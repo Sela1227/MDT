@@ -2388,7 +2388,7 @@ function casesPane(cid){
   const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>');
   const bCase=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'cases\')">+ 新增討論個案</button>');
   const bSpec=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'special\')">+ 新增特殊議程</button>');
-  const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">>+ 新增醫療小組成員</button>');
+  const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">+ 新增醫療小組討論個案</button>');
   return(
     '<div class="sh-track">'+
     '<div class="sh-track-hdr"><span class="sh-track-dot"></span>前期追蹤事項</div>'+
@@ -2404,14 +2404,6 @@ function casesPane(cid){
       cases.map((c,i)=>cFn(cid,i,c)).join('')+
     '</div>'+bCase+
     '</div>'+
-    '<hr class="rule">'+
-    '<div class="subsec">'+
-    '<div class="subhdr"><span class="sh-dot"></span>特殊議程</div>'+
-    '<div id="div-special-'+cid+'">'+
-      sp.map((s,i)=>sFn(cid,i,s)).join('')+
-    '</div>'+bSpec+
-    '</div>'+
-    // 醫療小組 section (only if has entries OR in edit mode)
     (team.length||!vm?(
       '<hr class="rule">'+
       '<div class="sh-track">'+
@@ -2420,7 +2412,14 @@ function casesPane(cid){
         (team.length?team.map((c,i)=>fFn(cid+'_team',i,c)).join(''):'<div class="sh-empty">（本次無醫療小組成員）</div>')+
       '</div>'+bTeam+
       '</div>'
-    ):'')
+    ):'')+
+    '<hr class="rule">'+
+    '<div class="subsec">'+
+    '<div class="subhdr"><span class="sh-dot"></span>特殊議程</div>'+
+    '<div id="div-special-'+cid+'">'+
+      sp.map((s,i)=>sFn(cid,i,s)).join('')+
+    '</div>'+bSpec+
+    '</div>'
   );
 }
 
