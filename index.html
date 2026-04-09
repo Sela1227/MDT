@@ -962,7 +962,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.6.2';
+const VERSION='V2.6.3';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -972,6 +972,7 @@ function loadAll(){
   try{const d=localStorage.getItem('mdt_drs');DRS=d?JSON.parse(d):[...DEFAULT_DRS]}catch{DRS=[...DEFAULT_DRS]}
   try{const e=localStorage.getItem('mdt_exam_types');EXAM_TYPES=e?JSON.parse(e):[...DEFAULT_EXAM_TYPES]}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
   migrateLOCS();
+  migrateCFG();
   migrateLOCS();
   migrateDRS();
   migrateCFGConv();
@@ -1021,6 +1022,20 @@ function migrateDRS(){
     DRS.push({dept:'核醫科',name:'侯柏年醫師'});changed=true;
   }
   saveAll();
+}
+
+function migrateCFG(){
+  // Update CFG locations to match DEFAULT_C (for head_neck and lymphoma → 8樓 圓桌)
+  const locFix={'彰濱-2樓  185會議室':'彰濱-2樓 185會議室'};
+  const cidLocs={'head_neck':'彰濱-8樓 圓桌會議室','lymphoma':'彰濱-8樓 圓桌會議室'};
+  let changed=false;
+  Object.entries(cidLocs).forEach(([cid,loc])=>{
+    if(CFG[cid]&&CFG[cid].loc!==loc){CFG[cid].loc=loc;changed=true;}
+  });
+  Object.values(CFG).forEach(ca=>{
+    if(ca.loc&&locFix[ca.loc]){ca.loc=locFix[ca.loc];changed=true;}
+  });
+  if(changed)saveAll();
 }
 
 function migrateCFGConv(){
