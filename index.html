@@ -928,7 +928,7 @@ textarea{resize:vertical}
 
 
 /* ════ DEFAULT CONFIG ════ */
-const DEFAULT_LOCS=['彰濱-2樓  185會議室','彰濱-1F 人文藝術館會議室','彰濱-1F  人文會議室','彰濱-7F  愛書人會議室','彰濱-3樓 甲狀腺會議室'];
+const DEFAULT_LOCS=['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪','彰濱-2樓 185會議室','彰濱-1F 人文藝術館會議室','彰濱-7F 愛書人會議室','彰濱-3樓 甲狀腺會議室'];
 const DEFAULT_EXAM_TYPES=['CT','MRI','SONO','PET-CT','X-Ray','Echo','Lab'];
 let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
@@ -947,8 +947,8 @@ const DEFAULT_DRS=[
 ];
 const mk=(d,n)=>`${d}::${n}`;
 const DEFAULT_C={
-  head_neck:{id:'head_neck',name:'頭頸癌',partner:'lymphoma',role:'first',weekday:4,weeknum:3,color:'#4A7C8E',defaultSlot:'12:30-13:30',slot:'12:30-13:00',loc:'彰濱-2樓  185會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'頭頸癌召集人',conv:'頭頸外科::張建明醫師',memberKeys:[mk('頭頸外科','王威群醫師'),mk('血液腫瘤科','劉大智醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','劉育昌醫師')]},
-  lymphoma:{id:'lymphoma',name:'血液淋巴癌',partner:'head_neck',role:'second',weekday:4,weeknum:3,defaultSlot:'12:30-13:30',color:'#5B8FA8',slot:'13:00-13:30',loc:'彰濱-2樓  185會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'血液淋巴癌召集人',conv:'血液腫瘤科::劉大智醫師',memberKeys:[mk('血液腫瘤科','張正雄醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  head_neck:{id:'head_neck',name:'頭頸癌',partner:'lymphoma',role:'first',weekday:4,weeknum:3,color:'#4A7C8E',defaultSlot:'12:30-13:30',slot:'12:30-13:00',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'頭頸癌召集人',conv:'頭頸外科::張建明醫師',memberKeys:[mk('頭頸外科','王威群醫師'),mk('血液腫瘤科','劉大智醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','劉育昌醫師')]},
+  lymphoma:{id:'lymphoma',name:'血液淋巴癌',partner:'head_neck',role:'second',weekday:4,weeknum:3,defaultSlot:'12:30-13:30',color:'#5B8FA8',slot:'13:00-13:30',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'血液淋巴癌召集人',conv:'血液腫瘤科::劉大智醫師',memberKeys:[mk('血液腫瘤科','張正雄醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','林伯儒醫師')]},
   thoracic:{id:'thoracic',name:'胸腔癌',partner:null,weekday:4,weeknum:3,color:'#6B7FA0',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6007',pwd:'7813888',url:'https://zoom.us/j/7256166007?pwd=oHlSANba92wzDrbbYs6NFVRFBT8O2x.1'},convTitle:'肺癌召集人',conv:'胸腔內科::張竣期醫師',memberKeys:[mk('胸腔外科','黃榆涵醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','劉奕祥醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
   breast:{id:'breast',name:'乳癌',partner:null,weekday:4,weeknum:3,defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-1樓 人文藝術館會議室',zoom:{id:'725-616-6003',pwd:'6222131',url:'https://zoom.us/j/7256166003?pwd=4gN5lhkzdIfh8WylCq7bYPl194bFI6.1'},convTitle:'乳癌召集人',conv:'一般外科::李岳聰醫師',memberKeys:[mk('一般外科','吳鴻昇醫師'),mk('一般外科','林建華醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','熊敬業醫師'),mk('血液腫瘤科','張正雄醫師')]},
   digestive:{id:'digestive',name:'消化道癌',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('消化內科','陳忠宏醫師'),mk('消化內科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
@@ -962,7 +962,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.6.1';
+const VERSION='V2.6.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -971,8 +971,23 @@ function loadAll(){
   try{const l=localStorage.getItem('mdt_locs');LOCS=l?JSON.parse(l):[...DEFAULT_LOCS]}catch{LOCS=[...DEFAULT_LOCS]}
   try{const d=localStorage.getItem('mdt_drs');DRS=d?JSON.parse(d):[...DEFAULT_DRS]}catch{DRS=[...DEFAULT_DRS]}
   try{const e=localStorage.getItem('mdt_exam_types');EXAM_TYPES=e?JSON.parse(e):[...DEFAULT_EXAM_TYPES]}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
+  migrateLOCS();
+  migrateLOCS();
   migrateDRS();
   migrateCFGConv();
+}
+
+function migrateLOCS(){
+  // Rename old location strings
+  const rename={'彰濱-2樓  185會議室':'彰濱-2樓 185會議室','彰濱-1F  人文會議室':'彰濱-1F 人文藝術館會議室'};
+  let changed=false;
+  LOCS=LOCS.map(l=>{if(rename[l]){changed=true;return rename[l];}return l;});
+  // Remove duplicate 人文 entries
+  const seen=new Set();
+  LOCS=LOCS.filter(l=>{if(seen.has(l))return false;seen.add(l);return true;});
+  // Add new rooms if missing
+  ['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪'].forEach(r=>{if(!LOCS.includes(r)){LOCS.unshift(r);changed=true;}});
+  if(changed)saveAll();
 }
 
 function migrateDRS(){
@@ -1996,8 +2011,15 @@ function newMeetingObj(userId,cids){
   const user=USERS.find(u=>u.id===userId),p=CFG[cids[0]],today=new Date().toISOString().slice(0,10);
   const t0=CFG[cids[0]].slot.split('-')[0],t1=CFG[cids[cids.length-1]].slot.split('-')[1];
   const sections={};cids.forEach(id=>{sections[id]={followups:[],cases:[],special:[]}});
-  const owner=USERS.find(u=>u.cancers.includes(cids[0]));
-  const contact=owner?(owner.ext?owner.name+'('+owner.ext+')':'暫無'):'暫無';
+  const owners=[];
+  cids.forEach(cid=>{
+    const o=USERS.find(u=>u.cancers.includes(cid));
+    if(o&&!owners.find(x=>x.id===o.id))owners.push(o);
+  });
+  const realOwners=owners.filter(o=>o.ext);
+  const contact=realOwners.length
+    ?realOwners.map(o=>o.name+'('+o.ext+')').join(' ')
+    :'暫無專職個管師';
   return{id:cids.join('_')+'_'+uid(),title:mtgTitle(cids),cids,date:today,
     time:p.defaultSlot||(p.slot?.startsWith('07')?'07:30-08:30':'12:30-13:30'),
     loc:p.loc,zoom:{id:'',pwd:'',url:''},contact,sections,version:0,savedBy:user.name,savedAt:''}
@@ -2026,9 +2048,16 @@ function renderEditor(){
   const urlDis=document.getElementById('f-zurl-display');if(urlDis)urlDis.textContent=m.zoom?.url||autoUrl||'—';
   document.getElementById('f-zpwd').value=m.zoom?.pwd||'';document.getElementById('f-zurl').value=m.zoom?.url||'';
   // Contact: auto-display (not editable)
-  const cid0=S.cids?.[0];
-  const contactOwner=USERS.find(u=>u.cancers?.includes(cid0));
-  const autoContact=contactOwner?(contactOwner.ext?contactOwner.name+'('+contactOwner.ext+')':'暫無'):'暫無';
+  const owners2=[];
+  (S.cids||[]).forEach(cid=>{
+    const o=USERS.find(u=>u.cancers?.includes(cid));
+    if(o&&!owners2.find(x=>x.id===o.id))owners2.push(o);
+  });
+  // 林伯儒是醫師代理，不列為聯絡人
+  const realOwners=owners2.filter(o=>o.ext);
+  const autoContact=realOwners.length
+    ?realOwners.map(o=>o.name+'('+o.ext+')').join(' ')
+    :'暫無專職個管師';
   const fc=document.getElementById('f-contact');
   if(fc)fc.textContent=autoContact;
   document.getElementById('out-area').style.display='none';document.getElementById('save-msg').innerHTML='';
