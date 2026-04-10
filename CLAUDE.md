@@ -224,6 +224,8 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.7.1 | Excel去遮蔽；JSON全量備份/還原（含影像），可跨裝置合併 |
+| V2.7.0 | Excel匯出（5個sheet：個案/檢查/治療/前期追蹤/會議資訊） |
 | V2.6.7 | 所有輸出函數醫師欄位改用getDoctorStr()，相容新舊格式 |
 | V2.6.6 | 醫師名稱去dept前綴；新增必要事件區塊 |
 | V2.6.5 | 醫療小組移到特殊議程前；按鈕文字修正 |

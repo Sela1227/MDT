@@ -661,6 +661,7 @@ textarea{resize:vertical}
               <button class="btn btn-b" onclick="doOutput('ai')" title="複製完整個案資料，貼到 claude.ai 生成摘要">複製 AI 提示詞</button>
               <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
+              <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
             </div>
             <div class="lib-status" id="lib-status"></div>
@@ -777,6 +778,17 @@ textarea{resize:vertical}
   <button class="btn btn-a" onclick="generateTestData()">生成測試資料</button>
   <button class="btn btn-b" onclick="clearTestData()">清除所有測試資料</button>
 </div>
+            <hr style="margin:16px 0;border:none;border-top:1px solid var(--blt)">
+            <div class="st-title" style="margin-bottom:4px">資料備份與還原</div>
+            <div class="st-desc">匯出所有會議記錄為 JSON 檔案（含影像），或從備份 JSON 匯入還原。</div>
+            <div class="brow" style="margin-top:10px">
+              <button class="btn btn-a" onclick="exportAllJSON()">匯出全部資料 (JSON)</button>
+              <label class="btn btn-b" style="cursor:pointer;display:inline-flex;align-items:center">
+                匯入還原 (JSON)
+                <input type="file" accept=".json" onchange="importAllJSON(this)" style="display:none">
+              </label>
+            </div>
+            <div id="backup-msg" style="font-size:12px;color:var(--ok);margin-top:8px;padding:0 2px"></div>
             </div>
 
             <div class="stab" id="stab-ai">
@@ -962,7 +974,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.6.7';
+const VERSION='V2.7.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2903,6 +2915,191 @@ async function genDOCX(){
 }
 
 /* ════ Generators ════ */
+function exportAllJSON(){
+  const backup={
+    version:VERSION,
+    exportedAt:new Date().toISOString(),
+    cfg:localStorage.getItem('mdt_cfg'),
+    locs:localStorage.getItem('mdt_locs'),
+    drs:localStorage.getItem('mdt_drs'),
+    exam_types:localStorage.getItem('mdt_exam_types'),
+    idx:localStorage.getItem('mdt_idx'),
+    meetings:{}
+  };
+  // Export all meetings
+  const idx=getIdx();
+  idx.forEach(m=>{
+    const data=localStorage.getItem('mdt_m_'+m.id);
+    if(data)backup.meetings['mdt_m_'+m.id]=data;
+    // Also export per-cancer sections for merged meetings
+    (m.cids||[]).forEach(cid=>{
+      const sk='mdt_sec_'+cid+'_'+m.date;
+      const sd=localStorage.getItem(sk);
+      if(sd)backup.meetings[sk]=sd;
+    });
+  });
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const count=idx.length;
+  download(blob,'MDT備份_'+new Date().toISOString().slice(0,10)+'_'+count+'場.json');
+  showSaveToast('已匯出 '+count+' 場會議記錄');
+  const el=document.getElementById('backup-msg');
+  if(el)el.textContent='已匯出 '+count+' 場，含影像資料，檔案較大請稍候。';
+}
+
+function importAllJSON(input){
+  const file=input.files[0];if(!file)return;
+  const el=document.getElementById('backup-msg');
+  if(el)el.textContent='讀取中...';
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const backup=JSON.parse(ev.target.result);
+      if(!backup.meetings||!backup.idx){throw new Error('格式不正確，請使用本系統匯出的 JSON 檔案')}
+      // Ask before overwrite
+      const count=Object.keys(backup.meetings).filter(k=>k.startsWith('mdt_m_')).length;
+      if(!confirm('即將匯入 '+count+' 場會議記錄。\n現有的同名記錄將被覆蓋，其他記錄保留。\n確定繼續？'))return;
+      // Restore settings (only if present)
+      if(backup.cfg)localStorage.setItem('mdt_cfg',backup.cfg);
+      if(backup.locs)localStorage.setItem('mdt_locs',backup.locs);
+      if(backup.drs)localStorage.setItem('mdt_drs',backup.drs);
+      if(backup.exam_types)localStorage.setItem('mdt_exam_types',backup.exam_types);
+      // Restore meetings
+      Object.entries(backup.meetings).forEach(([k,v])=>localStorage.setItem(k,v));
+      // Merge index
+      if(backup.idx){
+        const newIdx=JSON.parse(backup.idx);
+        const curIdx=getIdx();
+        const merged=[...newIdx];
+        curIdx.forEach(m=>{if(!merged.find(n=>n.id===m.id))merged.push(m)});
+        localStorage.setItem('mdt_idx',JSON.stringify(merged.slice(0,100)));
+      }
+      // Reload
+      loadAll();renderSbRecent();
+      if(el)el.textContent='匯入成功！已還原 '+count+' 場會議記錄。';
+      showSaveToast('匯入完成！共 '+count+' 場');
+      openHistory();
+    }catch(e){
+      if(el)el.textContent='匯入失敗：'+e.message;
+      alert('匯入失敗：'+e.message);
+    }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+
+async function genXLSX(){
+  const btn=document.getElementById('btn-xlsx');
+  if(btn){btn.disabled=true;btn.textContent='匯出中...';}
+  const ok=await loadLib('xlsx@0.18.5/dist/xlsx.full.min.js','XLSX');
+  if(!ok){setLibStatus('SheetJS 無法載入','var(--err)');if(btn){btn.disabled=false;btn.textContent='Excel 匯出';}return;}
+  try{
+    readForm();
+    const m=S.meeting,cids=S.cids;
+    const wb=XLSX.utils.book_new();
+
+    // ── Sheet 1: 個案討論 ──
+    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','病理日期','病理報告','討論要點','討論議題','摘要','決策']];
+    cids.forEach(cid=>{
+      const ca=CFG[cid];
+      const sec=m.sections[cid]||{};
+      (sec.cases||[]).forEach(c=>{
+        caseRows.push([
+          ca.name,
+          c.chartNo||'',
+          c.name||'',
+          c.gender||'M',
+          c.age||'',
+          getDoctorStr(c),
+          c.diagnosis||'',
+          c.cc||'',
+          (c.phChips||[]).map(x=>x+'(+)').join(' '),
+          c.ph||'',
+          c.pathologyDate||'',
+          c.pathology||'',
+          c.discussion||'',
+          (c.topics||[]).join('、'),
+          c.summary||'',
+          c.decision||''
+        ]);
+      });
+    });
+    const ws1=XLSX.utils.aoa_to_sheet(caseRows);
+    ws1['!cols']=[{wch:10},{wch:10},{wch:8},{wch:4},{wch:4},{wch:14},{wch:20},{wch:24},{wch:20},{wch:16},{wch:12},{wch:24},{wch:20},{wch:20},{wch:30},{wch:30}];
+    XLSX.utils.book_append_sheet(wb,ws1,'個案討論');
+
+    // ── Sheet 2: 檢查 ──
+    const examRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','項目','日期','內容']];
+    cids.forEach(cid=>{
+      const ca=CFG[cid];
+      (m.sections[cid]?.cases||[]).forEach(c=>{
+        const drs=getDoctorStr(c);
+        (c.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(ex=>{
+          examRows.push([ca.name,c.chartNo||'',c.name||'',drs,ex.name||'',ex.date||'',ex.content||'']);
+        });
+      });
+    });
+    if(examRows.length>1){
+      const ws2=XLSX.utils.aoa_to_sheet(examRows);
+      ws2['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:10},{wch:12},{wch:30}];
+      XLSX.utils.book_append_sheet(wb,ws2,'檢查記錄');
+    }
+
+    // ── Sheet 3: 治療 ──
+    const trtRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','項目','日期','內容']];
+    cids.forEach(cid=>{
+      const ca=CFG[cid];
+      (m.sections[cid]?.cases||[]).forEach(c=>{
+        const drs=getDoctorStr(c);
+        (c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(tr=>{
+          trtRows.push([ca.name,c.chartNo||'',c.name||'',drs,tr.name||'',tr.date||'',tr.content||'']);
+        });
+      });
+    });
+    if(trtRows.length>1){
+      const ws3=XLSX.utils.aoa_to_sheet(trtRows);
+      ws3['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:10},{wch:12},{wch:30}];
+      XLSX.utils.book_append_sheet(wb,ws3,'治療記錄');
+    }
+
+    // ── Sheet 4: 前期追蹤 ──
+    const fupRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','前次日期','追蹤說明']];
+    cids.forEach(cid=>{
+      const ca=CFG[cid];
+      (m.sections[cid]?.followups||[]).forEach(f=>{
+        fupRows.push([ca.name,f.chartNo||'',f.name||'',getDoctorStr(f),f.prevDate||'',f.note||'']);
+      });
+    });
+    if(fupRows.length>1){
+      const ws4=XLSX.utils.aoa_to_sheet(fupRows);
+      ws4['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:12},{wch:30}];
+      XLSX.utils.book_append_sheet(wb,ws4,'前期追蹤');
+    }
+
+    // ── Sheet 5: 會議資訊 ──
+    const infoRows=[
+      ['會議名稱',mtgTitle(cids)],
+      ['日期',m.date||''],
+      ['時間',m.time||''],
+      ['地點',m.loc||''],
+      ['聯絡人',m.contact||''],
+      ['版本','v'+(m.version||0)],
+      ['儲存者',m.savedBy||''],
+      ['儲存時間',m.savedAt?new Date(m.savedAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):''],
+    ];
+    const ws5=XLSX.utils.aoa_to_sheet(infoRows);
+    ws5['!cols']=[{wch:12},{wch:40}];
+    XLSX.utils.book_append_sheet(wb,ws5,'會議資訊');
+
+    const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_MDT.xlsx';
+    XLSX.writeFile(wb,fname);
+    setLibStatus('Excel 已下載','var(--ok)');
+    setTimeout(()=>setLibStatus(''),3000);
+  }catch(e){setLibStatus('Excel 匯出失敗：'+e.message,'var(--err)');console.error(e);}
+  if(btn){btn.disabled=false;btn.textContent='Excel 匯出';}
+}
+
+
 function genLine(){
   readForm();const m=S.meeting,cids=S.cids,pfx=timePfx(m.time.split('-')[0]);
   let t=`開會通知單\n會議名稱　${m.title}\n開會時間　${rocDate(m.date)} ${pfx}${m.time}\n`;
@@ -3020,7 +3217,7 @@ async function genAIInline(){
     hasCase=true;
     prompt+=`\n【${ca.name}】\n`;
     cases.forEach((c,i)=>{
-      prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name?maskName(c.name):''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
+      prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name||''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
       if(c.diagnosis)prompt+=`診斷：${c.diagnosis}\n`;
       if(c.cc)prompt+=`現病史: ${c.cc}\n`;
       if(c.ph)prompt+=`過去病史: ${c.ph}\n`;
