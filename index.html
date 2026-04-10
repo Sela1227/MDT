@@ -984,7 +984,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.7.3';
+const VERSION='V2.7.4';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2434,7 +2434,7 @@ function casesPane(cid){
       '<div class="sh-track">'+
       '<div class="sh-track-hdr"><span class="sh-track-dot"></span>醫療小組</div>'+
       '<div id="div-team-'+cid+'">'+
-        (team.length?team.map((c,i)=>fFn(cid+'_team',i,c)).join(''):'<div class="sh-empty">（本次無醫療小組成員）</div>')+
+        (team.length?team.map((c,i)=>fFn(cid,i,c,'team')).join(''):'<div class="sh-empty">（本次無醫療小組成員）</div>')+
       '</div>'+bTeam+
       '</div>'
     ):'')+
@@ -2443,7 +2443,7 @@ function casesPane(cid){
       '<div class="sh-track">'+
       '<div class="sh-track-hdr"><span class="sh-track-dot"></span>必要事件</div>'+
       '<div id="div-events-'+cid+'">'+
-        (events.length?events.map((c,i)=>fFn(cid+'_events',i,c)).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
+        (events.length?events.map((c,i)=>fFn(cid,i,c,'events')).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
       '</div>'+bEvents+
       '</div>'
     ):'')+
@@ -2558,30 +2558,30 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),chartNo:'',name:'',age:'',gender:'M',doctors:['','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],note:''}:type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');const realCid2=cid.endsWith('_team')?cid.slice(0,-5):cid;
-  const realType2=cid.endsWith('_team')?'team':type;
-  div.innerHTML=realType2==='cases'?caseHTML(realCid2,i,blank):realType2==='followups'||realType2==='team'||realType2==='events'?followupHTML(cid,i,blank):specialHTML(realCid2,i,blank);cont.appendChild(div.firstElementChild)}
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),chartNo:'',name:'',age:'',gender:'M',doctors:['','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],note:''}:type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');const _sfx=type==='team'?'_team':type==='events'?'_events':'';
+  const realCid2=_sfx?cid:(cid.includes('_team')?cid.slice(0,-5):cid.includes('_events')?cid.slice(0,-7):cid);
+  const realType2=_sfx||type;
+  const _fcid=_sfx?(cid+_sfx):cid;
+  div.innerHTML=realType2==='cases'?caseHTML(realCid2||cid,i,blank):
+    realType2==='followups'||realType2==='team'||realType2==='events'?followupHTML(_fcid,i,blank):
+    specialHTML(realCid2||cid,i,blank);cont.appendChild(div.firstElementChild)}
 function upd(cid,type,i,field,val){
-  const realCid=cid.endsWith('_team')?cid.slice(0,-5):cid;
-  const realType=cid.endsWith('_team')?'team':type;
-  ensureSec(realCid);const item=S.meeting.sections[realCid][realType][i];if(!item)return;item[field]=val;markDirty();const card=document.getElementById('cc-'+(realCid||cid)+'-'+(realType||type)+'-'+i);if(!card)return;if(field==='name'){card.querySelector('.cnm').textContent=val?maskName(val):'姓名'}if(field==='chartNo')card.querySelector('.cno').textContent=val||'病歷號';if(field==='title')card.querySelector('.cnm').textContent=val||'議程項目'}
+  ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;item[field]=val;markDirty();const card=document.getElementById('cc-'+cid+'-'+type+'-'+i);if(!card)return;if(field==='name'){card.querySelector('.cnm').textContent=val?maskName(val):'姓名'}if(field==='chartNo')card.querySelector('.cno').textContent=val||'病歷號';if(field==='title')card.querySelector('.cnm').textContent=val||'議程項目'}
 function updTopics(cid,type,i,topic,checked,el){ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;if(!item.topics)item.topics=[];if(checked){if(!item.topics.includes(topic))item.topics.push(topic)}else item.topics=item.topics.filter(t=>t!==topic);el.classList.toggle('on',checked);markDirty()}
 function delItem(cid,type,i){
-  const realCid=cid.endsWith('_team')?cid.slice(0,-5):cid;
-  const realType=cid.endsWith('_team')?'team':type;
-  ensureSec(realCid);
-  S.meeting.sections[realCid][realType].splice(i,1);
-  const cont=document.getElementById('div-'+realType+'-'+realCid);
+  ensureSec(cid);
+  S.meeting.sections[cid][type].splice(i,1);
+  const cont=document.getElementById('div-'+type+'-'+cid);
   if(!cont)return;
-  const items=S.meeting.sections[realCid][realType];
+  const items=S.meeting.sections[cid][type];
   cont.innerHTML=items.map((d,idx)=>
-    realType==='cases'?caseHTML(realCid,idx,d):
-    realType==='followups'||realType==='team'||realType==='events'?followupHTML(realCid+(realType==='team'?'_team':realType==='events'?'_events':''),idx,d):
-    specialHTML(realCid,idx,d)
+    type==='cases'?caseHTML(cid,idx,d):
+    type==='followups'||type==='team'||type==='events'?followupHTML(cid,idx,d,type):
+    specialHTML(cid,idx,d)
   ).join('');
-  if(realType==='followups'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無前期追蹤個案）</div>';
-  if(realType==='team'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無醫療小組成員）</div>';
-  if(realType==='events'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無必要事件）</div>';
+  if(type==='followups'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無前期追蹤個案）</div>';
+  if(type==='team'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無醫療小組成員）</div>';
+  if(type==='events'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無必要事件）</div>';
   markDirty();
 }
 

@@ -224,6 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.7.4 | 修正醫療小組/必要事件addItem/delItem/upd的_events後綴處理和cid傳遞 |
 | V2.7.3 | LINE通知個案列加入診斷 |
 | V2.7.2 | 修正genLine個案醫師：c.doctor→getDoctorStr(c) |
 | V2.7.1 | Excel去遮蔽；JSON全量備份/還原（含影像），可跨裝置合併 |
