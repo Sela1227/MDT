@@ -224,6 +224,8 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.7.6 | LINE通知格式全面重寫：統一縮排，醫療小組/必要事件顯示癌別 |
+| V2.7.5 | DOCX補齊所有欄位；DOCX/LINE加入醫療小組/必要事件 |
 | V2.7.4 | 修正醫療小組/必要事件addItem/delItem/upd的_events後綴處理和cid傳遞 |
 | V2.7.3 | LINE通知個案列加入診斷 |
 | V2.7.2 | 修正genLine個案醫師：c.doctor→getDoctorStr(c) |

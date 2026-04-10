@@ -984,7 +984,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.7.4';
+const VERSION='V2.7.6';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2864,11 +2864,23 @@ async function genDOCX(){
             ],spacing:{before:200,after:60}
           }));
           if(c.diagnosis)children.push(mkP(c.diagnosis,{size:20,color:ltColor,italics:true}));
-          // Compact info table (CC/Exam/Treatment only)
+          // Info table: all fields
           const infoRows=[];
           if(c.cc)infoRows.push(mkRow('現病史',c.cc));
-          if(c.exam)infoRows.push(mkRow('檢查',c.exam));
-          if(c.treatment&&c.treatment!=='尚未治療')infoRows.push(mkRow('治療',c.treatment));
+          const phAll2=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
+          if(phAll2)infoRows.push(mkRow('過去病史',phAll2));
+          if(c.pathology){const pathStr=(c.pathologyDate?c.pathologyDate+' ':'')+(c.pathology||'');infoRows.push(mkRow('病理',pathStr));}
+          // Exams (structured list)
+          const exStr2=(c.exams||[]).length
+            ?(c.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(ex=>(ex.name||'')+(ex.date?'('+ex.date+')':'')+(ex.content?' : '+ex.content:'')).join('\n')
+            :c.exam||'';
+          if(exStr2)infoRows.push(mkRow('檢查',exStr2));
+          // Treatments (structured list)
+          const trStr2=(c.treatments||[]).length
+            ?(c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(tr=>(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'')).join('\n')
+            :(c.treatment&&c.treatment!=='尚未治療'?c.treatment:'');
+          if(trStr2)infoRows.push(mkRow('治療',trStr2));
+          if(c.discussion)infoRows.push(mkRow('討論要點',c.discussion));
           if(infoRows.length)children.push(mkTable(infoRows));
           // Discussion focus: topics + summary + decision (expanded)
           const topics=(c.topics||[]).join('、');
@@ -2893,12 +2905,33 @@ async function genDOCX(){
       }else{
         children.push(mkP('（無個案討論）',{italics:true,color:ltColor}));
       }
+      // 醫療小組
+      const team2=sec.team||[];
+      if(team2.length){
+        children.push(mkH2('醫療小組'));
+        team2.forEach((c,i)=>{
+          children.push(mkH3(`${i+1}. ${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
+          children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('說明',c.note||'')]));
+          children.push(new Paragraph({text:'',spacing:{after:100}}));
+        });
+      }
+      // 必要事件
+      const events2=sec.events||[];
+      if(events2.length){
+        children.push(mkH2('必要事件'));
+        events2.forEach((c,i)=>{
+          children.push(mkH3(`${i+1}. ${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
+          children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('說明',c.note||'')]));
+          children.push(new Paragraph({text:'',spacing:{after:100}}));
+        });
+      }
       // 特殊議程
       const sp=sec.special||[];
       if(sp.length){
         children.push(mkH2('特殊議程'));
         sp.forEach(s=>{
-          children.push(mkH3(s.title));
+          const label=(s.topicType?'['+s.topicType+'] ':'')+( s.title||'');
+          children.push(mkH3(label));
           if(s.note)children.push(mkP(s.note));
           children.push(new Paragraph({text:'',spacing:{after:200}}));
         });
@@ -3112,28 +3145,69 @@ async function genXLSX(){
 
 function genLine(){
   readForm();const m=S.meeting,cids=S.cids,pfx=timePfx(m.time.split('-')[0]);
+  const multi=cids.length>1;
   let t=`開會通知單\n會議名稱　${m.title}\n開會時間　${rocDate(m.date)} ${pfx}${m.time}\n`;
   t+=`視訊主場　${m.loc}　聯絡人　${m.contact}\n`;
-  t+=`視訊會議資訊　會議登入ID:${m.zoom.id}　密碼：${m.zoom.pwd}\n　會議連結：${m.zoom.url}\n出席人員`;
-  cids.forEach(id=>{const ca=CFG[id];const convName=ca.conv?.includes('::')?ca.conv.split('::')[1]:ca.conv||'';t+=`　${ca.name}召集人：${convName}\n　核心成員:${getMemberStr(ca)}\n`});
-  t+=`　以上人員為核心成員，已備餐。\n會議說明`;
-  if(cids.length>1)t+='\n';
+  t+=`視訊會議資訊　會議登入ID:${m.zoom.id}　密碼：${m.zoom.pwd}\n　　　　　　　會議連結：${m.zoom.url}\n`;
+  t+=`出席人員`;
+  cids.forEach(id=>{
+    const ca=CFG[id];
+    const convName=ca.conv?.includes('::')?ca.conv.split('::')[1]:ca.conv||'';
+    t+=`\n　${ca.name}召集人：${convName}\n　核心成員：${getMemberStr(ca)}`;
+  });
+  t+=`\n　以上人員為核心成員，已備餐。\n`;
+  t+=`會議說明`;
   cids.forEach((id,ci)=>{
-    const ca=CFG[id],sec=m.sections[id]||{followups:[],cases:[],special:[]};
-    if(cids.length>1)t+=`${ca.name}：\n`;
+    const ca=CFG[id],sec=m.sections[id]||{};
+    const fups=sec.followups||[],cases=sec.cases||[],
+          team=sec.team||[],events=sec.events||[],sp=sec.special||[];
+    if(multi)t+=`\n${ca.name}：`;
+    else t+=`\n`;
     let n=1;
-    const fups=sec.followups||[];
-    if(fups.length){t+=`　${n}.前期追蹤個案：\n`;fups.forEach(c=>{t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} VS ${getDoctorStr(c)||'___'}　${c.prevDate?'【'+c.prevDate+'】':''}${c.note||''}\n`});n++}
-    else{t+=`　${n}.前期追蹤個案：無\n`;n++}
-    const cases=sec.cases||[];
-    if(cases.length){t+=`　${n}.個案討論：\n`;cases.forEach(c=>{const tp=c.topics?.length?`(${c.topics.join('、')})`:'';t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}${c.diagnosis?' / '+c.diagnosis:''} ${tp}\n`});n++}
-    else{t+=`　${n}.個案討論：無\n`;n++}
-    (sec.special||[]).forEach(s=>{t+=`　${n}.${s.title}${s.note?' '+s.note:''}\n`;n++});
+
+    // 1. 前期追蹤
+    t+=`\n　${n}.前期追蹤個案：`;
+    if(fups.length){fups.forEach(c=>{t+=`\n　　${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.prevDate?'　【前次 '+c.prevDate+'】':''}${c.note?'\n　　　'+c.note:''}`});}
+    else t+=`無`;
+    n++;
+
+    // 2. 個案討論
+    t+=`\n　${n}.個案討論：`;
+    if(cases.length){cases.forEach(c=>{
+      const tp=c.topics?.length?`（${c.topics.join('、')}）`:'';
+      t+=`\n　　${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}`;
+      if(c.diagnosis)t+=`\n　　　診斷：${c.diagnosis}`;
+      if(tp)t+=`\n　　　討論：${tp}`;
+    });}
+    else t+=`無`;
+    n++;
+
+    // 3. 醫療小組
+    t+=`\n　${n}.醫療小組（${ca.name}）：`;
+    if(team.length){team.forEach(c=>{t+=`\n　　${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
+    else t+=`無`;
+    n++;
+
+    // 4. 必要事件
+    t+=`\n　${n}.必要事件（${ca.name}）：`;
+    if(events.length){events.forEach(c=>{t+=`\n　　${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
+    else t+=`無`;
+    n++;
+
+    // 5. 特殊議程
+    if(sp.length){sp.forEach(s=>{
+      const label=(s.topicType?`[${s.topicType}] `:'')+( s.title||'');
+      t+=`\n　${n}.${label}`;
+      if(s.note)t+=`\n　　${s.note}`;
+      n++;
+    });}
+
     if(ci<cids.length-1)t+='\n';
   });
-  t+=`備　註　非核心成員歡迎參加，請聯繫個管師，以協助備餐。\n　　　　非核心成員無報名者，請自行備餐，謝謝。`;
+  t+=`\n備　註　非核心成員歡迎參加，請聯繫個管師，以協助備餐。\n　　　　非核心成員無報名者，請自行備餐，謝謝。`;
   return t;
 }
+
 function genAI(){readForm();const m=S.meeting,cids=S.cids;let p=`你是癌症個案管理師的會議記錄助理。請根據以下各個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出MDT會議討論摘要草稿，語言專業精簡。\n\n會議日期：${rocDate(m.date)}\n\n`;cids.forEach(id=>{const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];if(!cases.length)return;p+=`【${ca.name}】\n`;cases.forEach((c,i)=>{p+=`\n個案${i+1}：\n`;p+=`病歷號：${c.chartNo||'—'}　姓名：${c.name?maskName(c.name):'—'}，${c.gender||'M'}/${c.age||'—'}\n`;p+=`診斷：${c.diagnosis||'—'}\n主治醫師：${getDoctorStr(c)}\n`;if(c.cc)p+=`現病史: ${c.cc}\n`;
       const phAll=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph].filter(Boolean).join('  ');if(phAll)p+=`過去病史: ${phAll}\n`;if(c.exam)p+=`Exam:\n${c.exam}\n`;if(c.treatment)p+=`治療：\n${c.treatment}\n`;p+=`討論重點：${c.discussion||(c.topics||[]).join('、')||'—'}\n`});p+='\n'});p+='\n請對每個個案分別產出結構化討論摘要，供個管師填入MDT會議記錄。';return p}
 function doOutput(mode){
