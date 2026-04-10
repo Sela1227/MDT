@@ -704,6 +704,7 @@ textarea{resize:vertical}
               <div class="tab" onclick="showStab('cancers',this)">癌別</div>
               <div class="tab" onclick="showStab('ai',this)">AI</div>
               <div class="tab" onclick="showStab('testdata',this)">測試</div>
+              <div class="tab" onclick="showStab('backup',this)">備份還原</div>
             </div>
           </div>
           <div style="padding:22px">
@@ -768,7 +769,27 @@ textarea{resize:vertical}
               </div>
             </div>
 
-            <div class="stab" id="stab-testdata">
+            <div class="stab" id="stab-backup">
+  <div class="st-title">備份與還原</div>
+  <div class="st-desc">將所有會議記錄（含影像）打包成 JSON 備份檔，或從備份檔匯入還原。適合換電腦、跨裝置同步，或定期備份。</div>
+  <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
+    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">匯出備份</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">包含所有會議、個案資料、影像、設定。完整姓名，無遮蔽。</div>
+      <button class="btn btn-a" onclick="exportAllJSON()">匯出全部資料 (JSON)</button>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">匯入還原</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">選擇備份 JSON 檔。同名記錄覆蓋，其他記錄保留（可合併多台裝置資料）。</div>
+      <label class="btn btn-b" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+        選擇備份檔匯入
+        <input type="file" accept=".json" onchange="importAllJSON(this)" style="display:none">
+      </label>
+    </div>
+  </div>
+  <div id="backup-msg" style="font-size:12px;color:var(--ok);padding:2px"></div>
+</div>
+<div class="stab" id="stab-testdata">
               <div class="st-title">測試資料</div>
               <div class="st-desc">生成三位個管師各癌別的測試會議記錄（各3場，共18場），方便測試系統功能。</div>
               <div style="padding:12px 16px;background:var(--warnbg);color:var(--warn);border-radius:2px;font-size:12px;margin-bottom:14px">
@@ -778,17 +799,6 @@ textarea{resize:vertical}
   <button class="btn btn-a" onclick="generateTestData()">生成測試資料</button>
   <button class="btn btn-b" onclick="clearTestData()">清除所有測試資料</button>
 </div>
-            <hr style="margin:16px 0;border:none;border-top:1px solid var(--blt)">
-            <div class="st-title" style="margin-bottom:4px">資料備份與還原</div>
-            <div class="st-desc">匯出所有會議記錄為 JSON 檔案（含影像），或從備份 JSON 匯入還原。</div>
-            <div class="brow" style="margin-top:10px">
-              <button class="btn btn-a" onclick="exportAllJSON()">匯出全部資料 (JSON)</button>
-              <label class="btn btn-b" style="cursor:pointer;display:inline-flex;align-items:center">
-                匯入還原 (JSON)
-                <input type="file" accept=".json" onchange="importAllJSON(this)" style="display:none">
-              </label>
-            </div>
-            <div id="backup-msg" style="font-size:12px;color:var(--ok);margin-top:8px;padding:0 2px"></div>
             </div>
 
             <div class="stab" id="stab-ai">
