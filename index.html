@@ -984,7 +984,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.7.1';
+const VERSION='V2.7.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3123,10 +3123,10 @@ function genLine(){
     if(cids.length>1)t+=`${ca.name}：\n`;
     let n=1;
     const fups=sec.followups||[];
-    if(fups.length){t+=`　${n}.前期追蹤個案：\n`;fups.forEach(c=>{t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} VS ${c.doctor?.includes('::')?c.doctor.split('::')[1]:c.doctor||'___'}　${c.prevDate?'【'+c.prevDate+'】':''}${c.note||''}\n`});n++}
+    if(fups.length){t+=`　${n}.前期追蹤個案：\n`;fups.forEach(c=>{t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} VS ${getDoctorStr(c)||'___'}　${c.prevDate?'【'+c.prevDate+'】':''}${c.note||''}\n`});n++}
     else{t+=`　${n}.前期追蹤個案：無\n`;n++}
     const cases=sec.cases||[];
-    if(cases.length){t+=`　${n}.個案討論：\n`;cases.forEach(c=>{const tp=c.topics?.length?`(${c.topics.join('、')})`:'';t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} ${c.doctor?'VS '+c.doctor:''} ${tp}\n`});n++}
+    if(cases.length){t+=`　${n}.個案討論：\n`;cases.forEach(c=>{const tp=c.topics?.length?`(${c.topics.join('、')})`:'';t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''} ${tp}\n`});n++}
     else{t+=`　${n}.個案討論：無\n`;n++}
     (sec.special||[]).forEach(s=>{t+=`　${n}.${s.title}${s.note?' '+s.note:''}\n`;n++});
     if(ci<cids.length-1)t+='\n';
