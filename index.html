@@ -962,7 +962,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.6.6';
+const VERSION='V2.6.7';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2820,7 +2820,7 @@ async function genDOCX(){
       const fups=sec.followups||[];
       if(fups.length){
         fups.forEach((c,i)=>{
-          children.push(mkH3(`追蹤 ${i+1}：${c.chartNo||''} ${c.name?maskName(c.name):''} ${c.doctor?'VS '+c.doctor:''}`));
+          children.push(mkH3(`追蹤 ${i+1}：${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
           children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('追蹤說明',c.note||'')]));
           children.push(new Paragraph({text:'',spacing:{after:120}}));
         });
@@ -3020,7 +3020,7 @@ async function genAIInline(){
     hasCase=true;
     prompt+=`\n【${ca.name}】\n`;
     cases.forEach((c,i)=>{
-      prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name?maskName(c.name):''}　${c.gender||'M'}/${c.age||''}　VS ${c.doctor||''}\n`;
+      prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name?maskName(c.name):''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
       if(c.diagnosis)prompt+=`診斷：${c.diagnosis}\n`;
       if(c.cc)prompt+=`現病史: ${c.cc}\n`;
       if(c.ph)prompt+=`過去病史: ${c.ph}\n`;

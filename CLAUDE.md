@@ -224,6 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.6.7 | 所有輸出函數醫師欄位改用getDoctorStr()，相容新舊格式 |
 | V2.6.6 | 醫師名稱去dept前綴；新增必要事件區塊 |
 | V2.6.5 | 醫療小組移到特殊議程前；按鈕文字修正 |
 | V2.6.4 | 新增醫療小組區塊（前期追蹤格式）；消化/乳/肝膽地點→一樓人文；migrateCFG |
