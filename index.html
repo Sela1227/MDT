@@ -962,7 +962,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.6.5';
+const VERSION='V2.6.6';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2039,7 +2039,7 @@ function newMeetingObj(userId,cids){
     time:p.defaultSlot||(p.slot?.startsWith('07')?'07:30-08:30':'12:30-13:30'),
     loc:p.loc,zoom:{id:'',pwd:'',url:''},contact,sections,version:0,savedBy:user.name,savedAt:''}
 }
-function ensureSec(cid){if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],special:[],team:[]};const s=S.meeting.sections[cid];if(!s.followups)s.followups=[];if(!s.cases)s.cases=[];if(!s.special)s.special=[];if(!s.team)s.team=[]}
+function ensureSec(cid){if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],special:[],team:[]};const s=S.meeting.sections[cid];if(!s.followups)s.followups=[];if(!s.cases)s.cases=[];if(!s.special)s.special=[];if(!s.team)s.team=[];if(!s.events)s.events=[]}
 
 function renderEditor(){
   const m=S.meeting,cids=S.cids;
@@ -2237,8 +2237,9 @@ function getCancerDoctors(cid){
 
 /* ── Doctor helpers ── */
 function getDoctors(d){
-  if(Array.isArray(d.doctors))return d.doctors.filter(Boolean);
-  return d.doctor?[d.doctor]:[];
+  const stripDept=v=>v.includes('::')?v.split('::')[1]:v;
+  if(Array.isArray(d.doctors))return d.doctors.filter(Boolean).map(stripDept);
+  return d.doctor?[stripDept(d.doctor)]:[];
 }
 function getDoctorStr(d){return getDoctors(d).join('、')||'—'}
 /* ── Image handling ── */
@@ -2389,6 +2390,8 @@ function casesPane(cid){
   const bCase=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'cases\')">+ 新增討論個案</button>');
   const bSpec=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'special\')">+ 新增特殊議程</button>');
   const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">+ 新增醫療小組討論個案</button>');
+  const events=sec.events||[];
+  const bEvents=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'events\')">+ 新增必要事件</button>');
   return(
     '<div class="sh-track">'+
     '<div class="sh-track-hdr"><span class="sh-track-dot"></span>前期追蹤事項</div>'+
@@ -2411,6 +2414,15 @@ function casesPane(cid){
       '<div id="div-team-'+cid+'">'+
         (team.length?team.map((c,i)=>fFn(cid+'_team',i,c)).join(''):'<div class="sh-empty">（本次無醫療小組成員）</div>')+
       '</div>'+bTeam+
+      '</div>'
+    ):'')+
+    (events.length||!vm?(
+      '<hr class="rule">'+
+      '<div class="sh-track">'+
+      '<div class="sh-track-hdr"><span class="sh-track-dot"></span>必要事件</div>'+
+      '<div id="div-events-'+cid+'">'+
+        (events.length?events.map((c,i)=>fFn(cid+'_events',i,c)).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
+      '</div>'+bEvents+
       '</div>'
     ):'')+
     '<hr class="rule">'+
@@ -2524,9 +2536,9 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),chartNo:'',name:'',age:'',gender:'M',doctors:['','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],note:''}:type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');const realCid2=cid.endsWith('_team')?cid.slice(0,-5):cid;
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),chartNo:'',name:'',age:'',gender:'M',doctors:['','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],note:''}:type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');const realCid2=cid.endsWith('_team')?cid.slice(0,-5):cid;
   const realType2=cid.endsWith('_team')?'team':type;
-  div.innerHTML=realType2==='cases'?caseHTML(realCid2,i,blank):realType2==='followups'||realType2==='team'?followupHTML(cid,i,blank):specialHTML(realCid2,i,blank);cont.appendChild(div.firstElementChild)}
+  div.innerHTML=realType2==='cases'?caseHTML(realCid2,i,blank):realType2==='followups'||realType2==='team'||realType2==='events'?followupHTML(cid,i,blank):specialHTML(realCid2,i,blank);cont.appendChild(div.firstElementChild)}
 function upd(cid,type,i,field,val){
   const realCid=cid.endsWith('_team')?cid.slice(0,-5):cid;
   const realType=cid.endsWith('_team')?'team':type;
@@ -2542,11 +2554,12 @@ function delItem(cid,type,i){
   const items=S.meeting.sections[realCid][realType];
   cont.innerHTML=items.map((d,idx)=>
     realType==='cases'?caseHTML(realCid,idx,d):
-    realType==='followups'||realType==='team'?followupHTML(realCid+(realType==='team'?'_team':''),idx,d):
+    realType==='followups'||realType==='team'||realType==='events'?followupHTML(realCid+(realType==='team'?'_team':realType==='events'?'_events':''),idx,d):
     specialHTML(realCid,idx,d)
   ).join('');
   if(realType==='followups'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無前期追蹤個案）</div>';
   if(realType==='team'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無醫療小組成員）</div>';
+  if(realType==='events'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無必要事件）</div>';
   markDirty();
 }
 
@@ -2903,7 +2916,7 @@ function genLine(){
     if(cids.length>1)t+=`${ca.name}：\n`;
     let n=1;
     const fups=sec.followups||[];
-    if(fups.length){t+=`　${n}.前期追蹤個案：\n`;fups.forEach(c=>{t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} VS ${c.doctor||'___'}　${c.prevDate?'【'+c.prevDate+'】':''}${c.note||''}\n`});n++}
+    if(fups.length){t+=`　${n}.前期追蹤個案：\n`;fups.forEach(c=>{t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} VS ${c.doctor?.includes('::')?c.doctor.split('::')[1]:c.doctor||'___'}　${c.prevDate?'【'+c.prevDate+'】':''}${c.note||''}\n`});n++}
     else{t+=`　${n}.前期追蹤個案：無\n`;n++}
     const cases=sec.cases||[];
     if(cases.length){t+=`　${n}.個案討論：\n`;cases.forEach(c=>{const tp=c.topics?.length?`(${c.topics.join('、')})`:'';t+=`　　${c.chartNo||''}　${c.name?maskName(c.name):'___'} ${c.doctor?'VS '+c.doctor:''} ${tp}\n`});n++}

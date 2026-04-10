@@ -224,6 +224,13 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.6.6 | 醫師名稱去dept前綴；新增必要事件區塊 |
+| V2.6.5 | 醫療小組移到特殊議程前；按鈕文字修正 |
+| V2.6.4 | 新增醫療小組區塊（前期追蹤格式）；消化/乳/肝膽地點→一樓人文；migrateCFG |
+| V2.6.3 | migrateCFG修正頭頸/血淋地點（localStorage覆蓋DEFAULT問題） |
+| V2.6.2 | 林伯儒不列聯絡人；合併顯示多個管師；新地點；migrateLOCS |
+| V2.6.1 | 聯絡人合併所有癌別負責人 |
+| V2.6.0 | 檢查下拉選單+設定管理；術語統一（現病史/過去病史/檢查） |
 | V2.5.6 | 儲存後隱藏放棄編輯按鈕；PPTX補齊PH/病理/Exam/治療欄位 |
 | V2.5.5 | 討論項目chips修BUG-001；delegation區塊重寫；PH顯示HTN(+)格式 |
 | V2.5.4 | PPTX前期追蹤動態行高；PH chips顯示在閱覽/LINE |
@@ -398,3 +405,11 @@ print(script.count('{'), script.count('}'))
 **原因**：`.view-mode .sec-foot{display:none}` 只隱藏了 `.sec-foot`，而「放棄編輯」在 `.info-edit` div 裡  
 **修法**：加一條 `.view-mode .info-edit{display:none!important}`  
 **教訓**：儲存切換到 viewMode 時，所有編輯控制項（不只 sec-foot）都需要 CSS 隱藏規則
+
+---
+
+### BUG-012：DEFAULT 資料改動對 localStorage 舊資料無效（通用）
+**症狀**：改了 `DEFAULT_C`、`DEFAULT_LOCS`、`DEFAULT_DRS` 後，頁面仍顯示舊資料  
+**原因**：`loadAll()` 優先讀取 localStorage，只有 localStorage 為空時才用 DEFAULT  
+**修法**：每次改動 DEFAULT 資料，必須同步寫遷移函數（`migrateCFG`、`migrateLOCS`、`migrateDRS`），在 `loadAll()` 後自動執行  
+**教訓**：任何 DEFAULT 資料的變更（欄位改名、值更新、新增項目），都要問：「localStorage 裡的舊資料會怎樣？」然後寫遷移函數。
