@@ -224,6 +224,8 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.8.0 | 病理多筆條列；PPTX addRow動態行高修正重疊 |
+| V2.7.7 | LINE通知每位病人加癌別標籤【癌別名】 |
 | V2.7.6 | LINE通知格式全面重寫：統一縮排，醫療小組/必要事件顯示癌別 |
 | V2.7.5 | DOCX補齊所有欄位；DOCX/LINE加入醫療小組/必要事件 |
 | V2.7.4 | 修正醫療小組/必要事件addItem/delItem/upd的_events後綴處理和cid傳遞 |

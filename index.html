@@ -279,6 +279,7 @@ textarea{resize:vertical}
 .case-img-add{width:80px;height:80px;border:2px dashed var(--border);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--textlt);font-size:10px;gap:4px;flex-shrink:0;transition:all .15s;background:var(--white)}
 .struct-row{margin-bottom:5px}
 .struct-fields{display:grid;grid-template-columns:100px 130px 1fr auto;gap:5px;align-items:start}
+.struct-fields.path-row{grid-template-columns:140px 1fr auto}
 .struct-fields input{font-size:12px;padding:5px 7px;border:1px solid var(--border);border-radius:2px;width:100%;box-sizing:border-box}
 .case-img-add:hover{border-color:var(--fog-lt);color:var(--fog);background:var(--surface)}
 .img-caption{font-size:9px;color:var(--textlt);text-align:center;padding:2px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;line-height:1.3}
@@ -984,7 +985,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.7.6';
+const VERSION='V2.8.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2370,7 +2371,7 @@ function caseViewHTML(cid,i,d){
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body">
-${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${d.pathology?row('病理',(d.pathologyDate?rocDate(d.pathologyDate)+' '+d.pathology:d.pathology)):''}${(()=>{
+${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>`<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">${escA((p.date?p.date+' ':'')+p.content||'')}</span></div>`).join('');})()}${(()=>{
   const exArr=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const exStr=exArr.map(ex=>[(ex.name||''),(ex.date?'('+ex.date+')':''),' ',(ex.content||'')].join('').trim()).filter(Boolean).join('\n');
   return row('檢查', exStr||d.exam||'');
@@ -2466,6 +2467,19 @@ function caseHTML(cid,i,d){
   const phChips=d.phChips||[];
   const chips2=PH_CHIPS.map(c=>{const on=phChips.includes(c);return`<span class="tchip ${on?'on':''}" data-action="phchip" data-cid="${cid}" data-idx="${i}" data-chip="${c}">${c}</span>`}).join('');
 
+  // Pathologies sorted by date
+  const paths=(d.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  // Migrate old single pathology field → first entry if pathologies[] empty
+  if(!paths.length&&d.pathology){paths.push({date:d.pathologyDate||'',content:d.pathology});}
+  const pathRows=paths.map((p,pi)=>`
+    <div class="struct-row">
+      <div class="struct-fields">
+        <input placeholder="類型 (Biopsy/OP...)" value="${escA(p.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}" data-key="date" type="date">
+        <textarea placeholder="病理報告" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5">${escA(p.content||'')}</textarea>
+        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}" style="flex-shrink:0">×</button>
+      </div>
+    </div>`).join('');
+
   // Exams sorted by date
   const exams=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const examRows=exams.map((ex,ei)=>`
@@ -2514,9 +2528,8 @@ function caseHTML(cid,i,d){
   <div class="trow" style="margin-bottom:6px">${chips2}</div>
   ${inp('ph',d.ph,'其他病史')}
 </div>
-<div class="fg full"><label>病理 <span style="font-size:10px;color:var(--textlt);font-weight:400">日期</span></label>
-  <div style="display:flex;gap:6px;margin-bottom:4px"><input type="date" value="${escA(d.pathologyDate||'')}" oninput="upd('${cid}','cases',${i},'pathologyDate',this.value)" style="font-size:12px;padding:5px 8px;width:160px"></div>
-  ${ta('pathology',d.pathology,3,'病理報告（如：SCC, Grade 2, pT2N1...）')}
+<div class="fg full"><label>病理<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">+ 新增</button></label>
+  <div id="pathlist-${cid}-${i}">${pathRows}</div>
 </div>
 <div class="fg full"><label>檢查<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">+ 新增</button></label>
   <div id="examlist-${cid}-${i}">${examRows}</div>
@@ -2558,7 +2571,7 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),chartNo:'',name:'',age:'',gender:'M',doctors:['','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],note:''}:type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');const _sfx=type==='team'?'_team':type==='events'?'_events':'';
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),chartNo:'',name:'',age:'',gender:'M',doctors:['','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],note:''}:type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');const _sfx=type==='team'?'_team':type==='events'?'_events':'';
   const realCid2=_sfx?cid:(cid.includes('_team')?cid.slice(0,-5):cid.includes('_events')?cid.slice(0,-7):cid);
   const realType2=_sfx||type;
   const _fcid=_sfx?(cid+_sfx):cid;
@@ -2727,20 +2740,26 @@ async function genPPTX(){
       let y=.85;
       const addRow=(label,val,opt={})=>{
         if(!val)return;
-        s.addShape(pptx.ShapeType.rect,{x:.18,y,w:1.1,h:.22,fill:{color:C.surface},line:{color:C.surface,pt:0}});
-        txt(s,label,.2,y+.03,1.05,.18,{fontSize:9.5,bold:true,color:C.md});
-        txt(s,val,1.35,y,W-1.55,.22,{fontSize:10.5,color:C.dk,wrap:true,...opt});
-        y+=.26;
+        // Dynamic height: estimate lines (chars per line ~80 at this font/width)
+        const lines=String(val).split('
+').reduce((sum,l)=>sum+Math.max(1,Math.ceil(l.length/78)),0);
+        const rowH=Math.max(.28,lines*.2+.1);
+        s.addShape(pptx.ShapeType.rect,{x:.18,y,w:1.1,h:rowH,fill:{color:C.surface},line:{color:C.surface,pt:0}});
+        txt(s,label,.2,y+.04,1.05,rowH-.06,{fontSize:9.5,bold:true,color:C.md,valign:'top'});
+        s.addShape(pptx.ShapeType.rect,{x:1.3,y,w:W-1.48,h:rowH,fill:{color:'FFFFFF'},line:{color:'DDE2E7',pt:.5}});
+        txt(s,val,1.34,y+.04,W-1.52,rowH-.06,{fontSize:10.5,color:C.dk,wrap:true,valign:'top',...opt});
+        y+=rowH+.04;
       };
       addRow('現病史',c.cc);
       // PH: phChips + free text
       const phAll=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
       addRow('過去病史',phAll||null);
-      // Pathology
-      if(c.pathology){
-        const pathStr=(c.pathologyDate?rocDate(c.pathologyDate)+': ':'')+(c.pathology||'');
-        addRow('病理',pathStr);
-      }
+      // Pathology (structured list)
+      if((c.pathologies||[]).length){
+        const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('
+');
+        addRow('病理',pStr);
+      } else if(c.pathology){addRow('病理',(c.pathologyDate?c.pathologyDate+' ':'')+c.pathology);}
       // Exams (structured list)
       if((c.exams||[]).length){
         const exStr=(c.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(ex=>(ex.name||'')+(ex.date?'('+ex.date+')':'')+(ex.content?' : '+ex.content:'')).join('\n');
@@ -2869,7 +2888,9 @@ async function genDOCX(){
           if(c.cc)infoRows.push(mkRow('現病史',c.cc));
           const phAll2=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
           if(phAll2)infoRows.push(mkRow('過去病史',phAll2));
-          if(c.pathology){const pathStr=(c.pathologyDate?c.pathologyDate+' ':'')+(c.pathology||'');infoRows.push(mkRow('病理',pathStr));}
+          if((c.pathologies||[]).length){const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('
+');infoRows.push(mkRow('病理',pStr));}
+          else if(c.pathology){infoRows.push(mkRow('病理',(c.pathologyDate?c.pathologyDate+' ':'')+c.pathology));}
           // Exams (structured list)
           const exStr2=(c.exams||[]).length
             ?(c.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(ex=>(ex.name||'')+(ex.date?'('+ex.date+')':'')+(ex.content?' : '+ex.content:'')).join('\n')
@@ -3165,9 +3186,11 @@ function genLine(){
     else t+=`\n`;
     let n=1;
 
+    const tag=`【${ca.name}】`;
+
     // 1. 前期追蹤
     t+=`\n　${n}.前期追蹤個案：`;
-    if(fups.length){fups.forEach(c=>{t+=`\n　　${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.prevDate?'　【前次 '+c.prevDate+'】':''}${c.note?'\n　　　'+c.note:''}`});}
+    if(fups.length){fups.forEach(c=>{t+=`\n　　${tag}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.prevDate?'　【前次 '+c.prevDate+'】':''}${c.note?'\n　　　'+c.note:''}`});}
     else t+=`無`;
     n++;
 
@@ -3175,7 +3198,7 @@ function genLine(){
     t+=`\n　${n}.個案討論：`;
     if(cases.length){cases.forEach(c=>{
       const tp=c.topics?.length?`（${c.topics.join('、')}）`:'';
-      t+=`\n　　${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}`;
+      t+=`\n　　${tag}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}`;
       if(c.diagnosis)t+=`\n　　　診斷：${c.diagnosis}`;
       if(tp)t+=`\n　　　討論：${tp}`;
     });}
@@ -3183,14 +3206,14 @@ function genLine(){
     n++;
 
     // 3. 醫療小組
-    t+=`\n　${n}.醫療小組（${ca.name}）：`;
-    if(team.length){team.forEach(c=>{t+=`\n　　${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
+    t+=`\n　${n}.醫療小組：`;
+    if(team.length){team.forEach(c=>{t+=`\n　　${tag}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
     else t+=`無`;
     n++;
 
     // 4. 必要事件
-    t+=`\n　${n}.必要事件（${ca.name}）：`;
-    if(events.length){events.forEach(c=>{t+=`\n　　${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
+    t+=`\n　${n}.必要事件：`;
+    if(events.length){events.forEach(c=>{t+=`\n　　${tag}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
     else t+=`無`;
     n++;
 
