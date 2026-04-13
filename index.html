@@ -2527,7 +2527,7 @@ function casesPane(cid){
   const sFn=vm?specialViewHTML:specialHTML;
   // Pre-build add buttons (cid is in scope, no complex concat)
   const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>');
-  const bCase=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'cases\')">+ 新增討論個案</button><button class="btnadd" onclick="openImportCase(\'' + cid + \'\')" style="border-style:dashed">+ 匯入個案（JSON）</button>');
+  const bCase=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'cases\')">+ 新增討論個案</button>' + '<button class="btnadd" data-import-cid="' + cid + '" onclick="openImportCase(this.dataset.importCid)">+ 匯入個案（JSON）</button>');
   const bSpec=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'special\')">+ 新增特殊議程</button>');
   const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">+ 新增醫療小組討論個案</button>');
   const events=sec.events||[];
