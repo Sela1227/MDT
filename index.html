@@ -988,7 +988,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.8.4';
+const VERSION='V2.8.5';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2831,7 +2831,11 @@ async function genPPTX(){
   }
 
   const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_MDT簡報.pptx';
-  pptx.writeFile({fileName:fname}).then(()=>{btn.disabled=false;btn.textContent='PPTX 簡報';}).catch(e=>{setLibStatus('PPTX 失敗：'+e.message,'var(--err)');btn.disabled=false;btn.textContent='PPTX 簡報';});
+  pptx.write({outputType:'arraybuffer'}).then(ab=>{
+    const blob=new Blob([ab],{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+    download(blob,fname);
+    btn.disabled=false;btn.textContent='PPTX 簡報';
+  }).catch(e=>{setLibStatus('PPTX 失敗：'+e.message,'var(--err)');btn.disabled=false;btn.textContent='PPTX 簡報';});
 }
 
 async function genDOCX(){
@@ -3169,7 +3173,9 @@ async function genXLSX(){
     XLSX.utils.book_append_sheet(wb,ws5,'會議資訊');
 
     const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_MDT.xlsx';
-    XLSX.writeFile(wb,fname);
+    const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    download(blob,fname);
     setLibStatus('Excel 已下載','var(--ok)');
     setTimeout(()=>setLibStatus(''),3000);
   }catch(e){setLibStatus('Excel 匯出失敗：'+e.message,'var(--err)');console.error(e);}
