@@ -224,6 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.9.3 | 列印改A4橫向 |
 | V2.9.2 | 列印PDF改善：會議標題頁、隱藏UI、每案獨頁 |
 | V2.9.1 | 匯入個案JSON功能（+ 附匯入用prompt）|
 | V2.9.0 | 列印/PDF功能（@media print + window.print）|
