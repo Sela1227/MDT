@@ -224,6 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.9.9 | HTML投影片字體加大、&nbsp;修正、導覽改膠囊型 |
 | V2.9.8 | HTML投影片字體放大、topics加大、側邊導覽列 |
 | V2.9.7 | HTML投影片全面改版（表格式佈局、癌別色彩、字體放大）|
 | V2.9.6 | HTML投影片修正；從V2.9.4重建避免script洩漏bug |

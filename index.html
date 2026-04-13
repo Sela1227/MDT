@@ -1106,7 +1106,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.9.8';
+const VERSION='V2.9.9';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3319,7 +3319,7 @@ function genHTMLSlides(){
       const ph=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
       const paths=(c.pathologies||[]).length
         ?(c.pathologies||[]).map(p=>'<span class="pth">'+escA((p.date?p.date+'&nbsp;':'')+p.content)+'</span>').join('')
-        :(c.pathology?'<span class="pth">'+escA((c.pathologyDate?c.pathologyDate+'&nbsp;':'')+c.pathology)+'</span>':'');
+        :(c.pathology?'<span class="pth">'+(c.pathologyDate?'<span class="pdt">'+escA(c.pathologyDate)+'</span> ':'')+escA(c.pathology)+'</span>':'');
       const exs=(c.exams||[]).length
         ?(c.exams||[]).map(e=>'<span class="ex"><b>'+escA(e.name||'')+(e.date?'('+e.date+')':'')+'</b>'+(e.content?'&nbsp;'+escA(e.content):'')+'</span>').join('')
         :(c.exam?'<span class="ex">'+escA(c.exam)+'</span>':'');
@@ -3383,40 +3383,36 @@ function genHTMLSlides(){
     +'.sn{font-size:clamp(48px,8vw,100px);font-weight:800;color:#fff;letter-spacing:-.02em;}'
     +'.sd{font-size:clamp(16px,2vw,28px);color:rgba(255,255,255,.75);margin-top:2vh;}'
     +'.ch{background:var(--dk);color:#fff;padding:clamp(12px,1.8vh,24px) 2.5vw;display:flex;align-items:center;gap:2vw;flex-shrink:0;flex-wrap:wrap;border-bottom:5px solid var(--ca,#4A7C8E);}'
-    +'.ci{font-size:clamp(18px,2.4vw,34px);font-weight:700;}'
-    +'.cn{font-size:clamp(17px,2.2vw,32px);font-weight:600;}'
-    +'.cd{font-size:clamp(13px,1.4vw,20px);color:rgba(255,255,255,.6);}'
-    +'.cdr{font-size:clamp(13px,1.5vw,22px);color:rgba(255,255,255,.85);}'
-    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(12px,1.2vw,18px);white-space:nowrap;font-weight:500;}'
-    +'.cb{flex:1;overflow:auto;}'
+    +'.ci{font-size:clamp(22px,2.8vw,40px);font-weight:800;letter-spacing:-.01em;}'
+    +'.cn{font-size:clamp(20px,2.6vw,38px);font-weight:700;}'
+    +'.cd{font-size:clamp(14px,1.5vw,22px);color:rgba(255,255,255,.6);}'
+    +'.cdr{font-size:clamp(14px,1.6vw,23px);color:rgba(255,255,255,.85);}'
+    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'
+    +'.cb{flex:1;overflow:auto;min-height:0;}'
     +'.rtbl{width:100%;border-collapse:collapse;}'
     +'.rtbl tr{border-bottom:1px solid #eef0f3;}'
     +'.rtbl tr:last-child{border-bottom:none;}'
-    +'.rl{width:6vw;min-width:80px;padding:1.4vh 1.5vw 1.4vh 2.5vw;color:var(--lt);font-weight:700;font-size:clamp(13px,1.3vw,18px);vertical-align:top;white-space:nowrap;}'
-    +'.rv{padding:1.4vh 2.5vw 1.4vh .5vw;font-size:clamp(15px,1.6vw,22px);color:#2a3540;line-height:1.65;vertical-align:top;}'
-    +'.dg{color:var(--acc);font-style:italic;font-size:clamp(14px,1.5vw,20px)!important;}'
-    +'.pth{display:block;margin-bottom:.5vh;}'
+    +'.rl{width:6vw;min-width:82px;padding:1.5vh 1.5vw 1.5vh 2.5vw;color:var(--lt);font-weight:700;font-size:clamp(13px,1.35vw,19px);vertical-align:top;white-space:nowrap;}'
+    +'.rv{padding:1.5vh 2.5vw 1.5vh .5vw;font-size:clamp(15px,1.65vw,23px);color:#2a3540;line-height:1.65;vertical-align:top;}'
+    +'.dg{color:var(--acc);font-style:italic;font-size:clamp(14px,1.5vw,21px)!important;}'
+    +'.pth{display:block;margin-bottom:.6vh;}'
+    +'.pdt{color:var(--acc);font-weight:600;font-size:.9em;}'
     +'.ex{display:block;margin-bottom:.5vh;}'
-    +'.ct{padding:1.2vh 2.5vw;display:flex;gap:1vw;flex-wrap:wrap;background:#f8f9fa;border-top:2px solid var(--ca,var(--acc));flex-shrink:0;}'
-    +'.tp{border:2.5px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.5vh 1.4vw;border-radius:4px;font-size:clamp(13px,1.4vw,20px);font-weight:700;letter-spacing:.02em;}'
-    +'.nav-side{position:fixed;right:0;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:.4vh;z-index:100;padding:.8vw;background:rgba(20,30,40,.65);backdrop-filter:blur(10px);border-radius:12px 0 0 12px;}'
-    +'.nb{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;width:clamp(36px,3.2vw,50px);height:clamp(36px,3.2vw,50px);border-radius:8px;cursor:pointer;font-size:clamp(14px,1.4vw,20px);display:flex;align-items:center;justify-content:center;transition:all .15s;}'
-    +'.nb:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.6);}'
-    +'.ni{color:rgba(255,255,255,.85);font-size:clamp(12px,1.1vw,16px);text-align:center;padding:.5vh 0;min-width:clamp(36px,3.2vw,50px);line-height:1.3;}'
-    +'.ndiv{height:1px;background:rgba(255,255,255,.2);margin:.2vh 0;}'
-    +'.dots{display:flex;flex-direction:column;gap:.3vh;max-height:40vh;overflow:hidden;align-items:center;}'
-    +'.dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .2s;flex-shrink:0;}'
-    +'.dot.on{background:#fff;transform:scale(1.4);}'
-    +'.dot:hover{background:rgba(255,255,255,.7);}'
-    +'.bar{position:fixed;top:0;left:0;height:4px;background:var(--acc);transition:width .25s;z-index:200;}'
-    +'.pg2{position:absolute;bottom:1.5vh;left:2.5vw;font-size:clamp(12px,1.1vw,16px);color:rgba(0,0,0,.22);}'
+    +'.ct{padding:1.4vh 2.5vw;display:flex;gap:1vw;flex-wrap:wrap;background:#f8f9fa;border-top:3px solid var(--ca,var(--acc));flex-shrink:0;}'
+    +'.tp{border:2.5px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.55vh 1.5vw;border-radius:4px;font-size:clamp(14px,1.5vw,21px);font-weight:700;}'
     +'.tbl{padding:5vh 5vw;}'
     +'.th{font-size:clamp(18px,2.2vw,32px);font-weight:700;color:var(--dk);margin-bottom:2.5vh;}'
     +'.tc{font-size:.7em;color:var(--lt);font-weight:400;margin-left:1vw;}'
     +'table{width:100%;border-collapse:collapse;}'
     +'th{background:var(--dk);color:#fff;padding:1.4vh 1.8vw;text-align:left;font-size:clamp(14px,1.4vw,20px);}'
-    +'td{padding:1.2vh 1.8vw;border-bottom:1px solid #eee;font-size:clamp(14px,1.4vw,20px);line-height:1.6;vertical-align:top;}'
-    +'tr:nth-child(even) td{background:#f9fafc;}';
+    +'td{padding:1.2vh 1.8vw;border-bottom:1px solid #eee;font-size:clamp(14px,1.45vw,20px);line-height:1.6;vertical-align:top;}'
+    +'tr:nth-child(even) td{background:#f9fafc;}'
+    +'.bar{position:fixed;top:0;left:0;height:4px;background:var(--acc);transition:width .25s;z-index:200;}'
+    +'.nav-pill{position:fixed;bottom:2.5vh;right:2.5vw;display:flex;align-items:center;gap:.8vw;z-index:100;background:rgba(20,30,40,.72);backdrop-filter:blur(8px);padding:.8vh 1.6vw;border-radius:30px;}'
+    +'.nb{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;width:clamp(36px,3vw,46px);height:clamp(36px,3vw,46px);border-radius:50%;cursor:pointer;font-size:clamp(14px,1.3vw,19px);display:flex;align-items:center;justify-content:center;transition:all .15s;}'
+    +'.nb:hover:not(:disabled){background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.6);}'
+    +'.nb:disabled{opacity:.25;cursor:default;}'
+    +'.ni{color:rgba(255,255,255,.85);font-size:clamp(13px,1.2vw,18px);padding:0 .8vw;min-width:4vw;text-align:center;font-variant-numeric:tabular-nums;}';
 
   const js='var c=0,n='+N+';'
     +'function go(i){'
@@ -3434,9 +3430,6 @@ function genHTMLSlides(){
     +'if(e.key==="Home")go(0);if(e.key==="End")go(n-1);'
     +'if(e.key==="f"){var el=document.documentElement;'
     +'!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen();}});'
-    +'var dc=document.getElementById("dots");'
-    +'for(var di=0;di<n;di++){var d=document.createElement("div");d.className="dot"+(di===0?" on":"");'
-    +'(function(idx){d.onclick=function(){go(idx);};})(di);dc.appendChild(d);}'
     +'go(0);';
 
   const fullHTML='<!DOCTYPE html>\n<html lang="zh-TW"><head>\n'
@@ -3444,14 +3437,11 @@ function genHTMLSlides(){
     +'<title>'+escA(mtgTitle(cids))+' — '+escA(m.date)+'</title>\n'
     +'<style>'+css+'</style></head><body>\n'
     +'<div style="position:relative;width:100%;height:100%;">'+slides.join('')+'</div>\n'
-    +'<div class="nav-side" id="nav-side">'
-    +'<button class="nb" onclick="go(c-1)" title="上一頁 ←" id="nb-prev">&#9650;</button>'
-    +'<div class="dots" id="dots"></div>'
-    +'<div class="ndiv"></div>'
-    +'<span class="ni" id="ni">1<br>/'+N+'</span>'
-    +'<div class="ndiv"></div>'
-    +'<button class="nb" onclick="go(c+1)" title="下一頁 →" id="nb-next">&#9660;</button>'
-    +'<button class="nb" onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()" title="全螢幕 F" style="font-size:.8em">&#9974;</button>'
+    +'<div class="nav-pill">'
+    +'<button class="nb" id="nb-prev" onclick="go(c-1)">&#9664;</button>'
+    +'<span class="ni" id="ni">1&thinsp;/&thinsp;'+N+'</span>'
+    +'<button class="nb" id="nb-next" onclick="go(c+1)">&#9654;</button>'
+    +'<button class="nb" onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()" title="F">&#9974;</button>'
     +'</div>\n<div class="bar" id="bar" style="width:'+(1/N*100)+'%"></div>\n'
     +'<script>'+js+sc+'\n</body></html>';
 
