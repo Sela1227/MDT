@@ -1110,7 +1110,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.2';
+const VERSION='V3.0.3';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3318,8 +3318,24 @@ function genHTMLSlides(){
         +'</tbody></table></section>');
     }
 
-    // ── Case slides ──
+    // ── Case slides (with sub-grouping for mixed cancers) ──
+    const getSubGroup=function(c){
+      const dx=(c.diagnosis||'').toLowerCase();
+      if(/bladder|膀胱|transitional|urothelial/.test(dx))return'膀胱癌';
+      if(/prostate|攝護腺|prostatic/.test(dx))return'攝護腺癌';
+      if(/renal|kidney|腎|ccrc|clear cell/.test(dx))return'腎臟癌';
+      if(/ureter|ureteral|輸尿管/.test(dx))return'輸尿管癌';
+      if(/testicular|睪丸/.test(dx))return'睪丸癌';
+      return null;
+    };
+    // Group cases by sub-type (only if more than one sub-type detected)
+    const subGroups={};
+    cases.forEach(function(c){const sg=getSubGroup(c);const k=sg||'__none__';if(!subGroups[k])subGroups[k]=[];subGroups[k].push(c);});
+    const subKeys=Object.keys(subGroups).filter(k=>k!=='__none__');
+    const useSubGroups=subKeys.length>1;
+    let caseIndex=0;
     cases.forEach((c,ci)=>{
+      const sg=useSubGroups?getSubGroup(c):null;
       const drs=getDoctorStr(c)||'—';
       const ph=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
       const pathItems=(c.pathologies&&c.pathologies.length)?c.pathologies
@@ -3351,6 +3367,17 @@ function genHTMLSlides(){
         mkRow('討論',escA(c.discussion||'')),
       ].join('');
 
+      // Insert sub-group title slide when group changes
+      if(useSubGroups&&sg){
+        const isFirst=ci===0||getSubGroup(cases[ci-1])!==sg;
+        if(isFirst){
+          slides.push('<section class="slide sec" style="--ca:'+caColor+';opacity:.85;">'
+            +'<div class="sn" style="font-size:clamp(32px,5vw,64px)">'+escA(sg)+'</div>'
+            +'<div class="sd">'+escA(ca.name)+'</div>'
+            +'</section>');
+        }
+      }
+      caseIndex++;
       slides.push('<section class="slide case" style="--ca:'+caColor+';">'
         +'<div class="ch">'
         +'<div class="ci">'+escA(c.chartNo||'')+'&nbsp;<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
@@ -3362,7 +3389,7 @@ function genHTMLSlides(){
         +'<table class="rtbl">'+rows+'</table>'
         +'</div>'
         +(chips?'<div class="ct">'+chips+'</div>':'')
-        +'<div class="pg2">'+(ci+1)+'/'+cases.length+'</div>'
+        +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
         +'</section>');
     });
 
