@@ -1111,7 +1111,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.11';
+const VERSION='V3.0.12';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2720,7 +2720,7 @@ function caseHTML(cid,i,d){
   const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
   const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
-  return`<div class="casecard" id="cc-${cid}-cases-${i}">
+  return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
 <div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 
@@ -3551,7 +3551,7 @@ function genHTMLSlides(){
     +'.cn{font-size:clamp(20px,2.6vw,38px);font-weight:700;}'
     +'.cd{font-size:clamp(14px,1.5vw,22px);color:rgba(255,255,255,.6);}'
     +'.cdr{font-size:clamp(14px,1.6vw,23px);color:rgba(255,255,255,.85);}'
-    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'+'.cdx{font-size:clamp(14px,1.6vw,22px);color:rgba(255,255,255,.8);line-height:1.45;font-style:italic;}'
+    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'+'.cdx{font-size:clamp(16px,2vw,28px);color:rgba(255,255,255,.85);line-height:1.45;font-style:italic;}'
     +'.cb{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}'
     +'.cb-cols{display:flex;flex:1;min-height:0;overflow:hidden;}'
     +'.cb-l{flex:1;overflow:auto;border-right:2px solid #eef0f3;}'
@@ -4334,9 +4334,24 @@ document.addEventListener('click',function(e){
   const tog=e.target.closest('[data-action="togglecase"]');
   if(tog){
     const card=document.getElementById(tog.dataset.card);if(!card)return;
-    const collapsed=card.classList.toggle('cc-collapsed');
+    const willOpen=card.classList.contains('cc-collapsed');
+    // Accordion: close all sibling casecards in same container
+    if(willOpen){
+      const container=card.parentElement;
+      if(container){
+        container.querySelectorAll('.casecard').forEach(sib=>{
+          if(sib!==card){
+            sib.classList.add('cc-collapsed');
+            const sid=sib.id;if(!sid)return;
+            const icon2=document.getElementById('tgi-'+sid.slice(3));
+            if(icon2)icon2.textContent='▶';
+          }
+        });
+      }
+    }
+    card.classList.toggle('cc-collapsed');
     const icon=document.getElementById('tgi-'+tog.dataset.card.slice(3));
-    if(icon)icon.textContent=collapsed?'▶':'▼';
+    if(icon)icon.textContent=willOpen?'▼':'▶';
     return;
   }
 });
