@@ -2500,7 +2500,7 @@ ${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gen
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body" style="display:none">
-${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>`<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">${escA((p.date?p.date+' ':'')+p.content||'')}</span></div>`).join('');})()}${(()=>{
+${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(p.date)+'</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
   const exArr=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const exStr=exArr.map(ex=>[(ex.name||''),(ex.date?'('+ex.date+')':''),' ',(ex.content||'')].join('').trim()).filter(Boolean).join('\n');
   return row('檢查', exStr||d.exam||'');
