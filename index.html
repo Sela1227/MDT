@@ -483,68 +483,117 @@ textarea{resize:vertical}
 }
 
 @media print {
-  /* Hide everything except meeting content */
+  /* ── Hide all UI chrome ── */
   #sb-left, #mobile-nav, .mob-sheet, #mobile-cancer-sheet,
-  #mobile-user-sheet, .output-section, .sec-foot, .info-edit,
-  #btn-back-mtg, #btn-del-mtg, #mtg-top-bar, .rec-edit-ctrl,
-  .rec-save-ctrl, #del-confirm-modal, #cf-modal, #img-modal,
-  .btnadd, .delbtn, #rec-save-msg, #save-msg, #infobar { display:none !important; }
+  #mobile-user-sheet, #mtg-top-bar, #infobar,
+  .output-section, .sec-foot, .info-edit, .rec-edit-ctrl, .rec-save-ctrl,
+  #btn-back-mtg, #btn-del-mtg, #mtg-mode-tag,
+  #del-confirm-modal, #cf-modal, #img-modal,
+  .btnadd, .delbtn, #rec-save-msg, #save-msg,
+  #cases-sub, #print-cancel,
+  .view-mode .info-edit { display:none !important; }
 
-  /* Page setup */
-  @page { size: A4 portrait; margin: 15mm 12mm; }
-  body { background: white !important; font-size: 11pt; }
+  /* ── Page setup ── */
+  @page { size: A4 portrait; margin: 12mm 14mm 14mm; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body, #sh-app { background: white !important; }
 
-  /* Meeting title */
-  #mtg-title { font-size: 16pt; font-weight: bold; margin-bottom: 4mm; }
-  #mtg-sub { font-size: 11pt; color: #555; margin-bottom: 6mm; }
+  /* ── Show only meeting view ── */
+  #sh-login, #sh-loading { display: none !important; }
+  #sh-app { display: block !important; }
+  #view-meeting { display: block !important; }
+  #view-home, #view-settings, #view-history, #view-cancer { display: none !important; }
 
-  /* Info doc rows */
-  .doc-row { display: flex; gap: 8px; padding: 3px 0;
-             border-bottom: 1px solid #eee; font-size: 10pt; }
-  .doc-lbl { width: 60px; color: #666; flex-shrink: 0; }
+  /* ── Print header (injected by printMeeting) ── */
+  #print-header {
+    display: block !important;
+    background: #3A4550 !important;
+    color: white !important;
+    padding: 10mm 12mm 8mm;
+    margin: -12mm -14mm 8mm;
+    page-break-after: avoid;
+  }
+  #print-header .ph-title {
+    font-size: 17pt; font-weight: bold; margin-bottom: 3mm; letter-spacing: .5px;
+  }
+  #print-header .ph-meta {
+    font-size: 10pt; opacity: .85; line-height: 1.8;
+  }
+  #print-header .ph-members {
+    font-size: 9pt; opacity: .65; margin-top: 2mm; border-top: 1px solid rgba(255,255,255,.2); padding-top: 2mm;
+  }
 
-  /* Section headers */
-  .sh-track-hdr, .subhdr { font-size: 11pt; font-weight: bold;
-    padding: 4px 0; border-bottom: 2px solid #3A4550;
-    margin: 8mm 0 3mm; color: #3A4550; }
+  /* ── Cases section title ── */
+  #cases-hdr-title { font-size: 12pt; font-weight: bold; color: #3A4550;
+    border-bottom: 2px solid #3A4550; padding-bottom: 2mm; margin-bottom: 4mm; }
+
+  /* ── Section headers ── */
+  .sh-track-hdr, .subhdr {
+    font-size: 11pt; font-weight: bold;
+    padding: 3px 0; border-bottom: 2px solid #3A4550;
+    margin: 6mm 0 3mm; color: #3A4550;
+  }
   .sh-track-dot, .sh-dot { display: none; }
 
-  /* Case card: one per page */
-  .vc { page-break-inside: avoid; margin-bottom: 6mm;
-        border: 1px solid #ddd; border-radius: 3px; }
-  .vc + .vc { page-break-before: always; }
+  /* ── Track / followup cards ── */
+  .vc[style*="border-left"] {
+    border-left: 3px solid #9BAAB6 !important;
+    margin-bottom: 3mm;
+    page-break-inside: avoid;
+  }
 
-  /* Case header */
-  .vc-hdr { background: #3A4550 !important; color: white !important;
-            padding: 6px 10px; -webkit-print-color-adjust: exact;
-            print-color-adjust: exact; }
-  .vc-hdr-sub { color: #aac !important; font-size: 9pt; }
+  /* ── Case cards ── */
+  .vc {
+    margin-bottom: 0;
+    page-break-before: always;
+    page-break-inside: avoid;
+    border: none;
+  }
+  .vc:first-of-type { page-break-before: avoid; }
 
-  /* Case rows */
-  .vc-r { display: flex; border-bottom: 1px solid #f0f0f0;
-          padding: 4px 10px; font-size: 10pt; }
-  .vc-l { width: 70px; color: #666; flex-shrink: 0; font-size: 9pt;
-          padding-top: 1px; }
-  .vc-v { flex: 1; white-space: pre-wrap; line-height: 1.5; }
+  .vc-hdr {
+    background: #3A4550 !important;
+    color: white !important;
+    padding: 6px 10px;
+    border-radius: 3px 3px 0 0;
+  }
+  .vc-hdr-sub { color: #B0C8D0 !important; font-size: 9pt; display: block; margin-top: 2px; }
 
-  /* Topics chips */
-  .vc-chips { padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px; }
-  .vc-chip { border: 1px solid #3A4550; padding: 2px 8px;
-             border-radius: 2px; font-size: 9pt; color: #3A4550; }
+  .vc-body { border: 1px solid #ddd; border-top: none; border-radius: 0 0 3px 3px; }
 
-  /* Summary/decision */
-  .vc-rec { background: #f7f8fa; padding: 6px 10px; }
+  .vc-r {
+    display: flex;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 4px 10px;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  .vc-r:last-child { border-bottom: none; }
+  .vc-l {
+    width: 70px; min-width: 70px; color: #637281; flex-shrink: 0;
+    font-size: 9pt; padding-top: 1px;
+  }
+  .vc-v { flex: 1; white-space: pre-wrap; line-height: 1.6; word-break: break-word; }
 
-  /* Track cards (followup/team/events) */
-  .vc[style*="border-left"] { border-left: 3px solid #9BAAB6 !important; }
+  /* ── Topics chips ── */
+  .vc-chips { padding: 5px 10px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .vc-chip {
+    border: 1px solid #3A4550; padding: 2px 8px;
+    border-radius: 2px; font-size: 9pt; color: #3A4550;
+  }
 
-  /* Page break between cancer sections */
-  .subsec { page-break-inside: avoid; }
-  hr.rule { border: none; border-top: 1px solid #ddd; margin: 4mm 0; }
+  /* ── Summary box ── */
+  .vc-rec { background: #f7f8fa !important; padding: 6px 10px; border-top: 1px solid #eee; }
 
-  /* Hide empty placeholders */
+  /* ── Special agenda ── */
+  hr.rule { border: none; border-top: 1px solid #ddd; margin: 3mm 0; }
   .sh-empty { display: none; }
+
+  /* ── Hide wrap padding ── */
+  .wrap { padding: 0 !important; max-width: 100% !important; }
+  #view-meeting { padding: 0 !important; }
 }
+
 </style>>
 </head>
 <body>
@@ -1053,7 +1102,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.9.0';
+const VERSION='V2.9.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2478,7 +2527,7 @@ function casesPane(cid){
   const sFn=vm?specialViewHTML:specialHTML;
   // Pre-build add buttons (cid is in scope, no complex concat)
   const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>');
-  const bCase=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'cases\')">+ 新增討論個案</button>');
+  const bCase=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'cases\')">+ 新增討論個案</button><button class="btnadd" onclick="openImportCase(\'' + cid + \'\')" style="border-style:dashed">+ 匯入個案（JSON）</button>');
   const bSpec=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'special\')">+ 新增特殊議程</button>');
   const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">+ 新增醫療小組討論個案</button>');
   const events=sec.events||[];
@@ -3138,16 +3187,77 @@ function importAllJSON(input){
 }
 
 
+let _importCaseCid = null;
+
+function openImportCase(cid){
+  _importCaseCid = cid;
+  document.getElementById('import-case-json').value = '';
+  document.getElementById('import-case-err').textContent = '';
+  document.getElementById('import-case-modal').style.display = 'flex';
+}
+function closeImportCase(){
+  document.getElementById('import-case-modal').style.display = 'none';
+  _importCaseCid = null;
+}
+function doImportCase(){
+  const raw = document.getElementById('import-case-json').value.trim();
+  const errEl = document.getElementById('import-case-err');
+  if(!raw){errEl.textContent = '請貼入 JSON 內容';return;}
+  let data;
+  try{data = JSON.parse(raw);}
+  catch(e){errEl.textContent = 'JSON 格式錯誤：' + e.message;return;}
+  // Support array (import multiple) or single object
+  const cases = Array.isArray(data) ? data : [data];
+  const cid = _importCaseCid;
+  ensureSec(cid);
+  cases.forEach(d=>{
+    const blank = {
+      id:uid(), chartNo:d.chartNo||'', name:d.name||'',
+      age:String(d.age||''), gender:d.gender||'M',
+      doctors: Array.isArray(d.doctors)?d.doctors:['','',''],
+      doctor: d.doctor||'',
+      diagnosis: d.diagnosis||'',
+      cc: d.cc||'', ph: d.ph||'',
+      phChips: Array.isArray(d.phChips)?d.phChips:[],
+      pathology: d.pathology||'', pathologyDate: d.pathologyDate||'',
+      pathologies: Array.isArray(d.pathologies)?d.pathologies:[],
+      exams: Array.isArray(d.exams)?d.exams:[],
+      treatments: Array.isArray(d.treatments)?d.treatments:[],
+      discussion: d.discussion||'',
+      topics: Array.isArray(d.topics)?d.topics:['影像討論','分期討論','治療策略討論'],
+      summary: d.summary||'', decision: d.decision||'',
+      images: [], note: d.note||''
+    };
+    S.meeting.sections[cid].cases.push(blank);
+  });
+  closeImportCase();
+  renderCasesInner();
+  markDirty();
+  showSaveToast('已匯入 ' + cases.length + ' 筆個案資料');
+}
+
+
 function printMeeting(){
-  if(!S.meeting?.version){
-    alert('請先儲存會議資料');return;
-  }
-  // Ensure view mode before printing
+  if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   if(!S.viewMode){
-    if(!confirm('列印前會先切換到閱覽模式，確定繼續？'))return;
     S.viewMode=true;S.meetingMode='record';renderEditor();
   }
-  setTimeout(()=>window.print(), 300);
+  // Inject print header
+  let ph=document.getElementById('print-header');
+  if(!ph){ph=document.createElement('div');ph.id='print-header';ph.style.display='none';
+    document.getElementById('view-meeting').prepend(ph);}
+  const m=S.meeting,cids=S.cids;
+  const owners=[];
+  cids.forEach(cid=>{const o=USERS.find(u=>u.cancers?.includes(cid));if(o&&!owners.find(x=>x.id===o.id))owners.push(o);});
+  const contact=owners.filter(o=>o.ext).map(o=>o.name+'('+o.ext+')').join(' ')||'暫無專職個管師';
+  const memberLines=cids.map(cid=>{const ca=CFG[cid];const convName=ca.conv?.includes('::')?ca.conv.split('::')[1]:ca.conv||'';return`${ca.name}　召集人：${convName}　核心成員：${getMemberStr(ca)}`}).join('<br>');
+  ph.innerHTML=`<div class="ph-title">${escA(mtgTitle(cids))}</div>`
+    +`<div class="ph-meta">`
+    +`${rocDate(m.date)}&nbsp;&nbsp;${m.time||''}<br>`
+    +`地點：${escA(m.loc||'')}　　聯絡人：${escA(contact)}`
+    +(m.zoom?.id?`<br>Zoom：${escA(m.zoom.id)}　密碼：${escA(m.zoom.pwd||'')}`:'')+`</div>`
+    +(memberLines?`<div class="ph-members">${memberLines}</div>`:'');
+  setTimeout(()=>{window.print();},400);
 }
 
 
@@ -3735,6 +3845,34 @@ if(lgVer)lgVer.textContent=VERSION;
 
 
 </script>
+<!-- Import Case Modal -->
+<div id="import-case-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:4px;padding:24px;width:min(600px,92vw);max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+    <div style="font-size:15px;font-weight:600;color:var(--fog-dk);margin-bottom:8px">匯入個案資料（JSON）</div>
+    <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">將 AI 產出的 JSON 貼入下方，系統自動填入個案欄位。</div>
+    <textarea id="import-case-json" rows="12" placeholder='貼入 JSON，例如：
+{
+  "chartNo": "816106",
+  "name": "周安泉",
+  "age": "71",
+  "gender": "M",
+  "diagnosis": "Metastatic prostate adenocarcinoma...",
+  "cc": "Lower back pain...",
+  "ph": "Not mentioned.",
+  "pathologies": [{"date":"2026-03-04","content":"Prostatic adenocarcinoma..."}],
+  "exams": [{"name":"CT","date":"2026-02-26","content":"..."}],
+  "treatments": [{"name":"ADT","date":"2026-03-30","content":"..."}],
+  "discussion": "後續治療",
+  "topics": ["影像討論","治療策略討論"]
+}' style="width:100%;font-size:12px;padding:8px;border:1px solid var(--border);border-radius:3px;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea>
+    <div id="import-case-err" style="color:var(--err);font-size:12px;margin-top:6px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button class="btn btn-b btn-sm" onclick="closeImportCase()">取消</button>
+      <button class="btn btn-a btn-sm" onclick="doImportCase()">匯入</button>
+    </div>
+  </div>
+</div>
+
 <!-- Mobile Bottom Navigation -->
 <nav id="mobile-nav">
   <div class="mob-nav-item on" id="mnav-cal" onclick="showHome();setMNav('mnav-cal')">
