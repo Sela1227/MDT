@@ -2755,8 +2755,7 @@ async function genPPTX(){
       addRow('過去病史',phAll||null);
       // Pathology (structured list)
       if((c.pathologies||[]).length){
-        const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('
-');
+        const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('\n');
         addRow('病理',pStr);
       } else if(c.pathology){addRow('病理',(c.pathologyDate?c.pathologyDate+' ':'')+c.pathology);}
       // Exams (structured list)
@@ -2887,8 +2886,7 @@ async function genDOCX(){
           if(c.cc)infoRows.push(mkRow('現病史',c.cc));
           const phAll2=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
           if(phAll2)infoRows.push(mkRow('過去病史',phAll2));
-          if((c.pathologies||[]).length){const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('
-');infoRows.push(mkRow('病理',pStr));}
+          if((c.pathologies||[]).length){const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('\n');infoRows.push(mkRow('病理',pStr));}
           else if(c.pathology){infoRows.push(mkRow('病理',(c.pathologyDate?c.pathologyDate+' ':'')+c.pathology));}
           // Exams (structured list)
           const exStr2=(c.exams||[]).length
