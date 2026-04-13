@@ -224,6 +224,8 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.8.3 | 修正新增條目日期消失（移除編輯排序）；PPTX行高更保守 |
+| V2.8.2 | 病理/檢查/治療欄位排版改善 |
 | V2.8.1 | 修正SyntaxError：PPTX split換行符 |
 | V2.8.0 | 病理多筆條列；PPTX addRow動態行高修正重疊 |
 | V2.7.7 | LINE通知每位病人加癌別標籤【癌別名】 |
