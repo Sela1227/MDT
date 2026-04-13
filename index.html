@@ -123,7 +123,7 @@ textarea{resize:vertical}
 .sh-track-dot{width:5px;height:5px;border-radius:50%;background:var(--fog-lt);flex-shrink:0}
 .sh-empty{font-size:12px;color:var(--textlt);font-style:italic;padding:4px 0}
 .rule{border:none;border-top:1px solid var(--blt);margin:14px 0}
-.casecard{border:1px solid var(--blt);border-left:3px solid var(--cream-dk);border-radius:2px;padding:11px 13px;margin-bottom:6px;background:var(--surface);transition:border-color .15s}.fsec{grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);padding:8px 0 4px;border-bottom:1px solid var(--blt);margin-bottom:2px}
+.casecard{border:1px solid var(--blt);border-left:3px solid var(--cream-dk);border-radius:2px;padding:11px 13px;margin-bottom:6px;background:var(--surface);transition:border-color .15s}.field-hdr{display:flex;align-items:center;gap:8px;margin-bottom:4px;}.field-hdr label{margin-bottom:0;}.fsec{grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);padding:8px 0 4px;border-bottom:1px solid var(--blt);margin-bottom:2px}
 .casecard.cc-collapsed>.cg2,.casecard.cc-collapsed>.fg,.casecard.cc-collapsed>.struct-row{display:none!important}
 .cc-toggle-icon{margin-left:0;margin-right:6px;font-size:10px;opacity:.5;display:inline-block;transition:transform .15s;flex-shrink:0}
 .casecard:hover{border-color:var(--border);border-left-color:var(--fog-lt)}
@@ -1111,7 +1111,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.12';
+const VERSION='V3.0.13';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2745,18 +2745,18 @@ function caseHTML(cid,i,d){
     <div class="trow" style="margin-bottom:6px">${chips2}</div>
     ${inp('ph',d.ph,'其他病史')}
   </div>
-  <div class="fg full"><label>癌指數${addBtn('markers')}</label>
+  <div class="fg full"><div class="field-hdr"><label>癌指數</label>${addBtn('markers')}</div>
     <div id="marklist-${cid}-${i}">${markerRows}</div>
   </div>
 
   <div class="fsec">臨床資料</div>
-  <div class="fg full"><label>病理${addBtn('pathologies')}</label>
+  <div class="fg full"><div class="field-hdr"><label>病理</label>${addBtn('pathologies')}</div>
     <div id="pathlist-${cid}-${i}">${pathRows}</div>
   </div>
-  <div class="fg full"><label>檢查${addBtn('exams')}</label>
+  <div class="fg full"><div class="field-hdr"><label>檢查</label>${addBtn('exams')}</div>
     <div id="examlist-${cid}-${i}">${examRows}</div>
   </div>
-  <div class="fg full"><label>治療${addBtn('treatments')}</label>
+  <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
 
@@ -4328,11 +4328,11 @@ document.addEventListener('click',function(e){
     markDirty();return;
   }
   const addst=e.target.closest('[data-action="addstruct"]');
-  if(addst){addStruct(addst.dataset.cid,parseInt(addst.dataset.caseidx),addst.dataset.field);return;}
+  if(addst){e.stopPropagation();addStruct(addst.dataset.cid,parseInt(addst.dataset.caseidx),addst.dataset.field);return;}
   const delst=e.target.closest('[data-action="delstruct"]');
   if(delst){delStruct(delst.dataset.cid,parseInt(delst.dataset.caseidx),delst.dataset.field,parseInt(delst.dataset.rowid));return;}
   const tog=e.target.closest('[data-action="togglecase"]');
-  if(tog){
+  if(tog&&e.target.closest('.casetop')){
     const card=document.getElementById(tog.dataset.card);if(!card)return;
     const willOpen=card.classList.contains('cc-collapsed');
     // Accordion: close all sibling casecards in same container
