@@ -988,7 +988,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.8.3';
+const VERSION='V2.8.4';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2486,25 +2486,25 @@ function caseHTML(cid,i,d){
   // Exams sorted by date
   const exams=(d.exams||[]);
   const examRows=exams.map((ex,ei)=>`
-    <div class="struct-row">
-      <div class="struct-fields">
-        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="其他"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>
-        <input type="date" value="${escA(ex.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="date">
-        <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5">${escA(ex.content||'')}</textarea>
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}">×</button>
+    <div class="struct-row" style="position:relative">
+      <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
+        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="其他"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>
+        <input type="date" value="${escA(ex.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" style="margin-left:auto">×</button>
       </div>
+      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(ex.content||'')}</textarea>
     </div>`).join('');
 
   // Treatments sorted by date
   const trts=(d.treatments||[]);
   const trtRows=trts.map((tr,ti)=>`
-    <div class="struct-row">
-      <div class="struct-fields">
-        <input placeholder="項目" value="${escA(tr.name||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="name">
-        <input type="date" value="${escA(tr.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="date">
-        <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5">${escA(tr.content||'')}</textarea>
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}">×</button>
+    <div class="struct-row" style="position:relative">
+      <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
+        <input placeholder="項目 (化療/放療/手術...)" value="${escA(tr.name||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="name" style="flex:1">
+        <input type="date" value="${escA(tr.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" style="margin-left:auto">×</button>
       </div>
+      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(tr.content||'')}</textarea>
     </div>`).join('');
 
   // Topics
@@ -2741,16 +2741,27 @@ async function genPPTX(){
       if(c.diagnosis)txt(s,c.diagnosis,.18,.42,8,.26,{fontSize:11,color:'B0C4CC'});
 
       let y=.85;
+      // Slide management for overflow
+      let curSlide=s;
+      const pageHdr=()=>{
+        const ns=pptx.addSlide();
+        addBg(ns,'FFFFFF');
+        ns.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.4,fill:{color:C.dk},line:{color:C.dk,pt:0}});
+        txt(ns,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+drs,
+          .18,.07,8,.3,{fontSize:11,bold:true,color:C.white});
+        return ns;
+      };
       const addRow=(label,val,opt={})=>{
         if(!val)return;
-        // Dynamic height: conservative estimate (chars/55 per line at 10.5pt)
         const lines=String(val).split('\n').reduce((sum,l)=>sum+Math.max(1,Math.ceil(l.length/55)),0);
         const rowH=Math.max(.34,lines*.22+.14);
-        s.addShape(pptx.ShapeType.rect,{x:.18,y,w:1.1,h:rowH,fill:{color:C.surface},line:{color:C.surface,pt:0}});
-        txt(s,label,.2,y+.04,1.05,rowH-.06,{fontSize:9.5,bold:true,color:C.md,valign:'top'});
-        s.addShape(pptx.ShapeType.rect,{x:1.3,y,w:W-1.48,h:rowH,fill:{color:'FFFFFF'},line:{color:'DDE2E7',pt:.5}});
-        txt(s,val,1.34,y+.04,W-1.52,rowH-.06,{fontSize:10.5,color:C.dk,wrap:true,valign:'top',...opt});
-        y+=rowH+.04;
+        // Start new slide if overflow
+        if(y+rowH>5.3){curSlide=pageHdr();y=.55;}
+        curSlide.addShape(pptx.ShapeType.rect,{x:.18,y,w:1.1,h:rowH,fill:{color:C.surface},line:{color:C.surface,pt:0}});
+        txt(curSlide,label,.2,y+.04,1.05,rowH-.06,{fontSize:9.5,bold:true,color:C.md,valign:'top'});
+        curSlide.addShape(pptx.ShapeType.rect,{x:1.3,y,w:W-1.48,h:rowH,fill:{color:'FFFFFF'},line:{color:'DDE2E7',pt:.5}});
+        txt(curSlide,val,1.34,y+.04,W-1.52,rowH-.06,{fontSize:10.5,color:C.dk,wrap:true,valign:'top',...opt});
+        y+=rowH+.05;
       };
       addRow('現病史',c.cc);
       // PH: phChips + free text
@@ -2773,13 +2784,15 @@ async function genPPTX(){
       } else if(c.treatment){addRow('治療',c.treatment);}
       if(c.discussion)addRow('討論',c.discussion);
 
-      // Topics chips
+      // Topics chips (on current slide, near bottom)
       if((c.topics||[]).length){
+        if(y>4.8){curSlide=pageHdr();y=.55;}
+        const chipY=Math.max(y+.1,H-.45);
         let tx=.18;
         c.topics.forEach(t=>{
-          s.addShape(pptx.ShapeType.roundRect,{x:tx,y:4.85,w:t.length*.145+.2,h:.22,fill:{color:C.acc},line:{color:C.acc,pt:0},rectRadius:.06});
-          txt(s,t,tx+.06,4.87,t.length*.145+.14,.18,{fontSize:9,bold:true,color:C.white});
-          tx+=t.length*.145+.28;
+          curSlide.addShape(pptx.ShapeType.roundRect,{x:tx,y:chipY,w:t.length*.13+.2,h:.22,fill:{color:C.acc},line:{color:C.acc,pt:0},rectRadius:.06});
+          txt(curSlide,t,tx+.05,chipY+.02,t.length*.13+.16,.18,{fontSize:9,bold:true,color:C.white});
+          tx+=t.length*.13+.24;
         });
       }
 
