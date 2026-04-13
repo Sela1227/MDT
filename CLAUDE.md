@@ -224,6 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V2.8.6 | PPTX標題列簡化（不放診斷），診斷移入內容列 |
 | V2.8.5 | 修正PPTX/Excel下載權限問題（改用arraybuffer→Blob）|
 | V2.8.4 | 檢查/治療兩行版面；PPTX個案自動多頁 |
 | V2.8.3 | 修正新增條目日期消失（移除編輯排序）；PPTX行高更保守 |

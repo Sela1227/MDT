@@ -988,7 +988,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.8.5';
+const VERSION='V2.8.6';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2734,21 +2734,20 @@ async function genPPTX(){
       // Main case info slide
       const s=pptx.addSlide();
       addBg(s,'FFFFFF');
-      // Header bar
-      s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.7,fill:{color:C.dk},line:{color:C.dk,pt:0}});
+      // Header bar: single line, no diagnosis
+      s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.52,fill:{color:C.dk},line:{color:C.dk,pt:0}});
       txt(s,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+(c.gender||'M')+'/'+(c.age||'—')+'  VS '+drs,
-        .18,.09,8,.5,{fontSize:14,bold:true,color:C.white});
-      if(c.diagnosis)txt(s,c.diagnosis,.18,.42,8,.26,{fontSize:11,color:'B0C4CC'});
+        .18,.11,8.4,.3,{fontSize:14,bold:true,color:C.white,valign:'middle'});
 
-      let y=.85;
+      let y=.62;
       // Slide management for overflow
       let curSlide=s;
       const pageHdr=()=>{
         const ns=pptx.addSlide();
         addBg(ns,'FFFFFF');
-        ns.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.4,fill:{color:C.dk},line:{color:C.dk,pt:0}});
-        txt(ns,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+drs,
-          .18,.07,8,.3,{fontSize:11,bold:true,color:C.white});
+        ns.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.42,fill:{color:C.dk},line:{color:C.dk,pt:0}});
+        txt(ns,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+(c.gender||'M')+'/'+(c.age||'—')+'  VS '+drs,
+          .18,.09,8.4,.26,{fontSize:12,bold:true,color:C.white,valign:'middle'});
         return ns;
       };
       const addRow=(label,val,opt={})=>{
@@ -2763,6 +2762,7 @@ async function genPPTX(){
         txt(curSlide,val,1.34,y+.04,W-1.52,rowH-.06,{fontSize:10.5,color:C.dk,wrap:true,valign:'top',...opt});
         y+=rowH+.05;
       };
+      addRow('診斷',c.diagnosis);
       addRow('現病史',c.cc);
       // PH: phChips + free text
       const phAll=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
