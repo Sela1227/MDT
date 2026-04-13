@@ -3321,7 +3321,7 @@ function genHTMLSlides(){
       const drs=getDoctorStr(c)||'—';
       const ph=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
       const paths=(c.pathologies||[]).length
-        ?(c.pathologies||[]).map(p=>'<span class="pth">'+escA((p.date?p.date+'&nbsp;':'')+p.content)+'</span>').join('')
+        ?(c.pathologies||[]).map(p=>'<span class="pth">'+(p.date?'<span class="pdt">'+escA(p.date)+'</span>&ensp;':'')+escA(p.content)+'</span>').join('')
         :(c.pathology?'<span class="pth">'+(c.pathologyDate?'<span class="pdt">'+escA(c.pathologyDate)+'</span> ':'')+escA(c.pathology)+'</span>':'');
       const exs=(c.exams||[]).length
         ?(c.exams||[]).map(e=>'<span class="ex"><b>'+escA(e.name||'')+(e.date?'('+e.date+')':'')+'</b>'+(e.content?'&nbsp;'+escA(e.content):'')+'</span>').join('')
