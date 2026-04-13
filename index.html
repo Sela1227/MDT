@@ -1110,7 +1110,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.6';
+const VERSION='V3.0.7';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2660,7 +2660,7 @@ function caseHTML(cid,i,d){
   const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
   const chips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
-  return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
+  return`<div class="casecard" id="cc-${cid}-cases-${i}">
 <div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 <div class="fg"><label>病歷號</label>${inp('chartNo',d.chartNo,'病歷號')}</div>
@@ -2708,7 +2708,7 @@ function caseHTML(cid,i,d){
 </div></div>`;
 }
 
-function followupHTML(cid,i,d){return`<div class="casecard track-card cc-collapsed" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','followups',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','followups',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','followups',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','followups',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','followups',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','followups',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,'followups',i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,'followups',i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
@@ -2732,7 +2732,7 @@ function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const
   const _fcid=_sfx?(cid+_sfx):cid;
   div.innerHTML=realType2==='cases'?caseHTML(realCid2||cid,i,blank):
     realType2==='followups'||realType2==='team'||realType2==='events'?followupHTML(_fcid,i,blank):
-    specialHTML(realCid2||cid,i,blank);const newCard=div.firstElementChild;newCard.classList.add('cc-collapsed');cont.appendChild(newCard)}
+    specialHTML(realCid2||cid,i,blank);const newCard=div.firstElementChild;cont.appendChild(newCard)}
 function upd(cid,type,i,field,val){
   ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;item[field]=val;markDirty();const card=document.getElementById('cc-'+cid+'-'+type+'-'+i);if(!card)return;if(field==='name'){card.querySelector('.cnm').textContent=val?maskName(val):'姓名'}if(field==='chartNo')card.querySelector('.cno').textContent=val||'病歷號';if(field==='title')card.querySelector('.cnm').textContent=val||'議程項目'}
 function updTopics(cid,type,i,topic,checked,el){ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;if(!item.topics)item.topics=[];if(checked){if(!item.topics.includes(topic))item.topics.push(topic)}else item.topics=item.topics.filter(t=>t!==topic);el.classList.toggle('on',checked);markDirty()}
@@ -3811,7 +3811,7 @@ function genLine(){
 
     // 1. 前期追蹤
     t+=`\n　${n}.前期追蹤個案：`;
-    if(fups.length){fups.forEach(c=>{t+=`\n　　${tag}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.prevDate?'　【前次 '+c.prevDate+'】':''}${c.note?'\n　　　'+c.note:''}`});}
+    if(fups.length){fups.forEach(c=>{t+=`\n　　${tag(c)}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.prevDate?'　【前次 '+c.prevDate+'】':''}${c.note?'\n　　　'+c.note:''}`});}
     else t+=`無`;
     n++;
 
@@ -3819,7 +3819,7 @@ function genLine(){
     t+=`\n　${n}.個案討論：`;
     if(cases.length){cases.forEach(c=>{
       const tp=c.topics?.length?`（${c.topics.join('、')}）`:'';
-      t+=`\n　　${tag}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}`;
+      t+=`\n　　${tag(c)}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}`;
       if(c.diagnosis)t+=`\n　　　診斷：${c.diagnosis}`;
       if(tp)t+=`\n　　　討論：${tp}`;
     });}
@@ -3828,13 +3828,13 @@ function genLine(){
 
     // 3. 醫療小組
     t+=`\n　${n}.醫療小組：`;
-    if(team.length){team.forEach(c=>{t+=`\n　　${tag}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
+    if(team.length){team.forEach(c=>{t+=`\n　　${tag(c)}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
     else t+=`無`;
     n++;
 
     // 4. 必要事件
     t+=`\n　${n}.必要事件：`;
-    if(events.length){events.forEach(c=>{t+=`\n　　${tag}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
+    if(events.length){events.forEach(c=>{t+=`\n　　${tag(c)}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}${c.note?'\n　　　'+c.note:''}`});}
     else t+=`無`;
     n++;
 
