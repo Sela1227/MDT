@@ -985,7 +985,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.8.0';
+const VERSION='V2.8.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2741,8 +2741,7 @@ async function genPPTX(){
       const addRow=(label,val,opt={})=>{
         if(!val)return;
         // Dynamic height: estimate lines (chars per line ~80 at this font/width)
-        const lines=String(val).split('
-').reduce((sum,l)=>sum+Math.max(1,Math.ceil(l.length/78)),0);
+        const lines=String(val).split('\n').reduce((sum,l)=>sum+Math.max(1,Math.ceil(l.length/78)),0);
         const rowH=Math.max(.28,lines*.2+.1);
         s.addShape(pptx.ShapeType.rect,{x:.18,y,w:1.1,h:rowH,fill:{color:C.surface},line:{color:C.surface,pt:0}});
         txt(s,label,.2,y+.04,1.05,rowH-.06,{fontSize:9.5,bold:true,color:C.md,valign:'top'});
