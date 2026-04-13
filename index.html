@@ -485,13 +485,16 @@ textarea{resize:vertical}
 @media print {
   /* ── Hide all UI chrome ── */
   #sb-left, #mobile-nav, .mob-sheet, #mobile-cancer-sheet,
-  #mobile-user-sheet, #mtg-top-bar, #infobar,
-  .output-section, .sec-foot, .info-edit, .rec-edit-ctrl, .rec-save-ctrl,
+  #mobile-user-sheet, #mtg-top-bar,
+  [id^="infobar"], .sec-foot, .info-edit, .rec-edit-ctrl, .rec-save-ctrl,
   #btn-back-mtg, #btn-del-mtg, #mtg-mode-tag,
-  #del-confirm-modal, #cf-modal, #img-modal,
-  .btnadd, .delbtn, #rec-save-msg, #save-msg,
-  #cases-sub, #print-cancel,
+  #del-confirm-modal, #cf-modal, #img-modal, #import-case-modal,
+  .btnadd, .delbtn, #rec-save-msg, #save-msg, #cases-sub,
+  .output-section, .sec-hdr-btns, .sec-hdr button,
   .view-mode .info-edit { display:none !important; }
+  /* Hide the cases section header toolbar */
+  .sec-hdr { pointer-events:none; }
+  .sec-hdr .sec-title { display:block !important; font-size:13pt; font-weight:bold; }
 
   /* ── Page setup ── */
   @page { size: A4 landscape; margin: 10mm 14mm 10mm; }
@@ -777,6 +780,7 @@ textarea{resize:vertical}
               <button class="btn btn-a" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" onclick="doOutput('ai')" title="複製完整個案資料，貼到 claude.ai 生成摘要">複製 AI 提示詞</button>
               <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
+              <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides()">HTML 投影片</button>
               <button class="btn btn-b" onclick="printMeeting()">列印 / PDF</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
@@ -1102,7 +1106,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.9.3';
+const VERSION='V2.9.5';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2483,8 +2487,11 @@ function caseViewHTML(cid,i,d){
   const hasRec=d.summary||d.decision;
   const row=(l,v)=>v?`<div class="vc-r"><span class="vc-l">${l}</span><span class="vc-v">${escA(v)}</span></div>`:'';
   const chips=(d.topics||[]).length?`<div class="vc-chips">${(d.topics||[]).map(t=>`<span class="vc-chip">${t}</span>`).join('')}</div>`:'';
-  return`<div class="vc">
-<div class="vc-hdr">${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gender||'M')==='M'?'M':'F'}/${d.age||'—'} &nbsp;VS ${escA(drs)}</span>
+  const cardId='vcc-'+cid+'-'+i;
+  return`<div class="vc" id="${cardId}">
+<div class="vc-hdr" onclick="toggleVCCard('${cardId}')" style="cursor:pointer" title="點擊收合/展開">
+${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gender||'M')==='M'?'M':'F'}/${d.age||'—'} &nbsp;VS ${escA(drs)}</span>
+<span class="vc-collapse-icon" style="float:right;opacity:.5;font-size:11px">▼</span>
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body">
@@ -2527,7 +2534,7 @@ function casesPane(cid){
   const sFn=vm?specialViewHTML:specialHTML;
   // Pre-build add buttons (cid is in scope, no complex concat)
   const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>');
-  const bCase=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'cases\')">+ 新增討論個案</button>' + '<button class="btnadd" data-import-cid="' + cid + '" onclick="openImportCase(this.dataset.importCid)">+ 匯入個案（JSON）</button>');
+  const bCase=vm?'':('<button class="btnadd" data-add-cid="' + cid + '" onclick="openAddCaseModal(this.dataset.addCid)">+ 新增討論個案</button>');
   const bSpec=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'special\')">+ 新增特殊議程</button>');
   const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">+ 新增醫療小組討論個案</button>');
   const events=sec.events||[];
@@ -3187,6 +3194,29 @@ function importAllJSON(input){
 }
 
 
+let _addCaseCid = null;
+function openAddCaseModal(cid){
+  _addCaseCid = cid;
+  _importCaseCid = cid;
+  document.getElementById('add-case-modal').style.display = 'flex';
+}
+function closeAddCaseModal(){
+  document.getElementById('add-case-modal').style.display = 'none';
+  _addCaseCid = null;
+}
+function doAddManual(){
+  closeAddCaseModal();
+  addItem(_addCaseCid || _importCaseCid, 'cases');
+}
+function doAddImport(){
+  closeAddCaseModal();
+  // Open import JSON modal (reuse existing)
+  document.getElementById('import-case-json').value = '';
+  document.getElementById('import-case-err').textContent = '';
+  document.getElementById('import-case-modal').style.display = 'flex';
+}
+
+
 let _importCaseCid = null;
 
 function openImportCase(cid){
@@ -3234,6 +3264,183 @@ function doImportCase(){
   renderCasesInner();
   markDirty();
   showSaveToast('已匯入 ' + cases.length + ' 筆個案資料');
+}
+
+
+function genHTMLSlides(){
+  if(!S.meeting?.version){alert('請先儲存會議資料');return;}
+  readForm();
+  const m=S.meeting, cids=S.cids;
+  const slides=[];
+
+  // ── Cover slide ──
+  const owners2=[];
+  cids.forEach(cid=>{const o=USERS.find(u=>u.cancers?.includes(cid));if(o&&!owners2.find(x=>x.id===o.id))owners2.push(o);});
+  const contact2=owners2.filter(o=>o.ext).map(o=>o.name+'('+o.ext+')').join(' ')||'暫無專職個管師';
+  const memberLines=cids.map(cid=>{
+    const ca=CFG[cid];
+    const convName=ca.conv?.includes('::')?ca.conv.split('::')[1]:ca.conv||'';
+    return '<div class="cover-row"><span class="cover-ca">'+escA(ca.name)+'</span><span class="cover-conv">召集人：'+escA(convName)+'</span><span class="cover-mem">'+escA(getMemberStr(ca))+'</span></div>';
+  }).join('');
+
+  slides.push('<section class="slide cover-slide">'
+    +'<div class="cover-title">'+escA(mtgTitle(cids))+'</div>'
+    +'<div class="cover-meta">'+escA(rocDate(m.date))+'&emsp;'+escA(m.time||'')+'</div>'
+    +'<div class="cover-meta">'+escA(m.loc||'')+'&emsp;聯絡人：'+escA(contact2)+'</div>'
+    +memberLines
+    +'</section>');
+
+  // ── Per cancer ──
+  cids.forEach(cid=>{
+    const ca=CFG[cid];
+    const sec=m.sections[cid]||{};
+    const fups=sec.followups||[], cases=sec.cases||[];
+    const team=sec.team||[], events=sec.events||[];
+
+    slides.push('<section class="slide section-slide">'
+      +'<div class="section-name">'+escA(ca.name)+'</div>'
+      +'<div class="section-date">'+escA(rocDate(m.date))+'</div>'
+      +'</section>');
+
+    if(fups.length){
+      const rows=fups.map(f=>'<tr><td>'+escA(f.chartNo||'')+'</td><td>'+escA(f.name?maskName(f.name):'—')+'</td>'
+        +'<td>'+escA(getDoctorStr(f))+'</td><td>'+escA(f.prevDate||'')+'</td><td>'+escA(f.note||'')+'</td></tr>').join('');
+      slides.push('<section class="slide table-slide">'
+        +'<div class="slide-hdr">前期追蹤事項&ensp;<span class="slide-ca">'+escA(ca.name)+'</span></div>'
+        +'<table class="sum-table"><thead><tr><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>前次日期</th><th>說明</th></tr></thead>'
+        +'<tbody>'+rows+'</tbody></table></section>');
+    }
+
+    cases.forEach((c,ci)=>{
+      const drs=getDoctorStr(c)||'—';
+      const paths=(c.pathologies||[]).length
+        ?(c.pathologies||[]).map(p=>'<div class="fi">'+escA((p.date?p.date+' ':'')+p.content)+'</div>').join('')
+        :(c.pathology?'<div class="fi">'+escA((c.pathologyDate?c.pathologyDate+' ':'')+c.pathology)+'</div>':'');
+      const exs=(c.exams||[]).length
+        ?(c.exams||[]).map(e=>'<div class="fi"><b>'+escA(e.name||'')+(e.date?'('+e.date+')':'')+'</b>'+(e.content?' '+escA(e.content):'')+'</div>').join('')
+        :(c.exam?'<div class="fi">'+escA(c.exam)+'</div>':'');
+      const trts=(c.treatments||[]).length
+        ?(c.treatments||[]).map(t=>'<div class="fi"><b>'+escA(t.name||'')+(t.date?'('+t.date+')':'')+'</b>'+(t.content?' '+escA(t.content):'')+'</div>').join('')
+        :(c.treatment?'<div class="fi">'+escA(c.treatment)+'</div>':'');
+      const phStr=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
+      const topicChips=(c.topics||[]).map(t=>'<span class="tc">'+escA(t)+'</span>').join('');
+
+      const rows2=[
+        c.diagnosis?'<div class="fr"><span class="fl">診斷</span><span class="fv diag">'+escA(c.diagnosis)+'</span></div>':'',
+        c.cc?'<div class="fr"><span class="fl">現病史</span><span class="fv">'+escA(c.cc)+'</span></div>':'',
+        phStr?'<div class="fr"><span class="fl">過去病史</span><span class="fv">'+escA(phStr)+'</span></div>':'',
+        paths?'<div class="fr"><span class="fl">病理</span><span class="fv">'+paths+'</span></div>':'',
+        exs?'<div class="fr"><span class="fl">檢查</span><span class="fv">'+exs+'</span></div>':'',
+        trts?'<div class="fr"><span class="fl">治療</span><span class="fv">'+trts+'</span></div>':'',
+        c.discussion?'<div class="fr"><span class="fl">討論</span><span class="fv">'+escA(c.discussion)+'</span></div>':'',
+      ].join('');
+
+      slides.push('<section class="slide case-slide">'
+        +'<div class="ch"><div class="cid">'+escA(c.chartNo||'')+' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span> <span class="cd">'+escA((c.gender||'M')+'/'+( c.age||'—'))+'</span></div>'
+        +'<div class="cdr">VS '+escA(drs)+'</div><div class="cat">'+escA(ca.name)+'</div></div>'
+        +'<div class="cb">'+rows2+'</div>'
+        +(topicChips?'<div class="ct">'+topicChips+'</div>':'')
+        +'<div class="sn">'+(ci+1)+' / '+cases.length+'</div>'
+        +'</section>');
+    });
+
+    if(team.length||events.length){
+      const rows3=[
+        ...team.map(c=>'<tr><td>醫療小組</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>'),
+        ...events.map(c=>'<tr><td>必要事件</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>'),
+      ].join('');
+      slides.push('<section class="slide table-slide">'
+        +'<div class="slide-hdr">醫療小組 / 必要事件&ensp;<span class="slide-ca">'+escA(ca.name)+'</span></div>'
+        +'<table class="sum-table"><thead><tr><th>類別</th><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>說明</th></tr></thead>'
+        +'<tbody>'+rows3+'</tbody></table></section>');
+    }
+  });
+
+  const N=slides.length;
+  const css=':root{--dk:#3A4550;--acc:#4A7C8E;--lt:#9BAAB6;--cr:#EFF1F4;}'
+    +'*{margin:0;padding:0;box-sizing:border-box;}'
+    +'body{background:#1a1a2e;font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;overflow:hidden;}'
+    +'.ss{width:100vw;height:100vh;position:relative;}'
+    +'.slide{position:absolute;inset:0;display:none;padding:36px 48px;background:#fff;flex-direction:column;}'
+    +'.slide.on{display:flex;}'
+    +'.cover-slide{background:var(--dk);justify-content:center;gap:12px;}'
+    +'.cover-title{font-size:clamp(20px,3vw,38px);font-weight:700;color:#fff;line-height:1.3;}'
+    +'.cover-meta{font-size:clamp(12px,1.4vw,17px);color:rgba(255,255,255,.75);}'
+    +'.cover-row{display:flex;gap:16px;font-size:clamp(11px,1.1vw,14px);color:rgba(255,255,255,.6);}'
+    +'.cover-ca{color:rgba(255,255,255,.9);font-weight:600;min-width:70px;}'
+    +'.section-slide{background:var(--cr);justify-content:center;align-items:center;}'
+    +'.section-name{font-size:clamp(30px,5vw,60px);font-weight:700;color:var(--dk);}'
+    +'.section-date{font-size:clamp(13px,1.6vw,20px);color:var(--lt);margin-top:10px;}'
+    +'.ch{background:var(--dk);color:#fff;padding:12px 18px;border-radius:5px 5px 0 0;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}'
+    +'.cid{font-size:clamp(15px,2vw,24px);font-weight:700;}'
+    +'.cn{font-size:clamp(14px,1.8vw,22px);}'
+    +'.cd{font-size:clamp(11px,1.2vw,15px);color:rgba(255,255,255,.6);}'
+    +'.cdr{font-size:clamp(11px,1.3vw,16px);color:rgba(255,255,255,.8);}'
+    +'.cat{margin-left:auto;font-size:clamp(10px,1vw,13px);background:rgba(255,255,255,.15);padding:2px 9px;border-radius:20px;white-space:nowrap;}'
+    +'.cb{flex:1;overflow:hidden;border:1px solid #dde2e7;border-top:none;border-radius:0 0 5px 5px;display:flex;flex-direction:column;}'
+    +'.fr{display:flex;border-bottom:1px solid #eef0f2;padding:5px 14px;font-size:clamp(11px,1.2vw,14px);}'
+    +'.fr:last-child{border-bottom:none;}'
+    +'.fl{width:66px;min-width:66px;color:var(--lt);font-weight:600;font-size:.85em;padding-top:2px;}'
+    +'.fv{flex:1;color:var(--dk);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;}'
+    +'.fv.diag{font-style:italic;color:#4a7c8e;}'
+    +'.fi{margin-bottom:2px;}'
+    +'.ct{padding:7px 18px;display:flex;gap:6px;flex-wrap:wrap;}'
+    +'.tc{border:1.5px solid var(--acc);color:var(--acc);padding:2px 10px;border-radius:3px;font-size:clamp(10px,1vw,13px);font-weight:500;}'
+    +'.sn{position:absolute;bottom:12px;right:18px;font-size:12px;color:var(--lt);}'
+    +'.slide-hdr{font-size:clamp(14px,1.7vw,20px);font-weight:700;color:var(--dk);margin-bottom:12px;}'
+    +'.slide-ca{font-size:.75em;color:var(--lt);font-weight:400;}'
+    +'.sum-table{width:100%;border-collapse:collapse;font-size:clamp(11px,1.1vw,13px);}'
+    +'.sum-table th{background:var(--dk);color:#fff;padding:7px 10px;text-align:left;font-weight:500;}'
+    +'.sum-table td{padding:5px 10px;border-bottom:1px solid #eee;vertical-align:top;line-height:1.5;}'
+    +'.nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:100;background:rgba(0,0,0,.55);padding:7px 14px;border-radius:28px;}'
+    +'.nav button{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;padding:5px 16px;border-radius:20px;cursor:pointer;font-size:14px;}'
+    +'.nav button:hover{background:rgba(255,255,255,.2);}'
+    +'.ni{color:rgba(255,255,255,.7);font-size:13px;display:flex;align-items:center;padding:0 5px;}'
+    +'.pg{position:fixed;bottom:0;left:0;height:3px;background:var(--acc);transition:width .3s;}';
+
+  const js='var cur=0,tot='+N+';'
+    +'function go(n){document.querySelectorAll(".slide")[cur].classList.remove("on");'
+    +'cur=Math.max(0,Math.min(n,tot-1));'
+    +'document.querySelectorAll(".slide")[cur].classList.add("on");'
+    +'document.getElementById("ni").textContent=(cur+1)+" / "+tot;'
+    +'document.getElementById("pg").style.width=((cur+1)/tot*100)+"%";}'
+    +'document.addEventListener("keydown",function(e){'
+    +'if(e.key==="ArrowRight"||e.key==="ArrowDown"||e.key===" ")go(cur+1);'
+    +'if(e.key==="ArrowLeft"||e.key==="ArrowUp")go(cur-1);'
+    +'if(e.key==="Home")go(0);if(e.key==="End")go(tot-1);'
+    +'if(e.key==="f"||e.key==="F"){var el=document.documentElement;'
+    +'!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen();}});'
+    +'go(0);';
+
+  const fullHTML='<!DOCTYPE html>\n<html lang="zh-TW"><head>\n<meta charset="UTF-8">\n'
+    +'<meta name="viewport" content="width=device-width,initial-scale=1">\n'
+    +'<title>'+escA(mtgTitle(cids))+' '+escA(m.date)+'</title>\n'
+    +'<style>'+css+'</style></head><body>\n'
+    +'<div class="ss">'+slides.join('\n')+'</div>\n'
+    +'<div class="nav"><button onclick="go(cur-1)">&#9664;</button>'
+    +'<span class="ni" id="ni">1 / '+N+'</span>'
+    +'<button onclick="go(cur+1)">&#9654;</button>'
+    +'<button onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()">&#9974;</button>'
+    +'</div>\n<div class="pg" id="pg"></div>\n'
+    +'<script>'+js+'<\/script>\n</body></html>';
+
+  const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
+  const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fname;
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  showSaveToast('HTML 投影片已下載（'+N+' 頁）');
+}
+
+function toggleVCCard(id){
+  const card=document.getElementById(id);if(!card)return;
+  const body=card.querySelector('.vc-body');
+  const icon=card.querySelector('.vc-collapse-icon');
+  if(!body)return;
+  const collapsed=body.style.display==='none';
+  body.style.display=collapsed?'':'none';
+  if(icon)icon.textContent=collapsed?'▼':'▶';
 }
 
 
@@ -3845,6 +4052,27 @@ if(lgVer)lgVer.textContent=VERSION;
 
 
 </script>
+<!-- Add Case Modal (choose method) -->
+<div id="add-case-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:4px;padding:24px;width:min(420px,92vw);box-shadow:0 8px 32px rgba(0,0,0,.18)">
+    <div style="font-size:15px;font-weight:600;color:var(--fog-dk);margin-bottom:6px">新增討論個案</div>
+    <div style="font-size:12px;color:var(--textlt);margin-bottom:18px">選擇填入方式：</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-a" id="btn-add-manual" onclick="doAddManual()" style="padding:14px;font-size:13px;text-align:left">
+        <div style="font-weight:600">手動填入</div>
+        <div style="font-size:11px;opacity:.7;margin-top:3px">開啟空白個案表單逐欄填寫</div>
+      </button>
+      <button class="btn btn-b" id="btn-add-import" onclick="doAddImport()" style="padding:14px;font-size:13px;text-align:left">
+        <div style="font-weight:600">從 JSON 匯入</div>
+        <div style="font-size:11px;opacity:.7;margin-top:3px">貼入 AI 產出的 JSON，自動填入所有欄位</div>
+      </button>
+    </div>
+    <div style="margin-top:14px;text-align:right">
+      <button class="btn btn-b btn-sm" onclick="closeAddCaseModal()">取消</button>
+    </div>
+  </div>
+</div>
+
 <!-- Import Case Modal -->
 <div id="import-case-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center">
   <div style="background:var(--white);border-radius:4px;padding:24px;width:min(600px,92vw);max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)">
@@ -3901,4 +4129,15 @@ if(lgVer)lgVer.textContent=VERSION;
   </div>
 </div>
 </body>
-</html>
+</html<script>${scriptCode}</script>\n</body></html>\`;
+
+  const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
+  const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fname;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  showSaveToast('HTML 投影片已下載');
+}
+
+>
