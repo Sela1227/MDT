@@ -1110,7 +1110,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.7';
+const VERSION='V3.0.8';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1386,16 +1386,75 @@ function updStruct(cid,i,field,idx,key,val){
   if(!c[field])c[field]=[];if(!c[field][idx])c[field][idx]={};
   c[field][idx][key]=val;markDirty();
 }
-function delStruct(cid,i,field,idx){
+function delStruct(cid,i,field,rowIdx){
   ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
-  if(c[field])c[field].splice(idx,1);
-  renderCasesInner();markDirty();
+  if(!c[field])return;
+  c[field].splice(rowIdx,1);
+  markDirty();
+  const listId=field==='pathologies'?('pathlist-'+cid+'-'+i)
+    :field==='exams'?('examlist-'+cid+'-'+i)
+    :field==='treatments'?('trtlist-'+cid+'-'+i)
+    :field==='markers'?('marklist-'+cid+'-'+i):null;
+  const container=document.getElementById(listId);if(!container)return;
+  const rows=container.querySelectorAll('.struct-row');
+  if(rows[rowIdx])rows[rowIdx].remove();
+  container.querySelectorAll('[data-rowid]').forEach(el=>{
+    const cur=parseInt(el.dataset.rowid);
+    if(cur>rowIdx)el.dataset.rowid=String(cur-1);
+  });
 }
 function addStruct(cid,i,field){
   ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
   if(!c[field])c[field]=[];
   c[field].push({name:'',date:'',content:''});
-  renderCasesInner();markDirty();
+  markDirty();
+  // DOM update: append new row without re-rendering all cases
+  const rowIdx=c[field].length-1;
+  const blank={name:'',date:'',content:''};
+  const listId=field==='pathologies'?('pathlist-'+cid+'-'+i)
+               :field==='exams'?('examlist-'+cid+'-'+i)
+               :field==='treatments'?('trtlist-'+cid+'-'+i)
+               :field==='markers'?('marklist-'+cid+'-'+i):null;
+  if(!listId)return;
+  const container=document.getElementById(listId);if(!container)return;
+  const div=document.createElement('div');
+  if(field==='pathologies'){
+    div.innerHTML=`<div class="struct-row">
+      <div class="struct-fields path-row">
+        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}" data-key="date">
+        <textarea placeholder="病理報告" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5"></textarea>
+        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}">×</button>
+      </div></div>`;
+  } else if(field==='exams'){
+    const opts=EXAM_TYPES.map(t=>'<option>'+escA(t)+'</option>').join('');
+    div.innerHTML=`<div class="struct-row" style="position:relative">
+      <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
+        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="name" style="width:120px"><option value="">— 選擇 —</option>${opts}</select>
+        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
+      </div>
+      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+    </div>`;
+  } else if(field==='treatments'){
+    div.innerHTML=`<div class="struct-row" style="position:relative">
+      <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
+        <input placeholder="項目 (化療/放療/手術...)" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="name" style="flex:1">
+        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
+      </div>
+      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+    </div>`;
+  } else if(field==='markers'){
+    div.innerHTML=`<div class="struct-row" style="position:relative">
+      <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
+        <input placeholder="指數名稱 (PSA/CEA...)" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="name" style="width:140px">
+        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
+      </div>
+      <textarea placeholder="數值或趨勢" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+    </div>`;
+  }
+  if(div.firstElementChild)container.appendChild(div.firstElementChild);
 }
 
 

@@ -224,6 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V3.0.8 | addStruct/delStruct改局部DOM，不跳頁 |
 | V3.0.7 | 編輯模式預設展開；LINE通知顯示子癌別 |
 | V3.0.6 | 新增個案依癌別預選第一主治科別 |
 | V3.0.5 | 診斷/現病史多行；Bone scan；癌指數區塊；HTML圖片 |
