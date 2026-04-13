@@ -3422,7 +3422,10 @@ function genHTMLSlides(){
         +'<div class="cb">'
         +'<table class="rtbl">'+rows+'</table>'
         +'</div>'
-        // Images
+        +(chips?'<div class="ct">'+chips+'</div>':'')
+        +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
+        +'</section>');
+      // Images - separate slide after case slide
       const imgHtml=(c.images||[]).length
         ?(c.images||[]).map(img=>'<div class="img-wrap"><img src="'+img.dataUrl+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>').join(''):'';
       if(imgHtml){
@@ -3431,9 +3434,6 @@ function genHTMLSlides(){
           +'<div class="img-grid">'+imgHtml+'</div>'
           +'</section>');
       }
-      +(chips?'<div class="ct">'+chips+'</div>':'')
-        +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
-        +'</section>');
     });
 
     // ── Team / Events ──
