@@ -123,7 +123,7 @@ textarea{resize:vertical}
 .sh-track-dot{width:5px;height:5px;border-radius:50%;background:var(--fog-lt);flex-shrink:0}
 .sh-empty{font-size:12px;color:var(--textlt);font-style:italic;padding:4px 0}
 .rule{border:none;border-top:1px solid var(--blt);margin:14px 0}
-.casecard{border:1px solid var(--blt);border-left:3px solid var(--cream-dk);border-radius:2px;padding:11px 13px;margin-bottom:6px;background:var(--surface);transition:border-color .15s}
+.casecard{border:1px solid var(--blt);border-left:3px solid var(--cream-dk);border-radius:2px;padding:11px 13px;margin-bottom:6px;background:var(--surface);transition:border-color .15s}.fsec{grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);padding:8px 0 4px;border-bottom:1px solid var(--blt);margin-bottom:2px}
 .casecard.cc-collapsed>.cg2,.casecard.cc-collapsed>.fg,.casecard.cc-collapsed>.struct-row{display:none!important}
 .cc-toggle-icon{margin-left:0;margin-right:6px;font-size:10px;opacity:.5;display:inline-block;transition:transform .15s;flex-shrink:0}
 .casecard:hover{border-color:var(--border);border-left-color:var(--fog-lt)}
@@ -787,6 +787,7 @@ textarea{resize:vertical}
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-b" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
+              <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
               <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
             </div>
@@ -1110,7 +1111,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.10';
+const VERSION='V3.0.11';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2660,15 +2661,15 @@ function casesPane(cid){
 function caseHTML(cid,i,d){
   const inp=(f,v,ph='')=>`<input value="${escA(v||'')}" oninput="upd('${cid}','cases',${i},'${f}',this.value)" placeholder="${ph}" style="font-size:12px;padding:5px 8px">`;
   const ta=(f,v,rows,ph='')=>`<textarea rows="${rows}" oninput="upd('${cid}','cases',${i},'${f}',this.value)" placeholder="${ph}" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(v||'')}</textarea>`;
+  const addBtn=(field,label='+ 新增')=>`<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="${field}" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">${label}</button>`;
 
   // PH chips
   const PH_CHIPS=['HTN','DM','CAD','CVA','HBV','HCV','CKD','COPD'];
   const phChips=d.phChips||[];
   const chips2=PH_CHIPS.map(c=>{const on=phChips.includes(c);return`<span class="tchip ${on?'on':''}" data-action="phchip" data-cid="${cid}" data-idx="${i}" data-chip="${c}">${c}</span>`}).join('');
 
-  // Pathologies sorted by date
+  // Pathologies
   const paths=(d.pathologies||[]);
-  // Migrate old single pathology field → first entry if pathologies[] empty
   if(!paths.length&&d.pathology){paths.push({date:d.pathologyDate||'',content:d.pathology});}
   const pathRows=paths.map((p,pi)=>`
     <div class="struct-row">
@@ -2679,7 +2680,7 @@ function caseHTML(cid,i,d){
       </div>
     </div>`).join('');
 
-  // Exams sorted by date
+  // Exams
   const exams=(d.exams||[]);
   const examRows=exams.map((ex,ei)=>`
     <div class="struct-row" style="position:relative">
@@ -2691,7 +2692,7 @@ function caseHTML(cid,i,d){
       <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(ex.content||'')}</textarea>
     </div>`).join('');
 
-  // Markers (tumor markers)
+  // Markers
   const mkrs=(d.markers||[]);
   const markerRows=mkrs.map((mk,mi)=>`
     <div class="struct-row" style="position:relative">
@@ -2700,10 +2701,10 @@ function caseHTML(cid,i,d){
         <input type="date" value="${escA(mk.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="數值或趨勢" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(mk.content||'')}</textarea>
+      <textarea placeholder="數值或趨勢（如：5.21→8.53→13.7）" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(mk.content||'')}</textarea>
     </div>`).join('');
 
-  // Treatments sorted by date
+  // Treatments
   const trts=(d.treatments||[]);
   const trtRows=trts.map((tr,ti)=>`
     <div class="struct-row" style="position:relative">
@@ -2717,55 +2718,67 @@ function caseHTML(cid,i,d){
 
   // Topics
   const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-  const chips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
+  const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
   return`<div class="casecard" id="cc-${cid}-cases-${i}">
 <div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
-<div class="fg"><label>病歷號</label>${inp('chartNo',d.chartNo,'病歷號')}</div>
-<div class="fg"><label>姓名</label>${inp('name',d.name,'姓名')}</div>
-<div class="fg"><label>年齡</label>${inp('age',d.age,'年齡')}</div>
-<div class="fg"><label>性別</label><select onchange="upd('${cid}','cases',${i},'gender',this.value)" style="font-size:12px;padding:5px 8px"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select></div>
-</div>
-<div class="fg full"><label>主治醫師</label>
-<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
-<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第三主治（選填）</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[2]||'':'',2)}</div>
-</div></div>
-<div class="fg full"><label>診斷</label>${ta('diagnosis',d.diagnosis,2,'診斷（含分期）')}</div>
-<div class="fg full"><label>現病史</label>${ta('cc',d.cc,3,'現病史')}</div>
-<div class="fg full"><label>過去病史</label>
-  <div class="trow" style="margin-bottom:6px">${chips2}</div>
-  ${inp('ph',d.ph,'其他病史')}
-</div>
-<div class="fg full"><label>病理<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">+ 新增</button></label>
-  <div id="pathlist-${cid}-${i}">${pathRows}</div>
-</div>
-<div class="fg full"><label>檢查<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">+ 新增</button></label>
-  <div id="examlist-${cid}-${i}">${examRows}</div>
-</div>
-<div class="fg full"><label>治療<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">+ 新增</button></label>
-  <div id="trtlist-${cid}-${i}">${trtRows}</div>
-</div>
-<div class="fg full"><label>癌指數<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">+ 新增</button></label>
-  <div id="marklist-${cid}-${i}">${markerRows}</div>
-</div>
-<div class="fg full"><label>討論要點</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
-<div class="fg full"><label>討論項目（LINE 通知）</label><div class="trow">${chips}</div></div>
-<div class="fg full" style="margin-top:4px;padding-top:8px;border-top:1px dashed var(--blt)">
-  <label>相關影像（點擊放大・最多5張）</label>
-  ${buildImgArea(cid,i,d)}
-</div>
-<div class="fg full" style="border-top:1px solid var(--blt);padding-top:10px;margin-top:4px">
-  <label style="color:var(--fog);font-weight:600">會議記錄 — 開會後填入</label>
-  <div class="cg2" style="margin-top:8px">
-    <div class="fg full"><label>討論摘要</label>${ta('summary',d.summary,3,'影像討論：...')}</div>
-    <div class="fg full"><label>決策結論</label>${ta('decision',d.decision,2,'建議...')}</div>
+
+  <div class="fsec">基本資料</div>
+  <div class="fg"><label>病歷號</label>${inp('chartNo',d.chartNo,'病歷號')}</div>
+  <div class="fg"><label>姓名</label>${inp('name',d.name,'姓名')}</div>
+  <div class="fg"><label>年齡</label>${inp('age',d.age,'年齡')}</div>
+  <div class="fg"><label>性別</label><select onchange="upd('${cid}','cases',${i},'gender',this.value)" style="font-size:12px;padding:5px 8px"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select></div>
+
+  <div class="fg full"><label>主治醫師</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
+      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
+      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第三主治（選填）</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[2]||'':'',2)}</div>
+    </div>
   </div>
-</div>
+
+  <div class="fsec">病情摘要</div>
+  <div class="fg full"><label>診斷</label>${ta('diagnosis',d.diagnosis,2,'診斷（含分期）')}</div>
+  <div class="fg full"><label>現病史</label>${ta('cc',d.cc,3,'現病史')}</div>
+  <div class="fg full"><label>過去病史</label>
+    <div class="trow" style="margin-bottom:6px">${chips2}</div>
+    ${inp('ph',d.ph,'其他病史')}
+  </div>
+  <div class="fg full"><label>癌指數${addBtn('markers')}</label>
+    <div id="marklist-${cid}-${i}">${markerRows}</div>
+  </div>
+
+  <div class="fsec">臨床資料</div>
+  <div class="fg full"><label>病理${addBtn('pathologies')}</label>
+    <div id="pathlist-${cid}-${i}">${pathRows}</div>
+  </div>
+  <div class="fg full"><label>檢查${addBtn('exams')}</label>
+    <div id="examlist-${cid}-${i}">${examRows}</div>
+  </div>
+  <div class="fg full"><label>治療${addBtn('treatments')}</label>
+    <div id="trtlist-${cid}-${i}">${trtRows}</div>
+  </div>
+
+  <div class="fsec">討論</div>
+  <div class="fg full"><label>討論要點</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
+  <div class="fg full"><label>討論項目</label><div class="trow">${topicChips}</div></div>
+
+  <div class="fg full" style="margin-top:4px;padding-top:8px;border-top:1px dashed var(--blt)">
+    <label>相關影像（點擊放大・最多5張）</label>
+    ${buildImgArea(cid,i,d)}
+  </div>
+  <div class="fg full" style="border-top:1px solid var(--blt);padding-top:10px;margin-top:4px">
+    <label style="color:var(--fog);font-weight:600">會議記錄 — 開會後填入</label>
+    <div class="cg2" style="margin-top:8px">
+      <div class="fg full"><label>討論摘要</label>${ta('summary',d.summary,3,'影像討論：...')}</div>
+      <div class="fg full"><label>決策結論</label>${ta('decision',d.decision,2,'建議...')}</div>
+    </div>
+  </div>
+
 </div></div>`;
 }
+
 
 function followupHTML(cid,i,d){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','followups',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','followups',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','followups',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -3480,7 +3493,7 @@ function genHTMLSlides(){
         +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
         +' <span class="cd">'+escA((c.gender||'M')+'/'+(c.age||'—'))+'</span>'
         +' <span class="cdr">VS '+escA(drs)+'</span>'
-        +'<span class="cat">'+escA(ca.name)+'</span>'
+        +'<span class="cat">'+escA(getSubGroup(c)||ca.name)+'</span>'
         +'</div>'
         +dxLine
         +'</div>'
@@ -3858,6 +3871,13 @@ async function genXLSX(){
 }
 
 
+function genImportPrompt(){
+  const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON，不要加任何說明文字或 markdown 符號。\n欄位定義：\nchartNo：病歷號（字串）\nname：姓名\nage：年齡（字串）\ngender："M" 或 "F"\ndiagnosis：完整診斷\ncc：現病史（Present Illness）\nph：過去病史（Past History）\npathologies：病理檢查，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}\nexams：影像及其他檢查，陣列，每筆 {"name":"CT/MRI/PSA...","date":"YYYY-MM-DD","content":"..."}\ntreatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"..."}\nmarkers：癌指數，陣列，每筆 {"name":"PSA/CEA...","date":"YYYY-MM-DD","content":"數值或趨勢"}\ndiscussion：討論要點（一句話摘要）\ntopics：討論議題，從以下選填陣列：["影像討論","病理討論","分期討論","治療策略討論"]\n\n以下是病人資料：\n`;
+  document.getElementById('out-text').textContent=prompt;
+  document.getElementById('out-area').style.display='block';
+  document.getElementById('copy-ok').style.display='none';
+  document.getElementById('out-area').scrollIntoView({behavior:'smooth',block:'start'});
+}
 function genLine(){
   readForm();const m=S.meeting,cids=S.cids,pfx=timePfx(m.time.split('-')[0]);
   const multi=cids.length>1;
