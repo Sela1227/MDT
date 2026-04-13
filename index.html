@@ -1110,7 +1110,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.9';
+const VERSION='V3.0.10';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3444,7 +3444,8 @@ function genHTMLSlides(){
         var nm=t.name?('<b>'+escA(t.name)+(t.date?'('+escA(t.date)+')':'')+'</b> '):'';
         return '<span class="ex">'+nm+escA(t.content||'')+'</span>';
       }).join('');
-      const chips=(c.topics||[]).map(t=>'<span class="tp">'+escA(t)+'</span>').join('');
+      const _topicOrder=['影像討論','病理討論','分期討論','治療策略討論'];
+      const chips=(c.topics||[]).slice().sort((a,b)=>{const ai=_topicOrder.indexOf(a),bi=_topicOrder.indexOf(b);return(ai<0?99:ai)-(bi<0?99:bi);}).map(t=>'<span class="tp">'+escA(t)+'</span>').join('');
 
       const mkRow=(lbl,val)=>val?'<tr><td class="rl">'+lbl+'</td><td class="rv">'+val+'</td></tr>':'';
       const markersHtml=(c.markers&&c.markers.length)?( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+(mk.date?'('+escA(mk.date)+')':'')+'</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>'):'';
@@ -3537,7 +3538,7 @@ function genHTMLSlides(){
     +'.cn{font-size:clamp(20px,2.6vw,38px);font-weight:700;}'
     +'.cd{font-size:clamp(14px,1.5vw,22px);color:rgba(255,255,255,.6);}'
     +'.cdr{font-size:clamp(14px,1.6vw,23px);color:rgba(255,255,255,.85);}'
-    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'+'.cdx{font-size:clamp(12px,1.25vw,17px);color:rgba(255,255,255,.7);line-height:1.4;font-style:italic;}'
+    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'+'.cdx{font-size:clamp(14px,1.6vw,22px);color:rgba(255,255,255,.8);line-height:1.45;font-style:italic;}'
     +'.cb{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}'
     +'.cb-cols{display:flex;flex:1;min-height:0;overflow:hidden;}'
     +'.cb-l{flex:1;overflow:auto;border-right:2px solid #eef0f3;}'
