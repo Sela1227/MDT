@@ -124,6 +124,8 @@ textarea{resize:vertical}
 .sh-empty{font-size:12px;color:var(--textlt);font-style:italic;padding:4px 0}
 .rule{border:none;border-top:1px solid var(--blt);margin:14px 0}
 .casecard{border:1px solid var(--blt);border-left:3px solid var(--cream-dk);border-radius:2px;padding:11px 13px;margin-bottom:6px;background:var(--surface);transition:border-color .15s}
+.casecard.cc-collapsed>.cg2,.casecard.cc-collapsed>.fg,.casecard.cc-collapsed>.struct-row{display:none!important}
+.cc-toggle-icon{margin-left:0;margin-right:6px;font-size:10px;opacity:.5;display:inline-block;transition:transform .15s;flex-shrink:0}
 .casecard:hover{border-color:var(--border);border-left-color:var(--fog-lt)}
 .casecard.track-card{border-left-color:var(--fog-xlt);background:#FAFBFC}
 .casetop{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
@@ -1106,7 +1108,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.9.9';
+const VERSION='V3.0.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2489,12 +2491,13 @@ function caseViewHTML(cid,i,d){
   const chips=(d.topics||[]).length?`<div class="vc-chips">${(d.topics||[]).map(t=>`<span class="vc-chip">${t}</span>`).join('')}</div>`:'';
   const cardId='vcc-'+cid+'-'+i;
   return`<div class="vc" id="${cardId}">
-<div class="vc-hdr" onclick="toggleVCCard('${cardId}')" style="cursor:pointer" title="點擊收合/展開">
+<div class="vc-hdr" onclick="toggleVCCard('${cardId}')" style="cursor:pointer" title="點擊展開/收合">
+<span style="margin-right:8px;font-size:11px;opacity:.5" class="vc-collapse-icon">▶</span>
 ${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gender||'M')==='M'?'M':'F'}/${d.age||'—'} &nbsp;VS ${escA(drs)}</span>
-<span class="vc-collapse-icon" style="float:right;opacity:.5;font-size:11px">▼</span>
+<button onclick="event.stopPropagation();editSingleCase('${cid}',${i})" style="margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 10px;border-radius:2px;font-size:11px;cursor:pointer">編輯</button>
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
-<div class="vc-body">
+<div class="vc-body" style="display:none">
 ${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>`<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">${escA((p.date?p.date+' ':'')+p.content||'')}</span></div>`).join('');})()}${(()=>{
   const exArr=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const exStr=exArr.map(ex=>[(ex.name||''),(ex.date?'('+ex.date+')':''),' ',(ex.content||'')].join('').trim()).filter(Boolean).join('\n');
@@ -2632,8 +2635,8 @@ function caseHTML(cid,i,d){
   const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
   const chips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
-  return`<div class="casecard" id="cc-${cid}-cases-${i}">
-<div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','cases',${i})">×</button></div>
+  return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
+<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 <div class="fg"><label>病歷號</label>${inp('chartNo',d.chartNo,'病歷號')}</div>
 <div class="fg"><label>姓名</label>${inp('name',d.name,'姓名')}</div>
@@ -2677,7 +2680,7 @@ function caseHTML(cid,i,d){
 </div></div>`;
 }
 
-function followupHTML(cid,i,d){return`<div class="casecard track-card" id="cc-${cid}-followups-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','followups',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','followups',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','followups',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d){return`<div class="casecard track-card cc-collapsed" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','followups',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','followups',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','followups',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,'followups',i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,'followups',i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
@@ -2701,7 +2704,7 @@ function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),c
   const _fcid=_sfx?(cid+_sfx):cid;
   div.innerHTML=realType2==='cases'?caseHTML(realCid2||cid,i,blank):
     realType2==='followups'||realType2==='team'||realType2==='events'?followupHTML(_fcid,i,blank):
-    specialHTML(realCid2||cid,i,blank);cont.appendChild(div.firstElementChild)}
+    specialHTML(realCid2||cid,i,blank);const newCard=div.firstElementChild;newCard.classList.add('cc-collapsed');cont.appendChild(newCard)}
 function upd(cid,type,i,field,val){
   ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;item[field]=val;markDirty();const card=document.getElementById('cc-'+cid+'-'+type+'-'+i);if(!card)return;if(field==='name'){card.querySelector('.cnm').textContent=val?maskName(val):'姓名'}if(field==='chartNo')card.querySelector('.cno').textContent=val||'病歷號';if(field==='title')card.querySelector('.cnm').textContent=val||'議程項目'}
 function updTopics(cid,type,i,topic,checked,el){ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;if(!item.topics)item.topics=[];if(checked){if(!item.topics.includes(topic))item.topics.push(topic)}else item.topics=item.topics.filter(t=>t!==topic);el.classList.toggle('on',checked);markDirty()}
@@ -3463,6 +3466,24 @@ function toggleVCCard(id){
   body.style.display=collapsed?'':'none';
   if(icon)icon.textContent=collapsed?'▼':'▶';
 }
+function editSingleCase(cid,i){
+  // Switch to edit mode for the whole meeting, then scroll to specific case
+  if(S.viewMode){
+    S._snapshot=JSON.stringify(S.meeting);
+    S.viewMode=false;S.meetingMode='record';
+    renderEditor();
+    setTimeout(()=>{
+      const card=document.getElementById('cc-'+cid+'-cases-'+i);
+      if(card){
+        // Expand this card
+        card.classList.remove('cc-collapsed');
+        const icon=card.querySelector('.cc-toggle-icon');
+        if(icon)icon.textContent='▼';
+        card.scrollIntoView({behavior:'smooth',block:'start'});
+      }
+    },200);
+  }
+}
 
 
 function printMeeting(){
@@ -4049,6 +4070,14 @@ document.addEventListener('click',function(e){
   if(addst){addStruct(addst.dataset.cid,parseInt(addst.dataset.caseidx),addst.dataset.field);return;}
   const delst=e.target.closest('[data-action="delstruct"]');
   if(delst){delStruct(delst.dataset.cid,parseInt(delst.dataset.caseidx),delst.dataset.field,parseInt(delst.dataset.rowid));return;}
+  const tog=e.target.closest('[data-action="togglecase"]');
+  if(tog){
+    const card=document.getElementById(tog.dataset.card);if(!card)return;
+    const collapsed=card.classList.toggle('cc-collapsed');
+    const icon=document.getElementById('tgi-'+tog.dataset.card.slice(3));
+    if(icon)icon.textContent=collapsed?'▶':'▼';
+    return;
+  }
 });
 
 // Input/change delegation for struct fields
