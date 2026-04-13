@@ -1110,7 +1110,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.8';
+const VERSION='V3.0.9';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3446,17 +3446,19 @@ function genHTMLSlides(){
       }).join('');
       const chips=(c.topics||[]).map(t=>'<span class="tp">'+escA(t)+'</span>').join('');
 
-      const mkRow=(lbl,val,cls='')=>val?'<tr><td class="rl">'+lbl+'</td><td class="rv'+(cls?' '+cls:'')+'">'+val+'</td></tr>':'';
-      const rows=[
-        '',
+      const mkRow=(lbl,val)=>val?'<tr><td class="rl">'+lbl+'</td><td class="rv">'+val+'</td></tr>':'';
+      const markersHtml=(c.markers&&c.markers.length)?( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+(mk.date?'('+escA(mk.date)+')':'')+'</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>'):'';
+      const leftRows=[
         mkRow('現病史',escA(c.cc||'')),
         mkRow('過去病史',escA(ph||'')),
+        markersHtml?mkRow('癌指數',markersHtml):'',
         mkRow('病理',paths),
+      ].join('');
+      const rightRows=[
         mkRow('檢查',exs),
         mkRow('治療',trts),
-        mkRow('討論',escA(c.discussion||'')),
-        (c.markers&&c.markers.length)?('<tr><td class="rl">癌指數</td><td class="rv">'+( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+(mk.date?'('+escA(mk.date)+')':'')+'</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>')+'</td></tr>'):'',
       ].join('');
+      const discHtml=c.discussion?('<div class="disc-bar"><span class="disc-label">討論</span><span class="disc-text">'+escA(c.discussion)+'</span></div>'):'';
 
       // Insert sub-group title slide when group changes
       if(useSubGroups&&sg){
@@ -3475,14 +3477,18 @@ function genHTMLSlides(){
         +'<div class="cht">'
         +'<span class="ci">'+escA(c.chartNo||'')+'</span>'
         +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
-        +' <span class="cd">'+escA((c.gender||'M')+'/'+( c.age||'—'))+'</span>'
-        +' <span class="cdr">VS '+escA(drs)+'</span>'
+        +' <span class="cd">'+escA((c.gender||'M')+'/'+(c.age||'—'))+'</span>'
+        +' <span class="cdr">VS '+escA(drs)+'</span>'
         +'<span class="cat">'+escA(ca.name)+'</span>'
         +'</div>'
         +dxLine
         +'</div>'
         +'<div class="cb">'
-        +'<table class="rtbl">'+rows+'</table>'
+        +'<div class="cb-cols">'
+        +'<div class="cb-l"><table class="rtbl">'+leftRows+'</table></div>'
+        +'<div class="cb-r"><table class="rtbl">'+rightRows+'</table></div>'
+        +'</div>'
+        +discHtml
         +'</div>'
         +(chips?'<div class="ct">'+chips+'</div>':'')
         +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
@@ -3532,7 +3538,14 @@ function genHTMLSlides(){
     +'.cd{font-size:clamp(14px,1.5vw,22px);color:rgba(255,255,255,.6);}'
     +'.cdr{font-size:clamp(14px,1.6vw,23px);color:rgba(255,255,255,.85);}'
     +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'+'.cdx{font-size:clamp(12px,1.25vw,17px);color:rgba(255,255,255,.7);line-height:1.4;font-style:italic;}'
-    +'.cb{flex:1;overflow:auto;min-height:0;}'
+    +'.cb{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}'
+    +'.cb-cols{display:flex;flex:1;min-height:0;overflow:hidden;}'
+    +'.cb-l{flex:1;overflow:auto;border-right:2px solid #eef0f3;}'
+    +'.cb-r{flex:1;overflow:auto;}'
+    +'.cb-l .rtbl tr:last-child td,.cb-r .rtbl tr:last-child td{border-bottom:none;}'
+    +'.disc-bar{display:flex;align-items:baseline;gap:1.2vw;padding:1.2vh 2.5vw 1.4vh;background:#f4f6f8;border-top:3px solid var(--ca,var(--acc));flex-shrink:0;}'
+    +'.disc-label{color:var(--lt);font-weight:700;font-size:clamp(13px,1.35vw,19px);white-space:nowrap;}'
+    +'.disc-text{font-size:clamp(14px,1.5vw,21px);color:#2a3540;line-height:1.6;}'
     +'.rtbl{width:100%;border-collapse:collapse;}'
     +'.rtbl tr{border-bottom:1px solid #eef0f3;}'
     +'.rtbl tr:last-child{border-bottom:none;}'
@@ -3866,7 +3879,18 @@ function genLine(){
     else t+=`\n`;
     let n=1;
 
-    const tag=`【${ca.name}】`;
+    const tag=function(c){
+      const dx=(c.diagnosis||'').toLowerCase();
+      let sub=ca.name;
+      if(/bladder|膀胱|urothelial/.test(dx))sub='膀胱癌';
+      else if(/prostate|攝護腺|prostatic/.test(dx))sub='攝護腺癌';
+      else if(/renal|kidney|腎|ccrc|clear cell/.test(dx))sub='腎臟癌';
+      else if(/ureter|ureteral|輸尿管/.test(dx))sub='輸尿管癌';
+      else if(/testicular|睪丸/.test(dx))sub='睪丸癌';
+      else if(/lung|肺/.test(dx))sub='肺癌';
+      else if(/breast|乳/.test(dx))sub='乳癌';
+      return'【'+sub+'】';
+    };
 
     // 1. 前期追蹤
     t+=`\n　${n}.前期追蹤個案：`;
