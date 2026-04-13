@@ -3270,49 +3270,47 @@ function doImportCase(){
 function genHTMLSlides(){
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   readForm();
-  const m=S.meeting, cids=S.cids;
+  const m=S.meeting,cids=S.cids;
   const slides=[];
+  const sc='</'+'script>';  // safe split to avoid premature script close
 
-  // ── Cover slide ──
+  // Cover slide
   const owners2=[];
   cids.forEach(cid=>{const o=USERS.find(u=>u.cancers?.includes(cid));if(o&&!owners2.find(x=>x.id===o.id))owners2.push(o);});
   const contact2=owners2.filter(o=>o.ext).map(o=>o.name+'('+o.ext+')').join(' ')||'暫無專職個管師';
   const memberLines=cids.map(cid=>{
     const ca=CFG[cid];
     const convName=ca.conv?.includes('::')?ca.conv.split('::')[1]:ca.conv||'';
-    return '<div class="cover-row"><span class="cover-ca">'+escA(ca.name)+'</span><span class="cover-conv">召集人：'+escA(convName)+'</span><span class="cover-mem">'+escA(getMemberStr(ca))+'</span></div>';
+    return '<div class="cr"><span class="ca">'+escA(ca.name)+'</span>'
+      +'<span class="cc">召集人：'+escA(convName)+'</span>'
+      +'<span class="cm">'+escA(getMemberStr(ca))+'</span></div>';
   }).join('');
+  slides.push('<section class="slide cover">'
+    +'<div class="cvt">'+escA(mtgTitle(cids))+'</div>'
+    +'<div class="cvm">'+escA(rocDate(m.date))+'&emsp;'+escA(m.time||'')+'</div>'
+    +'<div class="cvm">'+escA(m.loc||'')+'&emsp;聯絡人：'+escA(contact2)+'</div>'
+    +memberLines+'</section>');
 
-  slides.push('<section class="slide cover-slide">'
-    +'<div class="cover-title">'+escA(mtgTitle(cids))+'</div>'
-    +'<div class="cover-meta">'+escA(rocDate(m.date))+'&emsp;'+escA(m.time||'')+'</div>'
-    +'<div class="cover-meta">'+escA(m.loc||'')+'&emsp;聯絡人：'+escA(contact2)+'</div>'
-    +memberLines
-    +'</section>');
-
-  // ── Per cancer ──
   cids.forEach(cid=>{
     const ca=CFG[cid];
     const sec=m.sections[cid]||{};
-    const fups=sec.followups||[], cases=sec.cases||[];
-    const team=sec.team||[], events=sec.events||[];
+    const fups=sec.followups||[],cases=sec.cases||[],team=sec.team||[],events=sec.events||[];
 
-    slides.push('<section class="slide section-slide">'
-      +'<div class="section-name">'+escA(ca.name)+'</div>'
-      +'<div class="section-date">'+escA(rocDate(m.date))+'</div>'
-      +'</section>');
+    slides.push('<section class="slide sec"><div class="sn">'+escA(ca.name)+'</div>'
+      +'<div class="sd">'+escA(rocDate(m.date))+'</div></section>');
 
     if(fups.length){
-      const rows=fups.map(f=>'<tr><td>'+escA(f.chartNo||'')+'</td><td>'+escA(f.name?maskName(f.name):'—')+'</td>'
-        +'<td>'+escA(getDoctorStr(f))+'</td><td>'+escA(f.prevDate||'')+'</td><td>'+escA(f.note||'')+'</td></tr>').join('');
-      slides.push('<section class="slide table-slide">'
-        +'<div class="slide-hdr">前期追蹤事項&ensp;<span class="slide-ca">'+escA(ca.name)+'</span></div>'
-        +'<table class="sum-table"><thead><tr><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>前次日期</th><th>說明</th></tr></thead>'
-        +'<tbody>'+rows+'</tbody></table></section>');
+      slides.push('<section class="slide tbl">'
+        +'<div class="th">前期追蹤事項 <span class="tc">'+escA(ca.name)+'</span></div>'
+        +'<table><thead><tr><th>病歷號</th><th>姓名</th><th>主治</th><th>前次日期</th><th>說明</th></tr></thead><tbody>'
+        +fups.map(f=>'<tr><td>'+escA(f.chartNo||'')+'</td><td>'+escA(f.name?maskName(f.name):'—')
+          +'</td><td>'+escA(getDoctorStr(f))+'</td><td>'+escA(f.prevDate||'')+'</td><td>'+escA(f.note||'')+'</td></tr>').join('')
+        +'</tbody></table></section>');
     }
 
     cases.forEach((c,ci)=>{
       const drs=getDoctorStr(c)||'—';
+      const ph=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
       const paths=(c.pathologies||[]).length
         ?(c.pathologies||[]).map(p=>'<div class="fi">'+escA((p.date?p.date+' ':'')+p.content)+'</div>').join('')
         :(c.pathology?'<div class="fi">'+escA((c.pathologyDate?c.pathologyDate+' ':'')+c.pathology)+'</div>':'');
@@ -3322,92 +3320,108 @@ function genHTMLSlides(){
       const trts=(c.treatments||[]).length
         ?(c.treatments||[]).map(t=>'<div class="fi"><b>'+escA(t.name||'')+(t.date?'('+t.date+')':'')+'</b>'+(t.content?' '+escA(t.content):'')+'</div>').join('')
         :(c.treatment?'<div class="fi">'+escA(c.treatment)+'</div>':'');
-      const phStr=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
-      const topicChips=(c.topics||[]).map(t=>'<span class="tc">'+escA(t)+'</span>').join('');
-
-      const rows2=[
-        c.diagnosis?'<div class="fr"><span class="fl">診斷</span><span class="fv diag">'+escA(c.diagnosis)+'</span></div>':'',
+      const chips=(c.topics||[]).map(t=>'<span class="tp">'+escA(t)+'</span>').join('');
+      const rows=[
+        c.diagnosis?'<div class="fr"><span class="fl">診斷</span><span class="fv dg">'+escA(c.diagnosis)+'</span></div>':'',
         c.cc?'<div class="fr"><span class="fl">現病史</span><span class="fv">'+escA(c.cc)+'</span></div>':'',
-        phStr?'<div class="fr"><span class="fl">過去病史</span><span class="fv">'+escA(phStr)+'</span></div>':'',
+        ph?'<div class="fr"><span class="fl">過去病史</span><span class="fv">'+escA(ph)+'</span></div>':'',
         paths?'<div class="fr"><span class="fl">病理</span><span class="fv">'+paths+'</span></div>':'',
         exs?'<div class="fr"><span class="fl">檢查</span><span class="fv">'+exs+'</span></div>':'',
         trts?'<div class="fr"><span class="fl">治療</span><span class="fv">'+trts+'</span></div>':'',
         c.discussion?'<div class="fr"><span class="fl">討論</span><span class="fv">'+escA(c.discussion)+'</span></div>':'',
       ].join('');
-
-      slides.push('<section class="slide case-slide">'
-        +'<div class="ch"><div class="cid">'+escA(c.chartNo||'')+' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span> <span class="cd">'+escA((c.gender||'M')+'/'+( c.age||'—'))+'</span></div>'
-        +'<div class="cdr">VS '+escA(drs)+'</div><div class="cat">'+escA(ca.name)+'</div></div>'
-        +'<div class="cb">'+rows2+'</div>'
-        +(topicChips?'<div class="ct">'+topicChips+'</div>':'')
-        +'<div class="sn">'+(ci+1)+' / '+cases.length+'</div>'
-        +'</section>');
+      slides.push('<section class="slide case">'
+        +'<div class="ch"><span class="ci">'+escA(c.chartNo||'')+'</span>'
+        +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+        +' <span class="cd">'+escA((c.gender||'M')+'/'+( c.age||'—'))+'</span>'
+        +' <span class="cdr">VS '+escA(drs)+'</span>'
+        +'<span class="cat">'+escA(ca.name)+'</span></div>'
+        +'<div class="cb">'+rows+'</div>'
+        +(chips?'<div class="ct">'+chips+'</div>':'')
+        +'<div class="pg2">'+(ci+1)+'/'+cases.length+'</div></section>');
     });
 
     if(team.length||events.length){
-      const rows3=[
-        ...team.map(c=>'<tr><td>醫療小組</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>'),
-        ...events.map(c=>'<tr><td>必要事件</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>'),
-      ].join('');
-      slides.push('<section class="slide table-slide">'
-        +'<div class="slide-hdr">醫療小組 / 必要事件&ensp;<span class="slide-ca">'+escA(ca.name)+'</span></div>'
-        +'<table class="sum-table"><thead><tr><th>類別</th><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>說明</th></tr></thead>'
-        +'<tbody>'+rows3+'</tbody></table></section>');
+      slides.push('<section class="slide tbl">'
+        +'<div class="th">醫療小組 / 必要事件 <span class="tc">'+escA(ca.name)+'</span></div>'
+        +'<table><thead><tr><th>類別</th><th>病歷號</th><th>姓名</th><th>主治</th><th>說明</th></tr></thead><tbody>'
+        +[...team.map(c=>'<tr><td>醫療小組</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>'),
+           ...events.map(c=>'<tr><td>必要事件</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>')].join('')
+        +'</tbody></table></section>');
     }
   });
 
   const N=slides.length;
-  const css=''
-    +':root{--dk:#3A4550;--acc:#4A7C8E;--lt:#9BAAB6;--cr:#EFF1F4;}'
+  const css=':root{--dk:#3A4550;--acc:#4A7C8E;--lt:#9BAAB6;--cr:#EFF1F4;}'
     +'*{margin:0;padding:0;box-sizing:border-box;}'
-    +'body{background:#1a1a2e;font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;overflow:hidden;height:100vh;}'
-    +'.ss{width:100vw;height:100vh;position:relative;}'
+    +'body{background:#111;font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;overflow:hidden;}'
     +'.slide{position:absolute;inset:0;display:none;background:#fff;flex-direction:column;}'
     +'.slide.on{display:flex;}'
-    +'.cover-slide{background:var(--dk);padding:6vh 7vw;justify-content:center;gap:1.6vh;}'
-    +'.cover-title{font-size:clamp(22px,3.2vw,48px);font-weight:700;color:#fff;line-height:1.3;}'
-    +'.cover-meta{font-size:clamp(13px,1.5vw,20px);color:rgba(255,255,255,.78);line-height:2;}'
-    +'.cover-row{display:flex;gap:1.5vw;font-size:clamp(11px,1.1vw,15px);color:rgba(255,255,255,.6);}'
-    +'.cover-ca{color:rgba(255,255,255,.9);font-weight:600;min-width:5vw;}'
-    +'.section-slide{background:var(--cr);padding:6vh 7vw;justify-content:center;align-items:center;}'
-    +'.section-name{font-size:clamp(32px,5.5vw,72px);font-weight:700;color:var(--dk);}'
-    +'.section-date{font-size:clamp(14px,1.8vw,24px);color:var(--lt);margin-top:1.5vh;}'
-    +'.ch{background:var(--dk);color:#fff;padding:1.4vh 2.2vw;display:flex;align-items:center;gap:1.5vw;flex-shrink:0;min-height:7vh;flex-wrap:wrap;}'
-    +'.cid{font-size:clamp(14px,1.9vw,26px);font-weight:700;white-space:nowrap;}'
-    +'.cn{font-size:clamp(13px,1.7vw,24px);}'
+    +'.cover{background:var(--dk);padding:6vh 7vw;justify-content:center;gap:1.8vh;}'
+    +'.cvt{font-size:clamp(22px,3.2vw,46px);font-weight:700;color:#fff;line-height:1.3;}'
+    +'.cvm{font-size:clamp(13px,1.5vw,20px);color:rgba(255,255,255,.78);line-height:1.8;}'
+    +'.cr{display:flex;gap:1.5vw;font-size:clamp(11px,1.1vw,15px);color:rgba(255,255,255,.6);}'
+    +'.ca{color:rgba(255,255,255,.9);font-weight:600;min-width:5vw;}'
+    +'.cc{color:rgba(255,255,255,.75);}'
+    +'.cm{color:rgba(255,255,255,.45);}'
+    +'.sec{background:var(--cr);justify-content:center;align-items:center;}'
+    +'.sn{font-size:clamp(32px,5.5vw,70px);font-weight:700;color:var(--dk);}'
+    +'.sd{font-size:clamp(13px,1.7vw,22px);color:var(--lt);margin-top:1.5vh;}'
+    +'.ch{background:var(--dk);color:#fff;padding:1.4vh 2.2vw;display:flex;align-items:center;gap:1.5vw;flex-shrink:0;flex-wrap:wrap;min-height:7vh;}'
+    +'.ci{font-size:clamp(14px,1.9vw,26px);font-weight:700;}'
+    +'.cn{font-size:clamp(13px,1.8vw,24px);}'
     +'.cd{font-size:clamp(10px,1.1vw,15px);color:rgba(255,255,255,.6);}'
     +'.cdr{font-size:clamp(11px,1.2vw,16px);color:rgba(255,255,255,.82);}'
-    +'.cat{margin-left:auto;font-size:clamp(10px,1vw,14px);background:rgba(255,255,255,.18);padding:.3vh 1vw;border-radius:20px;white-space:nowrap;flex-shrink:0;}'
-    +'.cb{flex:1;overflow:hidden;display:flex;flex-direction:column;border:1px solid #dde2e7;border-top:none;}'
-    +'.fr{display:flex;flex:1;border-bottom:1px solid #eef0f2;padding:.6vh 2vw;min-height:0;align-items:flex-start;}'
+    +'.cat{margin-left:auto;background:rgba(255,255,255,.18);padding:.3vh 1vw;border-radius:20px;font-size:clamp(10px,1vw,13px);white-space:nowrap;flex-shrink:0;}'
+    +'.cb{flex:1;overflow:hidden;display:flex;flex-direction:column;border:1px solid #dde;border-top:none;}'
+    +'.fr{display:flex;flex:1;border-bottom:1px solid #eef;padding:.55vh 2vw;min-height:0;}'
     +'.fr:last-child{border-bottom:none;}'
-    +'.fl{width:5vw;min-width:60px;color:var(--lt);font-weight:600;font-size:clamp(10px,1.05vw,14px);padding-top:.3vh;flex-shrink:0;}'
-    +'.fv{flex:1;color:var(--dk);line-height:1.55;font-size:clamp(11px,1.18vw,16px);overflow:hidden;}'
-    +'.fv.diag{font-style:italic;color:#4a7c8e;}'
-    +'.fi{margin-bottom:.3vh;line-height:1.5;}'
-    +'.ct{padding:.8vh 2vw;display:flex;gap:.6vw;flex-wrap:wrap;flex-shrink:0;border-top:1px solid #eef0f2;}'
-    +'.tc{border:1.5px solid var(--acc);color:var(--acc);padding:.3vh .9vw;border-radius:3px;font-size:clamp(10px,1vw,14px);font-weight:500;}'
-    +'.sn{position:absolute;top:1vh;right:1.5vw;font-size:clamp(10px,1vw,13px);color:rgba(0,0,0,.25);}'
-    +'.table-slide{padding:5vh 5vw;}'
-    +'.slide-hdr{font-size:clamp(15px,1.9vw,26px);font-weight:700;color:var(--dk);margin-bottom:2vh;}'
-    +'.slide-ca{font-size:.75em;color:var(--lt);font-weight:400;}'
-    +'.sum-table{width:100%;border-collapse:collapse;font-size:clamp(11px,1.15vw,15px);}'
-    +'.sum-table th{background:var(--dk);color:#fff;padding:1vh 1.2vw;text-align:left;font-weight:500;}'
-    +'.sum-table td{padding:.7vh 1.2vw;border-bottom:1px solid #eee;vertical-align:top;line-height:1.5;}'
-    +'.sum-table tr:nth-child(even) td{background:#f9fafc;}'
+    +'.fl{width:5vw;min-width:60px;color:var(--lt);font-weight:600;font-size:clamp(10px,1vw,14px);padding-top:.25vh;flex-shrink:0;}'
+    +'.fv{flex:1;color:#2a3540;line-height:1.55;font-size:clamp(11px,1.2vw,16px);overflow:hidden;}'
+    +'.dg{font-style:italic;color:var(--acc);}'
+    +'.fi{margin-bottom:.3vh;}'
+    +'.ct{padding:.7vh 2vw;display:flex;gap:.6vw;flex-wrap:wrap;flex-shrink:0;border-top:1px solid #eef;}'
+    +'.tp{border:1.5px solid var(--acc);color:var(--acc);padding:.25vh .9vw;border-radius:3px;font-size:clamp(10px,1vw,13px);font-weight:500;}'
+    +'.pg2{position:absolute;top:1vh;right:1.5vw;font-size:13px;color:rgba(0,0,0,.2);}'
+    +'.tbl{padding:5vh 5vw;}'
+    +'.th{font-size:clamp(15px,1.9vw,26px);font-weight:700;color:var(--dk);margin-bottom:2vh;}'
+    +'.tc{font-size:.75em;color:var(--lt);font-weight:400;}'
+    +'table{width:100%;border-collapse:collapse;font-size:clamp(11px,1.2vw,15px);}'
+    +'th{background:var(--dk);color:#fff;padding:1vh 1.2vw;text-align:left;font-weight:500;}'
+    +'td{padding:.7vh 1.2vw;border-bottom:1px solid #eee;vertical-align:top;line-height:1.5;}'
+    +'tr:nth-child(even) td{background:#f9fafc;}'
     +'.nav{position:fixed;bottom:2vh;left:50%;transform:translateX(-50%);display:flex;gap:.7vw;z-index:100;background:rgba(0,0,0,.55);padding:.7vh 1.4vw;border-radius:28px;}'
-    +'.nav button{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;padding:.4vh 1.4vw;border-radius:20px;cursor:pointer;font-size:clamp(13px,1.2vw,17px);}'
-    +'.nav button:hover{background:rgba(255,255,255,.2);}'
-    +'.ni{color:rgba(255,255,255,.75);font-size:clamp(12px,1.1vw,15px);display:flex;align-items:center;padding:0 .5vw;min-width:5vw;text-align:center;justify-content:center;}'
-    +'.pg{position:fixed;bottom:0;left:0;height:3px;background:var(--acc);transition:width .25s;}'
-+'</style></head><body>\n'
-    +'<div class="ss">'+slides.join('\n')+'</div>\n'
-    +'<div class="nav"><button onclick="go(cur-1)">&#9664;</button>'
+    +'.nb{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;padding:.4vh 1.4vw;border-radius:20px;cursor:pointer;font-size:clamp(13px,1.2vw,17px);}'
+    +'.nb:hover{background:rgba(255,255,255,.2);}'
+    +'.ni{color:rgba(255,255,255,.75);font-size:clamp(12px,1.1vw,15px);display:flex;align-items:center;padding:0 .5vw;min-width:5vw;justify-content:center;}'
+    +'.bar{position:fixed;bottom:0;left:0;height:3px;background:var(--acc);transition:width .25s;}';
+
+  const js='var c=0,n='+N+';'
+    +'function go(i){document.querySelectorAll(".slide")[c].classList.remove("on");'
+    +'c=Math.max(0,Math.min(i,n-1));'
+    +'document.querySelectorAll(".slide")[c].classList.add("on");'
+    +'document.getElementById("ni").textContent=(c+1)+" / "+n;'
+    +'document.getElementById("bar").style.width=((c+1)/n*100)+"%";}'
+    +'document.addEventListener("keydown",function(e){'
+    +'if(e.key==="ArrowRight"||e.key===" ")go(c+1);'
+    +'if(e.key==="ArrowLeft")go(c-1);'
+    +'if(e.key==="Home")go(0);if(e.key==="End")go(n-1);'
+    +'if(e.key==="f"){var el=document.documentElement;'
+    +'!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen();}});'
+    +'go(0);';
+
+  const fullHTML='<!DOCTYPE html>\n<html lang="zh-TW"><head>\n'
+    +'<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+    +'<title>'+escA(mtgTitle(cids))+' '+escA(m.date)+'</title>\n'
+    +'<style>'+css+'</style></head><body>\n'
+    +'<div style="width:100vw;height:100vh;position:relative;">'+slides.join('')+'</div>\n'
+    +'<div class="nav">'
+    +'<button class="nb" onclick="go(c-1)">&#9664;</button>'
     +'<span class="ni" id="ni">1 / '+N+'</span>'
-    +'<button onclick="go(cur+1)">&#9654;</button>'
-    +'<button onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()">&#9974;</button>'
-    +'</div>\n<div class="pg" id="pg"></div>\n'
-    +'<script>'+js+'<\/script>\n</body></html>';
+    +'<button class="nb" onclick="go(c+1)">&#9654;</button>'
+    +'<button class="nb" onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()">&#9974;</button>'
+    +'</div>\n<div class="bar" id="bar"></div>\n'
+    +'<script>'+js+sc+'\n</body></html>';
 
   const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
   const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
@@ -4114,15 +4128,4 @@ if(lgVer)lgVer.textContent=VERSION;
   </div>
 </div>
 </body>
-</html<script>${scriptCode}</script>\n</body></html>\`;
-
-  const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
-  const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=fname;
-  document.body.appendChild(a);a.click();
-  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
-  showSaveToast('HTML 投影片已下載');
-}
-
->
+</html>

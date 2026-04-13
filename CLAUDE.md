@@ -224,8 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
-| V2.9.6 | HTML投影片排版優化（全版flex+vw/vh比例字型）|
-| V2.9.5 | HTML投影片匯出（16:9全螢幕，鍵盤切換）|
+| V2.9.6 | HTML投影片修正；從V2.9.4重建避免script洩漏bug |
 | V2.9.4 | 個案可收合；新增個案選擇對話框；列印CSS修正 |
 | V2.9.3 | 列印改A4橫向 |
 | V2.9.2 | 列印PDF改善：會議標題頁、隱藏UI、每案獨頁 |
