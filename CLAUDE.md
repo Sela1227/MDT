@@ -224,6 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V3.0.2 | HTML投影片病理渲染重寫；Excel匯入功能 |
 | V3.0.1 | 移除isOwn編輯限制，任何登入者可編輯所有癌別 |
 | V3.0.0 | 個案預設收合；閱覽模式單獨編輯按鈕 |
 | V2.9.9 | HTML投影片字體加大、&nbsp;修正、導覽改膠囊型 |
