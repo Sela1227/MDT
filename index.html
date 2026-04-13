@@ -780,14 +780,15 @@ textarea{resize:vertical}
           <div class="sec-body">
             <div class="brow">
               <button class="btn btn-a" onclick="doOutput('line')">LINE 通知</button>
-              <button class="btn btn-b" onclick="doOutput('ai')" title="複製完整個案資料，貼到 claude.ai 生成摘要">複製 AI 提示詞</button>
+              <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
               <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides()">HTML 投影片</button>
               <button class="btn btn-b" onclick="printMeeting()">列印 / PDF</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-b" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
-              <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
+              <button class="btn btn-b" onclick="document.getElementById('json-import-input').click()" title="匯入 AI 產出的 JSON 檔，支援多筆多癌別">JSON 批次匯入</button>
+              <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
               <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
             </div>
@@ -1111,7 +1112,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.14';
+const VERSION='V3.0.17';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2830,7 +2831,19 @@ let _dirty=false;
 function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}}
 async function saveMeeting(){
   document.querySelectorAll('.sec-foot .btn-a, #btn-save-all').forEach(b=>{b.disabled=true;b.textContent='儲存中...'})
-  readForm();const time=await getNetworkTime();
+  readForm();
+  // Auto-fill Nil for cases with no past history
+  S.cids.forEach(cid=>{
+    (S.meeting.sections[cid]?.cases||[]).forEach(c=>{
+      if(!(c.phChips&&c.phChips.length)&&!( c.ph&&c.ph.trim())){
+        c.ph='Nil';
+        // Update the input field in DOM if visible
+        const card=document.getElementById('cc-'+cid+'-cases-'+(S.meeting.sections[cid].cases.indexOf(c)));
+        if(card){const inp=card.querySelector('[oninput*="\'ph\'"]');if(inp)inp.value='Nil';}
+      }
+    });
+  });
+  const time=await getNetworkTime();
   S.meeting.version=(S.meeting.version||0)+1;S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
   const lok=saveLocal(S.meeting),sok=await saveShared(S.meeting);
   _dirty=false;
@@ -3361,6 +3374,7 @@ function doImportCase(){
       pathologies: Array.isArray(d.pathologies)?d.pathologies:[],
       exams: Array.isArray(d.exams)?d.exams:[],
       treatments: Array.isArray(d.treatments)?d.treatments:[],
+      markers: Array.isArray(d.markers)?d.markers:[],
       discussion: d.discussion||'',
       topics: Array.isArray(d.topics)?d.topics:['影像討論','分期討論','治療策略討論'],
       summary: d.summary||'', decision: d.decision||'',
@@ -3878,6 +3892,54 @@ function genImportPrompt(){
   document.getElementById('copy-ok').style.display='none';
   document.getElementById('out-area').scrollIntoView({behavior:'smooth',block:'start'});
 }
+function importCaseJSON(inputEl){
+  const file=inputEl.files[0];if(!file)return;
+  inputEl.value='';
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    let data;
+    try{data=JSON.parse(ev.target.result);}
+    catch(e){alert('JSON 格式錯誤：'+e.message);return;}
+    const cases=Array.isArray(data)?data:[data];
+    if(!cases.length){alert('JSON 沒有個案資料');return;}
+    // Build cancer name → cid map
+    const nameMap={};Object.keys(CFG).forEach(cid=>nameMap[CFG[cid].name]=cid);
+    let imported=0,skipped=0;
+    cases.forEach(d=>{
+      // Determine cancer section: use d._cancer or d.癌別, fallback to current meeting's first cid
+      const caName=d._cancer||d['癌別']||'';
+      const cid=nameMap[caName]||(S.cids&&S.cids[0]);
+      if(!cid||!S.cids.includes(cid)){skipped++;return;}
+      ensureSec(cid);
+      const blank={
+        id:uid(),
+        chartNo:String(d.chartNo||'').trim(),
+        name:String(d.name||'').trim(),
+        age:String(d.age||''),
+        gender:d.gender||'M',
+        doctors:Array.isArray(d.doctors)?d.doctors:['','',''],
+        doctor:d.doctor||'',
+        diagnosis:d.diagnosis||'',
+        cc:d.cc||'',
+        ph:d.ph||'',
+        phChips:Array.isArray(d.phChips)?d.phChips:[],
+        pathologies:Array.isArray(d.pathologies)?d.pathologies:[],
+        exams:Array.isArray(d.exams)?d.exams:[],
+        treatments:Array.isArray(d.treatments)?d.treatments:[],
+        markers:Array.isArray(d.markers)?d.markers:[],
+        discussion:d.discussion||'',
+        topics:Array.isArray(d.topics)?d.topics:[],
+        summary:d.summary||'',decision:d.decision||'',
+        images:[],note:d.note||''
+      };
+      S.meeting.sections[cid].cases.push(blank);
+      imported++;
+    });
+    if(imported){renderCasesInner();markDirty();showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));}
+    else alert('沒有成功匯入任何個案，請確認 JSON 格式與癌別名稱');
+  };
+  reader.readAsText(file,'utf-8');
+}
 function genLine(){
   readForm();const m=S.meeting,cids=S.cids,pfx=timePfx(m.time.split('-')[0]);
   const multi=cids.length>1;
@@ -3924,7 +3986,6 @@ function genLine(){
     if(cases.length){cases.forEach(c=>{
       const tp=c.topics?.length?`（${c.topics.join('、')}）`:'';
       t+=`\n　　${tag(c)}${c.chartNo||''}　${c.name?maskName(c.name):'___'}　VS ${getDoctorStr(c)||'___'}`;
-      if(c.diagnosis)t+=`\n　　　診斷：${c.diagnosis}`;
       if(tp)t+=`\n　　　討論：${tp}`;
     });}
     else t+=`無`;
@@ -4050,7 +4111,6 @@ async function genAIInline(){
     prompt+=`\n【${ca.name}】\n`;
     cases.forEach((c,i)=>{
       prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name||''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
-      if(c.diagnosis)prompt+=`診斷：${c.diagnosis}\n`;
       if(c.cc)prompt+=`現病史: ${c.cc}\n`;
       if(c.ph)prompt+=`過去病史: ${c.ph}\n`;
       if((c.exams||[]).length)prompt+=`檢查:\n`+(c.exams||[]).map(e=>e.name+' '+e.date+' : '+e.content).join('\n')+'\n';
