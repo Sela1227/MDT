@@ -481,6 +481,70 @@ textarea{resize:vertical}
   /* History: stack layout on tiny screens */
   .hist-month-body [style*="display:flex"]{flex-wrap:wrap!important;gap:6px!important}
 }
+
+@media print {
+  /* Hide everything except meeting content */
+  #sb-left, #mobile-nav, .mob-sheet, #mobile-cancer-sheet,
+  #mobile-user-sheet, .output-section, .sec-foot, .info-edit,
+  #btn-back-mtg, #btn-del-mtg, #mtg-top-bar, .rec-edit-ctrl,
+  .rec-save-ctrl, #del-confirm-modal, #cf-modal, #img-modal,
+  .btnadd, .delbtn, #rec-save-msg, #save-msg, #infobar { display:none !important; }
+
+  /* Page setup */
+  @page { size: A4 portrait; margin: 15mm 12mm; }
+  body { background: white !important; font-size: 11pt; }
+
+  /* Meeting title */
+  #mtg-title { font-size: 16pt; font-weight: bold; margin-bottom: 4mm; }
+  #mtg-sub { font-size: 11pt; color: #555; margin-bottom: 6mm; }
+
+  /* Info doc rows */
+  .doc-row { display: flex; gap: 8px; padding: 3px 0;
+             border-bottom: 1px solid #eee; font-size: 10pt; }
+  .doc-lbl { width: 60px; color: #666; flex-shrink: 0; }
+
+  /* Section headers */
+  .sh-track-hdr, .subhdr { font-size: 11pt; font-weight: bold;
+    padding: 4px 0; border-bottom: 2px solid #3A4550;
+    margin: 8mm 0 3mm; color: #3A4550; }
+  .sh-track-dot, .sh-dot { display: none; }
+
+  /* Case card: one per page */
+  .vc { page-break-inside: avoid; margin-bottom: 6mm;
+        border: 1px solid #ddd; border-radius: 3px; }
+  .vc + .vc { page-break-before: always; }
+
+  /* Case header */
+  .vc-hdr { background: #3A4550 !important; color: white !important;
+            padding: 6px 10px; -webkit-print-color-adjust: exact;
+            print-color-adjust: exact; }
+  .vc-hdr-sub { color: #aac !important; font-size: 9pt; }
+
+  /* Case rows */
+  .vc-r { display: flex; border-bottom: 1px solid #f0f0f0;
+          padding: 4px 10px; font-size: 10pt; }
+  .vc-l { width: 70px; color: #666; flex-shrink: 0; font-size: 9pt;
+          padding-top: 1px; }
+  .vc-v { flex: 1; white-space: pre-wrap; line-height: 1.5; }
+
+  /* Topics chips */
+  .vc-chips { padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .vc-chip { border: 1px solid #3A4550; padding: 2px 8px;
+             border-radius: 2px; font-size: 9pt; color: #3A4550; }
+
+  /* Summary/decision */
+  .vc-rec { background: #f7f8fa; padding: 6px 10px; }
+
+  /* Track cards (followup/team/events) */
+  .vc[style*="border-left"] { border-left: 3px solid #9BAAB6 !important; }
+
+  /* Page break between cancer sections */
+  .subsec { page-break-inside: avoid; }
+  hr.rule { border: none; border-top: 1px solid #ddd; margin: 4mm 0; }
+
+  /* Hide empty placeholders */
+  .sh-empty { display: none; }
+}
 </style>>
 </head>
 <body>
@@ -664,6 +728,7 @@ textarea{resize:vertical}
               <button class="btn btn-a" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" onclick="doOutput('ai')" title="複製完整個案資料，貼到 claude.ai 生成摘要">複製 AI 提示詞</button>
               <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
+              <button class="btn btn-b" onclick="printMeeting()">列印 / PDF</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
@@ -988,7 +1053,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.8.6';
+const VERSION='V2.9.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2831,9 +2896,13 @@ async function genPPTX(){
   }
 
   const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_MDT簡報.pptx';
-  pptx.write({outputType:'arraybuffer'}).then(ab=>{
+  pptx.write('arraybuffer').then(ab=>{
     const blob=new Blob([ab],{type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
-    download(blob,fname);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=fname;
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
     btn.disabled=false;btn.textContent='PPTX 簡報';
   }).catch(e=>{setLibStatus('PPTX 失敗：'+e.message,'var(--err)');btn.disabled=false;btn.textContent='PPTX 簡報';});
 }
@@ -3069,6 +3138,19 @@ function importAllJSON(input){
 }
 
 
+function printMeeting(){
+  if(!S.meeting?.version){
+    alert('請先儲存會議資料');return;
+  }
+  // Ensure view mode before printing
+  if(!S.viewMode){
+    if(!confirm('列印前會先切換到閱覽模式，確定繼續？'))return;
+    S.viewMode=true;S.meetingMode='record';renderEditor();
+  }
+  setTimeout(()=>window.print(), 300);
+}
+
+
 async function genXLSX(){
   const btn=document.getElementById('btn-xlsx');
   if(btn){btn.disabled=true;btn.textContent='匯出中...';}
@@ -3175,7 +3257,11 @@ async function genXLSX(){
     const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_MDT.xlsx';
     const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
     const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    download(blob,fname);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=fname;
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
     setLibStatus('Excel 已下載','var(--ok)');
     setTimeout(()=>setLibStatus(''),3000);
   }catch(e){setLibStatus('Excel 匯出失敗：'+e.message,'var(--err)');console.error(e);}
