@@ -224,6 +224,7 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V3.0.5 | 診斷/現病史多行；Bone scan；癌指數區塊；HTML圖片 |
 | V3.0.4 | HTML投影片診斷移入深色標題列 |
 | V3.0.3 | HTML投影片：依診斷自動子分組（膀胱/攝護腺/腎臟等）|
 | V3.0.2 | HTML投影片病理渲染重寫；Excel匯入功能 |

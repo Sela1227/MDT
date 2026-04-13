@@ -1077,7 +1077,7 @@ textarea{resize:vertical}
 
 /* ════ DEFAULT CONFIG ════ */
 const DEFAULT_LOCS=['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪','彰濱-2樓 185會議室','彰濱-1F 人文藝術館會議室','彰濱-7F 愛書人會議室','彰濱-3樓 甲狀腺會議室'];
-const DEFAULT_EXAM_TYPES=['CT','MRI','SONO','PET-CT','X-Ray','Echo','Lab'];
+const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','PET-CT','X-Ray','Echo','Lab'];
 let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
 const DEFAULT_DRS=[
@@ -1110,7 +1110,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.4';
+const VERSION='V3.0.5';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1119,6 +1119,7 @@ function loadAll(){
   try{const l=localStorage.getItem('mdt_locs');LOCS=l?JSON.parse(l):[...DEFAULT_LOCS]}catch{LOCS=[...DEFAULT_LOCS]}
   try{const d=localStorage.getItem('mdt_drs');DRS=d?JSON.parse(d):[...DEFAULT_DRS]}catch{DRS=[...DEFAULT_DRS]}
   try{const e=localStorage.getItem('mdt_exam_types');EXAM_TYPES=e?JSON.parse(e):[...DEFAULT_EXAM_TYPES]}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
+  if(!EXAM_TYPES.includes('Bone scan')){EXAM_TYPES.splice(2,0,'Bone scan');saveAll();}
   migrateLOCS();
   migrateCFG();
   migrateLOCS();
@@ -2501,6 +2502,13 @@ ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis
 </div>
 <div class="vc-body" style="display:none">
 ${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(p.date)+'</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
+  const mkArr=(d.markers||[]);
+  if(!mkArr.length)return '';
+  return mkArr.map(mk=>{
+    const label=(mk.name||'')+(mk.date?' ('+mk.date+')':'');
+    return '<div class="vc-r"><span class="vc-l">癌指數</span><span class="vc-v">'+(label?'<b>'+escA(label)+'</b> ':'')+escA(mk.content||'')+'</span></div>';
+  }).join('');
+})()}${(()=>{
   const exArr=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const exStr=exArr.map(ex=>[(ex.name||''),(ex.date?'('+ex.date+')':''),' ',(ex.content||'')].join('').trim()).filter(Boolean).join('\n');
   return row('檢查', exStr||d.exam||'');
@@ -2621,6 +2629,18 @@ function caseHTML(cid,i,d){
       <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(ex.content||'')}</textarea>
     </div>`).join('');
 
+  // Markers (tumor markers)
+  const mkrs=(d.markers||[]);
+  const markerRows=mkrs.map((mk,mi)=>`
+    <div class="struct-row" style="position:relative">
+      <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
+        <input placeholder="指數名稱 (PSA/CEA...)" value="${escA(mk.name||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="name" style="width:140px">
+        <input type="date" value="${escA(mk.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" style="margin-left:auto">×</button>
+      </div>
+      <textarea placeholder="數值或趨勢" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(mk.content||'')}</textarea>
+    </div>`).join('');
+
   // Treatments sorted by date
   const trts=(d.treatments||[]);
   const trtRows=trts.map((tr,ti)=>`
@@ -2651,8 +2671,8 @@ function caseHTML(cid,i,d){
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第三主治（選填）</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[2]||'':'',2)}</div>
 </div></div>
-<div class="fg full"><label>診斷</label>${inp('diagnosis',d.diagnosis,'診斷（含分期）')}</div>
-<div class="fg full"><label>現病史</label>${inp('cc',d.cc,'主訴')}</div>
+<div class="fg full"><label>診斷</label>${ta('diagnosis',d.diagnosis,2,'診斷（含分期）')}</div>
+<div class="fg full"><label>現病史</label>${ta('cc',d.cc,3,'現病史')}</div>
 <div class="fg full"><label>過去病史</label>
   <div class="trow" style="margin-bottom:6px">${chips2}</div>
   ${inp('ph',d.ph,'其他病史')}
@@ -2665,6 +2685,9 @@ function caseHTML(cid,i,d){
 </div>
 <div class="fg full"><label>治療<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">+ 新增</button></label>
   <div id="trtlist-${cid}-${i}">${trtRows}</div>
+</div>
+<div class="fg full"><label>癌指數<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">+ 新增</button></label>
+  <div id="marklist-${cid}-${i}">${markerRows}</div>
 </div>
 <div class="fg full"><label>討論要點</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
 <div class="fg full"><label>討論項目（LINE 通知）</label><div class="trow">${chips}</div></div>
@@ -2700,7 +2723,7 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),chartNo:'',name:'',age:'',gender:'M',doctors:['','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],note:''}:type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');const _sfx=type==='team'?'_team':type==='events'?'_events':'';
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?{id:uid(),chartNo:'',name:'',age:'',gender:'M',doctors:['','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],markers:[],note:''}:type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');const _sfx=type==='team'?'_team':type==='events'?'_events':'';
   const realCid2=_sfx?cid:(cid.includes('_team')?cid.slice(0,-5):cid.includes('_events')?cid.slice(0,-7):cid);
   const realType2=_sfx||type;
   const _fcid=_sfx?(cid+_sfx):cid;
@@ -2909,6 +2932,10 @@ async function genPPTX(){
         addRow('治療',trStr);
       } else if(c.treatment){addRow('治療',c.treatment);}
       if(c.discussion)addRow('討論',c.discussion);
+      if((c.markers||[]).length){
+        const mkStr=(c.markers||[]).map(mk=>(mk.name||'')+(mk.date?' ('+mk.date+') ':' ')+(mk.content||'')).join('\n');
+        addRow('癌指數',mkStr);
+      }
 
       // Topics chips (on current slide, near bottom)
       if((c.topics||[]).length){
@@ -3048,6 +3075,7 @@ async function genDOCX(){
             ?(c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(tr=>(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'')).join('\n')
             :(c.treatment&&c.treatment!=='尚未治療'?c.treatment:'');
           if(trStr2)infoRows.push(mkRow('治療',trStr2));
+          if((c.markers||[]).length){const mkStr=(c.markers||[]).map(mk=>(mk.name||'')+(mk.date?' ('+mk.date+') ':' ')+(mk.content||'')).join('\n');infoRows.push(mkRow('癌指數',mkStr));}
           if(c.discussion)infoRows.push(mkRow('討論要點',c.discussion));
           if(infoRows.length)children.push(mkTable(infoRows));
           // Discussion focus: topics + summary + decision (expanded)
@@ -3365,6 +3393,7 @@ function genHTMLSlides(){
         mkRow('檢查',exs),
         mkRow('治療',trts),
         mkRow('討論',escA(c.discussion||'')),
+        (c.markers&&c.markers.length)?('<tr><td class="rl">癌指數</td><td class="rv">'+( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+(mk.date?'('+escA(mk.date)+')':'')+'</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>')+'</td></tr>'):'',
       ].join('');
 
       // Insert sub-group title slide when group changes
@@ -3393,7 +3422,16 @@ function genHTMLSlides(){
         +'<div class="cb">'
         +'<table class="rtbl">'+rows+'</table>'
         +'</div>'
-        +(chips?'<div class="ct">'+chips+'</div>':'')
+        // Images
+      const imgHtml=(c.images||[]).length
+        ?(c.images||[]).map(img=>'<div class="img-wrap"><img src="'+img.dataUrl+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>').join(''):'';
+      if(imgHtml){
+        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
+          +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
+          +'<div class="img-grid">'+imgHtml+'</div>'
+          +'</section>');
+      }
+      +(chips?'<div class="ct">'+chips+'</div>':'')
         +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
         +'</section>');
     });
@@ -3444,7 +3482,10 @@ function genHTMLSlides(){
     +'.ex{display:block;margin-bottom:.5vh;}'
     +'.ct{padding:1.4vh 2.5vw;display:flex;gap:1vw;flex-wrap:wrap;background:#f8f9fa;border-top:3px solid var(--ca,var(--acc));flex-shrink:0;}'
     +'.tp{border:2.5px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.55vh 1.5vw;border-radius:4px;font-size:clamp(14px,1.5vw,21px);font-weight:700;}'
-    +'.tbl{padding:5vh 5vw;}'
+    +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'
+    +'.img-grid{flex:1;display:flex;flex-wrap:wrap;gap:1vw;padding:2vh 2.5vw;align-items:center;justify-content:center;overflow:hidden;}'
+    +'.img-wrap{flex:1;min-width:30%;max-width:48%;display:flex;flex-direction:column;align-items:center;gap:.5vh;max-height:80vh;}'
+    +'.img-cap{font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7);text-align:center;}' +
     +'.th{font-size:clamp(18px,2.2vw,32px);font-weight:700;color:var(--dk);margin-bottom:2.5vh;}'
     +'.tc{font-size:.7em;color:var(--lt);font-weight:400;margin-left:1vw;}'
     +'table{width:100%;border-collapse:collapse;}'
