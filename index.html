@@ -1108,7 +1108,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.0';
+const VERSION='V3.0.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2350,8 +2350,8 @@ function renderCasesInner(){
     const wasVM=S.viewMode;
     myFirst.forEach((id,i)=>{
       const isOwn=S.user.cancers.includes(id);
-      // Partner tab always in view mode
-      S.viewMode=wasVM||!isOwn;
+      // All logged-in users can edit any cancer
+      S.viewMode=wasVM;
       const paneContent=casesPane(id);
       // Controls: own tab in edit mode gets save+abandon; partner tab gets attribution
       let ctrlRow='';
