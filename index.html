@@ -1111,7 +1111,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.13';
+const VERSION='V3.0.14';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4352,6 +4352,10 @@ document.addEventListener('click',function(e){
     card.classList.toggle('cc-collapsed');
     const icon=document.getElementById('tgi-'+tog.dataset.card.slice(3));
     if(icon)icon.textContent=willOpen?'▼':'▶';
+    // Scroll to top of opened card
+    if(willOpen){
+      setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),30);
+    }
     return;
   }
 });
