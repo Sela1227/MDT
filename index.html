@@ -1106,7 +1106,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V2.9.6';
+const VERSION='V2.9.7';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3272,79 +3272,94 @@ function genHTMLSlides(){
   readForm();
   const m=S.meeting,cids=S.cids;
   const slides=[];
-  const sc='</'+'script>';  // safe split to avoid premature script close
+  const sc='</'+'script>';
 
-  // Cover slide
+  // ── Cover ──
   const owners2=[];
   cids.forEach(cid=>{const o=USERS.find(u=>u.cancers?.includes(cid));if(o&&!owners2.find(x=>x.id===o.id))owners2.push(o);});
-  const contact2=owners2.filter(o=>o.ext).map(o=>o.name+'('+o.ext+')').join(' ')||'暫無專職個管師';
-  const memberLines=cids.map(cid=>{
-    const ca=CFG[cid];
-    const convName=ca.conv?.includes('::')?ca.conv.split('::')[1]:ca.conv||'';
-    return '<div class="cr"><span class="ca">'+escA(ca.name)+'</span>'
-      +'<span class="cc">召集人：'+escA(convName)+'</span>'
-      +'<span class="cm">'+escA(getMemberStr(ca))+'</span></div>';
-  }).join('');
+  const contact2=owners2.filter(o=>o.ext).map(o=>o.name+'('+o.ext+')').join('・')||'暫無專職個管師';
   slides.push('<section class="slide cover">'
     +'<div class="cvt">'+escA(mtgTitle(cids))+'</div>'
-    +'<div class="cvm">'+escA(rocDate(m.date))+'&emsp;'+escA(m.time||'')+'</div>'
-    +'<div class="cvm">'+escA(m.loc||'')+'&emsp;聯絡人：'+escA(contact2)+'</div>'
-    +memberLines+'</section>');
+    +'<div class="cvm">'+escA(rocDate(m.date))+'&emsp;&emsp;'+escA(m.time||'')+'</div>'
+    +'<div class="cvm">'+escA(m.loc||'')+'</div>'
+    +'<div class="cvm" style="opacity:.7">聯絡人：'+escA(contact2)+'</div>'
+    +'<div class="cmems">'+cids.map(cid=>{
+        const ca=CFG[cid];
+        const conv=ca.conv?.includes('::')?ca.conv.split('::')[1]:ca.conv||'';
+        return '<div class="cmr"><b>'+escA(ca.name)+'</b>　召集人：'+escA(conv)+'　核心成員：'+escA(getMemberStr(ca))+'</div>';
+      }).join('')+'</div>'
+    +'</section>');
 
   cids.forEach(cid=>{
     const ca=CFG[cid];
+    const caColor=ca.color||'#4A7C8E';
     const sec=m.sections[cid]||{};
     const fups=sec.followups||[],cases=sec.cases||[],team=sec.team||[],events=sec.events||[];
 
-    slides.push('<section class="slide sec"><div class="sn">'+escA(ca.name)+'</div>'
-      +'<div class="sd">'+escA(rocDate(m.date))+'</div></section>');
+    // ── Cancer section ──
+    slides.push('<section class="slide sec" style="--ca:'+caColor+';">'
+      +'<div class="sn">'+escA(ca.name)+'</div>'
+      +'<div class="sd">'+escA(rocDate(m.date))+'</div>'
+      +'</section>');
 
+    // ── Followup table ──
     if(fups.length){
       slides.push('<section class="slide tbl">'
-        +'<div class="th">前期追蹤事項 <span class="tc">'+escA(ca.name)+'</span></div>'
-        +'<table><thead><tr><th>病歷號</th><th>姓名</th><th>主治</th><th>前次日期</th><th>說明</th></tr></thead><tbody>'
+        +'<div class="th"><span style="border-left:4px solid '+caColor+';padding-left:10px">前期追蹤事項</span>'
+        +' <span class="tc">'+escA(ca.name)+'</span></div>'
+        +'<table><thead><tr><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>前次日期</th><th>追蹤說明</th></tr></thead><tbody>'
         +fups.map(f=>'<tr><td>'+escA(f.chartNo||'')+'</td><td>'+escA(f.name?maskName(f.name):'—')
           +'</td><td>'+escA(getDoctorStr(f))+'</td><td>'+escA(f.prevDate||'')+'</td><td>'+escA(f.note||'')+'</td></tr>').join('')
         +'</tbody></table></section>');
     }
 
+    // ── Case slides ──
     cases.forEach((c,ci)=>{
       const drs=getDoctorStr(c)||'—';
       const ph=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
       const paths=(c.pathologies||[]).length
-        ?(c.pathologies||[]).map(p=>'<div class="fi">'+escA((p.date?p.date+' ':'')+p.content)+'</div>').join('')
-        :(c.pathology?'<div class="fi">'+escA((c.pathologyDate?c.pathologyDate+' ':'')+c.pathology)+'</div>':'');
+        ?(c.pathologies||[]).map(p=>'<span class="pth">'+escA((p.date?p.date+'&nbsp;':'')+p.content)+'</span>').join('')
+        :(c.pathology?'<span class="pth">'+escA((c.pathologyDate?c.pathologyDate+'&nbsp;':'')+c.pathology)+'</span>':'');
       const exs=(c.exams||[]).length
-        ?(c.exams||[]).map(e=>'<div class="fi"><b>'+escA(e.name||'')+(e.date?'('+e.date+')':'')+'</b>'+(e.content?' '+escA(e.content):'')+'</div>').join('')
-        :(c.exam?'<div class="fi">'+escA(c.exam)+'</div>':'');
+        ?(c.exams||[]).map(e=>'<span class="ex"><b>'+escA(e.name||'')+(e.date?'('+e.date+')':'')+'</b>'+(e.content?'&nbsp;'+escA(e.content):'')+'</span>').join('')
+        :(c.exam?'<span class="ex">'+escA(c.exam)+'</span>':'');
       const trts=(c.treatments||[]).length
-        ?(c.treatments||[]).map(t=>'<div class="fi"><b>'+escA(t.name||'')+(t.date?'('+t.date+')':'')+'</b>'+(t.content?' '+escA(t.content):'')+'</div>').join('')
-        :(c.treatment?'<div class="fi">'+escA(c.treatment)+'</div>':'');
+        ?(c.treatments||[]).map(t=>'<span class="ex"><b>'+escA(t.name||'')+(t.date?'('+t.date+')':'')+'</b>'+(t.content?'&nbsp;'+escA(t.content):'')+'</span>').join('')
+        :(c.treatment?'<span class="ex">'+escA(c.treatment)+'</span>':'');
       const chips=(c.topics||[]).map(t=>'<span class="tp">'+escA(t)+'</span>').join('');
+
+      const mkRow=(lbl,val,cls='')=>val?'<tr><td class="rl">'+lbl+'</td><td class="rv'+(cls?' '+cls:'')+'">'+val+'</td></tr>':'';
       const rows=[
-        c.diagnosis?'<div class="fr"><span class="fl">診斷</span><span class="fv dg">'+escA(c.diagnosis)+'</span></div>':'',
-        c.cc?'<div class="fr"><span class="fl">現病史</span><span class="fv">'+escA(c.cc)+'</span></div>':'',
-        ph?'<div class="fr"><span class="fl">過去病史</span><span class="fv">'+escA(ph)+'</span></div>':'',
-        paths?'<div class="fr"><span class="fl">病理</span><span class="fv">'+paths+'</span></div>':'',
-        exs?'<div class="fr"><span class="fl">檢查</span><span class="fv">'+exs+'</span></div>':'',
-        trts?'<div class="fr"><span class="fl">治療</span><span class="fv">'+trts+'</span></div>':'',
-        c.discussion?'<div class="fr"><span class="fl">討論</span><span class="fv">'+escA(c.discussion)+'</span></div>':'',
+        mkRow('診斷',escA(c.diagnosis||''),'dg'),
+        mkRow('現病史',escA(c.cc||'')),
+        mkRow('過去病史',escA(ph||'')),
+        mkRow('病理',paths),
+        mkRow('檢查',exs),
+        mkRow('治療',trts),
+        mkRow('討論',escA(c.discussion||'')),
       ].join('');
-      slides.push('<section class="slide case">'
-        +'<div class="ch"><span class="ci">'+escA(c.chartNo||'')+'</span>'
-        +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
-        +' <span class="cd">'+escA((c.gender||'M')+'/'+( c.age||'—'))+'</span>'
-        +' <span class="cdr">VS '+escA(drs)+'</span>'
-        +'<span class="cat">'+escA(ca.name)+'</span></div>'
-        +'<div class="cb">'+rows+'</div>'
+
+      slides.push('<section class="slide case" style="--ca:'+caColor+';">'
+        +'<div class="ch">'
+        +'<div class="ci">'+escA(c.chartNo||'')+'&nbsp;<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+        +'&nbsp;<span class="cd">'+escA((c.gender||'M')+'/'+( c.age||'—'))+'</span></div>'
+        +'<div class="cdr">VS&nbsp;'+escA(drs)+'</div>'
+        +'<div class="cat">'+escA(ca.name)+'</div>'
+        +'</div>'
+        +'<div class="cb">'
+        +'<table class="rtbl">'+rows+'</table>'
+        +'</div>'
         +(chips?'<div class="ct">'+chips+'</div>':'')
-        +'<div class="pg2">'+(ci+1)+'/'+cases.length+'</div></section>');
+        +'<div class="pg2">'+(ci+1)+'/'+cases.length+'</div>'
+        +'</section>');
     });
 
+    // ── Team / Events ──
     if(team.length||events.length){
       slides.push('<section class="slide tbl">'
-        +'<div class="th">醫療小組 / 必要事件 <span class="tc">'+escA(ca.name)+'</span></div>'
-        +'<table><thead><tr><th>類別</th><th>病歷號</th><th>姓名</th><th>主治</th><th>說明</th></tr></thead><tbody>'
+        +'<div class="th"><span style="border-left:4px solid '+caColor+';padding-left:10px">醫療小組 / 必要事件</span>'
+        +' <span class="tc">'+escA(ca.name)+'</span></div>'
+        +'<table><thead><tr><th>類別</th><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>說明</th></tr></thead><tbody>'
         +[...team.map(c=>'<tr><td>醫療小組</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>'),
            ...events.map(c=>'<tr><td>必要事件</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>')].join('')
         +'</tbody></table></section>');
@@ -3352,54 +3367,58 @@ function genHTMLSlides(){
   });
 
   const N=slides.length;
-  const css=':root{--dk:#3A4550;--acc:#4A7C8E;--lt:#9BAAB6;--cr:#EFF1F4;}'
+  const css=''
+    +':root{--dk:#3A4550;--acc:#4A7C8E;--lt:#9BAAB6;}'
     +'*{margin:0;padding:0;box-sizing:border-box;}'
-    +'body{background:#111;font-family:"Noto Sans TC","Microsoft JhengHei",Arial,sans-serif;overflow:hidden;}'
+    +'html,body{width:100%;height:100%;overflow:hidden;font-family:"Noto Sans TC","Microsoft JhengHei",Helvetica,sans-serif;background:#111;}'
     +'.slide{position:absolute;inset:0;display:none;background:#fff;flex-direction:column;}'
     +'.slide.on{display:flex;}'
-    +'.cover{background:var(--dk);padding:6vh 7vw;justify-content:center;gap:1.8vh;}'
-    +'.cvt{font-size:clamp(22px,3.2vw,46px);font-weight:700;color:#fff;line-height:1.3;}'
-    +'.cvm{font-size:clamp(13px,1.5vw,20px);color:rgba(255,255,255,.78);line-height:1.8;}'
-    +'.cr{display:flex;gap:1.5vw;font-size:clamp(11px,1.1vw,15px);color:rgba(255,255,255,.6);}'
-    +'.ca{color:rgba(255,255,255,.9);font-weight:600;min-width:5vw;}'
-    +'.cc{color:rgba(255,255,255,.75);}'
-    +'.cm{color:rgba(255,255,255,.45);}'
-    +'.sec{background:var(--cr);justify-content:center;align-items:center;}'
-    +'.sn{font-size:clamp(32px,5.5vw,70px);font-weight:700;color:var(--dk);}'
-    +'.sd{font-size:clamp(13px,1.7vw,22px);color:var(--lt);margin-top:1.5vh;}'
-    +'.ch{background:var(--dk);color:#fff;padding:1.4vh 2.2vw;display:flex;align-items:center;gap:1.5vw;flex-shrink:0;flex-wrap:wrap;min-height:7vh;}'
-    +'.ci{font-size:clamp(14px,1.9vw,26px);font-weight:700;}'
-    +'.cn{font-size:clamp(13px,1.8vw,24px);}'
-    +'.cd{font-size:clamp(10px,1.1vw,15px);color:rgba(255,255,255,.6);}'
-    +'.cdr{font-size:clamp(11px,1.2vw,16px);color:rgba(255,255,255,.82);}'
-    +'.cat{margin-left:auto;background:rgba(255,255,255,.18);padding:.3vh 1vw;border-radius:20px;font-size:clamp(10px,1vw,13px);white-space:nowrap;flex-shrink:0;}'
-    +'.cb{flex:1;overflow:hidden;display:flex;flex-direction:column;border:1px solid #dde;border-top:none;}'
-    +'.fr{display:flex;flex:1;border-bottom:1px solid #eef;padding:.55vh 2vw;min-height:0;}'
-    +'.fr:last-child{border-bottom:none;}'
-    +'.fl{width:5vw;min-width:60px;color:var(--lt);font-weight:600;font-size:clamp(10px,1vw,14px);padding-top:.25vh;flex-shrink:0;}'
-    +'.fv{flex:1;color:#2a3540;line-height:1.55;font-size:clamp(11px,1.2vw,16px);overflow:hidden;}'
-    +'.dg{font-style:italic;color:var(--acc);}'
-    +'.fi{margin-bottom:.3vh;}'
-    +'.ct{padding:.7vh 2vw;display:flex;gap:.6vw;flex-wrap:wrap;flex-shrink:0;border-top:1px solid #eef;}'
-    +'.tp{border:1.5px solid var(--acc);color:var(--acc);padding:.25vh .9vw;border-radius:3px;font-size:clamp(10px,1vw,13px);font-weight:500;}'
-    +'.pg2{position:absolute;top:1vh;right:1.5vw;font-size:13px;color:rgba(0,0,0,.2);}'
+    +'.cover{background:var(--dk);justify-content:center;gap:clamp(8px,1.5vh,20px);padding:7vh 8vw;}'
+    +'.cvt{font-size:clamp(24px,3.5vw,52px);font-weight:700;color:#fff;line-height:1.25;}'
+    +'.cvm{font-size:clamp(14px,1.6vw,22px);color:rgba(255,255,255,.8);}'
+    +'.cmems{margin-top:1vh;display:flex;flex-direction:column;gap:.5vh;border-top:1px solid rgba(255,255,255,.15);padding-top:1.5vh;}'
+    +'.cmr{font-size:clamp(11px,1.1vw,16px);color:rgba(255,255,255,.6);line-height:1.8;}'
+    +'.cmr b{color:rgba(255,255,255,.85);}'
+    +'.sec{background:var(--ca,#4A7C8E);justify-content:center;align-items:center;}'
+    +'.sn{font-size:clamp(40px,7vw,88px);font-weight:800;color:#fff;letter-spacing:-.02em;}'
+    +'.sd{font-size:clamp(14px,1.8vw,24px);color:rgba(255,255,255,.7);margin-top:1.5vh;}'
+    +'.ch{background:var(--dk);color:#fff;padding:clamp(10px,1.5vh,20px) 2.5vw;display:flex;align-items:center;gap:2vw;flex-shrink:0;flex-wrap:wrap;border-bottom:4px solid var(--ca,#4A7C8E);}'
+    +'.ci{font-size:clamp(16px,2.2vw,30px);font-weight:700;}'
+    +'.cn{font-size:clamp(15px,2vw,28px);font-weight:600;}'
+    +'.cd{font-size:clamp(12px,1.3vw,18px);color:rgba(255,255,255,.6);}'
+    +'.cdr{font-size:clamp(12px,1.3vw,18px);color:rgba(255,255,255,.85);}'
+    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.4vh 1.2vw;border-radius:20px;font-size:clamp(11px,1.1vw,15px);white-space:nowrap;}'
+    +'.cb{flex:1;overflow:auto;}'
+    +'.rtbl{width:100%;border-collapse:collapse;}'
+    +'.rtbl tr{border-bottom:1px solid #eef0f3;}'
+    +'.rtbl tr:last-child{border-bottom:none;}'
+    +'.rl{width:6vw;min-width:72px;padding:1.2vh 1.5vw 1.2vh 2.5vw;color:var(--lt);font-weight:600;font-size:clamp(11px,1.1vw,15px);vertical-align:top;white-space:nowrap;}'
+    +'.rv{padding:1.2vh 2.5vw 1.2vh .5vw;font-size:clamp(13px,1.4vw,18px);color:#2a3540;line-height:1.6;vertical-align:top;}'
+    +'.dg{color:var(--acc);font-style:italic;font-size:clamp(12px,1.3vw,17px)!important;}'
+    +'.pth{display:block;margin-bottom:.4vh;line-height:1.5;}'
+    +'.ex{display:block;margin-bottom:.4vh;line-height:1.5;}'
+    +'.ct{padding:.8vh 2.5vw;display:flex;gap:.8vw;flex-wrap:wrap;background:#f8f9fa;border-top:1px solid #eef0f3;flex-shrink:0;}'
+    +'.tp{border:2px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.3vh 1vw;border-radius:4px;font-size:clamp(11px,1.1vw,15px);font-weight:600;}'
     +'.tbl{padding:5vh 5vw;}'
-    +'.th{font-size:clamp(15px,1.9vw,26px);font-weight:700;color:var(--dk);margin-bottom:2vh;}'
-    +'.tc{font-size:.75em;color:var(--lt);font-weight:400;}'
-    +'table{width:100%;border-collapse:collapse;font-size:clamp(11px,1.2vw,15px);}'
-    +'th{background:var(--dk);color:#fff;padding:1vh 1.2vw;text-align:left;font-weight:500;}'
-    +'td{padding:.7vh 1.2vw;border-bottom:1px solid #eee;vertical-align:top;line-height:1.5;}'
+    +'.th{font-size:clamp(16px,2vw,28px);font-weight:700;color:var(--dk);margin-bottom:2.5vh;}'
+    +'.tc{font-size:.7em;color:var(--lt);font-weight:400;margin-left:1vw;}'
+    +'table{width:100%;border-collapse:collapse;}'
+    +'th{background:var(--dk);color:#fff;padding:1.2vh 1.5vw;text-align:left;font-size:clamp(12px,1.2vw,16px);}'
+    +'td{padding:1vh 1.5vw;border-bottom:1px solid #eee;font-size:clamp(12px,1.25vw,16px);line-height:1.6;vertical-align:top;}'
     +'tr:nth-child(even) td{background:#f9fafc;}'
-    +'.nav{position:fixed;bottom:2vh;left:50%;transform:translateX(-50%);display:flex;gap:.7vw;z-index:100;background:rgba(0,0,0,.55);padding:.7vh 1.4vw;border-radius:28px;}'
-    +'.nb{background:none;border:1px solid rgba(255,255,255,.4);color:#fff;padding:.4vh 1.4vw;border-radius:20px;cursor:pointer;font-size:clamp(13px,1.2vw,17px);}'
+    +'.nav{position:fixed;bottom:2.5vh;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:.8vw;z-index:100;background:rgba(20,30,40,.7);backdrop-filter:blur(8px);padding:.8vh 1.6vw;border-radius:30px;}'
+    +'.nb{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;width:clamp(32px,3vw,44px);height:clamp(32px,3vw,44px);border-radius:50%;cursor:pointer;font-size:clamp(13px,1.2vw,18px);display:flex;align-items:center;justify-content:center;transition:background .15s;}'
     +'.nb:hover{background:rgba(255,255,255,.2);}'
-    +'.ni{color:rgba(255,255,255,.75);font-size:clamp(12px,1.1vw,15px);display:flex;align-items:center;padding:0 .5vw;min-width:5vw;justify-content:center;}'
-    +'.bar{position:fixed;bottom:0;left:0;height:3px;background:var(--acc);transition:width .25s;}';
+    +'.ni{color:rgba(255,255,255,.8);font-size:clamp(13px,1.2vw,16px);padding:0 1vw;min-width:6vw;text-align:center;}'
+    +'.bar{position:fixed;top:0;left:0;height:3px;background:var(--acc);transition:width .25s;z-index:200;}'
+    +'.pg2{position:absolute;bottom:1.5vh;right:2vw;font-size:13px;color:rgba(0,0,0,.18);}';
 
   const js='var c=0,n='+N+';'
-    +'function go(i){document.querySelectorAll(".slide")[c].classList.remove("on");'
+    +'function go(i){'
+    +'document.querySelectorAll(".slide")[c].classList.remove("on");'
     +'c=Math.max(0,Math.min(i,n-1));'
-    +'document.querySelectorAll(".slide")[c].classList.add("on");'
+    +'var s=document.querySelectorAll(".slide")[c];'
+    +'s.classList.add("on");'
     +'document.getElementById("ni").textContent=(c+1)+" / "+n;'
     +'document.getElementById("bar").style.width=((c+1)/n*100)+"%";}'
     +'document.addEventListener("keydown",function(e){'
@@ -3412,15 +3431,15 @@ function genHTMLSlides(){
 
   const fullHTML='<!DOCTYPE html>\n<html lang="zh-TW"><head>\n'
     +'<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
-    +'<title>'+escA(mtgTitle(cids))+' '+escA(m.date)+'</title>\n'
+    +'<title>'+escA(mtgTitle(cids))+' — '+escA(m.date)+'</title>\n'
     +'<style>'+css+'</style></head><body>\n'
-    +'<div style="width:100vw;height:100vh;position:relative;">'+slides.join('')+'</div>\n'
+    +'<div style="position:relative;width:100%;height:100%;">'+slides.join('')+'</div>\n'
     +'<div class="nav">'
-    +'<button class="nb" onclick="go(c-1)">&#9664;</button>'
+    +'<button class="nb" onclick="go(c-1)" title="上一頁 ←">&#9664;</button>'
     +'<span class="ni" id="ni">1 / '+N+'</span>'
-    +'<button class="nb" onclick="go(c+1)">&#9654;</button>'
-    +'<button class="nb" onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()">&#9974;</button>'
-    +'</div>\n<div class="bar" id="bar"></div>\n'
+    +'<button class="nb" onclick="go(c+1)" title="下一頁 →">&#9654;</button>'
+    +'<button class="nb" onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()" title="全螢幕 F">&#9974;</button>'
+    +'</div>\n<div class="bar" id="bar" style="width:'+(1/N*100)+'%"></div>\n'
     +'<script>'+js+sc+'\n</body></html>';
 
   const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
