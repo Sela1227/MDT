@@ -1112,7 +1112,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.17';
+const VERSION='V3.0.18';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2491,6 +2491,30 @@ function delImg(cid,i,j){
   const el=document.getElementById('imgs-'+cid+'-'+i);
   if(el){const tmp=document.createElement('div');tmp.innerHTML=buildImgArea(cid,i,item);el.replaceWith(tmp.firstElementChild)}
 }
+
+function updMammo(cid,i,key,val){
+  ensureSec(cid);
+  const c=S.meeting.sections[cid].cases[i];if(!c)return;
+  if(!c.mammo)c.mammo={date:'',report:'',images:[]};
+  c.mammo[key]=val;markDirty();
+}
+function buildMammoImgArea(cid,i,d){
+  const imgs=(d.mammo&&d.mammo.images)||[];
+  let h='';
+  imgs.forEach((img,j)=>{
+    const safe=escA(img.dataUrl);
+    const cap=escA(img.caption||img.name||'');
+    h+='<div class="case-img-wrap">'\
+      +'<img src="'+safe+'" title="'+cap+'" data-action="viewimg" data-src="'+safe+'">'\
+      +'<button class="case-img-del" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'\
+      +(cap?'<div class="img-caption">'+cap+'</div>':'')+'</div>';
+  });
+  if(imgs.length<2){
+    h+='<div class="case-img-add" data-action="addmammoimg" data-cid="'+cid+'" data-idx="'+i+'">'\
+      +'<span style="font-size:18px;line-height:1">+</span><span>新增乳攝影像</span></div>';
+  }
+  return h;
+}
 function buildImgArea(cid,i,d){
   const imgs=d.images||[];
   // Use data attributes so events survive innerHTML serialization
@@ -2565,7 +2589,7 @@ ${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gen
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body" style="display:none">
-${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(p.date)+'</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
+${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(p.date)+'</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
   const mkArr=(d.markers||[]);
   if(!mkArr.length)return '';
   return mkArr.map(mk=>{
@@ -2583,7 +2607,7 @@ ${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');cons
 })()}${row('討論',d.discussion)}
 ${chips}
 ${hasRec?`<div class="vc-rec">${row('摘要',d.summary)}${row('結論',d.decision)}</div>`:''}
-${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button onclick="viewImg('${escA(img.dataUrl)}')" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${cid==='breast'&&d.mammo&&(d.mammo.report||d.mammo.images?.length)?`<div class="vc-r"><span class="vc-l" style="align-self:flex-start">乳攝</span><span class="vc-v">${d.mammo.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(d.mammo.date)+'</span> ':''}<br>${escA(d.mammo.report||'')}${(d.mammo.images||[]).map((img,j)=>'<button onclick="viewImg(\''+img.dataUrl+'\')" style="margin-left:8px;font-size:10px;padding:1px 7px;border:1px solid var(--border);border-radius:2px;cursor:pointer">影像 '+(j+1)+'</button>').join('')}</span></div>`:''}${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button onclick="viewImg('${escA(img.dataUrl)}')" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 </div></div>`;
 }
 function followupViewHTML(cid,i,d){
@@ -2746,6 +2770,7 @@ function caseHTML(cid,i,d){
     <div class="trow" style="margin-bottom:6px">${chips2}</div>
     ${inp('ph',d.ph,'其他病史')}
   </div>
+  ${(cid==='breast'||cid==='gynecology')?`<div class="fg full"><label>家族史</label><textarea rows="2" oninput="upd('${cid}','cases',${i},'familyHistory',this.value)" placeholder="如：乳癌（母親）、婦癌（姊）" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>`:''}
   <div class="fg full"><div class="field-hdr"><label>癌指數</label>${addBtn('markers')}</div>
     <div id="marklist-${cid}-${i}">${markerRows}</div>
   </div>
@@ -2769,6 +2794,17 @@ function caseHTML(cid,i,d){
     <label>相關影像（點擊放大・最多5張）</label>
     ${buildImgArea(cid,i,d)}
   </div>
+  ${cid==='breast'?`<div class="fg full" style="margin-top:4px;padding-top:8px;border-top:1px dashed var(--blt)">
+    <div class="field-hdr"><label>乳房攝影</label></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" style="font-size:12px;padding:5px 8px">
+    </div>
+    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings:
+...
+Impression: BI-RADS Category ..." style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
+    <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像（最多2張）</div>
+    <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${buildMammoImgArea(cid,i,d)}</div>
+  </div>`:''}
   <div class="fg full" style="border-top:1px solid var(--blt);padding-top:10px;margin-top:4px">
     <label style="color:var(--fog);font-weight:600">會議記錄 — 開會後填入</label>
     <div class="cg2" style="margin-top:8px">
@@ -3375,6 +3411,8 @@ function doImportCase(){
       exams: Array.isArray(d.exams)?d.exams:[],
       treatments: Array.isArray(d.treatments)?d.treatments:[],
       markers: Array.isArray(d.markers)?d.markers:[],
+      familyHistory: d.familyHistory||'',
+      mammo: d.mammo&&typeof d.mammo==='object'?d.mammo:{date:'',report:'',images:[]},
       discussion: d.discussion||'',
       topics: Array.isArray(d.topics)?d.topics:['影像討論','分期討論','治療策略討論'],
       summary: d.summary||'', decision: d.decision||'',
@@ -3476,9 +3514,11 @@ function genHTMLSlides(){
 
       const mkRow=(lbl,val)=>val?'<tr><td class="rl">'+lbl+'</td><td class="rv">'+val+'</td></tr>':'';
       const markersHtml=(c.markers&&c.markers.length)?( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+(mk.date?'('+escA(mk.date)+')':'')+'</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>'):'';
+      const fhRow=(cid==='breast'||cid==='gynecology')&&c.familyHistory?mkRow('家族史',escA(c.familyHistory)):'';
       const leftRows=[
         mkRow('現病史',escA(c.cc||'')),
         mkRow('過去病史',escA(ph||'')),
+        fhRow,
         markersHtml?mkRow('癌指數',markersHtml):'',
         mkRow('病理',paths),
       ].join('');
@@ -3528,6 +3568,22 @@ function genHTMLSlides(){
         slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
           +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
           +'<div class="img-grid">'+imgHtml+'</div>'
+          +'</section>');
+      }
+      // Mammo slide (breast only, 4:6 layout)
+      if(cid==='breast'&&c.mammo&&(c.mammo.report||(c.mammo.images&&c.mammo.images.length))){
+        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+img.dataUrl+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px"></div>';}).join('');
+        const mDate=c.mammo.date?'<div style="font-size:.85em;opacity:.65;margin-bottom:.6vh">'+escA(c.mammo.date)+'</div>':'';
+        const mRep=escA(c.mammo.report||'').replace(/\n/g,'<br>');
+        slides.push('<section class="slide mammo-slide" style="--ca:'+caColor+';">'
+          +'<div class="ch"><div class="cht">'
+          +'<span class="ci">'+escA(c.chartNo||'')+'</span>'
+          +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+          +'<span class="cat">乳房攝影</span></div></div>'
+          +'<div class="mammo-body">'
+          +'<div class="mammo-report">'+mDate+mRep+'</div>'
+          +'<div class="mammo-imgs">'+mImgHtml+'</div>'
+          +'</div>'
           +'</section>');
       }
     });
@@ -3588,7 +3644,13 @@ function genHTMLSlides(){
     +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'
     +'.img-grid{flex:1;display:flex;flex-wrap:wrap;gap:1vw;padding:2vh 2.5vw;align-items:center;justify-content:center;overflow:hidden;}'
     +'.img-wrap{flex:1;min-width:30%;max-width:48%;display:flex;flex-direction:column;align-items:center;gap:.5vh;max-height:80vh;}'
-    +'.img-cap{font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7);text-align:center;}' +
+    +'.img-cap{font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7);text-align:center;}'
+    +'.mammo-slide{background:#1a1f24;}'
+    +'.mammo-body{flex:1;display:flex;min-height:0;overflow:hidden;}'
+    +'.mammo-report{flex:0 0 40%;overflow-y:auto;padding:2vh 2vw;font-size:clamp(13px,1.35vw,18px);color:rgba(255,255,255,.88);line-height:1.7;border-right:1px solid rgba(255,255,255,.1);}'
+    +'.mammo-imgs{flex:0 0 60%;display:flex;gap:1vw;padding:2vh 1.5vw;align-items:center;justify-content:center;overflow:hidden;}'
+    +'.mammo-img-wrap{flex:1;max-width:48%;display:flex;align-items:center;justify-content:center;max-height:100%;}'
+    +'.mammo-img-wrap img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;}' +
     +'.th{font-size:clamp(18px,2.2vw,32px);font-weight:700;color:var(--dk);margin-bottom:2.5vh;}'
     +'.tc{font-size:.7em;color:var(--lt);font-weight:400;margin-left:1vw;}'
     +'table{width:100%;border-collapse:collapse;}'
@@ -3886,7 +3948,7 @@ async function genXLSX(){
 
 
 function genImportPrompt(){
-  const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON，不要加任何說明文字或 markdown 符號。\n欄位定義：\nchartNo：病歷號（字串）\nname：姓名\nage：年齡（字串）\ngender："M" 或 "F"\ndiagnosis：完整診斷\ncc：現病史（Present Illness）\nph：過去病史（Past History）\npathologies：病理檢查，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}\nexams：影像及其他檢查，陣列，每筆 {"name":"CT/MRI/PSA...","date":"YYYY-MM-DD","content":"..."}\ntreatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"..."}\nmarkers：癌指數，陣列，每筆 {"name":"PSA/CEA...","date":"YYYY-MM-DD","content":"數值或趨勢"}\ndiscussion：討論要點（一句話摘要）\ntopics：討論議題，從以下選填陣列：["影像討論","病理討論","分期討論","治療策略討論"]\n\n以下是病人資料：\n`;
+  const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON，不要加任何說明文字或 markdown 符號。\n欄位定義：\nchartNo：病歷號（字串）\nname：姓名\nage：年齡（字串）\ngender："M" 或 "F"\ndiagnosis：完整診斷\ncc：現病史（Present Illness）\nph：過去病史（Past History）\npathologies：病理檢查，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}\nexams：影像及其他檢查，陣列，每筆 {"name":"CT/MRI/PSA...","date":"YYYY-MM-DD","content":"..."}\ntreatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"..."}\nmarkers：癌指數（隨時間追蹤數值如 PSA/CEA/CA125；ER/PR/HER2 等 IHC 結果請放在 pathologies.content 裡），陣列，每筆 {"name":"PSA...","date":"YYYY-MM-DD","content":"數值或趨勢"}\nfamilyHistory：家族癌症史（自由文字，如：乳癌（母親）；非乳癌/婦癌個案可省略）\ndiscussion：討論要點（一句話摘要）\ntopics：討論議題，從以下選填陣列：["影像討論","病理討論","分期討論","治療策略討論"]\n\n以下是病人資料：\n`;
   document.getElementById('out-text').textContent=prompt;
   document.getElementById('out-area').style.display='block';
   document.getElementById('copy-ok').style.display='none';
@@ -3927,6 +3989,8 @@ function importCaseJSON(inputEl){
         exams:Array.isArray(d.exams)?d.exams:[],
         treatments:Array.isArray(d.treatments)?d.treatments:[],
         markers:Array.isArray(d.markers)?d.markers:[],
+        familyHistory:d.familyHistory||'',
+        mammo:d.mammo&&typeof d.mammo==='object'?d.mammo:{date:'',report:'',images:[]},
         discussion:d.discussion||'',
         topics:Array.isArray(d.topics)?d.topics:[],
         summary:d.summary||'',decision:d.decision||'',
