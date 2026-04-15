@@ -1118,7 +1118,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.28';
+const VERSION='V3.0.29';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2616,11 +2616,11 @@ ${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gen
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body" style="display:none">
-${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:var(--acc);font-weight:700;font-size:.9em">'+escA(p.date)+'</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
+${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:#2a3540;font-weight:700">'+escA(p.date)+'：</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
   const mkArr=(d.markers||[]);
   if(!mkArr.length)return '';
   return mkArr.map(mk=>{
-    return '<div class="vc-r"><span class="vc-l">癌指數</span><span class="vc-v">'+(mk.name?'<b>'+escA(mk.name)+'</b> ':'')+escA(mk.content||'')+'</span></div>';
+    return '<div class="vc-r"><span class="vc-l">癌指數</span><span class="vc-v">'+(mk.name?'<b>'+escA(mk.name)+'：</b> ':'')+escA(mk.content||'')+'</span></div>';
   }).join('');
 })()}${(()=>{
   const exArr=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
@@ -3081,7 +3081,7 @@ async function genPPTX(){
       } else if(c.treatment){addRow('治療',c.treatment);}
       if(c.discussion)addRow('討論',c.discussion);
       if((c.markers||[]).length){
-        const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+' ':' ')+(mk.content||'')).join('\n');
+        const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+'： ':' ')+(mk.content||'')).join('\n');
         addRow('癌指數',mkStr);
       }
 
@@ -3223,7 +3223,7 @@ async function genDOCX(){
             ?(c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(tr=>(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'')).join('\n')
             :(c.treatment&&c.treatment!=='尚未治療'?c.treatment:'');
           if(trStr2)infoRows.push(mkRow('治療',trStr2));
-          if((c.markers||[]).length){const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+' ':' ')+(mk.content||'')).join('\n');infoRows.push(mkRow('癌指數',mkStr));}
+          if((c.markers||[]).length){const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+'： ':' ')+(mk.content||'')).join('\n');infoRows.push(mkRow('癌指數',mkStr));}
           if(c.discussion)infoRows.push(mkRow('討論要點',c.discussion));
           if(infoRows.length)children.push(mkTable(infoRows));
           // Discussion focus: topics + summary + decision (expanded)
@@ -3520,7 +3520,7 @@ function genHTMLSlides(){
       const pathItems=(c.pathologies&&c.pathologies.length)?c.pathologies
         :(c.pathology?[{date:c.pathologyDate||'',content:c.pathology}]:[]);
       const paths=pathItems.map(function(p){
-        var d=p.date?('<span class="pdt">'+escA(p.date)+'</span> '):'';
+        var d=p.date?('<span class="pdt">'+escA(p.date)+'：</span> '):'';
         return '<span class="pth">'+d+escA(p.content||'')+'</span>';
       }).join('');
       const examItems=(c.exams&&c.exams.length)?c.exams:(c.exam?[{name:'',date:'',content:c.exam}]:[]);
@@ -3537,7 +3537,7 @@ function genHTMLSlides(){
       const chips=(c.topics||[]).slice().sort((a,b)=>{const ai=_topicOrder.indexOf(a),bi=_topicOrder.indexOf(b);return(ai<0?99:ai)-(bi<0?99:bi);}).map(t=>'<span class="tp">'+escA(t)+'</span>').join('');
 
       const mkRow=(lbl,val)=>val?'<tr><td class="rl">'+lbl+'</td><td class="rv">'+val+'</td></tr>':'';
-      const markersHtml=(c.markers&&c.markers.length)?( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+'</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>'):'';
+      const markersHtml=(c.markers&&c.markers.length)?( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+'：</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>'):'';
       const fhRow=(cid==='breast'||cid==='gynecology')&&c.familyHistory?mkRow('家族史',escA(c.familyHistory)):'';
       const leftRows=[
         mkRow('現病史',escA(c.cc||'')),
@@ -3661,7 +3661,7 @@ function genHTMLSlides(){
     +'.rv{padding:1.5vh 2.5vw 1.5vh .5vw;font-size:clamp(15px,1.65vw,23px);color:#2a3540;line-height:1.65;vertical-align:top;}'
     +'.dg{color:var(--acc);font-style:italic;font-size:clamp(14px,1.5vw,21px)!important;}'
     +'.pth{display:block;margin-bottom:.6vh;}'
-    +'.pdt{color:var(--acc);font-weight:600;font-size:.9em;}'
+    +'.pdt{color:#2a3540;font-weight:700;}'
     +'.ex{display:block;margin-bottom:.5vh;}'
     +'.ct{padding:1.4vh 2.5vw;display:flex;gap:1vw;flex-wrap:wrap;background:#f8f9fa;border-top:3px solid var(--ca,var(--acc));flex-shrink:0;}'
     +'.tp{border:2.5px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.55vh 1.5vw;border-radius:4px;font-size:clamp(14px,1.5vw,21px);font-weight:700;}'
