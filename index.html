@@ -1112,7 +1112,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.21';
+const VERSION='V3.0.22';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2790,6 +2790,15 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>檢查</label>${addBtn('exams')}</div>
     <div id="examlist-${cid}-${i}">${examRows}</div>
   </div>
+  ${cid==='breast'?`<div class="fg full" style="margin-top:4px;padding-top:8px;border-top:1px dashed var(--blt)">
+    <div class="field-hdr"><label>乳房攝影</label></div>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" style="font-size:12px;padding:5px 8px">
+    </div>
+    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
+    <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像（最多2張）</div>
+    <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${buildMammoImgArea(cid,i,d)}</div>
+  </div>`:''}
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
@@ -2802,15 +2811,6 @@ function caseHTML(cid,i,d){
     <label>相關影像（點擊放大・最多5張）</label>
     ${buildImgArea(cid,i,d)}
   </div>
-  ${cid==='breast'?`<div class="fg full" style="margin-top:4px;padding-top:8px;border-top:1px dashed var(--blt)">
-    <div class="field-hdr"><label>乳房攝影</label></div>
-    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-      <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" style="font-size:12px;padding:5px 8px">
-    </div>
-    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
-    <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像（最多2張）</div>
-    <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${buildMammoImgArea(cid,i,d)}</div>
-  </div>`:''}
   <div class="fg full" style="border-top:1px solid var(--blt);padding-top:10px;margin-top:4px">
     <label style="color:var(--fog);font-weight:600">會議記錄 — 開會後填入</label>
     <div class="cg2" style="margin-top:8px">
@@ -4430,6 +4430,36 @@ document.addEventListener('click',function(e){
   if(add){addImg(add.dataset.cid,parseInt(add.dataset.idx));return;}
   const del=e.target.closest('[data-action="delimg"]');
   if(del){delImg(del.dataset.cid,parseInt(del.dataset.idx),parseInt(del.dataset.imgidx));return;}
+  const addmammo=e.target.closest('[data-action="addmammoimg"]');
+  if(addmammo){
+    const cid=addmammo.dataset.cid,idx=parseInt(addmammo.dataset.idx);
+    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+    inp.onchange=function(ev){
+      const file=ev.target.files[0];if(!file)return;
+      const reader=new FileReader();
+      reader.onload=function(re){
+        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+        if(!c.mammo)c.mammo={date:'',report:'',images:[]};
+        if(c.mammo.images.length>=2)return;
+        c.mammo.images.push({dataUrl:re.target.result,name:file.name,caption:''});
+        markDirty();
+        const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
+        if(el)el.innerHTML=buildMammoImgArea(cid,idx,c);
+      };
+      reader.readAsDataURL(file);
+    };
+    document.body.appendChild(inp);inp.click();document.body.removeChild(inp);
+    return;
+  }
+  const delmammo=e.target.closest('[data-action="delmammoimg"]');
+  if(delmammo){
+    const cid=delmammo.dataset.cid,idx=parseInt(delmammo.dataset.idx),j=parseInt(delmammo.dataset.imgidx);
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c||!c.mammo)return;
+    c.mammo.images.splice(j,1);markDirty();
+    const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
+    if(el)el.innerHTML=buildMammoImgArea(cid,idx,c);
+    return;
+  }
   const view=e.target.closest('[data-action="viewimg"]');
   if(view){viewImg(view.dataset.src);return;}
   const chip=e.target.closest('[data-action="phchip"]');
