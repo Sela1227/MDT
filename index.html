@@ -1117,7 +1117,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.24';
+const VERSION='V3.0.25';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1337,6 +1337,19 @@ function deleteCurMtg(){
     localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(x=>x.id!==S.meeting.id)));
     if(S.cids)S.cids.forEach(cid=>{try{delSec(cid,S.meeting.date)}catch{}});
     showSaveToast('會議已刪除');renderSbRecent();goBackFromMeeting();
+  });
+}
+function deleteMtg(id,e){
+  if(e)e.stopPropagation();
+  const local=loadLocal(id);
+  if(!local)return;
+  const caseN=Object.values(local.sections||{}).reduce(function(n,s){return n+(s.cases||[]).length;},0);
+  const title=caseN>0?('刪除此會議記錄（含 '+caseN+' 筆個案資料）'):'刪除此會議記錄';
+  showDelConfirm(title,function(){
+    localStorage.removeItem('mdt_m_'+id);
+    localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(function(x){return x.id!==id;})));
+    renderSbRecent();renderHistory();
+    showSaveToast('會議已刪除');
   });
 }
 function goBackFromMeeting(){
