@@ -1112,7 +1112,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.18';
+const VERSION='V3.0.19';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2501,17 +2501,13 @@ function updMammo(cid,i,key,val){
 function buildMammoImgArea(cid,i,d){
   const imgs=(d.mammo&&d.mammo.images)||[];
   let h='';
-  imgs.forEach((img,j)=>{
+  imgs.forEach(function(img,j){
     const safe=escA(img.dataUrl);
     const cap=escA(img.caption||img.name||'');
-    h+='<div class="case-img-wrap">'\
-      +'<img src="'+safe+'" title="'+cap+'" data-action="viewimg" data-src="'+safe+'">'\
-      +'<button class="case-img-del" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'\
-      +(cap?'<div class="img-caption">'+cap+'</div>':'')+'</div>';
+    h+='<div class="case-img-wrap"><img src="'+safe+'" title="'+cap+'" data-action="viewimg" data-src="'+safe+'"><button class="case-img-del" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'+(cap?'<div class="img-caption">'+cap+'</div>':'')+'</div>';
   });
   if(imgs.length<2){
-    h+='<div class="case-img-add" data-action="addmammoimg" data-cid="'+cid+'" data-idx="'+i+'">'\
-      +'<span style="font-size:18px;line-height:1">+</span><span>新增乳攝影像</span></div>';
+    h+='<div class="case-img-add" data-action="addmammoimg" data-cid="'+cid+'" data-idx="'+i+'"><span style="font-size:18px;line-height:1">+</span><span>新增乳攝影像</span></div>';
   }
   return h;
 }
