@@ -1112,7 +1112,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.20';
+const VERSION='V3.0.21';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1662,7 +1662,19 @@ function openHistory(){
   setMNav('mnav-hist','歷史記錄');
   renderHistory();
 }
+function migrateCaseFields(){
+  if(!S.meeting)return;
+  Object.keys(S.meeting.sections||{}).forEach(function(cid){
+    (S.meeting.sections[cid].cases||[]).forEach(function(c){
+      if(c.familyHistory===undefined)c.familyHistory='';
+      if(!c.mammo||typeof c.mammo!=='object')c.mammo={date:'',report:'',images:[]};
+      if(!Array.isArray(c.mammo.images))c.mammo.images=[];
+      if(!Array.isArray(c.markers))c.markers=[];
+    });
+  });
+}
 function enterEditMode(){
+  migrateCaseFields();
   S._snapshot=JSON.stringify(S.meeting);
   S.viewMode=false;
   const wrap=document.querySelector('#view-meeting .wrap');
