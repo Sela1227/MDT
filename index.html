@@ -1118,7 +1118,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.31';
+const VERSION='V3.0.32';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2678,7 +2678,7 @@ function casesPane(cid){
     '<div class="subsec">'+
     '<div class="subhdr"><span class="sh-dot"></span>個案討論</div>'+
     '<div id="div-cases-'+cid+'">'+
-      cases.map((c,i)=>cFn(cid,i,c)).join('')+
+      cases.map((c,i)=>{try{return cFn(cid,i,c);}catch(err){console.error('caseHTML error',cid,i,err);return '<div style="padding:12px;color:var(--err);border:1px solid var(--err);border-radius:3px;margin:4px">個案渲染錯誤（'+escA(c.chartNo||'?')+'）：'+escA(err.message)+'</div>';}}).join('')+
     '</div>'+bCase+
     '</div>'+
     (team.length||!vm?(
@@ -4351,7 +4351,7 @@ function generateTestData(){
   const TC={
     head_neck:[
       {chartNo:'5314073',name:'陳信宏',age:'50',gender:'M',
-       doctors:['頭頸外科::張建明醫師','放射腫瘤科::劉育昌醫師',''],
+       doctors:['張建明醫師','劉育昌醫師',''],
        diagnosis:'左舌鱗狀細胞癌，cT2N0M0',
        cc:'口腔潰瘍2週，無法進食。內視鏡發現左舌緣3cm潰瘍性腫塊，切片確認SCC。',
        ph:'Nil',phChips:['HTN'],
@@ -4361,7 +4361,7 @@ function generateTestData(){
        markers:[],familyHistory:'',
        discussion:'術後分期確認，討論 adjuvant CCRT 適應症。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
       {chartNo:'5188925',name:'林義助',age:'62',gender:'M',
-       doctors:['頭頸外科::張建明醫師',''],
+       doctors:['張建明醫師',''],
        diagnosis:'右下咽鱗狀細胞癌，cT3N1M0',
        cc:'吞嚥困難3個月，體重下降5kg。內視鏡發現右下咽腫瘤，切片確認SCC。',
        ph:'Nil',phChips:[],
@@ -4372,7 +4372,7 @@ function generateTestData(){
     ],
     lymphoma:[
       {chartNo:'5240001',name:'王美珠',age:'58',gender:'F',
-       doctors:['血液腫瘤科::劉大智醫師',''],
+       doctors:['劉大智醫師',''],
        diagnosis:'瀰漫性大B細胞淋巴瘤（DLBCL），Ann Arbor Stage IIA',
        cc:'頸部雙側腫塊2週，無B症狀。切片確認DLBCL。',
        ph:'Nil',phChips:['DM'],
@@ -4384,7 +4384,7 @@ function generateTestData(){
     ],
     thoracic:[
       {chartNo:'5321456',name:'黃明德',age:'67',gender:'M',
-       doctors:['胸腔外科::黃榆涵醫師','血液腫瘤科::張正雄醫師',''],
+       doctors:['黃榆涵醫師','張正雄醫師',''],
        diagnosis:'右上肺腺癌，EGFR exon21 L858R+，cT1bN0M0',
        cc:'健診發現右上肺結節1cm，無症狀。切片確認腺癌，EGFR L858R陽性。',
        ph:'Nil',phChips:[],
@@ -4393,7 +4393,7 @@ function generateTestData(){
        treatments:[],markers:[],familyHistory:'',
        discussion:'手術切除 vs SBRT vs EGFR-TKI 策略討論。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
       {chartNo:'5198234',name:'林淑芬',age:'54',gender:'F',
-       doctors:['胸腔外科::黃榆涵醫師','放射腫瘤科::劉育昌醫師',''],
+       doctors:['黃榆涵醫師','劉育昌醫師',''],
        diagnosis:'左肺鱗狀細胞癌，cT2aN2M0，Stage IIIA',
        cc:'咳嗽痰血2個月，CXR發現左肺門腫塊。支氣管鏡切片確認SCC。',
        ph:'Nil',phChips:['HTN','DM'],
@@ -4405,7 +4405,7 @@ function generateTestData(){
     ],
     breast:[
       {chartNo:'5267891',name:'陳淑美',age:'45',gender:'F',
-       doctors:['一般外科::李岳聰醫師','血液腫瘤科::張正雄醫師',''],
+       doctors:['李岳聰醫師','張正雄醫師',''],
        diagnosis:'左乳浸潤性管狀癌，ER(+) PR(+) HER2(-)，cT1cN0M0',
        cc:'乳篩發現左乳1.8cm腫塊，無疼痛。切片確認IDC。',
        ph:'Nil',phChips:[],
@@ -4415,7 +4415,7 @@ function generateTestData(){
        mammo:{date:'2026-01-10',report:'Findings: 左乳外上象限見1.8cm高密度不規則腫塊，邊緣毛刺狀。\nImpression: BI-RADS Category 5: Highly suggestive of malignancy.',images:[]},
        discussion:'手術方式討論（乳房保留 vs 全切除）及術後輔助治療。',topics:['影像討論','病理討論','治療策略討論'],summary:'',decision:''},
       {chartNo:'5301234',name:'黃淑惠',age:'52',gender:'F',
-       doctors:['一般外科::吳鴻昇醫師','血液腫瘤科::張正雄醫師',''],
+       doctors:['吳鴻昇醫師','張正雄醫師',''],
        diagnosis:'右乳浸潤性管狀癌，HER2(+)，cT2N1M0',
        cc:'自摸右乳腫塊3週，腋下可觸及腫大淋巴結。切片確認IDC HER2+。',
        ph:'Nil',phChips:['HTN'],
@@ -4428,7 +4428,7 @@ function generateTestData(){
     ],
     digestive:[
       {chartNo:'0089801',name:'禤志亮',age:'71',gender:'M',
-       doctors:['一般外科::歐金俊醫師','放射腫瘤科::劉育昌醫師',''],
+       doctors:['歐金俊醫師','劉育昌醫師',''],
        diagnosis:'乙狀結腸腺癌，cT3N1M0，Stage IIIB',
        cc:'血便3個月，體重下降4kg。大腸鏡發現乙狀結腸腫瘤，切片確認腺癌。',
        ph:'Nil',phChips:['HTN'],
@@ -4438,7 +4438,7 @@ function generateTestData(){
        markers:[{name:'CEA',date:'2026-01-18',content:'12.5 (2026-01-18)'}],familyHistory:'',
        discussion:'手術時機及術前CCRT適應症討論。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
       {chartNo:'0318988',name:'蕭淑霞',age:'63',gender:'F',
-       doctors:['一般外科::歐金俊醫師','放射腫瘤科::劉育昌醫師',''],
+       doctors:['歐金俊醫師','劉育昌醫師',''],
        diagnosis:'直腸腺癌，cT3N2M0，Stage IIIC',
        cc:'排便習慣改變6個月，血便，裡急後重。大腸鏡發現直腸腫塊，切片確認腺癌。',
        ph:'Nil',phChips:['DM'],
@@ -4450,7 +4450,7 @@ function generateTestData(){
     ],
     hepatobiliary:[
       {chartNo:'5332341',name:'劉志利',age:'68',gender:'M',
-       doctors:['一般外科::李岳聰醫師','血液腫瘤科::張正雄醫師',''],
+       doctors:['李岳聰醫師','張正雄醫師',''],
        diagnosis:'肝細胞癌（HCC），BCLC Stage A，單顆3cm，肝硬化背景',
        cc:'腹部超音波追蹤發現肝臟3cm新生腫塊，確診HCC。',
        ph:'Nil',phChips:['HBV'],
@@ -4462,7 +4462,7 @@ function generateTestData(){
     ],
     urology:[
       {chartNo:'172606',name:'施志華',age:'58',gender:'M',
-       doctors:['泌尿科::楊哲學醫師',''],
+       doctors:['楊哲學醫師',''],
        diagnosis:'膀胱乳頭狀尿路上皮癌，低惡性度，非肌層侵犯',
        cc:'無痛性肉眼血尿數週。膀胱超音波發現1.5cm乳頭狀腫瘤，TURBT後確診。',
        ph:'Nil',phChips:['HBV'],
@@ -4472,7 +4472,7 @@ function generateTestData(){
        markers:[],familyHistory:'',
        discussion:'術後追蹤計畫，膀胱灌注化療適應症。',topics:['病理討論','治療策略討論'],summary:'',decision:''},
       {chartNo:'291402',name:'洪志宏',age:'66',gender:'M',
-       doctors:['泌尿科::吳其翔醫師','放射腫瘤科::劉育昌醫師',''],
+       doctors:['吳其翔醫師','劉育昌醫師',''],
        diagnosis:'攝護腺腺癌，Gleason score 4+3=7，cT2bN0M0，iPSA 49.2',
        cc:'排尿困難，夜尿頻繁。DRE發現攝護腺右葉硬結。切片確認腺癌。',
        ph:'Nil',phChips:[],
@@ -4484,7 +4484,7 @@ function generateTestData(){
     ],
     gynecology:[
       {chartNo:'5298765',name:'張淑惠',age:'52',gender:'F',
-       doctors:['婦科::吳宏明醫師','放射腫瘤科::林伯儒醫師',''],
+       doctors:['吳宏明醫師','林伯儒醫師',''],
        diagnosis:'子宮頸鱗狀細胞癌，FIGO Stage IIB',
        cc:'異常陰道出血3個月，性交後出血。子宮頸切片確認SCC。',
        ph:'Nil',phChips:[],
@@ -4494,7 +4494,7 @@ function generateTestData(){
        markers:[{name:'SCC-Ag',date:'2026-01-14',content:'8.5 (2026-01-14) → 3.2 (2026-02-25)'}],familyHistory:'無',
        discussion:'CCRT治療反應評估。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
       {chartNo:'5311098',name:'李美秀',age:'48',gender:'F',
-       doctors:['婦科::林坤沂醫師','血液腫瘤科::劉大智醫師',''],
+       doctors:['林坤沂醫師','劉大智醫師',''],
        diagnosis:'子宮內膜腺癌，Grade 2，手術後病理 Stage IA',
        cc:'停經後出血3個月。子宮內膜刮除術確認腺癌，接受子宮全切除術。',
        ph:'Nil',phChips:['DM'],
