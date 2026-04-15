@@ -1118,7 +1118,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.32';
+const VERSION='V3.0.33';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2670,7 +2670,7 @@ function casesPane(cid){
     '<div class="sh-track">'+
     '<div class="sh-track-hdr"><span class="sh-track-dot"></span>前期追蹤事項</div>'+
     '<div id="div-followups-'+cid+'">'+
-      (fups.length?fups.map((c,i)=>fFn(cid,i,c)).join(''):
+      (fups.length?fups.map((c,i)=>{try{return fFn(cid,i,c);}catch(err){console.error('followupHTML error',err);return '';}}).join(''):
         '<div class="sh-empty">（本次無前期追蹤個案）</div>')+
     '</div>'+bFup+
     '</div>'+
@@ -2686,7 +2686,7 @@ function casesPane(cid){
       '<div class="sh-track">'+
       '<div class="sh-track-hdr"><span class="sh-track-dot"></span>醫療小組</div>'+
       '<div id="div-team-'+cid+'">'+
-        (team.length?team.map((c,i)=>fFn(cid,i,c,'team')).join(''):'<div class="sh-empty">（本次無醫療小組成員）</div>')+
+        (team.length?team.map((c,i)=>{try{return fFn(cid,i,c,'team');}catch(err){console.error('teamHTML error',err);return '';}}).join(''):'<div class="sh-empty">（本次無醫療小組成員）</div>')+
       '</div>'+bTeam+
       '</div>'
     ):'')+
@@ -2695,7 +2695,7 @@ function casesPane(cid){
       '<div class="sh-track">'+
       '<div class="sh-track-hdr"><span class="sh-track-dot"></span>必要事件</div>'+
       '<div id="div-events-'+cid+'">'+
-        (events.length?events.map((c,i)=>fFn(cid,i,c,'events')).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
+        (events.length?events.map((c,i)=>{try{return fFn(cid,i,c,'events');}catch(err){console.error('eventsHTML error',err);return '';}}).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
       '</div>'+bEvents+
       '</div>'
     ):'')+
@@ -2841,7 +2841,7 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','followups',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','followups',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','followups',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups'){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','followups',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','followups',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,'followups',i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,'followups',i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
