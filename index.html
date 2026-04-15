@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.2.0';
+const VERSION='V3.2.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1393,16 +1393,6 @@ function togglePhChip(cid,i,chip,el){
   else{c.phChips.push(chip);el.classList.add('on');}
   markDirty();
 }
-function toggleTopic(cid,type,i,topic,el){
-  ensureSec(cid);
-  const sec=S.meeting.sections[cid];
-  const c=sec[type]?.[i];if(!c)return;
-  if(!c.topics)c.topics=[];
-  const idx2=c.topics.indexOf(topic);
-  if(idx2>=0){c.topics.splice(idx2,1);el.classList.remove('on');}
-  else{c.topics.push(topic);el.classList.add('on');}
-  markDirty();
-}
 function updStruct(cid,i,field,idx,key,val){
   ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
   if(!c[field])c[field]=[];if(!c[field][idx])c[field][idx]={};
@@ -1610,16 +1600,9 @@ function renderCalendar(){
   renderSbCal(y,mo,cancerDates,monthMtgs);
 }
 
-function sbCalPrev(){_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--}renderCalendar()}
-function sbCalNext(){_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++}renderCalendar()}
 function renderSbCal(){} // sidebar mini cal removed - just a nav button now
 
 
-function _calJump(dateStr){
-  const[y,m]=dateStr.split('-').map(Number);
-  _calYear=y;_calMonth=m-1;
-  showView('home');renderCalendar();
-}
 
 
 function askCreateMtg(dateStr){
@@ -1824,17 +1807,6 @@ function renderHistory(){
 }
 
 
-async function openMtgFromHistory(id){
-  const local=loadLocal(id);if(!local){alert('找不到記錄');return}
-  const shared=await loadShared(local),conflict=detectConflict(shared,local);
-  if(conflict){showConflict(conflict);return}
-  S.meeting=shared&&shared.version>=local.version?shared:local;
-  S.cids=S.meeting.cids;S.viewMode=true;
-  setSbActive(S.meeting.cids.find(c=>S.user.cancers.includes(c)));
-  document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
-  renderEditor();showView('meeting');
-}
-function openNewModal(){document.getElementById('nm-cancer').innerHTML=S.user.cancers.map(cid=>{const ca=CFG[cid];return`<option value="${cid}">${ca.name}${ca.partner?' (合併 '+CFG[ca.partner]?.name+')':''}</option>`}).join('');document.getElementById('nm-date').value=new Date().toISOString().slice(0,10);document.getElementById('new-modal').classList.add('open')}
 function closeNewModal(){document.getElementById('new-modal').classList.remove('open')}
 function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;S.viewMode=false;renderEditor();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
 function openFromSb(cid){
@@ -1897,12 +1869,6 @@ function openFromSb(cid){
   }
   const mobT=document.getElementById('mob-page-title');if(mobT)mobT.textContent=cids.map(id=>CFG[id]?.name).filter(Boolean).join('+');
   showView('cancer');
-}
-function editCancerInfo(){
-  // Opens settings to cancer config tab
-  openSettings();
-  const tab=document.querySelector('#st-tabs .tab:nth-child(4)');
-  if(tab)showStab('cancers',tab);
 }
 function startNewMtgForCancer(){
   const cids=S.cids;
@@ -2004,19 +1970,6 @@ function onZoomSuffixChange(suffix){
   document.getElementById('f-zurl-display').textContent=url||'—';
   document.getElementById('f-zurl').value=url;
   if(S.meeting){S.meeting.zoom={id:fullId,pwd,url};markDirty();}
-}
-function updateZoomByDate(dateStr){
-  // When date changes, recalculate password and URL (keep suffix)
-  const suffix=(S.meeting?.zoom?.id||'').slice(-2).replace(/\D/g,'');
-  if(!suffix)return;
-  const pwd=zoomPwdByMonth(dateStr);
-  const url='https://zoom.us/j/725616600'+suffix+'?pwd=bGqy0tLm0GgEdfq0VpQtC5ulcI0NXP.1';
-  document.getElementById('f-zpwd').value=pwd;
-  document.getElementById('f-zpwd-display').textContent=pwd;
-  document.getElementById('f-zurl').value=url;
-  document.getElementById('f-zurl-display').textContent=url;
-  document.getElementById('f-zid').value='725-616-60'+suffix;
-  if(S.meeting){S.meeting.zoom={id:'725-616-60'+suffix,pwd,url};markDirty();}
 }
 
 function renderLocsTab(){
@@ -2260,7 +2213,6 @@ function saveCancerCfg(id){
   renderCancerCfgList();
   showSaveToast(CFG[id].name+'設定已儲存');
 }
-function saveCfg(){Object.keys(CFG).forEach(id=>{const g=k=>{const el=document.getElementById('cfg-'+id+'-'+k);return el?el.value:''};const ds=g('slot');CFG[id]={...CFG[id],loc:g('loc'),defaultSlot:ds,slot:ds,conv:g('conv')||CFG[id].conv}});saveAll();const el=document.getElementById('cfg-msg');el.innerHTML='<span class="smsg sok"><span class="sdot"></span>已儲存</span>';setTimeout(()=>el.innerHTML='',2500)}
 function resetCfg(){if(!confirm('確定還原？'))return;localStorage.removeItem('mdt_cfg');localStorage.removeItem('mdt_locs');localStorage.removeItem('mdt_drs');loadAll();renderLocsTab();renderDrsTab();renderCancerCfgList()}
 
 /* ════ Meeting ════ */
@@ -2470,12 +2422,6 @@ function renderCasesInner(){
 function switchTab(cid){const mf=[...S.cids].sort((a,b)=>S.user.cancers.includes(a)?-1:1);mf.forEach((id,i)=>{document.querySelectorAll('#ctabs .tab')[i]?.classList.toggle('active',id===cid);document.getElementById('tp-'+id)?.classList.toggle('active',id===cid)})}
 
 
-function getCancerDoctors(cid){
-  const keys=CFG[cid]?.memberKeys||[];
-  const names=[];
-  keys.forEach(k=>{const s=k.indexOf('::');if(s>=0){const n=k.slice(s+2);if(!names.includes(n))names.push(n)}});
-  return names;
-}
 
 /* ── Doctor helpers ── */
 function getDoctors(d){
@@ -2866,7 +2812,6 @@ function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const
   const newCard=div.firstElementChild;cont.appendChild(newCard);}
 function upd(cid,type,i,field,val){
   ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;item[field]=val;markDirty();const card=document.getElementById('cc-'+cid+'-'+type+'-'+i);if(!card)return;if(field==='name'){card.querySelector('.cnm').textContent=val?maskName(val):'姓名'}if(field==='chartNo')card.querySelector('.cno').textContent=val||'病歷號';if(field==='title')card.querySelector('.cnm').textContent=val||'議程項目'}
-function updTopics(cid,type,i,topic,checked,el){ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;if(!item.topics)item.topics=[];if(checked){if(!item.topics.includes(topic))item.topics.push(topic)}else item.topics=item.topics.filter(t=>t!==topic);el.classList.toggle('on',checked);markDirty()}
 function delItem(cid,type,i){
   ensureSec(cid);
   S.meeting.sections[cid][type].splice(i,1);
@@ -3398,12 +3343,6 @@ function doAddImport(){
 
 let _importCaseCid = null;
 
-function openImportCase(cid){
-  _importCaseCid = cid;
-  document.getElementById('import-case-json').value = '';
-  document.getElementById('import-case-err').textContent = '';
-  document.getElementById('import-case-modal').style.display = 'flex';
-}
 function closeImportCase(){
   document.getElementById('import-case-modal').style.display = 'none';
   _importCaseCid = null;
@@ -4379,7 +4318,6 @@ function clearTestData(){
   localStorage.removeItem('mdt_idx');
   renderSbRecent();showSaveToast('測試資料已清除');
 }
-function restoreTestData(){generateTestData()}
 function generateTestData(){
   if(!confirm('生成三位個管師各癌別共18場測試會議，是否繼續？'))return;
   const TC={
@@ -4577,75 +4515,6 @@ function generateTestData(){
   showSaveToast('已生成 '+count+' 場測試會議');
 }
 
-function genTestData(){
-  if(!confirm('生成測試資料？這將新增數筆模擬會議記錄。'))return;
-  let count=0;
-  const today=new Date();
-  function daysAgo(n){const d=new Date(today);d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)}
-
-  const groups=[
-    {cids:['head_neck','lymphoma'],days:[7,35,63]},
-    {cids:['thoracic'],days:[14,42]},
-    {cids:['breast'],days:[7,35]},
-    {cids:['digestive','hepatobiliary'],days:[14,42]},
-    {cids:['urology'],days:[10,38]},
-    {cids:['gynecology'],days:[10,38]},
-  ];
-
-  groups.forEach(g=>{
-    g.days.forEach(d=>{
-      const date=daysAgo(d);
-      const p=CFG[g.cids[0]];
-      const user=USERS.find(u=>u.cancers.includes(g.cids[0]))||USERS[0];
-      const owner=USERS.find(u=>u.cancers.includes(g.cids[0]));
-      const contact=owner?(owner.ext?owner.name+'('+owner.ext+')':'暫無'):'暫無';
-      const sections={};
-      g.cids.forEach(cid=>{
-        const caName=CFG[cid]?.name||cid;
-        sections[cid]={
-          followups:[{
-            id:uid(),chartNo:String(Math.floor(Math.random()*9000000+1000000)),
-            name:'前追甲',doctors:['一般外科::李岳聰醫師',''],
-            doctor:'一般外科::李岳聰醫師',
-            prevDate:daysAgo(d+30),note:'治療後追蹤，病情穩定，持續觀察'
-          }],
-          cases:[{
-            id:uid(),chartNo:String(Math.floor(Math.random()*9000000+1000000)),
-            name:'新案乙',age:String(55+Math.floor(Math.random()*15)),gender:Math.random()>.5?'M':'F',
-            doctors:['頭頸外科::王威群醫師','血液腫瘤科::張正雄醫師','放射腫瘤科::劉育昌醫師'],
-            doctor:'頭頸外科::王威群醫師',
-            diagnosis:caName+' cT2N1M0 Stage III',
-            cc:'喉嚨異物感 2 個月',
-            ph:'其他無特殊',phChips:['HTN','DM'],
-            pathology:'SCC, Grade 2, pT2N1',pathologyDate:daysAgo(d+10),
-            exams:[
-              {name:'CT',date:daysAgo(d+15),content:'腫瘤 2.8cm，頸部淋巴結腫大'},
-              {name:'PET',date:daysAgo(d+8),content:'原發灶 SUVmax 8.2，N1'}
-            ],
-            treatments:[],
-            discussion:'影像討論、分期確認',
-            topics:['影像討論','分期討論','治療策略討論'],
-            summary:'',decision:'',images:[],note:''
-          }],
-          special:[]
-        };
-      });
-      const m={
-        id:g.cids.join('_')+'_'+uid(),
-        title:mtgTitle(g.cids),cids:g.cids,date,
-        time:p?.defaultSlot||'12:30-13:30',
-        loc:p?.loc||'彰濱-2樓 185會議室',
-        zoom:{id:'',pwd:'',url:''},
-        contact,sections,
-        version:1,savedBy:user.name,savedAt:new Date().toISOString()
-      };
-      saveLocal(m);count++;
-    });
-  });
-  renderSbRecent();
-  if(typeof openHistory==='function')openHistory();
-  showSaveToast('已生成 '+count+' 場測試會議');
-}
 
 /* ════ Mobile Navigation ════ */
 function setMNav(id,title){
@@ -4653,13 +4522,6 @@ function setMNav(id,title){
   const el=document.getElementById(id);if(el)el.classList.add('on');
   const pt=document.getElementById('mob-page-title');
   if(pt&&title)pt.textContent=title;
-}
-function updateMobUser(){
-  if(!S.user)return;
-  const av=document.getElementById('mob-av');
-  const un=document.getElementById('mob-uname');
-  if(av)av.textContent=S.user.name[0];
-  if(un)un.textContent=S.user.name;
 }
 function openUserSheet(){
   const sheet=document.getElementById('mobile-user-sheet');
