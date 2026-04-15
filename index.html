@@ -1112,7 +1112,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.19';
+const VERSION='V3.0.20';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2795,9 +2795,7 @@ function caseHTML(cid,i,d){
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
       <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" style="font-size:12px;padding:5px 8px">
     </div>
-    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings:
-...
-Impression: BI-RADS Category ..." style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
+    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
     <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像（最多2張）</div>
     <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${buildMammoImgArea(cid,i,d)}</div>
   </div>`:''}
