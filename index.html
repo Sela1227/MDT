@@ -789,6 +789,7 @@ textarea{resize:vertical}
               <button class="btn btn-b" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
               <button class="btn btn-b" onclick="document.getElementById('json-import-input').click()" title="匯入 AI 產出的 JSON 檔，支援多筆多癌別">JSON 批次匯入</button>
               <button class="btn btn-b" onclick="exportCaseJSON()" title="將本次會議所有病人資料匯出為 JSON 檔，可再次匯入">JSON 個案匯出</button>
+              <button class="btn btn-b" onclick="exportMeetingJSON()" title="匯出完整會議（含追蹤/醫療小組/特殊議程/會議資訊），可用備份還原功能匯入">JSON 完整會議匯出</button>
               <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
               <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
@@ -1118,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.1.1';
+const VERSION='V3.2.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4002,6 +4003,36 @@ topics：討論議題，從以下選填陣列：["影像討論","病理討論","
   document.getElementById('out-area').style.display='block';
   document.getElementById('copy-ok').style.display='none';
   document.getElementById('out-area').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function exportMeetingJSON(){
+  readForm();
+  const m=S.meeting;
+  if(!m||!m.id){alert('請先開啟並儲存會議');return;}
+  // Build single-meeting backup compatible with importAllJSON
+  const meetingData={};
+  const key='mdt_m_'+m.id;
+  meetingData[key]=JSON.stringify(m);
+  // Also include per-cancer section files for merged meetings
+  (m.cids||[]).forEach(function(cid){
+    const sk='mdt_sec_'+cid+'_'+m.date;
+    const sd=localStorage.getItem(sk);
+    if(sd)meetingData[sk]=sd;
+  });
+  const backup={
+    version:VERSION,
+    exportedAt:new Date().toISOString(),
+    idx:JSON.stringify([{id:m.id,title:m.title,date:m.date,cids:m.cids}]),
+    meetings:meetingData
+  };
+  const json=JSON.stringify(backup,null,2);
+  const blob=new Blob([json],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=(m.cids||[]).map(function(id){return CFG[id]?.name||id;}).join('_')+'_'+m.date+'_完整會議.json';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  showSaveToast('會議 JSON 已匯出（可用備份還原功能匯入）');
 }
 function exportCaseJSON(){
   readForm();
