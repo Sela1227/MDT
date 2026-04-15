@@ -1118,7 +1118,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.30';
+const VERSION='V3.0.31';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4412,8 +4412,7 @@ function generateTestData(){
        pathologies:[{date:'2026-01-12',content:'Invasive ductal carcinoma, Grade 2. ER(+) 95%, PR(+) 80%, HER2(-), Ki-67 12%. LVI(-).'}],
        exams:[{name:'MRI',date:'2026-01-12',content:'左乳1.8cm腫塊，cT1cN0M0，無對側病灶。'},{name:'Bone scan',date:'2026-01-18',content:'無骨骼轉移。'}],
        treatments:[],markers:[],familyHistory:'無',
-       mammo:{date:'2026-01-10',report:'Findings: 左乳外上象限見1.8cm高密度不規則腫塊，邊緣毛刺狀。
-Impression: BI-RADS Category 5: Highly suggestive of malignancy.',images:[]},
+       mammo:{date:'2026-01-10',report:'Findings: 左乳外上象限見1.8cm高密度不規則腫塊，邊緣毛刺狀。\nImpression: BI-RADS Category 5: Highly suggestive of malignancy.',images:[]},
        discussion:'手術方式討論（乳房保留 vs 全切除）及術後輔助治療。',topics:['影像討論','病理討論','治療策略討論'],summary:'',decision:''},
       {chartNo:'5301234',name:'黃淑惠',age:'52',gender:'F',
        doctors:['一般外科::吳鴻昇醫師','血液腫瘤科::張正雄醫師',''],
@@ -4424,8 +4423,7 @@ Impression: BI-RADS Category 5: Highly suggestive of malignancy.',images:[]},
        exams:[{name:'MRI',date:'2026-01-28',content:'右乳2.5cm腫塊，cT2N1M0。右腋下淋巴結腫大1.5cm。'}],
        treatments:[{name:'Neoadjuvant chemotherapy',date:'2026-02-01',content:'AC x4 → THP x4，術前化療中。'}],
        markers:[],familyHistory:'母親有乳癌病史（70歲確診）',
-       mammo:{date:'2026-01-25',report:'Findings: 右乳外側2.5cm高密度腫塊，邊界不清，右腋下淋巴結增大。
-Impression: BI-RADS Category 5.',images:[]},
+       mammo:{date:'2026-01-25',report:'Findings: 右乳外側2.5cm高密度腫塊，邊界不清，右腋下淋巴結增大。\nImpression: BI-RADS Category 5.',images:[]},
        discussion:'術前化療反應評估，討論手術時機。',topics:['影像討論','病理討論','治療策略討論'],summary:'',decision:''},
     ],
     digestive:[
