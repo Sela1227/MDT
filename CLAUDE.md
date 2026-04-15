@@ -220,11 +220,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V3.0.23）
+## 十二、版本（當前 V3.0.24）
 
 | 版本 | 關鍵變更 |
 |------|---------|
-| V3.0.23 | LINE通知移除診斷；HTML投影片診斷字放大；topics固定順序（影像/病理/分期/治療策略）|
+| V3.0.24 | LINE通知移除診斷；HTML投影片診斷字放大；topics固定順序（影像/病理/分期/治療策略）|
 | V3.0.9 | 修復genLine tag is not a function；HTML投影片改左右兩欄（左：現病史/過去病史/癌指數/病理；右：檢查/治療；底：討論）|
 | V3.0.8 | addStruct/delStruct改局部DOM，不跳頁 |
 | V3.0.7 | 編輯模式預設展開；LINE通知顯示子癌別 |

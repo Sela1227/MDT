@@ -1117,7 +1117,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.23';
+const VERSION='V3.0.24';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3959,7 +3959,29 @@ async function genXLSX(){
 
 
 function genImportPrompt(){
-  const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON，不要加任何說明文字或 markdown 符號。\n欄位定義：\nchartNo：病歷號（字串）\nname：姓名\nage：年齡（字串）\ngender："M" 或 "F"\ndiagnosis：完整診斷\ncc：現病史（Present Illness）\nph：過去病史（Past History）\npathologies：病理檢查，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}\nexams：影像及其他檢查，陣列，每筆 {"name":"CT/MRI/PSA...","date":"YYYY-MM-DD","content":"..."}\ntreatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"..."}\nmarkers：癌指數（隨時間追蹤數值如 PSA/CEA/CA125；ER/PR/HER2 等 IHC 結果請放在 pathologies.content 裡），陣列，每筆 {"name":"PSA...","date":"YYYY-MM-DD","content":"數值或趨勢"}\nfamilyHistory：家族癌症史（自由文字，如：乳癌（母親）；非乳癌/婦癌個案可省略）\ndiscussion：討論要點（一句話摘要）\ntopics：討論議題，從以下選填陣列：["影像討論","病理討論","分期討論","治療策略討論"]\n\n以下是病人資料：\n`;
+  const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON 陣列（即使只有一筆也用陣列），不要加任何說明文字或 markdown 符號。
+欄位定義：
+_cancer：癌別名稱，從以下選填（必填）：「頭頸癌」「血液淋巴癌」「胸腔癌」「乳癌」「消化道癌」「肝膽胰癌」「泌尿道癌」「婦癌」
+chartNo：病歷號（字串）
+name：姓名（原文，系統顯示時自動遮蔽中間字）
+age：年齡（字串）
+gender："M" 或 "F"
+diagnosis：完整診斷（含分期）
+cc：現病史（Present Illness）
+ph：過去病史（Past History），若無請填 "Nil"
+phChips：慢性病陣列，從以下選填：["HTN","DM","CAD","CVA","HBV","HCV","CKD","COPD"]，無則空陣列
+pathologies：病理檢查，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}；IHC 結果（ER/PR/HER2/Ki-67 等）請放在 content 裡，不要放 markers
+exams：影像及其他檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/PET-CT/SONO...","date":"YYYY-MM-DD","content":"..."}
+treatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"說明"}
+markers：癌指數（隨時間追蹤的數值，如 PSA/CEA/CA125/AFP/CA199），陣列，每筆 {"name":"PSA","date":"YYYY-MM-DD","content":"數值或趨勢"}
+familyHistory：家族癌症史，自由文字（如：乳癌（母親）、無）；僅 _cancer 為「乳癌」或「婦癌」時填寫，其他癌別省略或填空字串
+mammo：乳房攝影（僅 _cancer 為「乳癌」時填寫），格式：{"date":"YYYY-MM-DD","report":"Findings:...
+Impression:...","images":[]}；其他癌別省略此欄位
+discussion：討論要點（一句話摘要）
+topics：討論議題，從以下選填陣列：["影像討論","病理討論","分期討論","治療策略討論"]
+
+以下是病人資料：
+`;
   document.getElementById('out-text').textContent=prompt;
   document.getElementById('out-area').style.display='block';
   document.getElementById('copy-ok').style.display='none';
