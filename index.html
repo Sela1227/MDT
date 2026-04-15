@@ -788,6 +788,7 @@ textarea{resize:vertical}
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-b" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
               <button class="btn btn-b" onclick="document.getElementById('json-import-input').click()" title="匯入 AI 產出的 JSON 檔，支援多筆多癌別">JSON 批次匯入</button>
+              <button class="btn btn-b" onclick="exportCaseJSON()" title="將本次會議所有病人資料匯出為 JSON 檔，可再次匯入">JSON 個案匯出</button>
               <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
               <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
@@ -1117,7 +1118,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.0.25';
+const VERSION='V3.0.28';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2615,12 +2616,11 @@ ${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gen
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body" style="display:none">
-${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(p.date)+'</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
+${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:var(--acc);font-weight:700;font-size:.9em">'+escA(p.date)+'</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
   const mkArr=(d.markers||[]);
   if(!mkArr.length)return '';
   return mkArr.map(mk=>{
-    const label=(mk.name||'')+(mk.date?' ('+mk.date+')':'');
-    return '<div class="vc-r"><span class="vc-l">癌指數</span><span class="vc-v">'+(label?'<b>'+escA(label)+'</b> ':'')+escA(mk.content||'')+'</span></div>';
+    return '<div class="vc-r"><span class="vc-l">癌指數</span><span class="vc-v">'+(mk.name?'<b>'+escA(mk.name)+'</b> ':'')+escA(mk.content||'')+'</span></div>';
   }).join('');
 })()}${(()=>{
   const exArr=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
@@ -3081,7 +3081,7 @@ async function genPPTX(){
       } else if(c.treatment){addRow('治療',c.treatment);}
       if(c.discussion)addRow('討論',c.discussion);
       if((c.markers||[]).length){
-        const mkStr=(c.markers||[]).map(mk=>(mk.name||'')+(mk.date?' ('+mk.date+') ':' ')+(mk.content||'')).join('\n');
+        const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+' ':' ')+(mk.content||'')).join('\n');
         addRow('癌指數',mkStr);
       }
 
@@ -3205,7 +3205,7 @@ async function genDOCX(){
               new TextRun({text:'  '+c.gender+'/'+(c.age||'—')+'  VS '+drs,size:20,color:ltColor}),
             ],spacing:{before:200,after:60}
           }));
-          if(c.diagnosis)children.push(mkP(c.diagnosis,{size:20,color:ltColor,italics:true}));
+          if(c.diagnosis)children.push(mkP(c.diagnosis,{size:20,color:ltColor}));
           // Info table: all fields
           const infoRows=[];
           if(c.cc)infoRows.push(mkRow('現病史',c.cc));
@@ -3223,7 +3223,7 @@ async function genDOCX(){
             ?(c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(tr=>(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'')).join('\n')
             :(c.treatment&&c.treatment!=='尚未治療'?c.treatment:'');
           if(trStr2)infoRows.push(mkRow('治療',trStr2));
-          if((c.markers||[]).length){const mkStr=(c.markers||[]).map(mk=>(mk.name||'')+(mk.date?' ('+mk.date+') ':' ')+(mk.content||'')).join('\n');infoRows.push(mkRow('癌指數',mkStr));}
+          if((c.markers||[]).length){const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+' ':' ')+(mk.content||'')).join('\n');infoRows.push(mkRow('癌指數',mkStr));}
           if(c.discussion)infoRows.push(mkRow('討論要點',c.discussion));
           if(infoRows.length)children.push(mkTable(infoRows));
           // Discussion focus: topics + summary + decision (expanded)
@@ -3537,7 +3537,7 @@ function genHTMLSlides(){
       const chips=(c.topics||[]).slice().sort((a,b)=>{const ai=_topicOrder.indexOf(a),bi=_topicOrder.indexOf(b);return(ai<0?99:ai)-(bi<0?99:bi);}).map(t=>'<span class="tp">'+escA(t)+'</span>').join('');
 
       const mkRow=(lbl,val)=>val?'<tr><td class="rl">'+lbl+'</td><td class="rv">'+val+'</td></tr>':'';
-      const markersHtml=(c.markers&&c.markers.length)?( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+(mk.date?'('+escA(mk.date)+')':'')+'</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>'):'';
+      const markersHtml=(c.markers&&c.markers.length)?( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+'</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>'):'';
       const fhRow=(cid==='breast'||cid==='gynecology')&&c.familyHistory?mkRow('家族史',escA(c.familyHistory)):'';
       const leftRows=[
         mkRow('現病史',escA(c.cc||'')),
@@ -3645,7 +3645,7 @@ function genHTMLSlides(){
     +'.cn{font-size:clamp(20px,2.6vw,38px);font-weight:700;}'
     +'.cd{font-size:clamp(14px,1.5vw,22px);color:rgba(255,255,255,.6);}'
     +'.cdr{font-size:clamp(14px,1.6vw,23px);color:rgba(255,255,255,.85);}'
-    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'+'.cdx{font-size:clamp(16px,2vw,28px);color:rgba(255,255,255,.85);line-height:1.45;font-style:italic;}'
+    +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'+'.cdx{font-size:clamp(16px,2vw,28px);color:rgba(255,255,255,.85);line-height:1.45;}'
     +'.cb{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}'
     +'.cb-cols{display:flex;flex:1;min-height:0;overflow:hidden;}'
     +'.cb-l{flex:1;overflow:auto;border-right:2px solid #eef0f3;}'
@@ -3986,7 +3986,7 @@ phChips：慢性病陣列，從以下選填：["HTN","DM","CAD","CVA","HBV","HCV
 pathologies：病理檢查，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}；IHC 結果（ER/PR/HER2/Ki-67 等）請放在 content 裡，不要放 markers
 exams：影像及其他檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/PET-CT/SONO...","date":"YYYY-MM-DD","content":"..."}
 treatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"說明"}
-markers：癌指數（隨時間追蹤的數值，如 PSA/CEA/CA125/AFP/CA199），陣列，每筆 {"name":"PSA","date":"YYYY-MM-DD","content":"數值或趨勢"}
+markers：癌指數（隨時間追蹤的數值，如 PSA/CEA/CA125/AFP/CA199），陣列，每筆 {"name":"PSA","date":"第一筆日期YYYY-MM-DD","content":"數值趨勢，格式：值(日期) → 值(日期)，例如：7.10(2025-03-07) → 11.32(2025-07-10) → 7226(2026-02-23)；content 不要重複名稱"}
 familyHistory：家族癌症史，自由文字（如：乳癌（母親）、無）；僅 _cancer 為「乳癌」或「婦癌」時填寫，其他癌別省略或填空字串
 mammo：乳房攝影（僅 _cancer 為「乳癌」時填寫），格式：{"date":"YYYY-MM-DD","report":"Findings:...
 Impression:...","images":[]}；其他癌別省略此欄位
@@ -3999,6 +3999,53 @@ topics：討論議題，從以下選填陣列：["影像討論","病理討論","
   document.getElementById('out-area').style.display='block';
   document.getElementById('copy-ok').style.display='none';
   document.getElementById('out-area').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function exportCaseJSON(){
+  readForm();
+  const m=S.meeting,cids=S.cids;
+  if(!m){alert('請先開啟會議');return;}
+  const result=[];
+  cids.forEach(function(cid){
+    const ca=CFG[cid];
+    const cases=(m.sections[cid]||{}).cases||[];
+    cases.forEach(function(c){
+      const obj={
+        _cancer: ca.name,
+        chartNo: c.chartNo||'',
+        name: c.name||'',
+        age: String(c.age||''),
+        gender: c.gender||'M',
+        diagnosis: c.diagnosis||'',
+        cc: c.cc||'',
+        ph: c.ph||'',
+        phChips: Array.isArray(c.phChips)?c.phChips:[],
+        pathologies: Array.isArray(c.pathologies)?c.pathologies:[],
+        exams: Array.isArray(c.exams)?c.exams:[],
+        treatments: Array.isArray(c.treatments)?c.treatments:[],
+        markers: Array.isArray(c.markers)?c.markers:[],
+        familyHistory: c.familyHistory||'',
+        discussion: c.discussion||'',
+        topics: Array.isArray(c.topics)?c.topics:[],
+        summary: c.summary||'',
+        decision: c.decision||''
+      };
+      // Only include mammo for breast cancer
+      if(cid==='breast'&&c.mammo&&typeof c.mammo==='object'){
+        obj.mammo={date:c.mammo.date||'',report:c.mammo.report||'',images:[]};
+      }
+      result.push(obj);
+    });
+  });
+  if(!result.length){alert('本次會議沒有個案資料');return;}
+  const json=JSON.stringify(result,null,2);
+  const blob=new Blob([json],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=cids.map(function(id){return CFG[id]?.name||id;}).join('_')+'_'+m.date+'_個案.json';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  showSaveToast('已匯出 '+result.length+' 筆個案 JSON');
 }
 function importCaseJSON(inputEl){
   const file=inputEl.files[0];if(!file)return;
