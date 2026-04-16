@@ -1091,7 +1091,7 @@ let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
 const DEFAULT_DRS=[
   {dept:'一般外科',name:'李岳聰醫師'},{dept:'一般外科',name:'林建華醫師'},{dept:'一般外科',name:'吳鴻昇醫師'},{dept:'一般外科',name:'歐金俊醫師'},
-  {dept:'頭頸外科',name:'張建明醫師'},{dept:'頭頸外科',name:'王威群醫師'},{dept:'頭頸外科',name:'李俊毅醫師'},
+  {dept:'頭頸外科',name:'張建明醫師'},{dept:'頭頸外科',name:'王威群醫師'},{dept:'頭頸外科',name:'李俊毅醫師'},{dept:'頭頸外科',name:'蕭信昌醫師'},
   {dept:'胸腔外科',name:'黃榆涵醫師'},{dept:'胸腔內科',name:'張竣期醫師'},
   {dept:'消化內科',name:'陳忠宏醫師'},{dept:'消化內科',name:'王俊偉醫師'},
   {dept:'血液腫瘤科',name:'張正雄醫師'},{dept:'血液腫瘤科',name:'劉大智醫師'},
@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.2.7';
+const VERSION='V3.2.9';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3371,7 +3371,7 @@ function doImportCase(){
       pathologies: Array.isArray(d.pathologies)?d.pathologies:[],
       exams: Array.isArray(d.exams)?d.exams:[],
       treatments: Array.isArray(d.treatments)?d.treatments:[],
-      markers: Array.isArray(d.markers)?d.markers:[],
+      markers: (()=>{const raw=Array.isArray(d.markers)?d.markers:[];const seen={};return raw.filter(function(mk){const k=(mk.name||'').trim().toLowerCase();if(!k)return true;if(seen[k])return false;seen[k]=true;return true;});})(),
       familyHistory: d.familyHistory||'',
       mammo: d.mammo&&typeof d.mammo==='object'?d.mammo:{date:'',report:'',images:[]},
       discussion: d.discussion||'',
@@ -3976,6 +3976,7 @@ async function genXLSX(){
 
 function genImportPrompt(){
   const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON 陣列（即使只有一筆也用陣列），不要加任何說明文字或 markdown 符號。
+【重要限制】只能使用貼上的資料，絕對不可自行推斷、補充、或引用任何外部醫學知識與記憶。資料中沒有的欄位一律留空字串或空陣列。
 欄位定義：
 _cancer：癌別名稱，從以下選填（必填）：「頭頸癌」「血液淋巴癌」「胸腔癌」「乳癌」「消化道癌」「肝膽胰癌」「泌尿道癌」「婦癌」
 chartNo：病歷號（字串）
@@ -4114,7 +4115,7 @@ function importCaseJSON(inputEl){
         pathologies:Array.isArray(d.pathologies)?d.pathologies:[],
         exams:Array.isArray(d.exams)?d.exams:[],
         treatments:Array.isArray(d.treatments)?d.treatments:[],
-        markers:Array.isArray(d.markers)?d.markers:[],
+        markers:(()=>{const raw=Array.isArray(d.markers)?d.markers:[];const seen={};return raw.filter(function(mk){const k=(mk.name||'').trim().toLowerCase();if(!k)return true;if(seen[k])return false;seen[k]=true;return true;});})(),
         familyHistory:d.familyHistory||'',
         mammo:d.mammo&&typeof d.mammo==='object'?d.mammo:{date:'',report:'',images:[]},
         discussion:d.discussion||'',
