@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.2.3';
+const VERSION='V3.2.4';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3723,10 +3723,13 @@ async function importXLSX(inputEl){
       diagnosis:String(r['診斷']||'').trim(),
       cc:String(r['現病史']||'').trim(),
       ph:String(r['過去病史']||'').trim(),
-      pathologies:[],exams:[],treatments:[],
-      discussion:String(r['討論']||'').trim(),
+      pathologies:[],exams:[],treatments:[],markers:[],
+      familyHistory:String(r['家族史']||'').trim(),
+      discussion:String(r['討論要點']||r['討論']||'').trim(),
       topics:(r['討論議題']?String(r['討論議題']).split('、').filter(Boolean):[]),
-      doctors:['','',''],doctor:'',phChips:[],images:[],note:'',
+      doctors:['','',''],doctor:'',
+      phChips:(r['過去病史（chip）']?String(r['過去病史（chip）']).split(' ').map(x=>x.replace('(+)','').trim()).filter(x=>['HTN','DM','CAD','CVA','HBV','HCV','CKD','COPD'].includes(x)):[]),
+      images:[],note:'',
       _cancer:String(r['癌別']||'').trim()
     };
     const c=byChart[key];
@@ -3754,6 +3757,33 @@ async function importXLSX(inputEl){
         c.treatments.push({name:tName,date:tDate,content:tCont});
     }
   });
+  // Read markers from 癌指數記錄 sheet if present
+  const wsMk=wb.Sheets['癌指數記錄'];
+  if(wsMk){
+    const mkRrows=XLSX.utils.sheet_to_json(wsMk,{defval:''});
+    mkRrows.forEach(r=>{
+      const key=(r['癌別']||'')+'__'+(r['病歷號']||'');
+      if(byChart[key]){
+        const mk={name:String(r['指數']||'').trim(),date:String(r['日期']||'').trim(),content:String(r['數值趨勢']||'').trim()};
+        if((mk.name||mk.content)&&!byChart[key].markers.find(m=>m.name===mk.name))
+          byChart[key].markers.push(mk);
+      }
+    });
+  }
+  // Read pathologies from 病理記錄 sheet if present
+  const wsPth=wb.Sheets['病理記錄'];
+  if(wsPth){
+    const pthRows=XLSX.utils.sheet_to_json(wsPth,{defval:''});
+    pthRows.forEach(r=>{
+      const key=(r['癌別']||'')+'__'+(r['病歷號']||'');
+      if(byChart[key]){
+        const pDate=String(r['日期']||'').trim();
+        const pCont=String(r['病理報告']||'').trim();
+        if(pCont&&!byChart[key].pathologies.find(p=>p.date===pDate&&p.content===pCont))
+          byChart[key].pathologies.push({date:pDate,content:pCont});
+      }
+    });
+  }
   const cases=Object.values(byChart);
   if(!cases.length){alert('沒有找到個案資料');return;}
   // Match cancer name to cid
@@ -3807,7 +3837,7 @@ async function genXLSX(){
     const wb=XLSX.utils.book_new();
 
     // ── Sheet 1: 個案討論 ──
-    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','病理日期','病理報告','討論要點','討論議題','摘要','決策']];
+    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','家族史','討論要點','討論議題','摘要','決策']];
     cids.forEach(cid=>{
       const ca=CFG[cid];
       const sec=m.sections[cid]||{};
@@ -3823,8 +3853,7 @@ async function genXLSX(){
           c.cc||'',
           (c.phChips||[]).map(x=>x+'(+)').join(' '),
           c.ph||'',
-          c.pathologyDate||'',
-          c.pathology||'',
+          c.familyHistory||'',
           c.discussion||'',
           (c.topics||[]).join('、'),
           c.summary||'',
@@ -3833,7 +3862,7 @@ async function genXLSX(){
       });
     });
     const ws1=XLSX.utils.aoa_to_sheet(caseRows);
-    ws1['!cols']=[{wch:10},{wch:10},{wch:8},{wch:4},{wch:4},{wch:14},{wch:20},{wch:24},{wch:20},{wch:16},{wch:12},{wch:24},{wch:20},{wch:20},{wch:30},{wch:30}];
+    ws1['!cols']=[{wch:10},{wch:10},{wch:8},{wch:4},{wch:4},{wch:14},{wch:20},{wch:24},{wch:20},{wch:16},{wch:16},{wch:20},{wch:20},{wch:30},{wch:30}];
     XLSX.utils.book_append_sheet(wb,ws1,'個案討論');
 
     // ── Sheet 2: 檢查 ──
@@ -3870,7 +3899,38 @@ async function genXLSX(){
       XLSX.utils.book_append_sheet(wb,ws3,'治療記錄');
     }
 
-    // ── Sheet 4: 前期追蹤 ──
+    // ── Sheet 4: 病理 ──
+    const pathRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','日期','病理報告']];
+    cids.forEach(cid=>{
+      const ca=CFG[cid];
+      (m.sections[cid]?.cases||[]).forEach(c=>{
+        const drs=getDoctorStr(c);
+        const pp=(c.pathologies&&c.pathologies.length)?c.pathologies:(c.pathology?[{date:c.pathologyDate||'',content:c.pathology}]:[]);
+        pp.forEach(p=>{pathRows.push([ca.name,c.chartNo||'',c.name||'',drs,p.date||'',p.content||'']);});
+      });
+    });
+    if(pathRows.length>1){
+      const wsp=XLSX.utils.aoa_to_sheet(pathRows);
+      wsp['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:12},{wch:60}];
+      XLSX.utils.book_append_sheet(wb,wsp,'病理記錄');
+    }
+
+    // ── Sheet 5: 癌指數 ──
+    const mkRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','指數','日期','數值趨勢']];
+    cids.forEach(cid=>{
+      const ca=CFG[cid];
+      (m.sections[cid]?.cases||[]).forEach(c=>{
+        const drs=getDoctorStr(c);
+        (c.markers||[]).forEach(mk=>{mkRows.push([ca.name,c.chartNo||'',c.name||'',drs,mk.name||'',mk.date||'',mk.content||'']);});
+      });
+    });
+    if(mkRows.length>1){
+      const wsmk=XLSX.utils.aoa_to_sheet(mkRows);
+      wsmk['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:8},{wch:12},{wch:40}];
+      XLSX.utils.book_append_sheet(wb,wsmk,'癌指數記錄');
+    }
+
+    // ── Sheet 6: 前期追蹤 ──
     const fupRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','前次日期','追蹤說明']];
     cids.forEach(cid=>{
       const ca=CFG[cid];
@@ -3884,7 +3944,7 @@ async function genXLSX(){
       XLSX.utils.book_append_sheet(wb,ws4,'前期追蹤');
     }
 
-    // ── Sheet 5: 會議資訊 ──
+    // ── Sheet 7: 會議資訊 ──
     const infoRows=[
       ['會議名稱',mtgTitle(cids)],
       ['日期',m.date||''],
