@@ -1119,15 +1119,15 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.2.6';
+const VERSION='V3.2.7';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
 function loadAll(){
   try{const c=localStorage.getItem('mdt_cfg');if(c){const stored=JSON.parse(c);CFG={...DEFAULT_C};Object.keys(DEFAULT_C).forEach(cid=>{if(stored[cid])CFG[cid]={...DEFAULT_C[cid],...stored[cid]};});}else{CFG={...DEFAULT_C};}}catch{CFG={...DEFAULT_C}}
   try{const l=localStorage.getItem('mdt_locs');LOCS=l?JSON.parse(l):[...DEFAULT_LOCS]}catch{LOCS=[...DEFAULT_LOCS]}
-  try{const d=localStorage.getItem('mdt_drs');DRS=d?JSON.parse(d):[...DEFAULT_DRS]}catch{DRS=[...DEFAULT_DRS]}
-  try{const e=localStorage.getItem('mdt_exam_types');EXAM_TYPES=e?JSON.parse(e):[...DEFAULT_EXAM_TYPES]}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
+  try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS]}
+  try{const e=localStorage.getItem('mdt_exam_types');if(e){EXAM_TYPES=JSON.parse(e);DEFAULT_EXAM_TYPES.forEach(function(t){if(!EXAM_TYPES.includes(t))EXAM_TYPES.push(t);});}else{EXAM_TYPES=[...DEFAULT_EXAM_TYPES];}}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
   if(!EXAM_TYPES.includes('Bone scan')){EXAM_TYPES.splice(2,0,'Bone scan');saveAll();}
   migrateLOCS();
   migrateCFG();
