@@ -835,6 +835,7 @@ textarea{resize:vertical}
               <div class="tab" onclick="showStab('cancers',this)">癌別</div>
               <div class="tab" onclick="showStab('ai',this)">AI</div>
               <div class="tab" onclick="showStab('testdata',this)">測試</div>
+              <div class="tab" onclick="showStab('github',this)">GitHub 分享</div>
               <div class="tab" onclick="showStab('backup',this)">備份還原</div>
             </div>
           </div>
@@ -900,7 +901,9 @@ textarea{resize:vertical}
               </div>
             </div>
 
-            <div class="stab" id="stab-backup">
+            <div class="stab" id="stab-github">
+  <div class="st-title">GitHub 投影片分享</div>
+  <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結<br>需先至 GitHub 申請 Personal Access Token（Contents: Read and write）</div>
   <div class="st-title">GitHub 投影片上傳</div>
   <div style="font-size:12px;color:var(--textlt);margin-bottom:8px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結</div>
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
@@ -913,7 +916,10 @@ textarea{resize:vertical}
   <div id="shared-slides-list"></div>
 
   <hr style="border:none;border-top:1px solid var(--blt);margin:0 0 16px">
-  <div class="st-title">備份與還原</div>
+  </div>
+
+<div class="stab" id="stab-backup">
+<div class="st-title">備份與還原</div>
   <div class="st-desc">將所有會議記錄（含影像）打包成 JSON 備份檔，或從備份檔匯入還原。適合換電腦、跨裝置同步，或定期備份。</div>
   <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
     <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
@@ -1132,7 +1138,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.7.2';
+const VERSION='V3.7.3';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
