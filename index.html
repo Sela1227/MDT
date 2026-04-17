@@ -1138,7 +1138,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.8.3';
+const VERSION='V3.8.5';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3116,6 +3116,11 @@ function renderSharedSlides(){
   }).join('');
 }
 
+async function _folderEntries(handle){
+  const arr=[];
+  for await(const e of handle.values())arr.push(e);
+  return arr;
+}
 function getGhToken(){return localStorage.getItem('mdt_gh_token')||'';}
 function saveGhToken(){
   const t=document.getElementById('gh-token-input').value.trim();
@@ -4665,69 +4670,80 @@ function genLine(){
 
     const tag=function(c){
       const dx=(c.diagnosis||'').toLowerCase();
+      const caId=ca.id||'';
       let sub=ca.name;
-      // 頭頸癌
-      if(/nasopharyn|鼻咽/.test(dx))sub='鼻咽癌';
-      else if(/oropharyn|口咽/.test(dx))sub='口咽癌';
-      else if(/hypopharyn|下咽/.test(dx))sub='下咽癌';
-      else if(/laryn|喉/.test(dx))sub='喉癌';
-      else if(/oral|tongue|舌|口腔|buccal|gingiv/.test(dx))sub='口腔癌';
-      else if(/thyroid|甲狀腺/.test(dx))sub='甲狀腺癌';
-      else if(/sinus|nasal|鼻竇|鼻腔/.test(dx))sub='鼻竇癌';
-      else if(/parotid|salivary|腮腺|唾液腺/.test(dx))sub='唾液腺癌';
-      // 胸腔癌
-      else if(/urothelial|膀胱|bladder/.test(dx))sub='膀胱癌';
-      else if(/lung|肺|pulmon/.test(dx))sub='肺癌';
-      else if(/esophag|食道/.test(dx))sub='食道癌';
-      else if(/mesothelioma|間皮/.test(dx))sub='間皮瘤';
-      else if(/thymoma|胸腺/.test(dx))sub='胸腺瘤';
-      // 乳癌
-      else if(/breast|乳癌|乳房|乳腺/.test(dx))sub='乳癌';
-      // 消化道癌
-      else if(/rectal|rectum|直腸/.test(dx))sub='直腸癌';
-      else if(/colon|結腸/.test(dx))sub='結腸癌';
-      else if(/colorectal|大腸/.test(dx))sub='大腸癌';
-      else if(/gastric|stomach|胃/.test(dx))sub='胃癌';
-      else if(/appendix|闌尾/.test(dx))sub='闌尾癌';
-      else if(/anal|肛門/.test(dx))sub='肛門癌';
-      else if(/small bowel|小腸/.test(dx))sub='小腸癌';
-      // 肝膽胰癌
-      else if(/hepatocellular|hcc|肝細胞/.test(dx))sub='肝細胞癌';
-      else if(/cholangiocarcinoma|bile duct|膽管/.test(dx))sub='膽管癌';
-      else if(/gallbladder|膽囊/.test(dx))sub='膽囊癌';
-      else if(/pancreatic|pancreas|胰臟|胰腺/.test(dx))sub='胰臟癌';
-      else if(/ampulla|壺腹/.test(dx))sub='壺腹癌';
-      else if(/hepatic|liver|肝/.test(dx))sub='肝癌';
-      // 泌尿道癌
-      else if(/bladder|膀胱|urothelial/.test(dx))sub='膀胱癌';
-      else if(/prostate|攝護腺|prostatic/.test(dx))sub='攝護腺癌';
-      else if(/renal|kidney|腎|ccrc|clear cell/.test(dx))sub='腎臟癌';
-      else if(/ureter|ureteral|輸尿管/.test(dx))sub='輸尿管癌';
-      else if(/testicular|睪丸/.test(dx))sub='睪丸癌';
-      else if(/penile|陰莖/.test(dx))sub='陰莖癌';
-      // 婦癌
-      else if(/cervix|cervical|子宮頸/.test(dx))sub='子宮頸癌';
-      else if(/endometri|子宮內膜/.test(dx))sub='子宮內膜癌';
-      else if(/ovarian|ovary|卵巢/.test(dx))sub='卵巢癌';
-      else if(/uterine|子宮|uterus/.test(dx))sub='子宮癌';
-      else if(/vaginal|陰道/.test(dx))sub='陰道癌';
-      else if(/vulvar|外陰/.test(dx))sub='外陰癌';
-      // 血液淋巴癌
-      else if(/dlbcl|diffuse large b|瀰漫性大b/.test(dx))sub='DLBCL';
-      else if(/hodgkin/.test(dx))sub='Hodgkin Lymphoma';
-      else if(/follicular/.test(dx))sub='Follicular Lymphoma';
-      else if(/mantle cell/.test(dx))sub='Mantle Cell Lymphoma';
-      else if(/marginal zone|malt/.test(dx))sub='Marginal Zone Lymphoma';
-      else if(/burkitt/.test(dx))sub='Burkitt Lymphoma';
-      else if(/t.cell|nk.cell/.test(dx))sub='T/NK-cell Lymphoma';
-      else if(/lymphoma|淋巴瘤/.test(dx))sub='Lymphoma';
-      else if(/multiple myeloma|骨髓瘤/.test(dx))sub='Multiple Myeloma';
-      else if(/aml|acute myeloid/.test(dx))sub='AML';
-      else if(/all|acute lymph/.test(dx))sub='ALL';
-      else if(/cml|chronic myeloid/.test(dx))sub='CML';
-      else if(/cll|chronic lymph/.test(dx))sub='CLL';
-      else if(/mds|myelodysplastic/.test(dx))sub='MDS';
-      else if(/leukemia|白血病/.test(dx))sub='Leukemia';
+      // 依癌別分組查找，避免轉移灶描述誤判
+      if(caId==='head_neck'||caId==='lymphoma'||sub==='頭頸癌'){
+        if(/nasopharyn|鼻咽/.test(dx))sub='鼻咽癌';
+        else if(/oropharyn|口咽|tonsil|扁桃/.test(dx))sub='口咽癌';
+        else if(/hypopharyn|下咽/.test(dx))sub='下咽癌';
+        else if(/laryn|喉癌|laryngeal/.test(dx))sub='喉癌';
+        else if(/oral|tongue|舌|口腔|buccal|gingiv/.test(dx))sub='口腔癌';
+        else if(/thyroid|甲狀腺/.test(dx))sub='甲狀腺癌';
+        else if(/sinus|nasal cav|鼻竇|鼻腔/.test(dx))sub='鼻竇癌';
+        else if(/parotid|salivary|腮腺|唾液腺/.test(dx))sub='唾液腺癌';
+        else if(/dlbcl|diffuse large b/.test(dx))sub='DLBCL';
+        else if(/hodgkin/.test(dx))sub='Hodgkin Lymphoma';
+        else if(/follicular lymph/.test(dx))sub='Follicular Lymphoma';
+        else if(/mantle cell/.test(dx))sub='Mantle Cell Lymphoma';
+        else if(/marginal zone|malt/.test(dx))sub='Marginal Zone Lymphoma';
+        else if(/lymphoma/.test(dx))sub='Lymphoma';
+        else if(/myeloma/.test(dx))sub='Multiple Myeloma';
+        else if(/leukemia/.test(dx))sub='Leukemia';
+      } else if(caId==='thoracic'||sub==='胸腔癌'){
+        if(/lung|肺|pulmon/.test(dx))sub='肺癌';
+        else if(/esophag|食道/.test(dx))sub='食道癌';
+        else if(/mesothelioma|間皮/.test(dx))sub='間皮瘤';
+        else if(/thymoma|胸腺/.test(dx))sub='胸腺瘤';
+      } else if(caId==='breast'||sub==='乳癌'){
+        sub='乳癌';
+      } else if(caId==='digestive'||sub==='消化道癌'){
+        if(/rectal|rectum|直腸/.test(dx))sub='直腸癌';
+        else if(/colon|結腸/.test(dx))sub='結腸癌';
+        else if(/colorectal|大腸/.test(dx))sub='大腸癌';
+        else if(/gastric|stomach|胃癌|gastric/.test(dx))sub='胃癌';
+        else if(/esophag|食道/.test(dx))sub='食道癌';
+        else if(/appendix|闌尾/.test(dx))sub='闌尾癌';
+        else if(/anal|肛門/.test(dx))sub='肛門癌';
+        else if(/small bowel|小腸/.test(dx))sub='小腸癌';
+      } else if(caId==='hepatobiliary'||sub==='肝膽胰癌'){
+        if(/hepatocellular|hcc|肝細胞/.test(dx))sub='肝細胞癌';
+        else if(/cholangiocarcinoma|bile duct|膽管/.test(dx))sub='膽管癌';
+        else if(/gallbladder|膽囊/.test(dx))sub='膽囊癌';
+        else if(/pancreatic|pancreas|胰臟|胰腺/.test(dx))sub='胰臟癌';
+        else if(/ampulla|壺腹/.test(dx))sub='壺腹癌';
+        else if(/hepatic|liver|肝/.test(dx))sub='肝細胞癌';
+      } else if(caId==='urology'||sub==='泌尿道癌'){
+        if(/urothelial|膀胱|bladder/.test(dx))sub='膀胱癌';
+        else if(/prostate|攝護腺|prostatic/.test(dx))sub='攝護腺癌';
+        else if(/renal|kidney|腎|ccrc|clear cell/.test(dx))sub='腎臟癌';
+        else if(/ureter|ureteral|輸尿管/.test(dx))sub='輸尿管癌';
+        else if(/testicular|睪丸/.test(dx))sub='睪丸癌';
+        else if(/penile|陰莖/.test(dx))sub='陰莖癌';
+      } else if(caId==='gynecology'||sub==='婦癌'){
+        if(/cervix|cervical|子宮頸/.test(dx))sub='子宮頸癌';
+        else if(/endometri|子宮內膜/.test(dx))sub='子宮內膜癌';
+        else if(/ovarian|ovary|卵巢/.test(dx))sub='卵巢癌';
+        else if(/uterine|子宮|uterus/.test(dx))sub='子宮癌';
+        else if(/vaginal|陰道/.test(dx))sub='陰道癌';
+        else if(/vulvar|外陰/.test(dx))sub='外陰癌';
+      } else if(caId==='lymphoma'){
+        if(/dlbcl|diffuse large b|瀰漫性大b/.test(dx))sub='DLBCL';
+        else if(/hodgkin/.test(dx))sub='Hodgkin Lymphoma';
+        else if(/follicular/.test(dx))sub='Follicular Lymphoma';
+        else if(/mantle cell/.test(dx))sub='Mantle Cell Lymphoma';
+        else if(/marginal zone|malt/.test(dx))sub='Marginal Zone Lymphoma';
+        else if(/burkitt/.test(dx))sub='Burkitt Lymphoma';
+        else if(/t.cell|nk.cell/.test(dx))sub='T/NK-cell Lymphoma';
+        else if(/lymphoma|淋巴瘤/.test(dx))sub='Lymphoma';
+        else if(/multiple myeloma|骨髓瘤/.test(dx))sub='Multiple Myeloma';
+        else if(/aml|acute myeloid/.test(dx))sub='AML';
+        else if(/all|acute lymph/.test(dx))sub='ALL';
+        else if(/cml|chronic myeloid/.test(dx))sub='CML';
+        else if(/cll|chronic lymph/.test(dx))sub='CLL';
+        else if(/mds|myelodysplastic/.test(dx))sub='MDS';
+        else if(/leukemia|白血病/.test(dx))sub='Leukemia';
+      }
       return'【'+sub+'】';
     };
 
@@ -5216,8 +5232,9 @@ document.addEventListener('click',function(e){
       if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
         // List image files in folder
         const files=[];
-        for await(const entry of pathImgFolderHandle.values()){
-          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp|tiff?)$/i.test(entry.name))files.push(entry);
+        const _entries3=await _folderEntries(pathImgFolderHandle);
+        for(const entry of _entries3){
+          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
         }
         if(!files.length){alert('資料夾內沒有找到圖檔');return;}
         // Build selection dialog
@@ -5309,7 +5326,8 @@ document.addEventListener('click',function(e){
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
         const files=[];
-        for await(const entry of pathImgFolderHandle.values()){
+        const _entries1=await _folderEntries(pathImgFolderHandle);
+        for(const entry of _entries1){
           if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
         }
         files.sort(function(a,b){return a.name.localeCompare(b.name);});
@@ -5317,7 +5335,7 @@ document.addEventListener('click',function(e){
         const existing=new Set(c.surgicalImages.map(function(x){return x.name;}));
         const list=files.map(function(f){
           var base=f.name.replace(/\.[^.]+$/,''),ext=f.name.split('.').pop().toUpperCase();
-          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='rgba(0,0,0,.04)'" onmouseout="this.style.background=''">'
+          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'
             +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
             +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(base)+'</span>'
             +'<span style="font-size:10px;color:#aaa;flex-shrink:0">'+escA(ext)+'</span>'+'</label>';
@@ -5436,7 +5454,8 @@ document.addEventListener('click',function(e){
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         const arr=type==='mammo'?(c.mammo=c.mammo||{date:'',report:'',images:[]},c.mammo.images=c.mammo.images||[],c.mammo.images):c.images=(c.images||[]);
         const files=[];
-        for await(const entry of imgFolderHandle.values()){
+        const _entries2=await _folderEntries(imgFolderHandle);
+        for(const entry of _entries2){
           if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
         }
         files.sort(function(a,b){return a.name.localeCompare(b.name);});
