@@ -1138,7 +1138,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.8.1';
+const VERSION='V3.8.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2266,15 +2266,10 @@ function renderEditor(){
   // Location: dropdown
   (()=>{const sel=document.getElementById('f-loc');sel.innerHTML='<option value="">— 選擇地點 —</option>'+LOCS.map(l=>'<option'+(l===m.loc?' selected':'')+'>'+escA(l)+'</option>').join('');})();
   // Zoom fields
-  // Auto-fill pwd based on meeting date
   const autoPwd=zoomPwdByMonth(m.date||'');
-  const autoUrl='';
-  document.getElementById('f-zpwd').value=m.zoom?.pwd||autoPwd;
-  const pwdDis=document.getElementById('f-zpwd-display');if(pwdDis)pwdDis.textContent=m.zoom?.pwd||autoPwd||'—';
   const zoomSuffix=(m.zoom?.id||'').replace('725-616-60','').replace(/\D/g,'').slice(0,2);
   const zsEl=document.getElementById('f-zsuffix');if(zsEl)zsEl.value=zoomSuffix;
   if(document.getElementById('f-zid'))document.getElementById('f-zid').value=m.zoom?.id||'';
-  const autoPwd=zoomPwdByMonth(m.date||'');
   const pwdDis=document.getElementById('f-zpwd-display');if(pwdDis)pwdDis.textContent=m.zoom?.pwd||autoPwd||'—';
   if(document.getElementById('f-zpwd'))document.getElementById('f-zpwd').value=m.zoom?.pwd||autoPwd;
   const urlEl=document.getElementById('f-zurl');if(urlEl)urlEl.value=m.zoom?.url||'';
@@ -2809,7 +2804,7 @@ function caseHTML(cid,i,d){
   const examRows=exams.map((ex,ei)=>`
     <div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="其他"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>
+        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${ei},'${cid}')">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="__other__"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>${!EXAM_TYPES.includes(ex.name)?`<input placeholder="檢查類型" value="${escA(ex.name)}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:100px;font-size:12px">`:``}
         <input type="date" value="${escA(ex.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" style="margin-left:auto">×</button>
       </div>
@@ -3150,6 +3145,38 @@ function updateFolderStatusBar(){
     if(needs)h+='<button onclick="(async function(){try{imgFolderHandle=await window.showDirectoryPicker({mode:\'read\'});updateFolderStatusBar();showSaveToast(\'影像資料夾已授權\');}catch(e){}})()" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px">⚠️ 授權相關影像資料夾</button>';
   }
   el.innerHTML=h;
+}
+
+
+function onExamTypeChange(sel,caseIdx,examIdx,cid){
+  if(sel.value==='__other__'){
+    // Insert text input after select
+    let inp=sel.nextElementSibling;
+    if(!inp||inp.tagName!=='INPUT'){
+      inp=document.createElement('input');
+      inp.placeholder='檢查類型';
+      inp.style.cssText='width:100px;font-size:12px;margin-left:4px';
+      inp.dataset.action='updstruct';
+      inp.dataset.cid=cid;
+      inp.dataset.caseidx=caseIdx;
+      inp.dataset.field='exams';
+      inp.dataset.rowid=examIdx;
+      inp.dataset.key='name';
+      sel.parentNode.insertBefore(inp,sel.nextSibling);
+      inp.focus();
+    }
+    // Set name to empty so user fills it
+    const c=S.meeting?.sections[cid]?.cases[caseIdx];
+    if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name='';
+    markDirty();
+  } else {
+    // Remove custom input if present
+    const inp=sel.nextElementSibling;
+    if(inp&&inp.tagName==='INPUT')inp.remove();
+    const c=S.meeting?.sections[cid]?.cases[caseIdx];
+    if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name=sel.value;
+    markDirty();
+  }
 }
 
 /* ════ Save ════ */
