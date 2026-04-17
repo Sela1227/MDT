@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.6.1';
+const VERSION='V3.6.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2946,6 +2946,13 @@ async function saveMeeting(){
   });
   const time=await getNetworkTime();
   S.meeting.version=(S.meeting.version||0)+1;S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
+  // Update per-section keys for merged meetings (so loadMergedSections gets fresh data on reload)
+  if(S.cids.length>1){
+    const d=S.meeting.date||'';
+    S.cids.forEach(function(cid){
+      const sec=S.meeting.sections[cid];if(sec)saveSec(cid,d,sec);
+    });
+  }
   const lok=saveLocal(S.meeting),sok=await saveShared(S.meeting);
   _dirty=false;
   const t=new Date(time).toLocaleTimeString('zh-TW',{hour12:false,timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit'});
