@@ -1138,7 +1138,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.7.6';
+const VERSION='V3.7.8';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2942,7 +2942,7 @@ function delItem(cid,type,i){
 }
 
 
-const GH_REPO='sela1227/MDT';
+const GH_REPO='Sela1227/MDT-slides';
 const GH_BRANCH='main';
 const GH_SLIDES_PATH='slides';
 
@@ -3112,7 +3112,7 @@ async function uploadSlidesToGitHub(htmlContent, fname){
     const err=await resp.json().catch(()=>({}));
     throw new Error((err.message||resp.status)+' — 請確認 Token 權限（需 Contents: Read and write）');
   }
-  return 'https://sela1227.github.io/MDT/'+path;
+  return 'https://sela1227.github.io/MDT-slides/'+(GH_SLIDES_PATH?GH_SLIDES_PATH+'/':'')+fname;
 }
 
 /* ════ Save ════ */
