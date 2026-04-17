@@ -784,6 +784,7 @@ textarea{resize:vertical}
               <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
               <button class="btn btn-b" id="btn-share-slides" onclick="shareHTMLSlides()" title="上傳至 GitHub Pages 產生可分享連結">HTML 分享</button>
+              <div id="slide-share-link" style="display:contents"></div>
               <button class="btn btn-b" onclick="printMeeting()">列印 / PDF</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
@@ -904,8 +905,7 @@ textarea{resize:vertical}
             <div class="stab" id="stab-github">
   <div class="st-title">GitHub 投影片分享</div>
   <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結<br>需先至 GitHub 申請 Personal Access Token（Contents: Read and write）</div>
-  <div class="st-title">GitHub 投影片上傳</div>
-  <div style="font-size:12px;color:var(--textlt);margin-bottom:8px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結</div>
+
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
     <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxx（Personal Access Token）" style="flex:1;font-size:12px;font-family:monospace">
     <button class="btn btn-a btn-sm" onclick="saveGhToken()">儲存</button>
@@ -1138,7 +1138,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.7.4';
+const VERSION='V3.7.5';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2962,8 +2962,22 @@ async function shareHTMLSlides(){
     if(!confirm('將上傳「'+ghFname+'」至 GitHub Pages\n\n佈署需約 3 分鐘後才能分享連結\n\n確定上傳？'))return;
     if(btn){btn.textContent='上傳中...';}
     showSaveToast('正在產生並上傳...');
-    const fullHTML=await buildSlidesHTML();
+    // Generate slides HTML without downloading
+    const fullHTML=await buildSlidesHTMLOnly();
     if(!fullHTML){throw new Error('無法產生投影片內容');}
+    // Delete old file for this meeting
+    try{
+      const _er=await fetch(existUrl,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+      if(_er.ok){
+        const _ej=await _er.json();
+        if(_ej.sha){
+          await fetch(existUrl,{method:'DELETE',
+            headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
+            body:JSON.stringify({message:'Replace: '+ghFname,sha:_ej.sha})
+          });
+        }
+      }
+    }catch(_e){}
     const shareUrl=await uploadSlidesToGitHub(fullHTML,ghFname);
     const arr=getSharedSlides();
     const existing=arr.findIndex(s=>s.fname===ghFname);
@@ -2971,6 +2985,10 @@ async function shareHTMLSlides(){
     if(existing>=0)arr[existing]=entry;else arr.unshift(entry);
     saveSharedSlides(arr.slice(0,30));
     showSaveToast('已上傳！佈署約 3 分鐘後生效');
+    // Show link in output area
+    const linkEl=document.getElementById('slide-share-link');
+    if(linkEl){linkEl.innerHTML='<div style="margin-top:8px;padding:8px 12px;background:var(--surface);border-radius:4px;font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--textlt)">分享連結：</span><a href="'+escA(shareUrl)+'" target="_blank" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--acc)">'+escA(shareUrl)+'</a><button onclick="navigator.clipboard.writeText('+JSON.stringify(shareUrl)+').then(()=>this.textContent=\'✓ 已複製\').catch(()=>{})" style="flex-shrink:0;font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:none">複製</button><button onclick="this.closest(\'div\').parentElement.innerHTML=\'\'" style="color:var(--textlt);background:none;border:none;cursor:pointer;font-size:14px">×</button></div>';
+    }
     // Show share result modal with copy button
     const modal=document.createElement('div');
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
@@ -3025,16 +3043,16 @@ function renderSharedSlides(){
   const el=document.getElementById('shared-slides-list');if(!el)return;
   const arr=getSharedSlides();
   if(!arr.length){el.innerHTML='<div style="font-size:12px;color:var(--textlt);padding:8px 0">尚無已分享的投影片</div>';return;}
-  el.innerHTML=arr.map(s=>{
+  el.innerHTML=arr.map(function(s,idx){
     const dt=s.uploadedAt?new Date(s.uploadedAt).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Taipei'}):'';
     return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--blt)">'
       +'<div style="flex:1;min-width:0">'
       +'<div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(s.title||s.fname)+'</div>'
       +'<div style="font-size:11px;color:var(--textlt);margin-top:2px">'+escA(s.date)+(dt?' · 上傳 '+dt:'')+'</div>'
       +'</div>'
-      +'<button class="btn btn-b btn-sm" onclick="navigator.clipboard.writeText('+JSON.stringify(s.url)+').then(()=>showSaveToast(\'連結已複製\'))">複製連結</button>'
+      +'<button class="btn btn-b btn-sm" data-action="copyslideurl" data-idx="'+idx+'">複製連結</button>'
       +'<a href="'+escA(s.url)+'" target="_blank" class="btn btn-b btn-sm" style="text-decoration:none">開啟</a>'
-      +'<button class="btn btn-sm" style="background:#fee;color:var(--err);border:1px solid var(--err);border-radius:2px;padding:3px 8px;cursor:pointer;font-size:12px" onclick="deleteSharedSlide('+JSON.stringify(s.fname)+')">刪除</button>'
+      +'<button class="btn btn-sm" style="background:#fee;color:var(--err);border:1px solid var(--err);border-radius:2px;padding:3px 8px;cursor:pointer;font-size:12px" data-action="deleteslide" data-fname="'+escA(s.fname)+'">刪除</button>'
       +'</div>';
   }).join('');
 }
@@ -3659,6 +3677,15 @@ function doImportCase(){
 
 async function buildSlidesHTML(){
   await genHTMLSlides();
+  return _lastSlidesHTML;
+}
+async function buildSlidesHTMLOnly(){
+  // Generate slides without downloading - temporarily override download
+  const origAppend=document.body.appendChild.bind(document.body);
+  let captured=null;
+  document.body.appendChild=function(el){if(el.tagName==='A'&&el.download){el.click=function(){};captured=true;}return origAppend(el);};
+  await genHTMLSlides();
+  document.body.appendChild=origAppend;
   return _lastSlidesHTML;
 }
 
@@ -5122,6 +5149,19 @@ document.addEventListener('click',function(e){
     if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
     return;
   }
+  const copyslideurl=e.target.closest('[data-action="copyslideurl"]');
+  if(copyslideurl){
+    const idx=parseInt(copyslideurl.dataset.idx);
+    const arr=getSharedSlides();
+    const url=(arr[idx]||{}).url||'';
+    navigator.clipboard.writeText(url).then(function(){
+      copyslideurl.textContent='✓ 已複製';
+      setTimeout(function(){copyslideurl.textContent='複製連結';},2000);
+    }).catch(function(){alert('請手動複製：'+url);});
+    return;
+  }
+  const deleteslide=e.target.closest('[data-action="deleteslide"]');
+  if(deleteslide){deleteSharedSlide(deleteslide.dataset.fname);return;}
   const previewpathimg=e.target.closest('[data-action="previewpathimg"]');
   if(previewpathimg){
     const name=(previewpathimg.dataset.name||'').trim();
