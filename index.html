@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.6.4';
+const VERSION='V3.6.5';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4319,12 +4319,13 @@ function genLine(){
       else if(/sinus|nasal|鼻竇|鼻腔/.test(dx))sub='鼻竇癌';
       else if(/parotid|salivary|腮腺|唾液腺/.test(dx))sub='唾液腺癌';
       // 胸腔癌
+      else if(/urothelial|膀胱|bladder/.test(dx))sub='膀胱癌';
       else if(/lung|肺|pulmon/.test(dx))sub='肺癌';
       else if(/esophag|食道/.test(dx))sub='食道癌';
       else if(/mesothelioma|間皮/.test(dx))sub='間皮瘤';
       else if(/thymoma|胸腺/.test(dx))sub='胸腺瘤';
       // 乳癌
-      else if(/breast|乳/.test(dx))sub='乳癌';
+      else if(/breast|乳癌|乳房|乳腺/.test(dx))sub='乳癌';
       // 消化道癌
       else if(/rectal|rectum|直腸/.test(dx))sub='直腸癌';
       else if(/colon|結腸/.test(dx))sub='結腸癌';
