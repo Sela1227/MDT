@@ -1138,7 +1138,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.7.9';
+const VERSION='V3.8.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3947,7 +3947,25 @@ async function genHTMLSlides(){
     +'.ex{display:block;margin-bottom:.5vh;}'
     +'.ct{padding:1.4vh 2.5vw;display:flex;gap:1vw;flex-wrap:wrap;background:#f8f9fa;border-top:3px solid var(--ca,var(--acc));flex-shrink:0;}'
     +'.tp{border:2.5px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.55vh 1.5vw;border-radius:4px;font-size:clamp(14px,1.5vw,21px);font-weight:700;}'
-    +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'+'.img-slide img{transform-origin:center center;will-change:transform;user-select:none;}'
+    +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'
+    +'@media(max-width:600px){'
+    +'.cb-cols{flex-direction:column!important;}'
+    +'.cb-l{border-right:none!important;border-bottom:2px solid #eef0f3;}'
+    +'.cb-r{flex:1;}'
+    +'.rl{width:auto;min-width:60px;padding:1.2vh 2vw 1.2vh 3vw;font-size:13px;}'
+    +'.rv{padding:1.2vh 3vw 1.2vh 1vw;font-size:14px;line-height:1.5;}'
+    +'.ci{font-size:clamp(20px,5vw,32px)!important;}'
+    +'.cn{font-size:clamp(18px,4.5vw,30px)!important;}'
+    +'.cd,.cdr{font-size:clamp(13px,3.5vw,20px)!important;}'
+    +'.cdx{font-size:clamp(13px,3.5vw,20px)!important;}'
+    +'.cat{font-size:clamp(12px,3vw,18px)!important;padding:.4vh 2.5vw;}'
+    +'.tp{font-size:clamp(12px,3vw,18px)!important;padding:.5vh 2.5vw;}'
+    +'.disc-text{font-size:clamp(13px,3.5vw,20px)!important;}'
+    +'.disc-label{font-size:clamp(12px,3vw,18px)!important;}'
+    +'.nav-pill{bottom:1.5vh;right:2vw;padding:.6vh 2.5vw;gap:1vw;}'
+    +'.nb{width:clamp(40px,10vw,52px)!important;height:clamp(40px,10vw,52px)!important;font-size:clamp(16px,4vw,22px)!important;}'
+    +'.ni{font-size:clamp(13px,3.5vw,18px)!important;}'
+    +'}'+'.img-slide img{transform-origin:center center;will-change:transform;user-select:none;}'
     +'.img-grid{flex:1;display:flex;flex-wrap:wrap;gap:1vw;padding:2vh 2.5vw;align-items:center;justify-content:center;overflow:hidden;}'
     +'.img-wrap{flex:1;min-width:30%;max-width:48%;display:flex;flex-direction:column;align-items:center;gap:.5vh;max-height:80vh;}'
     +'.img-cap{font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7);text-align:center;}'
@@ -3965,7 +3983,7 @@ async function genHTMLSlides(){
     +'tr:nth-child(even) td{background:#f9fafc;}'
     +'.bar{position:fixed;top:0;left:0;height:4px;background:var(--acc);transition:width .25s;z-index:200;}'
     +'.nav-pill{position:fixed;bottom:2.5vh;right:2.5vw;display:flex;align-items:center;gap:.8vw;z-index:100;background:rgba(20,30,40,.72);backdrop-filter:blur(8px);padding:.8vh 1.6vw;border-radius:30px;}'
-    +'.nb{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;width:clamp(36px,3vw,46px);height:clamp(36px,3vw,46px);border-radius:50%;cursor:pointer;font-size:clamp(14px,1.3vw,19px);display:flex;align-items:center;justify-content:center;transition:all .15s;}'
+    +'.nb{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;width:clamp(40px,3vw,46px);height:clamp(40px,3vw,46px);border-radius:50%;cursor:pointer;font-size:clamp(14px,1.3vw,19px);display:flex;align-items:center;justify-content:center;transition:all .15s;touch-action:manipulation;}'
     +'.nb:hover:not(:disabled){background:rgba(255,255,255,.38);border-color:rgba(255,255,255,.78);}'
     +'.nb:disabled{opacity:.25;cursor:default;}'
     +'.ni{color:rgba(255,255,255,.85);font-size:clamp(13px,1.2vw,18px);padding:0 .8vw;min-width:4vw;text-align:center;font-variant-numeric:tabular-nums;}'
@@ -4013,6 +4031,18 @@ document.addEventListener('mousedown',function(e){var slide=document.querySelect
 document.addEventListener('mousemove',function(e){if(!_dragging)return;_panX=_dragPx+(e.clientX-_dragSx)/_zoom;_panY=_dragPy+(e.clientY-_dragSy)/_zoom;_zoomImg();});
 document.addEventListener('mouseup',function(e){if(_dragging){_dragging=false;_zoomImg();}});
 var _origGo=go;go=function(i){_resetZoom();if(_magCv)_magCv.style.display='none';_origGo(i);};
+/* Swipe navigation */
+var _tx=0,_ty=0;
+document.addEventListener('touchstart',function(e){if(e.touches.length===1){_tx=e.touches[0].clientX;_ty=e.touches[0].clientY;}},{passive:true});
+document.addEventListener('touchend',function(e){
+  if(e.changedTouches.length!==1)return;
+  var dx=e.changedTouches[0].clientX-_tx,dy=e.changedTouches[0].clientY-_ty;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){
+    var slide=document.querySelectorAll('.slide')[c];
+    if(slide&&slide.classList.contains('img-slide'))return; // let zoom handle
+    if(dx<0)go(c+1);else go(c-1);
+  }
+},{passive:true});
 var _t0=null;document.addEventListener('touchstart',function(e){if(e.touches.length===2)_t0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
 document.addEventListener('touchmove',function(e){if(e.touches.length===2&&_t0){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide')){_zoom=Math.max(1,Math.min(8,_zoom*(d/_t0)));_t0=d;_zoomImg();}e.preventDefault();}},{passive:false});`;
 
