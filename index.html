@@ -739,7 +739,7 @@ textarea{resize:vertical}
               <div class="fg"><label>會議日期</label><input type="date" id="f-date" oninput="onDateChange()"></div>
               <div class="fg"><label>時間</label><select id="f-time"><option value="07:30-08:30">07:30-08:30　早會</option><option value="12:30-13:30">12:30-13:30　午會</option></select></div>
               <div class="fg full"><label>地點</label><select id="f-loc"><option value="">— 選擇地點 —</option></select></div>
-              <div class="fg"><label>視訊密碼 <span style="font-size:10px;color:var(--textlt);font-weight:400">（依月份自動）</span></label><div id="f-zpwd-display" style="padding:8px 10px;font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px"></div><input type="hidden" id="f-zpwd"></div><div class="fg full"><label>會議連結</label><input type="text" id="f-zurl" placeholder="https://zoom.us/j/..." oninput="onZoomUrlChange(this.value)" style="font-size:12px"></div>
+              <div class="fg"><label>Zoom ID 後兩碼</label><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px;padding:6px 10px;white-space:nowrap">725-616-60</span><input type="text" id="f-zsuffix" maxlength="2" placeholder="00" style="width:52px;font-size:15px;font-weight:600;text-align:center;letter-spacing:.1em" oninput="onZoomSuffixChange(this.value)"></div><input type="hidden" id="f-zid"></div><div class="fg"><label>視訊密碼 <span style="font-size:10px;color:var(--textlt);font-weight:400">（依月份自動）</span></label><div id="f-zpwd-display" style="padding:8px 10px;font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px"></div><input type="hidden" id="f-zpwd"></div><div class="fg full"><label>會議連結 <span style="font-size:10px;color:var(--textlt);font-weight:400">（可直接貼上）</span></label><input type="text" id="f-zurl" placeholder="https://zoom.us/j/..." oninput="onZoomUrlChange(this.value)" style="font-size:12px"></div>
               <div class="fg full"><label>聯絡人 <span style="font-size:10px;color:var(--textlt);font-weight:400">自動帶入</span></label><div id="f-contact" style="padding:8px 10px;font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px"></div></div>
             </div>
           </div>
@@ -797,7 +797,7 @@ textarea{resize:vertical}
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
             </div>
             <div class="lib-status" id="lib-status"></div>
-            <div id="out-area" style="display:none">
+            <div id="folder-status-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:11px;align-items:center"></div><div id="out-area" style="display:none">
               <div class="outbox" id="out-text"></div>
               <div class="brow" style="margin-top:9px">
                 <button class="btn btn-m" onclick="copyOut()">複製到剪貼簿</button>
@@ -1138,7 +1138,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.8.0';
+const VERSION='V3.8.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1830,7 +1830,7 @@ function renderHistory(){
 
 
 function closeNewModal(){document.getElementById('new-modal').classList.remove('open')}
-function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;S.viewMode=false;renderEditor();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
+function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;S.viewMode=false;renderEditor();updateFolderStatusBar();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
 function openFromSb(cid){
   const cids=pairIds(cid);S.cids=cids;setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -1979,6 +1979,15 @@ function zoomPwdByMonth(dateStr){
   if([2,5,8,11].includes(mo))return'2609926';
   if([3,6,9,12].includes(mo))return'6222131';
   return'';
+}
+function onZoomSuffixChange(suffix){
+  const dateStr=document.getElementById('f-date')?.value||'';
+  const pwd=zoomPwdByMonth(dateStr);
+  const fullId='725-616-60'+suffix.replace(/\D/g,'').slice(0,2);
+  document.getElementById('f-zid').value=fullId;
+  document.getElementById('f-zpwd').value=pwd;
+  document.getElementById('f-zpwd-display').textContent=pwd||'—';
+  if(S.meeting){if(!S.meeting.zoom)S.meeting.zoom={id:'',pwd:'',url:''};S.meeting.zoom.id=fullId;S.meeting.zoom.pwd=pwd;markDirty();}
 }
 function onZoomUrlChange(url){
   if(S.meeting){if(!S.meeting.zoom)S.meeting.zoom={id:'',pwd:'',url:''};S.meeting.zoom.url=url;markDirty();}
@@ -2262,7 +2271,14 @@ function renderEditor(){
   const autoUrl='';
   document.getElementById('f-zpwd').value=m.zoom?.pwd||autoPwd;
   const pwdDis=document.getElementById('f-zpwd-display');if(pwdDis)pwdDis.textContent=m.zoom?.pwd||autoPwd||'—';
+  const zoomSuffix=(m.zoom?.id||'').replace('725-616-60','').replace(/\D/g,'').slice(0,2);
+  const zsEl=document.getElementById('f-zsuffix');if(zsEl)zsEl.value=zoomSuffix;
+  if(document.getElementById('f-zid'))document.getElementById('f-zid').value=m.zoom?.id||'';
+  const autoPwd=zoomPwdByMonth(m.date||'');
+  const pwdDis=document.getElementById('f-zpwd-display');if(pwdDis)pwdDis.textContent=m.zoom?.pwd||autoPwd||'—';
+  if(document.getElementById('f-zpwd'))document.getElementById('f-zpwd').value=m.zoom?.pwd||autoPwd;
   const urlEl=document.getElementById('f-zurl');if(urlEl)urlEl.value=m.zoom?.url||'';
+
   // Contact: auto-display (not editable)
   const owners2=[];
   (S.cids||[]).forEach(cid=>{
@@ -2326,7 +2342,8 @@ function renderEditor(){
   }
 }
 function onDateChange(){document.getElementById('mtg-sub').textContent=rocDate(document.getElementById('f-date').value)}
-function readForm(){const m=S.meeting;m.date=document.getElementById('f-date').value;m.time=document.getElementById('f-time').value;m.loc=document.getElementById('f-loc').value;m.zoom.id='';
+function readForm(){const m=S.meeting;m.date=document.getElementById('f-date').value;m.time=document.getElementById('f-time').value;m.loc=document.getElementById('f-loc').value;const _zsuf=(document.getElementById('f-zsuffix')?.value||'').replace(/\D/g,'').slice(0,2);
+  m.zoom.id='725-616-60'+_zsuf;
   m.zoom.pwd=document.getElementById('f-zpwd')?.value||zoomPwdByMonth(m.date||'');
   m.zoom.url=document.getElementById('f-zurl')?.value||'';// contact is auto-set, read from hidden field
   m.contact=(document.getElementById('f-contact')?.textContent||'').trim()||m.contact||'';m.title=mtgTitle(m.cids)}
@@ -3113,6 +3130,26 @@ async function uploadSlidesToGitHub(htmlContent, fname){
     throw new Error((err.message||resp.status)+' — 請確認 Token 權限（需 Contents: Read and write）');
   }
   return 'https://sela1227.github.io/MDT-slides/'+(GH_SLIDES_PATH?GH_SLIDES_PATH+'/':'')+fname;
+}
+
+
+function updateFolderStatusBar(){
+  const el=document.getElementById('folder-status-bar');if(!el)return;
+  let h='';
+  if(pathImgFolderHandle){
+    h+='<span style="background:#e8f4e8;color:#2a6;border:1px solid #b8ddb8;border-radius:3px;padding:2px 8px">🔬 病理：'+escA(pathImgFolderHandle.name)+'</span>';
+  } else {
+    // Check if any case has folder-based pathology images
+    const needs=S.meeting&&S.cids.some(function(cid){return(S.meeting.sections[cid]?.cases||[]).some(function(c){return(c.pathologyImages||[]).some(function(i){return i.fromFolder;});});});
+    if(needs)h+='<button onclick="(async function(){try{pathImgFolderHandle=await window.showDirectoryPicker({mode:\'read\'});updateFolderStatusBar();showSaveToast(\'病理資料夾已授權\');}catch(e){}})()" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px">⚠️ 授權病理影像資料夾</button>';
+  }
+  if(imgFolderHandle){
+    h+='<span style="background:#e8f4e8;color:#2a6;border:1px solid #b8ddb8;border-radius:3px;padding:2px 8px">🖼 影像：'+escA(imgFolderHandle.name)+'</span>';
+  } else {
+    const needs=S.meeting&&S.cids.some(function(cid){return(S.meeting.sections[cid]?.cases||[]).some(function(c){return(c.images||[]).some(function(i){return i.fromFolder;})||(c.mammo&&(c.mammo.images||[]).some(function(i){return i.fromFolder;}));});});
+    if(needs)h+='<button onclick="(async function(){try{imgFolderHandle=await window.showDirectoryPicker({mode:\'read\'});updateFolderStatusBar();showSaveToast(\'影像資料夾已授權\');}catch(e){}})()" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px">⚠️ 授權相關影像資料夾</button>';
+  }
+  el.innerHTML=h;
 }
 
 /* ════ Save ════ */
