@@ -778,26 +778,34 @@ textarea{resize:vertical}
         <div class="section output-section">
           <div class="sec-hdr"><span class="sec-title">產出</span><span class="sec-sub">已完稿，可匯出</span></div>
           <div class="sec-body">
-            <div class="brow">
+            <!-- 資料夾授權：優先顯示 -->
+            <div id="folder-status-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"></div>
+            <!-- 投影片分享 -->
+            <div class="brow" style="margin-bottom:4px">
               <button class="btn btn-a" onclick="doOutput('line')">LINE 通知</button>
-              <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
-              <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
               <button class="btn btn-b" id="btn-share-slides" onclick="shareHTMLSlides()" title="上傳至 GitHub Pages 產生可分享連結">HTML 分享</button>
-              <div id="slide-share-link"></div>
-              <button class="btn btn-b" onclick="printMeeting()">列印 / PDF</button>
+              <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
+            </div>
+            <div id="slide-share-link"></div>
+            <!-- 資料匯入匯出 -->
+            <div class="brow" style="margin-bottom:4px">
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-b" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
               <button class="btn btn-b" onclick="document.getElementById('json-import-input').click()" title="匯入 AI 產出的 JSON 檔，支援多筆多癌別">JSON 批次匯入</button>
               <button class="btn btn-b" onclick="exportCaseJSON()" title="將本次會議所有病人資料匯出為 JSON 檔，可再次匯入">JSON 個案匯出</button>
-              <button class="btn btn-b" onclick="exportMeetingJSON()" title="匯出完整會議（含追蹤/醫療小組/特殊議程/會議資訊），可用備份還原功能匯入">JSON 完整會議匯出</button>
-              <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
-              <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
+              <button class="btn btn-b" onclick="exportMeetingJSON()" title="匯出完整會議（含追蹤/醫療小組/特殊議程/會議資訊），可用備份還原功能匯入">JSON 完整匯出</button>
+            </div>
+            <!-- AI 工具 -->
+            <div class="brow">
+              <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
             </div>
+            <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
+            <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
             <div class="lib-status" id="lib-status"></div>
-            <div id="folder-status-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;font-size:11px;align-items:center"></div><div id="out-area" style="display:none">
+            <div id="out-area" style="display:none">
               <div class="outbox" id="out-text"></div>
               <div class="brow" style="margin-top:9px">
                 <button class="btn btn-m" onclick="copyOut()">複製到剪貼簿</button>
@@ -1138,7 +1146,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.8.6';
+const VERSION='V3.8.7';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
