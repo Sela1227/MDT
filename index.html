@@ -1138,7 +1138,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.7.8';
+const VERSION='V3.7.9';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3701,6 +3701,17 @@ async function genHTMLSlides(){
   readForm();
   const m=S.meeting,cids=S.cids;
   const slides=[];
+  // Check if any folder-based images exist without dataUrl
+  const _needsPathFolder=S.cids.some(function(cid){return(m.sections[cid]?.cases||[]).some(function(c){return(c.pathologyImages||[]).some(function(img){return img.fromFolder&&!img.dataUrl;});});});
+  const _needsImgFolder=S.cids.some(function(cid){return(m.sections[cid]?.cases||[]).some(function(c){return(c.images||[]).some(function(img){return img.fromFolder&&!img.dataUrl;})||(c.mammo&&(c.mammo.images||[]).some(function(img){return img.fromFolder&&!img.dataUrl;}));});});
+  if(_needsPathFolder&&!pathImgFolderHandle){
+    if(!confirm('此次會議包含來自資料夾的病理影像，需要重新選取資料夾才能嵌入投影片。\n\n點確認選擇「病理影像」資料夾，點取消略過（圖片將不顯示）')){}
+    else{try{pathImgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}}
+  }
+  if(_needsImgFolder&&!imgFolderHandle){
+    if(!confirm('此次會議包含來自資料夾的影像，需要重新選取資料夾才能嵌入投影片。\n\n點確認選擇「相關影像」資料夾，點取消略過（圖片將不顯示）')){}
+    else{try{imgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}}
+  }
   // Pre-load folder-based pathology images to base64 (TEMP COPY ONLY - never write back to S.meeting)
   const _pathImgCache={};
   if(pathImgFolderHandle){
