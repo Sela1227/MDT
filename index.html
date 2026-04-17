@@ -783,6 +783,7 @@ textarea{resize:vertical}
               <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
               <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
+              <button class="btn btn-b" id="btn-share-slides" onclick="shareHTMLSlides()" title="上傳至 GitHub Pages 產生可分享連結">HTML 分享</button>
               <button class="btn btn-b" onclick="printMeeting()">列印 / PDF</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
@@ -900,6 +901,18 @@ textarea{resize:vertical}
             </div>
 
             <div class="stab" id="stab-backup">
+  <div class="st-title">GitHub 投影片上傳</div>
+  <div style="font-size:12px;color:var(--textlt);margin-bottom:8px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結</div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+    <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxx（Personal Access Token）" style="flex:1;font-size:12px;font-family:monospace">
+    <button class="btn btn-a btn-sm" onclick="saveGhToken()">儲存</button>
+    <button class="btn btn-b btn-sm" onclick="clearGhToken()">清除</button>
+  </div>
+  <div id="gh-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
+  <div style="font-weight:600;font-size:12px;margin-bottom:6px">已分享的投影片</div>
+  <div id="shared-slides-list"></div>
+
+  <hr style="border:none;border-top:1px solid var(--blt);margin:0 0 16px">
   <div class="st-title">備份與還原</div>
   <div class="st-desc">將所有會議記錄（含影像）打包成 JSON 備份檔，或從備份檔匯入還原。適合換電腦、跨裝置同步，或定期備份。</div>
   <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
@@ -1119,7 +1132,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.6.9';
+const VERSION='V3.7.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1659,7 +1672,7 @@ function calCreateMtg(cid,date){
 
 
 
-function openSettings(){showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on')}
+function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on')}
 function openHistory(){
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -2923,6 +2936,134 @@ function delItem(cid,type,i){
   markDirty();
 }
 
+
+const GH_REPO='sela1227/MDT';
+const GH_BRANCH='main';
+const GH_SLIDES_PATH='slides';
+
+// ── GitHub slides share manager ──
+function getSharedSlides(){try{return JSON.parse(localStorage.getItem('mdt_shared_slides')||'[]');}catch{return[];}}
+function saveSharedSlides(arr){localStorage.setItem('mdt_shared_slides',JSON.stringify(arr));}
+
+async function shareHTMLSlides(){
+  if(!getGhToken()){alert('請先到設定頁填入 GitHub Personal Access Token');return;}
+  if(!S.meeting?.version){alert('請先儲存會議資料');return;}
+  const btn=document.getElementById('btn-share-slides');
+  if(btn){btn.disabled=true;btn.textContent='產生中...';}
+  try{
+    readForm();
+    const m=S.meeting,cids=S.cids;
+    const ghFname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
+    if(!confirm('將上傳「'+ghFname+'」至 GitHub Pages\n\n佈署需約 3 分鐘後才能分享連結\n\n確定上傳？'))return;
+    if(btn){btn.textContent='上傳中...';}
+    showSaveToast('正在產生並上傳...');
+    const fullHTML=await buildSlidesHTML();
+    if(!fullHTML){throw new Error('無法產生投影片內容');}
+    const shareUrl=await uploadSlidesToGitHub(fullHTML,ghFname);
+    const arr=getSharedSlides();
+    const existing=arr.findIndex(s=>s.fname===ghFname);
+    const entry={fname:ghFname,url:shareUrl,uploadedAt:new Date().toISOString(),title:m.title||ghFname,date:m.date||''};
+    if(existing>=0)arr[existing]=entry;else arr.unshift(entry);
+    saveSharedSlides(arr.slice(0,30));
+    showSaveToast('已上傳！佈署約 3 分鐘後生效');
+    const copied=await navigator.clipboard.writeText(shareUrl).then(()=>true).catch(()=>false);
+    alert('上傳成功！\n\n連結：'+shareUrl+'\n\n'+(copied?'✓ 已複製到剪貼簿':'請手動複製連結')+'\n\n佈署需約 3 分鐘後才能開啟');
+    if(document.getElementById('shared-slides-list'))renderSharedSlides();
+  }catch(e){
+    alert('上傳失敗：'+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='HTML 分享';}
+  }
+}
+
+async function deleteSharedSlide(fname){
+  if(!confirm('確定刪除「'+fname+'」？\n（GitHub Pages 上的檔案將一併移除）'))return;
+  const token=getGhToken();
+  if(!token){alert('請先設定 Token');return;}
+  const url='https://api.github.com/repos/'+GH_REPO+'/contents/'+GH_SLIDES_PATH+'/'+fname;
+  try{
+    const r=await fetch(url,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(!r.ok)throw new Error('找不到檔案');
+    const j=await r.json();
+    const resp=await fetch(url,{method:'DELETE',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({message:'Delete slides: '+fname,sha:j.sha})});
+    if(!resp.ok)throw new Error('刪除失敗：'+resp.status);
+    saveSharedSlides(getSharedSlides().filter(s=>s.fname!==fname));
+    renderSharedSlides();
+    showSaveToast('已刪除 '+fname);
+  }catch(e){alert('刪除失敗：'+e.message);}
+}
+
+function renderSharedSlides(){
+  const el=document.getElementById('shared-slides-list');if(!el)return;
+  const arr=getSharedSlides();
+  if(!arr.length){el.innerHTML='<div style="font-size:12px;color:var(--textlt);padding:8px 0">尚無已分享的投影片</div>';return;}
+  el.innerHTML=arr.map(s=>{
+    const dt=s.uploadedAt?new Date(s.uploadedAt).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Taipei'}):'';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--blt)">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(s.title||s.fname)+'</div>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:2px">'+escA(s.date)+(dt?' · 上傳 '+dt:'')+'</div>'
+      +'</div>'
+      +'<button class="btn btn-b btn-sm" onclick="navigator.clipboard.writeText('+JSON.stringify(s.url)+').then(()=>showSaveToast(\'連結已複製\'))">複製連結</button>'
+      +'<a href="'+escA(s.url)+'" target="_blank" class="btn btn-b btn-sm" style="text-decoration:none">開啟</a>'
+      +'<button class="btn btn-sm" style="background:#fee;color:var(--err);border:1px solid var(--err);border-radius:2px;padding:3px 8px;cursor:pointer;font-size:12px" onclick="deleteSharedSlide('+JSON.stringify(s.fname)+')">刪除</button>'
+      +'</div>';
+  }).join('');
+}
+
+function getGhToken(){return localStorage.getItem('mdt_gh_token')||'';}
+function saveGhToken(){
+  const t=document.getElementById('gh-token-input').value.trim();
+  if(!t){alert('請輸入 Token');return;}
+  localStorage.setItem('mdt_gh_token',t);
+  document.getElementById('gh-token-status').textContent='✓ Token 已儲存（本機）';
+  document.getElementById('gh-token-input').value='';
+}
+function clearGhToken(){
+  localStorage.removeItem('mdt_gh_token');
+  document.getElementById('gh-token-status').textContent='Token 已清除';
+}
+function loadGhTokenStatus(){
+  const el=document.getElementById('gh-token-status');
+  if(!el)return;
+  el.textContent=getGhToken()?'✓ Token 已設定':'尚未設定 Token';
+  renderSharedSlides();
+}
+
+async function uploadSlidesToGitHub(htmlContent, fname){
+  const token=getGhToken();
+  if(!token){alert('請先到設定頁填入 GitHub Token');return;}
+  const path=GH_SLIDES_PATH+'/'+fname;
+  const url='https://api.github.com/repos/'+GH_REPO+'/contents/'+path;
+  // Check if file exists (need SHA to update)
+  let sha='';
+  try{
+    const r=await fetch(url,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(r.ok){const j=await r.json();sha=j.sha||'';}
+  }catch(e){}
+  // Encode content (handle Unicode)
+  const bytes=new TextEncoder().encode(htmlContent);
+  let b64='';
+  const chunk=8192;
+  for(let i=0;i<bytes.length;i+=chunk){
+    b64+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+  }
+  b64=btoa(b64);
+  const body={message:'Upload slides: '+fname,content:b64,branch:GH_BRANCH};
+  if(sha)body.sha=sha;
+  const resp=await fetch(url,{
+    method:'PUT',
+    headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+    body:JSON.stringify(body)
+  });
+  if(!resp.ok){
+    const err=await resp.json().catch(()=>({}));
+    throw new Error((err.message||resp.status)+' — 請確認 Token 權限（需 Contents: Read and write）');
+  }
+  return 'https://sela1227.github.io/MDT/'+path;
+}
+
 /* ════ Save ════ */
 let _dirty=false;
 function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}}
@@ -3489,6 +3630,12 @@ function doImportCase(){
 }
 
 
+async function buildSlidesHTML(){
+  await genHTMLSlides();
+  return _lastSlidesHTML;
+}
+
+let _lastSlidesHTML=null;
 async function genHTMLSlides(){
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   readForm();
@@ -3812,12 +3959,14 @@ document.addEventListener('touchmove',function(e){if(e.touches.length===2&&_t0){
     +'</div>\n<div class="bar" id="bar" style="width:'+(1/N*100)+'%"></div>\n'
     +'<script>'+js+sc+'\n</'+'script>\n'+('<script>'+extraJs+'\n</'+'script>')+'\n</body></html>'
   const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
+  _lastSlidesHTML=fullHTML;
   const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=fname;
   document.body.appendChild(a);a.click();
   setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
   showSaveToast('HTML 投影片已下載（'+N+' 頁）');
+
 }
 
 function toggleVCCard(id){
