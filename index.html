@@ -739,7 +739,7 @@ textarea{resize:vertical}
               <div class="fg"><label>會議日期</label><input type="date" id="f-date" oninput="onDateChange()"></div>
               <div class="fg"><label>時間</label><select id="f-time"><option value="07:30-08:30">07:30-08:30　早會</option><option value="12:30-13:30">12:30-13:30　午會</option></select></div>
               <div class="fg full"><label>地點</label><select id="f-loc"><option value="">— 選擇地點 —</option></select></div>
-              <div class="fg"><label>Zoom ID 後兩碼</label><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px;padding:6px 10px;white-space:nowrap">725-616-60</span><input type="text" id="f-zsuffix" maxlength="2" placeholder="00" style="width:52px;font-size:15px;font-weight:600;text-align:center;letter-spacing:.1em" oninput="onZoomSuffixChange(this.value)"></div><input type="hidden" id="f-zid"></div><div class="fg"><label>視訊密碼 <span style="font-size:10px;color:var(--textlt);font-weight:400">（依月份自動）</span></label><div id="f-zpwd-display" style="padding:8px 10px;font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px"></div><input type="hidden" id="f-zpwd"></div><div class="fg full"><label>會議連結 <span style="font-size:10px;color:var(--textlt);font-weight:400">（自動）</span></label><div id="f-zurl-display" style="padding:8px 10px;font-size:12px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px;word-break:break-all"></div><input type="hidden" id="f-zurl"></div>
+              <div class="fg"><label>視訊密碼</label><input type="text" id="f-zpwd" placeholder="例：6222131" oninput="onZoomPwdChange(this.value)" style="font-size:13px"></div><div class="fg full"><label>會議連結</label><input type="text" id="f-zurl" placeholder="https://zoom.us/j/..." oninput="onZoomUrlChange(this.value)" style="font-size:12px"></div>
               <div class="fg full"><label>聯絡人 <span style="font-size:10px;color:var(--textlt);font-weight:400">自動帶入</span></label><div id="f-contact" style="padding:8px 10px;font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px"></div></div>
             </div>
           </div>
@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.6.5';
+const VERSION='V3.6.6';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1961,18 +1961,11 @@ function zoomPwdByMonth(dateStr){
   if([3,6,9,12].includes(mo))return'6222131';
   return'';
 }
-function onZoomSuffixChange(suffix){
-  const s=suffix.replace(/\D/g,'').slice(0,2);
-  const dateStr=document.getElementById('f-date')?.value||S.meeting?.date||'';
-  const pwd=zoomPwdByMonth(dateStr);
-  const fullId='725-616-60'+s;
-  const url=s?'https://zoom.us/j/725616600'+s+'?pwd=bGqy0tLm0GgEdfq0VpQtC5ulcI0NXP.1':'';
-  document.getElementById('f-zid').value=fullId;
-  document.getElementById('f-zpwd').value=pwd;
-  document.getElementById('f-zpwd-display').textContent=pwd||'（請先輸入後兩碼）';
-  document.getElementById('f-zurl-display').textContent=url||'—';
-  document.getElementById('f-zurl').value=url;
-  if(S.meeting){S.meeting.zoom={id:fullId,pwd,url};markDirty();}
+function onZoomPwdChange(pwd){
+  if(S.meeting){if(!S.meeting.zoom)S.meeting.zoom={id:'',pwd:'',url:''};S.meeting.zoom.pwd=pwd;markDirty();}
+}
+function onZoomUrlChange(url){
+  if(S.meeting){if(!S.meeting.zoom)S.meeting.zoom={id:'',pwd:'',url:''};S.meeting.zoom.url=url;markDirty();}
 }
 
 function renderLocsTab(){
@@ -2248,17 +2241,11 @@ function renderEditor(){
   // Location: dropdown
   (()=>{const sel=document.getElementById('f-loc');sel.innerHTML='<option value="">— 選擇地點 —</option>'+LOCS.map(l=>'<option'+(l===m.loc?' selected':'')+'>'+escA(l)+'</option>').join('');})();
   // Zoom fields
-  const zoomSuffix=(m.zoom?.id||'').replace('725-616-60','').replace(/\D/g,'').slice(0,2);
-  const zsEl=document.getElementById('f-zsuffix');if(zsEl)zsEl.value=zoomSuffix;
-  document.getElementById('f-zid').value=m.zoom?.id||'725-616-60'+zoomSuffix;
+  // zoom fields now direct inputs
   // Auto-fill pwd based on meeting date
   const autoPwd=zoomPwdByMonth(m.date||'');
-  const autoUrl=zoomSuffix?'https://zoom.us/j/725616600'+zoomSuffix+'?pwd=bGqy0tLm0GgEdfq0VpQtC5ulcI0NXP.1':'';
-  document.getElementById('f-zpwd').value=m.zoom?.pwd||autoPwd;
-  const pwdDis=document.getElementById('f-zpwd-display');if(pwdDis)pwdDis.textContent=m.zoom?.pwd||autoPwd||'—';
-  document.getElementById('f-zurl').value=m.zoom?.url||autoUrl;
-  const urlDis=document.getElementById('f-zurl-display');if(urlDis)urlDis.textContent=m.zoom?.url||autoUrl||'—';
-  document.getElementById('f-zpwd').value=m.zoom?.pwd||'';document.getElementById('f-zurl').value=m.zoom?.url||'';
+  const pwdEl=document.getElementById('f-zpwd');if(pwdEl)pwdEl.value=m.zoom?.pwd||'';
+  const urlEl=document.getElementById('f-zurl');if(urlEl)urlEl.value=m.zoom?.url||'';
   // Contact: auto-display (not editable)
   const owners2=[];
   (S.cids||[]).forEach(cid=>{
@@ -2322,10 +2309,9 @@ function renderEditor(){
   }
 }
 function onDateChange(){document.getElementById('mtg-sub').textContent=rocDate(document.getElementById('f-date').value)}
-function readForm(){const m=S.meeting;m.date=document.getElementById('f-date').value;m.time=document.getElementById('f-time').value;m.loc=document.getElementById('f-loc').value;const _zsuf=(document.getElementById('f-zsuffix')?.value||'').replace(/\D/g,'').slice(0,2);
-  m.zoom.id='725-616-60'+_zsuf;
-  m.zoom.pwd=document.getElementById('f-zpwd')?.value||zoomPwdByMonth(m.date||'');
-  m.zoom.url=_zsuf?'https://zoom.us/j/725616600'+_zsuf+'?pwd=bGqy0tLm0GgEdfq0VpQtC5ulcI0NXP.1':'';// contact is auto-set, read from hidden field
+function readForm(){const m=S.meeting;m.date=document.getElementById('f-date').value;m.time=document.getElementById('f-time').value;m.loc=document.getElementById('f-loc').value;m.zoom.pwd=document.getElementById('f-zpwd')?.value||'';
+  m.zoom.url=document.getElementById('f-zurl')?.value||'';
+  m.zoom.id='';// contact is auto-set, read from hidden field
   m.contact=(document.getElementById('f-contact')?.textContent||'').trim()||m.contact||'';m.title=mtgTitle(m.cids)}
 
 function _renderInfoDoc(){
