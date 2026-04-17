@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.4.0';
+const VERSION='V3.4.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3616,7 +3616,7 @@ async function genHTMLSlides(){
       // Pathology staining images - one slide per image
       (c.pathologyImages||[]).forEach(function(img){
         const stainName=escA(img.caption||img.name||'病理影像');
-        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+img.dataUrl+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'<div style="position:absolute;bottom:0;left:0;right:0;padding:1.2vh 2.5vw;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);font-size:clamp(14px,1.6vw,22px);font-weight:700;color:#fff;letter-spacing:.02em;">'+stainName+'</div>'+'</div>'          +'</section>');
+        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+img.dataUrl+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'          +'</section>');
       });
 
     }); // end cases.forEach
