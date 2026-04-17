@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.6.8';
+const VERSION='V3.6.9';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2663,17 +2663,28 @@ ${hasRec?`<div class="vc-rec">${row('摘要',d.summary)}${row('結論',d.decisio
 ${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button onclick="viewImg('${escA(img.dataUrl)}')" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 </div></div>`;
 }
-function followupViewHTML(cid,i,d){
+function followupViewHTML(cid,i,d,type='followups'){
   const drs=getDoctors(d).join('、')||'—';
+  const lbl=type==='team'?'醫療小組':type==='events'?'必要事件':'前期追蹤';
   return`<div class="vc" style="border-left:4px solid var(--fog-xlt)">
 <div class="vc-hdr">${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> VS ${escA(drs)}</span>
-<span class="vc-hdr-sub" style="margin-top:2px;font-size:10px;background:rgba(255,255,255,.12);padding:1px 7px;border-radius:2px;margin-left:6px">前期追蹤</span>
+<span class="vc-hdr-sub" style="margin-top:2px;font-size:10px;background:rgba(255,255,255,.12);padding:1px 7px;border-radius:2px;margin-left:6px">${lbl}</span>
+<button onclick="event.stopPropagation();editFollowup('${cid}',${i},'${type}')" style="margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 10px;border-radius:2px;font-size:11px;cursor:pointer">編輯</button>
 </div>
 <div class="vc-body">
 ${d.prevDate?`<div class="vc-r"><span class="vc-l">前次</span><span class="vc-v">${rocDate(d.prevDate)}</span></div>`:''}
 ${d.note?`<div class="vc-r"><span class="vc-l">說明</span><span class="vc-v">${escA(d.note)}</span></div>`:''}
 </div></div>`;
 }
+function editFollowup(cid,i,type){
+  S.viewMode=false;
+  renderEditor();
+  setTimeout(function(){
+    const el=document.getElementById('cc-'+cid+'-'+type+'-'+i);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+  },150);
+}
+
 function specialViewHTML(cid,i,d){
   return`<div class="vc"><div class="vc-r" style="padding:10px 14px"><span style="font-weight:600;color:var(--fog-dk)">${escA(d.title||'')}</span>${d.note?` <span class="vc-v" style="margin-left:8px;color:var(--textlt)">${escA(d.note)}</span>`:''}</div></div>`;
 }
@@ -2697,7 +2708,7 @@ function casesPane(cid){
     '<div class="sh-track">'+
     '<div class="sh-track-hdr"><span class="sh-track-dot"></span>前期追蹤事項</div>'+
     '<div id="div-followups-'+cid+'">'+
-      (fups.length?fups.map((c,i)=>{try{return fFn(cid,i,c);}catch(err){console.error('followupHTML error',err);return '';}}).join(''):
+      (fups.length?fups.map((c,i)=>{try{return fFn(cid,i,c,'followups');}catch(err){console.error('followupHTML error',err);return '';}}).join(''):
         '<div class="sh-empty">（本次無前期追蹤個案）</div>')+
     '</div>'+bFup+
     '</div>'+
@@ -2871,11 +2882,11 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups'){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','followups',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','followups',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups'){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,'followups',i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
-<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,'followups',i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-</div></div><div class="fg"><label>前次醫療小組日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','followups',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','followups',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
+<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
+<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
+</div></div><div class="fg"><label>前次醫療小組日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
 function specialHTML(cid,i,d){
   const STYPES=['核心指標','品質指標','修改指引','其他'];
   const typeChips=STYPES.map(t=>{
