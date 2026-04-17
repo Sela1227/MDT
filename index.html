@@ -1146,7 +1146,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.8.7';
+const VERSION='V3.8.8';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2531,12 +2531,10 @@ function buildMammoImgArea(cid,i,d){
     });
     h+='</div>';
   }
-  if(imgs.length<2){
-    h+='<div style="display:flex;gap:8px">'
-      +'<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="mammo" data-max="2" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇影像資料夾')+'</button>';
-    if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearmammoimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除</button>';
-    h+='</div>';
-  }
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="mammo" data-max="2" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
+  if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearmammoimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除</button>';
+  h+='</div>';
   h+='</div>';
   return h;
 }
@@ -2583,7 +2581,7 @@ function buildSurgicalImgArea(cid,i,d){
     h+='</div>';
   }
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  h+='<button class="btn btn-b btn-sm" data-action="picksurgfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇手術照片資料夾')+'</button>';
+  h+='<button class="btn btn-b btn-sm" data-action="picksurgfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
   if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearsurgimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
   h+='</div>';
   h+='</div>';
@@ -2656,7 +2654,7 @@ function buildImgArea(cid,i,d){
     h+='</div>';
   }
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  if(imgs.length<5)h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="images" data-max="5" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇影像資料夾')+'</button>';
+  if(imgs.length<5)h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="images" data-max="5" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
   if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
   h+='</div>';
   h+='</div>';
