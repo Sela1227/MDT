@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.5.0';
+const VERSION='V3.5.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2536,7 +2536,6 @@ function buildPathImgArea(cid,i,d){
   }
   // Action buttons row
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  h+='<button class="btn btn-b btn-sm" data-action="addpathimg" data-cid="'+cid+'" data-idx="'+i+'">＋ 上傳影像</button>';
   h+='<button class="btn btn-b btn-sm" data-action="pickpathfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
   if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearpathimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
   h+='</div>';
@@ -4743,8 +4742,8 @@ document.addEventListener('click',function(e){
         // Sort files alphabetically
         files.sort(function(a,b){return a.name.localeCompare(b.name);});
         const list=files.map(function(f){
-          return '<label style="display:flex;align-items:center;gap:10px;padding:6px 8px;cursor:pointer;border-radius:3px;transition:background .1s" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'            +'<input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
-            +'<span style="font-size:12px;color:#333;flex:1;word-break:break-all">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'            +'<span style="font-size:10px;color:#aaa">'+escA(f.name.split('.').pop().toUpperCase())+'</span>'            +'</label>';
+          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;transition:background .1s;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'            +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
+            +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'            +'<span style="font-size:10px;color:#aaa">'+escA(f.name.split('.').pop().toUpperCase())+'</span>'            +'</label>';
         }).join('');
         const overlay=document.createElement('div');
         overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
