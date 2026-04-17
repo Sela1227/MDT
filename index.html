@@ -782,7 +782,7 @@ textarea{resize:vertical}
               <button class="btn btn-a" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
               <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
-              <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides()">HTML 投影片</button>
+              <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
               <button class="btn btn-b" onclick="printMeeting()">列印 / PDF</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
@@ -1086,12 +1086,12 @@ textarea{resize:vertical}
 
 /* ════ DEFAULT CONFIG ════ */
 const DEFAULT_LOCS=['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪','彰濱-2樓 185會議室','彰濱-1F 人文藝術館會議室','彰濱-7F 愛書人會議室','彰濱-3樓 甲狀腺會議室'];
-const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','PET-CT','X-Ray','Echo','Lab'];
+const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','PET-CT','X-Ray','Echo','Endoscopy','Lab'];
 let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
 const DEFAULT_DRS=[
   {dept:'一般外科',name:'李岳聰醫師'},{dept:'一般外科',name:'林建華醫師'},{dept:'一般外科',name:'吳鴻昇醫師'},{dept:'一般外科',name:'歐金俊醫師'},
-  {dept:'頭頸外科',name:'張建明醫師'},{dept:'頭頸外科',name:'王威群醫師'},
+  {dept:'頭頸外科',name:'張建明醫師'},{dept:'頭頸外科',name:'王威群醫師'},{dept:'頭頸外科',name:'李俊毅醫師'},{dept:'頭頸外科',name:'蕭信昌醫師'},{dept:'頭頸外科',name:'鍾從得醫師'},
   {dept:'胸腔外科',name:'黃榆涵醫師'},{dept:'胸腔內科',name:'張竣期醫師'},
   {dept:'消化內科',name:'陳忠宏醫師'},{dept:'消化內科',name:'王俊偉醫師'},
   {dept:'血液腫瘤科',name:'張正雄醫師'},{dept:'血液腫瘤科',name:'劉大智醫師'},
@@ -1119,15 +1119,15 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.2.5';
+const VERSION='V3.6.4';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
 function loadAll(){
   try{const c=localStorage.getItem('mdt_cfg');if(c){const stored=JSON.parse(c);CFG={...DEFAULT_C};Object.keys(DEFAULT_C).forEach(cid=>{if(stored[cid])CFG[cid]={...DEFAULT_C[cid],...stored[cid]};});}else{CFG={...DEFAULT_C};}}catch{CFG={...DEFAULT_C}}
   try{const l=localStorage.getItem('mdt_locs');LOCS=l?JSON.parse(l):[...DEFAULT_LOCS]}catch{LOCS=[...DEFAULT_LOCS]}
-  try{const d=localStorage.getItem('mdt_drs');DRS=d?JSON.parse(d):[...DEFAULT_DRS]}catch{DRS=[...DEFAULT_DRS]}
-  try{const e=localStorage.getItem('mdt_exam_types');EXAM_TYPES=e?JSON.parse(e):[...DEFAULT_EXAM_TYPES]}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
+  try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS]}
+  try{const e=localStorage.getItem('mdt_exam_types');if(e){EXAM_TYPES=JSON.parse(e);DEFAULT_EXAM_TYPES.forEach(function(t){if(!EXAM_TYPES.includes(t))EXAM_TYPES.push(t);});}else{EXAM_TYPES=[...DEFAULT_EXAM_TYPES];}}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
   if(!EXAM_TYPES.includes('Bone scan')){EXAM_TYPES.splice(2,0,'Bone scan');saveAll();}
   migrateLOCS();
   migrateCFG();
@@ -1236,6 +1236,8 @@ function getMemberStr(ca){return mkStr(ca.memberKeys)||ca.members||''}
 /* ════ State ════ */
 let S={user:null,meeting:null,cids:[],conflict:null,viewMode:false,meetingMode:'record'};
 let folderHandle=null;
+let pathImgFolderHandle=null;
+let imgFolderHandle=null;
 
 /* ════ Library loader (jsdelivr confirmed) ════ */
 const CDN_BASE='https://cdn.jsdelivr.net/npm/';
@@ -1670,6 +1672,7 @@ function migrateCaseFields(){
   Object.keys(S.meeting.sections||{}).forEach(function(cid){
     (S.meeting.sections[cid].cases||[]).forEach(function(c){
       if(c.familyHistory===undefined)c.familyHistory='';
+      if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
       if(!c.mammo||typeof c.mammo!=='object')c.mammo={date:'',report:'',images:[]};
       if(!Array.isArray(c.mammo.images))c.mammo.images=[];
       if(!Array.isArray(c.markers))c.markers=[];
@@ -2478,38 +2481,129 @@ function updMammo(cid,i,key,val){
 }
 function buildMammoImgArea(cid,i,d){
   const imgs=(d.mammo&&d.mammo.images)||[];
-  let h='';
-  imgs.forEach(function(img,j){
-    const safe=escA(img.dataUrl);
-    const cap=escA(img.caption||img.name||'');
-    h+='<div class="case-img-wrap"><img src="'+safe+'" title="'+cap+'" data-action="viewimg" data-src="'+safe+'"><button class="case-img-del" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'+(cap?'<div class="img-caption">'+cap+'</div>':'')+'</div>';
-  });
-  if(imgs.length<2){
-    h+='<div class="case-img-add" data-action="addmammoimg" data-cid="'+cid+'" data-idx="'+i+'"><span style="font-size:18px;line-height:1">+</span><span>新增乳攝影像</span></div>';
+  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
+  let h='<div style="display:flex;flex-direction:column;gap:8px">';
+  if(imgs.length){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    imgs.forEach(function(img,j){
+      const cap=escA(img.caption||img.name||'');
+      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
+      if(img.dataUrl){
+        const safe=escA(img.dataUrl);
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
+          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
+          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      } else {
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
+          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
+          +'<span style="font-size:20px">🖼</span>'
+          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
+          +'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      }
+    });
+    h+='</div>';
   }
-  return h;
-}
-function buildImgArea(cid,i,d){
-  const imgs=d.images||[];
-  // Use data attributes so events survive innerHTML serialization
-  let h='<div class="case-imgs" id="imgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
-  imgs.forEach((img,j)=>{
-    const safe=escA(img.dataUrl);
-    const cap=escA(img.caption||'');
-    h+='<div class="case-img-wrap">'
-      +'<img src="'+safe+'" title="'+escA(img.caption||img.name||'')+'" data-action="viewimg" data-src="'+safe+'">'
-      +'<button class="case-img-del" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-      +(cap?'<div class="img-caption">'+cap+'</div>':'')
-      +'</div>';
-  });
-  if(imgs.length<5){
-    h+='<div class="case-img-add" data-action="addimg" data-cid="'+cid+'" data-idx="'+i+'">'
-      +'<span style="font-size:18px;line-height:1">+</span><span>新增影像</span>'
-      +'</div>';
+  if(imgs.length<2){
+    h+='<div style="display:flex;gap:8px">'
+      +'<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="mammo" data-max="2" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇影像資料夾')+'</button>';
+    if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearmammoimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除</button>';
+    h+='</div>';
   }
   h+='</div>';
   return h;
 }
+
+function compressImage(dataUrl,maxW,maxH,quality,cb){
+  var img=new Image();
+  img.onload=function(){
+    var w=img.width,h=img.height;
+    var scale=Math.min(1,maxW/w,maxH/h);
+    var cw=Math.round(w*scale),ch=Math.round(h*scale);
+    var canvas=document.createElement('canvas');canvas.width=cw;canvas.height=ch;
+    var ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,cw,ch);
+    cb(canvas.toDataURL('image/jpeg',quality||0.82));
+  };
+  img.src=dataUrl;
+}
+function buildPathImgArea(cid,i,d){
+  const imgs=(d.pathologyImages||[]);
+  const folderName=pathImgFolderHandle?escA(pathImgFolderHandle.name):'';
+  let h='<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0" id="pathimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
+  // Image tiles row
+  if(imgs.length){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    imgs.forEach(function(img,j){
+      const cap=escA(img.caption||img.name||'');
+      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
+      if(img.dataUrl){
+        const safe=escA(img.dataUrl);
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
+          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover;"></div>'
+          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      } else {
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
+          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
+          +'<span style="font-size:20px">🔬</span>'
+          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
+          +'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      }
+    });
+    h+='</div>';
+  }
+  // Action buttons row
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  h+='<button class="btn btn-b btn-sm" data-action="pickpathfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
+  if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearpathimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
+  h+='</div>';
+  h+='</div>';
+  return h;
+}
+function buildImgArea(cid,i,d){
+  const imgs=d.images||[];
+  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
+  let h='<div id="imgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'" style="display:flex;flex-direction:column;gap:8px">';
+  if(imgs.length){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    imgs.forEach(function(img,j){
+      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
+      if(img.dataUrl){
+        const safe=escA(img.dataUrl);
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
+          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
+          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      } else {
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
+          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
+          +'<span style="font-size:20px">🖼</span>'
+          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
+          +'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      }
+    });
+    h+='</div>';
+  }
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  if(imgs.length<5)h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="images" data-max="5" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇影像資料夾')+'</button>';
+  if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
+  h+='</div>';
+  h+='</div>';
+  return h;
+}
+
 function viewImg(dataUrl){
   const m=document.getElementById('img-modal');
   document.getElementById('img-modal-img').src=dataUrl;
@@ -2563,7 +2657,8 @@ ${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gen
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body" style="display:none">
-${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:#2a3540;font-weight:700">'+escA(p.date)+'：</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(()=>{
+${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:#2a3540;font-weight:700">'+escA(p.date)+'：</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(d.pathologyImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">病理影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.pathologyImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewpathimg" data-name="${escA(img.name||'')} " data-dataurl="${escA(img.dataUrl||'')} " style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${(()=>{
   const mkArr=(d.markers||[]);
   if(!mkArr.length)return '';
   return mkArr.map(mk=>{
@@ -2752,6 +2847,9 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>病理</label>${addBtn('pathologies')}</div>
     <div id="pathlist-${cid}-${i}">${pathRows}</div>
   </div>
+  <div class="fg full"><div class="field-hdr"><label>病理染色影像</label></div>
+    ${buildPathImgArea(cid,i,d)}
+  </div>
   <div class="fg full"><div class="field-hdr"><label>檢查</label>${addBtn('exams')}</div>
     <div id="examlist-${cid}-${i}">${examRows}</div>
   </div>
@@ -2806,7 +2904,7 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],markers:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],markers:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;cont.appendChild(newCard);}
@@ -2848,6 +2946,13 @@ async function saveMeeting(){
   });
   const time=await getNetworkTime();
   S.meeting.version=(S.meeting.version||0)+1;S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
+  // Update per-section keys for merged meetings (so loadMergedSections gets fresh data on reload)
+  if(S.cids.length>1){
+    const d=S.meeting.date||'';
+    S.cids.forEach(function(cid){
+      const sec=S.meeting.sections[cid];if(sec)saveSec(cid,d,sec);
+    });
+  }
   const lok=saveLocal(S.meeting),sok=await saveShared(S.meeting);
   _dirty=false;
   const t=new Date(time).toLocaleTimeString('zh-TW',{hour12:false,timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit'});
@@ -3371,7 +3476,7 @@ function doImportCase(){
       pathologies: Array.isArray(d.pathologies)?d.pathologies:[],
       exams: Array.isArray(d.exams)?d.exams:[],
       treatments: Array.isArray(d.treatments)?d.treatments:[],
-      markers: Array.isArray(d.markers)?d.markers:[],
+      markers: (()=>{const raw=Array.isArray(d.markers)?d.markers:[];const seen={};return raw.filter(function(mk){const k=(mk.name||'').trim().toLowerCase();if(!k)return true;if(seen[k])return false;seen[k]=true;return true;});})(),
       familyHistory: d.familyHistory||'',
       mammo: d.mammo&&typeof d.mammo==='object'?d.mammo:{date:'',report:'',images:[]},
       discussion: d.discussion||'',
@@ -3388,11 +3493,28 @@ function doImportCase(){
 }
 
 
-function genHTMLSlides(){
+async function genHTMLSlides(){
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   readForm();
   const m=S.meeting,cids=S.cids;
   const slides=[];
+  // Pre-load folder-based pathology images to base64 (TEMP COPY ONLY - never write back to S.meeting)
+  const _pathImgCache={};
+  if(pathImgFolderHandle){
+    for(const cid of cids){
+      for(const c of (m.sections[cid]?.cases||[])){
+        for(const img of (c.pathologyImages||[])){
+          if(img.fromFolder&&!img.dataUrl){
+            try{
+              const fh=await pathImgFolderHandle.getFileHandle(img.name);
+              const file=await fh.getFile();
+              _pathImgCache[img.name]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
+            }catch(e){console.warn('無法讀取病理影像:',img.name,e);}
+          }
+        }
+      }
+    }
+  }
   const sc='</'+'script>';
 
   // ── Cover ──
@@ -3458,17 +3580,18 @@ function genHTMLSlides(){
         :(c.pathology?[{date:c.pathologyDate||'',content:c.pathology}]:[]);
       const paths=pathItems.map(function(p){
         var d=p.date?('<span class="pdt">'+escA(p.date)+'：</span> '):'';
-        return '<span class="pth">'+d+escA(p.content||'')+'</span>';
+        return '<span class="pth">'+d+escA(p.content||'').replace(/\n/g,'<br>')+'</span>';
       }).join('');
-      const examItems=(c.exams&&c.exams.length)?c.exams:(c.exam?[{name:'',date:'',content:c.exam}]:[]);
+      const examItems=((c.exams&&c.exams.length)?c.exams:(c.exam?[{name:'',date:'',content:c.exam}]:[])).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
       const exs=examItems.map(function(e){
-        var nm=e.name?('<b>'+escA(e.name)+(e.date?'('+escA(e.date)+')':'')+'</b> '):'';
-        return '<span class="ex">'+nm+escA(e.content||'')+'</span>';
+        var nm=e.name?('<b>'+escA(e.name)+(e.date?'('+escA(e.date)+')':'')+'</b><br>'):'';var sep2=(nm&&e.content)?'':'';
+        return '<span class="ex">'+nm+escA(e.content||'').replace(/\n/g,'<br>')+'</span>';
       }).join('');
       const trtItems=(c.treatments&&c.treatments.length)?c.treatments:(c.treatment?[{name:'',date:'',content:c.treatment}]:[]);
       const trts=trtItems.map(function(t){
-        var nm=t.name?('<b>'+escA(t.name)+(t.date?'('+escA(t.date)+')':'')+'</b> '):'';
-        return '<span class="ex">'+nm+escA(t.content||'')+'</span>';
+        var nm=t.name?('<b>'+escA(t.name)+(t.date?'('+escA(t.date)+')':'')+'</b>'):'';
+        var sep=(nm&&t.content)?'<br>':'';
+        return '<span class="ex">'+nm+sep+escA(t.content||'').replace(/\n/g,'<br>')+'</span>';
       }).join('');
       const _topicOrder=['影像討論','病理討論','分期討論','治療策略討論'];
       const chips=(c.topics||[]).slice().sort((a,b)=>{const ai=_topicOrder.indexOf(a),bi=_topicOrder.indexOf(b);return(ai<0?99:ai)-(bi<0?99:bi);}).map(t=>'<span class="tp">'+escA(t)+'</span>').join('');
@@ -3477,8 +3600,8 @@ function genHTMLSlides(){
       const markersHtml=(c.markers&&c.markers.length)?( c.markers||[]).map(function(mk){return(mk.name?'<b>'+escA(mk.name)+'：</b> ':'')+(mk.content?escA(mk.content):'');}).join('<br>'):'';
       const fhRow=(cid==='breast'||cid==='gynecology')&&c.familyHistory?mkRow('家族史',escA(c.familyHistory)):'';
       const leftRows=[
-        mkRow('現病史',escA(c.cc||'')),
-        mkRow('過去病史',escA(ph||'')),
+        mkRow('現病史',escA(c.cc||'').replace(/\n/g,'<br>')),
+        mkRow('過去病史',escA(ph||'').replace(/\n/g,'<br>')),
         fhRow,
         markersHtml?mkRow('癌指數',markersHtml):'',
         mkRow('病理',paths),
@@ -3504,7 +3627,7 @@ function genHTMLSlides(){
       slides.push('<section class="slide case" style="--ca:'+caColor+';">'
         +'<div class="ch">'
         +'<div class="cht">'
-        +'<span class="ci">'+escA(c.chartNo||'')+'</span>'
+        +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.dataset.oc=el.style.opacity;el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=el.dataset.oc||\'\'}, 600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
         +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
         +' <span class="cd">'+escA((c.gender||'M')+'/'+(c.age||'—'))+'</span>'
         +' <span class="cdr">VS '+escA(drs)+'</span>'
@@ -3524,7 +3647,7 @@ function genHTMLSlides(){
         +'</section>');
       // Images - separate slide after case slide
       const imgHtml=(c.images||[]).length
-        ?(c.images||[]).map(img=>'<div class="img-wrap"><img src="'+img.dataUrl+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>').join(''):'';
+        ?(c.images||[]).map(img=>'<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>').join(''):'';
       if(imgHtml){
         slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
           +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
@@ -3533,12 +3656,12 @@ function genHTMLSlides(){
       }
       // Mammo slide (breast only, 4:6 layout)
       if(cid==='breast'&&c.mammo&&(c.mammo.report||(c.mammo.images&&c.mammo.images.length))){
-        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+img.dataUrl+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
+        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
         const mDate=c.mammo.date?'<div style="font-size:.85em;opacity:.65;margin-bottom:.6vh">'+escA(c.mammo.date)+'</div>':'';
         const mRep=escA(c.mammo.report||'').replace(/\n/g,'<br>');
         slides.push('<section class="slide mammo-slide" style="--ca:'+caColor+';">'
           +'<div class="ch"><div class="cht">'
-          +'<span class="ci">'+escA(c.chartNo||'')+'</span>'
+          +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.dataset.oc=el.style.opacity;el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=el.dataset.oc||\'\'}, 600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
           +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
           +'<span class="cat">乳房攝影</span></div></div>'
           +'<div class="mammo-body">'
@@ -3547,7 +3670,14 @@ function genHTMLSlides(){
           +'</div>'
           +'</section>');
       }
-    });
+
+      // Pathology staining images - one slide per image
+      (c.pathologyImages||[]).forEach(function(img){
+        const stainName=escA(img.caption||img.name||'病理影像');
+        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'          +'</section>');
+      });
+
+    }); // end cases.forEach
 
     // ── Team / Events ──
     if(team.length||events.length){
@@ -3578,7 +3708,8 @@ function genHTMLSlides(){
     +'.sn{font-size:clamp(48px,8vw,100px);font-weight:800;color:#fff;letter-spacing:-.02em;}'
     +'.sd{font-size:clamp(16px,2vw,28px);color:rgba(255,255,255,.75);margin-top:2vh;}'
     +'.ch{background:var(--dk);color:#fff;padding:clamp(10px,1.4vh,18px) 2.5vw clamp(8px,1.2vh,14px);display:flex;flex-direction:column;gap:.4vh;flex-shrink:0;border-bottom:5px solid var(--ca,#4A7C8E);}'
-    +'.cht{display:flex;align-items:center;gap:2vw;flex-wrap:wrap;}'+'.ci{font-size:clamp(22px,2.8vw,40px);font-weight:800;letter-spacing:-.01em;}'
+    +'.cht{display:flex;align-items:center;gap:2vw;flex-wrap:wrap;}'+'.ci{font-size:clamp(22px,2.8vw,40px);font-weight:800;letter-spacing:-.01em;cursor:pointer;user-select:none;}'
+    +'.ci:hover{opacity:.75;}'
     +'.cn{font-size:clamp(20px,2.6vw,38px);font-weight:700;}'
     +'.cd{font-size:clamp(14px,1.5vw,22px);color:rgba(255,255,255,.78);}'
     +'.cdr{font-size:clamp(14px,1.6vw,23px);color:rgba(255,255,255,.85);}'
@@ -3602,7 +3733,7 @@ function genHTMLSlides(){
     +'.ex{display:block;margin-bottom:.5vh;}'
     +'.ct{padding:1.4vh 2.5vw;display:flex;gap:1vw;flex-wrap:wrap;background:#f8f9fa;border-top:3px solid var(--ca,var(--acc));flex-shrink:0;}'
     +'.tp{border:2.5px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.55vh 1.5vw;border-radius:4px;font-size:clamp(14px,1.5vw,21px);font-weight:700;}'
-    +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'
+    +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'+'.img-slide img{transform-origin:center center;will-change:transform;user-select:none;}'
     +'.img-grid{flex:1;display:flex;flex-wrap:wrap;gap:1vw;padding:2vh 2.5vw;align-items:center;justify-content:center;overflow:hidden;}'
     +'.img-wrap{flex:1;min-width:30%;max-width:48%;display:flex;flex-direction:column;align-items:center;gap:.5vh;max-height:80vh;}'
     +'.img-cap{font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7);text-align:center;}'
@@ -3647,7 +3778,29 @@ function genHTMLSlides(){
     +'if(e.key==="Home")go(0);if(e.key==="End")go(n-1);'
     +'if(e.key==="f"){var el=document.documentElement;'
     +'!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen();}});'
-    +'go(0);'+'var _hlSel=null;'+'document.addEventListener(\'mouseup\',function(e){'+'  if(e.target.closest(\'#hl-toolbar\'))return;'+'  var sel=window.getSelection();'+'  if(!sel||sel.isCollapsed||!sel.toString().trim()){document.getElementById(\'hl-toolbar\').style.display=\'none\';return;}'+'  _hlSel=sel.getRangeAt(0);'+'  var r=_hlSel.getBoundingClientRect();'+'  var tb=document.getElementById(\'hl-toolbar\');'+'  tb.style.display=\'flex\';'+'  var top=r.top-48;if(top<4)top=r.bottom+8;'+'  var left=r.left+r.width/2-80;if(left<4)left=4;if(left+200>window.innerWidth)left=window.innerWidth-204;'+'  tb.style.top=top+\'px\';tb.style.left=left+\'px\';'+'});'+'document.addEventListener(\'keydown\',function(e){if(e.key===\'Escape\')document.getElementById(\'hl-toolbar\').style.display=\'none\';});'+'function hlApply(color){'+'  if(!_hlSel)return;'+'  try{'+'    var span=document.createElement(\'mark\');'+'    span.style.background=color;'+'    span.style.color=\'inherit\';'+'    _hlSel.surroundContents(span);'+'  }catch(e){'+'    try{'+'      var frag=_hlSel.extractContents();'+'      var sp=document.createElement(\'mark\');sp.style.background=color;sp.style.color=\'inherit\';'+'      sp.appendChild(frag);_hlSel.insertNode(sp);'+'    }catch(e2){}'+'  }'+'  window.getSelection().removeAllRanges();'+'  document.getElementById(\'hl-toolbar\').style.display=\'none\';'+'  _hlSel=null;'+'}'+'function hlClear(){'+'  document.querySelectorAll(\'mark\').forEach(function(m){'+'    var p=m.parentNode;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);'+'  });'+'  document.getElementById(\'hl-toolbar\').style.display=\'none\';'+'}';
+    +'go(0);';
+  const extraJs=`var _hlSel=null;
+document.addEventListener('mouseup',function(e){if(e.target.closest('#hl-toolbar'))return;var sel=window.getSelection();if(!sel||sel.isCollapsed||!sel.toString().trim()){document.getElementById('hl-toolbar').style.display='none';return;}_hlSel=sel.getRangeAt(0);var r=_hlSel.getBoundingClientRect();var tb=document.getElementById('hl-toolbar');tb.style.display='flex';var top=r.top-48;if(top<4)top=r.bottom+8;var left=r.left+r.width/2-80;if(left<4)left=4;if(left+200>window.innerWidth)left=window.innerWidth-204;tb.style.top=top+'px';tb.style.left=left+'px';});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')document.getElementById('hl-toolbar').style.display='none';});
+function hlApply(color){if(!_hlSel)return;try{var span=document.createElement('mark');span.style.background=color;span.style.color='inherit';_hlSel.surroundContents(span);}catch(ex){try{var frag=_hlSel.extractContents();var sp=document.createElement('mark');sp.style.background=color;sp.style.color='inherit';sp.appendChild(frag);_hlSel.insertNode(sp);}catch(e2){}}window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;}
+function hlClear(){document.querySelectorAll('mark').forEach(function(m){var p=m.parentNode;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);});document.getElementById('hl-toolbar').style.display='none';}
+var _magMode=false,_magCv=null;
+function _initMag(){if(_magCv)return;_magCv=document.createElement('canvas');_magCv.style.cssText='position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;';document.body.appendChild(_magCv);}
+function _toggleMag(){_initMag();_magMode=!_magMode;var btn=document.getElementById('nb-mag');if(btn)btn.style.color=_magMode?'#7FE87F':'';if(!_magMode)_magCv.style.display='none';}
+document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=slide.querySelector('img');if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);var sx=(mx/rect.width)*img.naturalWidth,sy=(my/rect.height)*img.naturalHeight;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
+document.addEventListener('mouseleave',function(){if(_magCv)_magCv.style.display='none';});
+document.addEventListener('keydown',function(e){if(e.key==='l'||e.key==='L')_toggleMag();});
+var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0;
+function _zoomImg(){var slide=document.querySelectorAll('.slide')[c];var img=slide&&slide.classList.contains('img-slide')?slide.querySelector('img'):null;if(!img)return;img.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';img.style.cursor=_zoom>1?'grab':'default';img.style.transition=_dragging?'':'transform .15s';}
+function _resetZoom(){_zoom=1;_panX=0;_panY=0;_zoomImg();}
+document.addEventListener('wheel',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;e.preventDefault();_zoom=Math.max(1,Math.min(8,_zoom*(e.deltaY<0?1.12:0.89)));if(_zoom===1){_panX=0;_panY=0;}_zoomImg();},{passive:false});
+document.addEventListener('dblclick',function(e){var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide'))_resetZoom();});
+document.addEventListener('mousedown',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')||_zoom<=1)return;_dragging=true;_dragSx=e.clientX;_dragSy=e.clientY;_dragPx=_panX;_dragPy=_panY;e.preventDefault();});
+document.addEventListener('mousemove',function(e){if(!_dragging)return;_panX=_dragPx+(e.clientX-_dragSx)/_zoom;_panY=_dragPy+(e.clientY-_dragSy)/_zoom;_zoomImg();});
+document.addEventListener('mouseup',function(e){if(_dragging){_dragging=false;_zoomImg();}});
+var _origGo=go;go=function(i){_resetZoom();if(_magCv)_magCv.style.display='none';_origGo(i);};
+var _t0=null;document.addEventListener('touchstart',function(e){if(e.touches.length===2)_t0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
+document.addEventListener('touchmove',function(e){if(e.touches.length===2&&_t0){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide')){_zoom=Math.max(1,Math.min(8,_zoom*(d/_t0)));_t0=d;_zoomImg();}e.preventDefault();}},{passive:false});`;
 
   const fullHTML='<!DOCTYPE html>\n<html lang="zh-TW"><head>\n'
     +'<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
@@ -3659,9 +3812,9 @@ function genHTMLSlides(){
     +'<span class="ni" id="ni">1&thinsp;/&thinsp;'+N+'</span>'
     +'<button class="nb" id="nb-next" onclick="go(c+1)">&#9654;</button>'
     +'<button class="nb" onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()" title="F">&#9974;</button>'
+    +'<button class="nb" id="nb-mag" onclick="_toggleMag()" title="放大鏡 L" style="font-size:clamp(12px,1.1vw,16px)">&#128269;</button>'
     +'</div>\n<div class="bar" id="bar" style="width:'+(1/N*100)+'%"></div>\n'
-    +'<script>'+js+sc+'\n</body></html>';
-
+    +'<script>'+js+sc+'\n</'+'script>\n'+('<script>'+extraJs+'\n</'+'script>')+'\n</body></html>'
   const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
   const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
@@ -3976,6 +4129,7 @@ async function genXLSX(){
 
 function genImportPrompt(){
   const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON 陣列（即使只有一筆也用陣列），不要加任何說明文字或 markdown 符號。
+【重要限制】只能使用貼上的資料，絕對不可自行推斷、補充、或引用任何外部醫學知識與記憶。資料中沒有的欄位一律留空字串或空陣列。
 欄位定義：
 _cancer：癌別名稱，從以下選填（必填）：「頭頸癌」「血液淋巴癌」「胸腔癌」「乳癌」「消化道癌」「肝膽胰癌」「泌尿道癌」「婦癌」
 chartNo：病歷號（字串）
@@ -4114,13 +4268,13 @@ function importCaseJSON(inputEl){
         pathologies:Array.isArray(d.pathologies)?d.pathologies:[],
         exams:Array.isArray(d.exams)?d.exams:[],
         treatments:Array.isArray(d.treatments)?d.treatments:[],
-        markers:Array.isArray(d.markers)?d.markers:[],
+        markers:(()=>{const raw=Array.isArray(d.markers)?d.markers:[];const seen={};return raw.filter(function(mk){const k=(mk.name||'').trim().toLowerCase();if(!k)return true;if(seen[k])return false;seen[k]=true;return true;});})(),
         familyHistory:d.familyHistory||'',
         mammo:d.mammo&&typeof d.mammo==='object'?d.mammo:{date:'',report:'',images:[]},
         discussion:d.discussion||'',
         topics:Array.isArray(d.topics)?d.topics:[],
         summary:d.summary||'',decision:d.decision||'',
-        images:[],note:d.note||''
+        images:[],pathologyImages:Array.isArray(d.pathologyImages)?d.pathologyImages:[],note:d.note||''
       };
       S.meeting.sections[cid].cases.push(blank);
       imported++;
@@ -4155,13 +4309,67 @@ function genLine(){
     const tag=function(c){
       const dx=(c.diagnosis||'').toLowerCase();
       let sub=ca.name;
-      if(/bladder|膀胱|urothelial/.test(dx))sub='膀胱癌';
+      // 頭頸癌
+      if(/nasopharyn|鼻咽/.test(dx))sub='鼻咽癌';
+      else if(/oropharyn|口咽/.test(dx))sub='口咽癌';
+      else if(/hypopharyn|下咽/.test(dx))sub='下咽癌';
+      else if(/laryn|喉/.test(dx))sub='喉癌';
+      else if(/oral|tongue|舌|口腔|buccal|gingiv/.test(dx))sub='口腔癌';
+      else if(/thyroid|甲狀腺/.test(dx))sub='甲狀腺癌';
+      else if(/sinus|nasal|鼻竇|鼻腔/.test(dx))sub='鼻竇癌';
+      else if(/parotid|salivary|腮腺|唾液腺/.test(dx))sub='唾液腺癌';
+      // 胸腔癌
+      else if(/lung|肺|pulmon/.test(dx))sub='肺癌';
+      else if(/esophag|食道/.test(dx))sub='食道癌';
+      else if(/mesothelioma|間皮/.test(dx))sub='間皮瘤';
+      else if(/thymoma|胸腺/.test(dx))sub='胸腺瘤';
+      // 乳癌
+      else if(/breast|乳/.test(dx))sub='乳癌';
+      // 消化道癌
+      else if(/rectal|rectum|直腸/.test(dx))sub='直腸癌';
+      else if(/colon|結腸/.test(dx))sub='結腸癌';
+      else if(/colorectal|大腸/.test(dx))sub='大腸癌';
+      else if(/gastric|stomach|胃/.test(dx))sub='胃癌';
+      else if(/appendix|闌尾/.test(dx))sub='闌尾癌';
+      else if(/anal|肛門/.test(dx))sub='肛門癌';
+      else if(/small bowel|小腸/.test(dx))sub='小腸癌';
+      // 肝膽胰癌
+      else if(/hepatocellular|hcc|肝細胞/.test(dx))sub='肝細胞癌';
+      else if(/cholangiocarcinoma|bile duct|膽管/.test(dx))sub='膽管癌';
+      else if(/gallbladder|膽囊/.test(dx))sub='膽囊癌';
+      else if(/pancreatic|pancreas|胰臟|胰腺/.test(dx))sub='胰臟癌';
+      else if(/ampulla|壺腹/.test(dx))sub='壺腹癌';
+      else if(/hepatic|liver|肝/.test(dx))sub='肝癌';
+      // 泌尿道癌
+      else if(/bladder|膀胱|urothelial/.test(dx))sub='膀胱癌';
       else if(/prostate|攝護腺|prostatic/.test(dx))sub='攝護腺癌';
       else if(/renal|kidney|腎|ccrc|clear cell/.test(dx))sub='腎臟癌';
       else if(/ureter|ureteral|輸尿管/.test(dx))sub='輸尿管癌';
       else if(/testicular|睪丸/.test(dx))sub='睪丸癌';
-      else if(/lung|肺/.test(dx))sub='肺癌';
-      else if(/breast|乳/.test(dx))sub='乳癌';
+      else if(/penile|陰莖/.test(dx))sub='陰莖癌';
+      // 婦癌
+      else if(/cervix|cervical|子宮頸/.test(dx))sub='子宮頸癌';
+      else if(/endometri|子宮內膜/.test(dx))sub='子宮內膜癌';
+      else if(/ovarian|ovary|卵巢/.test(dx))sub='卵巢癌';
+      else if(/uterine|子宮|uterus/.test(dx))sub='子宮癌';
+      else if(/vaginal|陰道/.test(dx))sub='陰道癌';
+      else if(/vulvar|外陰/.test(dx))sub='外陰癌';
+      // 血液淋巴癌
+      else if(/dlbcl|diffuse large b|瀰漫性大b/.test(dx))sub='DLBCL';
+      else if(/hodgkin/.test(dx))sub='Hodgkin Lymphoma';
+      else if(/follicular/.test(dx))sub='Follicular Lymphoma';
+      else if(/mantle cell/.test(dx))sub='Mantle Cell Lymphoma';
+      else if(/marginal zone|malt/.test(dx))sub='Marginal Zone Lymphoma';
+      else if(/burkitt/.test(dx))sub='Burkitt Lymphoma';
+      else if(/t.cell|nk.cell/.test(dx))sub='T/NK-cell Lymphoma';
+      else if(/lymphoma|淋巴瘤/.test(dx))sub='Lymphoma';
+      else if(/multiple myeloma|骨髓瘤/.test(dx))sub='Multiple Myeloma';
+      else if(/aml|acute myeloid/.test(dx))sub='AML';
+      else if(/all|acute lymph/.test(dx))sub='ALL';
+      else if(/cml|chronic myeloid/.test(dx))sub='CML';
+      else if(/cll|chronic lymph/.test(dx))sub='CLL';
+      else if(/mds|myelodysplastic/.test(dx))sub='MDS';
+      else if(/leukemia|白血病/.test(dx))sub='Leukemia';
       return'【'+sub+'】';
     };
 
@@ -4636,8 +4844,217 @@ function closeCancerSheet(){
 
 /* ════ Event delegation ════ */
 document.addEventListener('click',function(e){
-  const add=e.target.closest('[data-action="addimg"]');
-  if(add){addImg(add.dataset.cid,parseInt(add.dataset.idx));return;}
+  const pickpathfolder=e.target.closest('[data-action="pickpathfolder"]');
+  if(pickpathfolder){
+    const cid=pickpathfolder.dataset.cid,idx=parseInt(pickpathfolder.dataset.idx);
+    (async function(){
+      try{
+        // Re-use existing handle or pick new one
+        if(!pathImgFolderHandle){
+          pathImgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+        }
+        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+        if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
+        // List image files in folder
+        const files=[];
+        for await(const entry of pathImgFolderHandle.values()){
+          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp|tiff?)$/i.test(entry.name))files.push(entry);
+        }
+        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
+        // Build selection dialog
+        const existing=new Set(c.pathologyImages.map(function(x){return x.name;}));
+        // Sort files alphabetically
+        files.sort(function(a,b){return a.name.localeCompare(b.name);});
+        const list=files.map(function(f){
+          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;transition:background .1s;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'            +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
+            +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'            +'<span style="font-size:10px;color:#aaa">'+escA(f.name.split('.').pop().toUpperCase())+'</span>'            +'</label>';
+        }).join('');
+        const overlay=document.createElement('div');
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+        overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
+          +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取病理影像</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(pathImgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
+          +'<div style="display:flex;gap:6px;align-items:center">'
+          +'<button id="pathfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
+          +'<button id="pathfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
+          +'<span id="pathfolder-count" style="font-size:11px;color:#888;margin-left:4px"></span>'
+          +'</div>'
+          +'<div id="pathfolder-list" style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px;padding:4px;min-height:120px;max-height:50vh">'+list+'</div>'
+          +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #eee">'
+          +'<button id="pathfolder-cancel" class="btn btn-b btn-sm">取消</button>'
+          +'<button id="pathfolder-change" class="btn btn-b btn-sm">換資料夾</button>'
+          +'<button id="pathfolder-ok" class="btn btn-a btn-sm">確認</button>'
+          +'</div></div>';
+        document.body.appendChild(overlay);
+        document.getElementById('pathfolder-cancel').onclick=function(){document.body.removeChild(overlay);};
+        function updateCount(){var n=overlay.querySelectorAll('#pathfolder-list input:checked').length;document.getElementById('pathfolder-count').textContent=n+' 張已選';}
+        overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.onchange=updateCount;});
+        updateCount();
+        document.getElementById('pathfolder-selall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=true;});updateCount();};
+        document.getElementById('pathfolder-clrall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=false;});updateCount();};
+        document.getElementById('pathfolder-change').onclick=async function(){
+          try{pathImgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
+          document.body.removeChild(overlay);
+          // Rebuild area and re-trigger
+          const el2=document.getElementById('pathimgs-'+cid+'-'+idx);
+          if(el2){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el2.replaceWith(tmp.firstElementChild);}
+        };
+        document.getElementById('pathfolder-ok').onclick=async function(){
+          const checked=[...overlay.querySelectorAll('#pathfolder-list input:checked')].map(function(x){return x.value;});
+          // Keep existing non-folder images; replace folder refs
+          c.pathologyImages=c.pathologyImages.filter(function(x){return x.dataUrl&&!existing.has(x.name);});
+          checked.forEach(function(fname){c.pathologyImages.push({name:fname,caption:fname.replace(/\.[^.]+$/,''),fromFolder:true});});
+          markDirty();
+          document.body.removeChild(overlay);
+          const el3=document.getElementById('pathimgs-'+cid+'-'+idx);
+          if(el3){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el3.replaceWith(tmp.firstElementChild);}
+        };
+      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+    })();
+    return;
+  }
+  const addpathimg=e.target.closest('[data-action="addpathimg"]');
+  if(addpathimg){
+    const cid=addpathimg.dataset.cid,idx=parseInt(addpathimg.dataset.idx);
+    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
+    inp.onchange=function(ev){
+      const files=Array.from(ev.target.files);if(!files.length)return;
+      ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+      if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
+      let loaded=0;
+      files.forEach(function(file){
+        const reader=new FileReader();
+        reader.onload=function(re){
+          compressImage(re.target.result,2400,2400,0.82,function(compressed){
+            c.pathologyImages.push({dataUrl:compressed,name:file.name,caption:file.name.replace(/\.[^.]+$/,'')});
+            markDirty();loaded++;
+            if(loaded===files.length){
+              const el=document.getElementById('pathimgs-'+cid+'-'+idx);
+              if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+            }
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+    document.body.appendChild(inp);inp.click();document.body.removeChild(inp);return;
+  }
+  const clearpathimgs=e.target.closest('[data-action="clearpathimgs"]');
+  if(clearpathimgs){
+    const cid=clearpathimgs.dataset.cid,idx=parseInt(clearpathimgs.dataset.idx);
+    if(!confirm('清除所有病理影像？'))return;
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    c.pathologyImages=[];markDirty();
+    const el=document.getElementById('pathimgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
+  const previewpathimg=e.target.closest('[data-action="previewpathimg"]');
+  if(previewpathimg){
+    const name=(previewpathimg.dataset.name||'').trim();
+    const dataUrl=(previewpathimg.dataset.dataurl||'').trim();
+    if(dataUrl){viewImg(dataUrl);return;}
+    if(name&&pathImgFolderHandle){
+      pathImgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
+        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
+      }).catch(function(){alert('無法讀取影像：'+name);});
+    }else{alert(name?'請先選擇資料夾':'無法預覽');} return;
+  }
+  const delpathimg=e.target.closest('[data-action="delpathimg"]');
+  if(delpathimg){
+    const cid=delpathimg.dataset.cid,idx=parseInt(delpathimg.dataset.idx),j=parseInt(delpathimg.dataset.imgidx);
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    c.pathologyImages.splice(j,1);markDirty();
+    const el=document.getElementById('pathimgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
+  const pickimgfolder=e.target.closest('[data-action="pickimgfolder"]');
+  if(pickimgfolder){
+    const cid=pickimgfolder.dataset.cid,idx=parseInt(pickimgfolder.dataset.idx);
+    const type=pickimgfolder.dataset.type||'images',maxN=parseInt(pickimgfolder.dataset.max)||5;
+    (async function(){
+      try{
+        if(!imgFolderHandle) imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+        const arr=type==='mammo'?(c.mammo=c.mammo||{date:'',report:'',images:[]},c.mammo.images=c.mammo.images||[],c.mammo.images):c.images=(c.images||[]);
+        const files=[];
+        for await(const entry of imgFolderHandle.values()){
+          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
+        }
+        files.sort(function(a,b){return a.name.localeCompare(b.name);});
+        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
+        const existing=new Set(arr.map(function(x){return x.name;}));
+        const list=files.map(function(f){
+          var baseName=f.name.replace(/\.[^.]+$/,'');
+          var ext=f.name.split('.').pop().toUpperCase();
+          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'
+            +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
+            +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(baseName)+'</span>'
+            +'<span style="font-size:10px;color:#aaa;flex-shrink:0">'+escA(ext)+'</span>'
+            +'</label>';
+        }).join('');
+        const overlay=document.createElement('div');
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+        overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
+          +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取影像</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔　最多 '+maxN+' 張</div>'
+          +'<div style="display:flex;gap:6px;align-items:center">'
+          +'<button id="imgfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
+          +'<button id="imgfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
+          +'<span id="imgfolder-count" style="font-size:11px;color:#888;margin-left:4px"></span>'
+          +'</div>'
+          +'<div id="imgfolder-list" style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px;padding:4px;min-height:120px;max-height:50vh">'+list+'</div>'
+          +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #eee">'
+          +'<button id="imgfolder-cancel" class="btn btn-b btn-sm">取消</button>'
+          +'<button id="imgfolder-change" class="btn btn-b btn-sm">換資料夾</button>'
+          +'<button id="imgfolder-ok" class="btn btn-a btn-sm">確認</button>'
+          +'</div></div>';
+        document.body.appendChild(overlay);
+        function updateCnt(){var n=overlay.querySelectorAll('#imgfolder-list input:checked').length;document.getElementById('imgfolder-count').textContent=n+' 張已選';}
+        overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.onchange=updateCnt;});
+        updateCnt();
+        document.getElementById('imgfolder-selall').onclick=function(){overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.checked=true;});updateCnt();};
+        document.getElementById('imgfolder-clrall').onclick=function(){overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.checked=false;});updateCnt();};
+        document.getElementById('imgfolder-cancel').onclick=function(){document.body.removeChild(overlay);};
+        document.getElementById('imgfolder-change').onclick=async function(){
+          try{imgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
+          document.body.removeChild(overlay);
+          const elR=document.getElementById('imgs-'+cid+'-'+idx)||document.getElementById('mammo-imgs-'+cid+'-'+idx);
+          if(elR){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elR.replaceWith(tmp.firstElementChild);}
+        };
+        document.getElementById('imgfolder-ok').onclick=function(){
+          const checked=[...overlay.querySelectorAll('#imgfolder-list input:checked')].map(function(x){return x.value;}).slice(0,maxN);
+          if(type==='mammo'){c.mammo.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});}
+          else{c.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});}
+          markDirty();document.body.removeChild(overlay);
+          const elOk=document.getElementById('imgs-'+cid+'-'+idx)||document.getElementById('mammo-imgs-'+cid+'-'+idx);
+          if(elOk){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elOk.replaceWith(tmp.firstElementChild);}
+        };
+      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+    })();
+    return;
+  }
+  const clearimgs=e.target.closest('[data-action="clearimgs"]');
+  if(clearimgs){
+    const cid=clearimgs.dataset.cid,idx=parseInt(clearimgs.dataset.idx);
+    if(!confirm('清除所有相關影像？'))return;
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    c.images=[];markDirty();
+    const el=document.getElementById('imgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
+  const clearmammoimgs=e.target.closest('[data-action="clearmammoimgs"]');
+  if(clearmammoimgs){
+    const cid=clearmammoimgs.dataset.cid,idx=parseInt(clearmammoimgs.dataset.idx);
+    if(!confirm('清除乳攝影像？'))return;
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    if(c.mammo)c.mammo.images=[];markDirty();
+    const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildMammoImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
   const del=e.target.closest('[data-action="delimg"]');
   if(del){delImg(del.dataset.cid,parseInt(del.dataset.idx),parseInt(del.dataset.imgidx));return;}
   const addmammo=e.target.closest('[data-action="addmammoimg"]');
