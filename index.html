@@ -1132,7 +1132,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.7.1';
+const VERSION='V3.7.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2252,7 +2252,6 @@ function renderEditor(){
   (()=>{const sel=document.getElementById('f-loc');sel.innerHTML='<option value="">— 選擇地點 —</option>'+LOCS.map(l=>'<option'+(l===m.loc?' selected':'')+'>'+escA(l)+'</option>').join('');})();
   // Zoom fields
   // Auto-fill pwd based on meeting date
-  const autoPwd=zoomPwdByMonth(m.date||'');
   const autoPwd=zoomPwdByMonth(m.date||'');
   const autoUrl='';
   document.getElementById('f-zpwd').value=m.zoom?.pwd||autoPwd;
