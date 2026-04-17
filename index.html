@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.5.2';
+const VERSION='V3.6.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1237,6 +1237,7 @@ function getMemberStr(ca){return mkStr(ca.memberKeys)||ca.members||''}
 let S={user:null,meeting:null,cids:[],conflict:null,viewMode:false,meetingMode:'record'};
 let folderHandle=null;
 let pathImgFolderHandle=null;
+let imgFolderHandle=null;
 
 /* ════ Library loader (jsdelivr confirmed) ════ */
 const CDN_BASE='https://cdn.jsdelivr.net/npm/';
@@ -2480,15 +2481,40 @@ function updMammo(cid,i,key,val){
 }
 function buildMammoImgArea(cid,i,d){
   const imgs=(d.mammo&&d.mammo.images)||[];
-  let h='';
-  imgs.forEach(function(img,j){
-    const safe=escA(img.dataUrl);
-    const cap=escA(img.caption||img.name||'');
-    h+='<div class="case-img-wrap"><img src="'+safe+'" title="'+cap+'" data-action="viewimg" data-src="'+safe+'"><button class="case-img-del" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'+(cap?'<div class="img-caption">'+cap+'</div>':'')+'</div>';
-  });
-  if(imgs.length<2){
-    h+='<div class="case-img-add" data-action="addmammoimg" data-cid="'+cid+'" data-idx="'+i+'"><span style="font-size:18px;line-height:1">+</span><span>新增乳攝影像</span></div>';
+  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
+  let h='<div style="display:flex;flex-direction:column;gap:8px">';
+  if(imgs.length){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    imgs.forEach(function(img,j){
+      const cap=escA(img.caption||img.name||'');
+      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
+      if(img.dataUrl){
+        const safe=escA(img.dataUrl);
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
+          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
+          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      } else {
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
+          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
+          +'<span style="font-size:20px">🖼</span>'
+          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
+          +'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      }
+    });
+    h+='</div>';
   }
+  if(imgs.length<2){
+    h+='<div style="display:flex;gap:8px">'
+      +'<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="mammo" data-max="2" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇影像資料夾')+'</button>';
+    if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearmammoimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除</button>';
+    h+='</div>';
+  }
+  h+='</div>';
   return h;
 }
 
@@ -2544,25 +2570,40 @@ function buildPathImgArea(cid,i,d){
 }
 function buildImgArea(cid,i,d){
   const imgs=d.images||[];
-  // Use data attributes so events survive innerHTML serialization
-  let h='<div class="case-imgs" id="imgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
-  imgs.forEach((img,j)=>{
-    const safe=escA(img.dataUrl);
-    const cap=escA(img.caption||'');
-    h+='<div class="case-img-wrap">'
-      +'<img src="'+safe+'" title="'+escA(img.caption||img.name||'')+'" data-action="viewimg" data-src="'+safe+'">'
-      +'<button class="case-img-del" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-      +(cap?'<div class="img-caption">'+cap+'</div>':'')
-      +'</div>';
-  });
-  if(imgs.length<5){
-    h+='<div class="case-img-add" data-action="addimg" data-cid="'+cid+'" data-idx="'+i+'">'
-      +'<span style="font-size:18px;line-height:1">+</span><span>新增影像</span>'
-      +'</div>';
+  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
+  let h='<div id="imgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'" style="display:flex;flex-direction:column;gap:8px">';
+  if(imgs.length){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    imgs.forEach(function(img,j){
+      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
+      if(img.dataUrl){
+        const safe=escA(img.dataUrl);
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
+          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
+          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      } else {
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
+          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
+          +'<span style="font-size:20px">🖼</span>'
+          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
+          +'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      }
+    });
+    h+='</div>';
   }
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  if(imgs.length<5)h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="images" data-max="5" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇影像資料夾')+'</button>';
+  if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
+  h+='</div>';
   h+='</div>';
   return h;
 }
+
 function viewImg(dataUrl){
   const m=document.getElementById('img-modal');
   document.getElementById('img-modal-img').src=dataUrl;
@@ -3599,7 +3640,7 @@ async function genHTMLSlides(){
         +'</section>');
       // Images - separate slide after case slide
       const imgHtml=(c.images||[]).length
-        ?(c.images||[]).map(img=>'<div class="img-wrap"><img src="'+img.dataUrl+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>').join(''):'';
+        ?(c.images||[]).map(img=>'<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>').join(''):'';
       if(imgHtml){
         slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
           +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
@@ -3608,7 +3649,7 @@ async function genHTMLSlides(){
       }
       // Mammo slide (breast only, 4:6 layout)
       if(cid==='breast'&&c.mammo&&(c.mammo.report||(c.mammo.images&&c.mammo.images.length))){
-        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+img.dataUrl+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
+        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
         const mDate=c.mammo.date?'<div style="font-size:.85em;opacity:.65;margin-bottom:.6vh">'+escA(c.mammo.date)+'</div>':'';
         const mRep=escA(c.mammo.report||'').replace(/\n/g,'<br>');
         slides.push('<section class="slide mammo-slide" style="--ca:'+caColor+';">'
@@ -4846,8 +4887,92 @@ document.addEventListener('click',function(e){
     if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
     return;
   }
-  const add=e.target.closest('[data-action="addimg"]');
-  if(add){addImg(add.dataset.cid,parseInt(add.dataset.idx));return;}
+  const pickimgfolder=e.target.closest('[data-action="pickimgfolder"]');
+  if(pickimgfolder){
+    const cid=pickimgfolder.dataset.cid,idx=parseInt(pickimgfolder.dataset.idx);
+    const type=pickimgfolder.dataset.type||'images',maxN=parseInt(pickimgfolder.dataset.max)||5;
+    (async function(){
+      try{
+        if(!imgFolderHandle) imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+        const arr=type==='mammo'?(c.mammo=c.mammo||{date:'',report:'',images:[]},c.mammo.images=c.mammo.images||[],c.mammo.images):c.images=(c.images||[]);
+        const files=[];
+        for await(const entry of imgFolderHandle.values()){
+          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
+        }
+        files.sort(function(a,b){return a.name.localeCompare(b.name);});
+        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
+        const existing=new Set(arr.map(function(x){return x.name;}));
+        const list=files.map(function(f){
+          var baseName=f.name.replace(/\.[^.]+$/,'');
+          var ext=f.name.split('.').pop().toUpperCase();
+          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background='rgba(0,0,0,.04)'" onmouseout="this.style.background=''">'
+            +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
+            +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(baseName)+'</span>'
+            +'<span style="font-size:10px;color:#aaa;flex-shrink:0">'+escA(ext)+'</span>'
+            +'</label>';
+        }).join('');
+        const overlay=document.createElement('div');
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+        overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
+          +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取影像</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔　最多 '+maxN+' 張</div>'
+          +'<div style="display:flex;gap:6px;align-items:center">'
+          +'<button id="imgfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
+          +'<button id="imgfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
+          +'<span id="imgfolder-count" style="font-size:11px;color:#888;margin-left:4px"></span>'
+          +'</div>'
+          +'<div id="imgfolder-list" style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px;padding:4px;min-height:120px;max-height:50vh">'+list+'</div>'
+          +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #eee">'
+          +'<button id="imgfolder-cancel" class="btn btn-b btn-sm">取消</button>'
+          +'<button id="imgfolder-change" class="btn btn-b btn-sm">換資料夾</button>'
+          +'<button id="imgfolder-ok" class="btn btn-a btn-sm">確認</button>'
+          +'</div></div>';
+        document.body.appendChild(overlay);
+        function updateCnt(){var n=overlay.querySelectorAll('#imgfolder-list input:checked').length;document.getElementById('imgfolder-count').textContent=n+' 張已選';}
+        overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.onchange=updateCnt;});
+        updateCnt();
+        document.getElementById('imgfolder-selall').onclick=function(){overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.checked=true;});updateCnt();};
+        document.getElementById('imgfolder-clrall').onclick=function(){overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.checked=false;});updateCnt();};
+        document.getElementById('imgfolder-cancel').onclick=function(){document.body.removeChild(overlay);};
+        document.getElementById('imgfolder-change').onclick=async function(){
+          try{imgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
+          document.body.removeChild(overlay);
+          const elR=document.getElementById('imgs-'+cid+'-'+idx)||document.getElementById('mammo-imgs-'+cid+'-'+idx);
+          if(elR){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elR.replaceWith(tmp.firstElementChild);}
+        };
+        document.getElementById('imgfolder-ok').onclick=function(){
+          const checked=[...overlay.querySelectorAll('#imgfolder-list input:checked')].map(function(x){return x.value;}).slice(0,maxN);
+          if(type==='mammo'){c.mammo.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});}
+          else{c.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});}
+          markDirty();document.body.removeChild(overlay);
+          const elOk=document.getElementById('imgs-'+cid+'-'+idx)||document.getElementById('mammo-imgs-'+cid+'-'+idx);
+          if(elOk){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elOk.replaceWith(tmp.firstElementChild);}
+        };
+      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+    })();
+    return;
+  }
+  const clearimgs=e.target.closest('[data-action="clearimgs"]');
+  if(clearimgs){
+    const cid=clearimgs.dataset.cid,idx=parseInt(clearimgs.dataset.idx);
+    if(!confirm('清除所有相關影像？'))return;
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    c.images=[];markDirty();
+    const el=document.getElementById('imgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
+  const clearmammoimgs=e.target.closest('[data-action="clearmammoimgs"]');
+  if(clearmammoimgs){
+    const cid=clearmammoimgs.dataset.cid,idx=parseInt(clearmammoimgs.dataset.idx);
+    if(!confirm('清除乳攝影像？'))return;
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    if(c.mammo)c.mammo.images=[];markDirty();
+    const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildMammoImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
   const del=e.target.closest('[data-action="delimg"]');
   if(del){delImg(del.dataset.cid,parseInt(del.dataset.idx),parseInt(del.dataset.imgidx));return;}
   const addmammo=e.target.closest('[data-action="addmammoimg"]');
