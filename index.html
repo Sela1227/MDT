@@ -1119,7 +1119,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.4.1';
+const VERSION='V3.4.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2506,29 +2506,39 @@ function compressImage(dataUrl,maxW,maxH,quality,cb){
 }
 function buildPathImgArea(cid,i,d){
   const imgs=(d.pathologyImages||[]);
-  let h='<div class="case-imgs" id="pathimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
-  imgs.forEach(function(img,j){
-    const cap=escA(img.caption||img.name||'');
-    if(img.dataUrl){
-      const safe=escA(img.dataUrl);
-      h+='<div class="case-img-wrap"><img src="'+safe+'" title="'+cap+'" data-action="viewimg" data-src="'+safe+'">'
-        +'<button class="case-img-del" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-        +(cap?'<div class="img-caption">'+cap+'</div>':'')+'</div>';
-    } else {
-      // Folder-ref only (no base64 stored)
-      h+='<div class="case-img-wrap" style="background:rgba(0,0,0,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:80px;padding:8px;border-radius:4px;">'
-        +'<span style="font-size:22px">🔬</span>'
-        +'<div style="font-size:10px;text-align:center;color:var(--fog);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+cap+'</div>'
-        +'<button class="case-img-del" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-        +'</div>';
-    }
-  });
-  const folderLabel=pathImgFolderHandle?'📁 '+escA(pathImgFolderHandle.name):'';
-  h+='<div style="display:flex;flex-direction:column;gap:6px;padding:6px 0;">';
-  h+='<div class="case-img-add" data-action="addpathimg" data-cid="'+cid+'" data-idx="'+i+'">'
-    +'<span style="font-size:18px;line-height:1">+</span><span>上傳影像</span></div>';
-  h+='<div class="case-img-add" data-action="pickpathfolder" data-cid="'+cid+'" data-idx="'+i+'" style="background:rgba(80,130,180,.15)">'
-    +'<span style="font-size:16px">📂</span><span>'+(pathImgFolderHandle?'從資料夾選取 ('+folderLabel+')':'選擇病理影像資料夾')+'</span></div>';
+  const folderName=pathImgFolderHandle?escA(pathImgFolderHandle.name):'';
+  let h='<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0" id="pathimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
+  // Image tiles row
+  if(imgs.length){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    imgs.forEach(function(img,j){
+      const cap=escA(img.caption||img.name||'');
+      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
+      if(img.dataUrl){
+        const safe=escA(img.dataUrl);
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
+          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover;"></div>'
+          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      } else {
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
+          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
+          +'<span style="font-size:20px">🔬</span>'
+          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
+          +'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      }
+    });
+    h+='</div>';
+  }
+  // Action buttons row
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  h+='<button class="btn btn-b btn-sm" data-action="addpathimg" data-cid="'+cid+'" data-idx="'+i+'">＋ 上傳影像</button>';
+  h+='<button class="btn btn-b btn-sm" data-action="pickpathfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
+  if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearpathimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
   h+='</div>';
   h+='</div>';
   return h;
@@ -2607,7 +2617,7 @@ ${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gen
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body" style="display:none">
-${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:#2a3540;font-weight:700">'+escA(p.date)+'：</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(d.pathologyImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">病理影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.pathologyImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button onclick="viewImg('${escA(img.dataUrl)}')" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:#2a3540;font-weight:700">'+escA(p.date)+'：</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(d.pathologyImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">病理影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.pathologyImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewpathimg" data-name="${escA(img.name||'')} " data-dataurl="${escA(img.dataUrl||'')} " style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 ${(()=>{
   const mkArr=(d.markers||[]);
   if(!mkArr.length)return '';
@@ -4729,24 +4739,35 @@ document.addEventListener('click',function(e){
         if(!files.length){alert('資料夾內沒有找到圖檔');return;}
         // Build selection dialog
         const existing=new Set(c.pathologyImages.map(function(x){return x.name;}));
+        // Sort files alphabetically
+        files.sort(function(a,b){return a.name.localeCompare(b.name);});
         const list=files.map(function(f){
-          return '<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">'
-            +'<input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
-            +'<span style="font-size:13px">'+escA(f.name)+'</span></label>';
+          return '<label style="display:flex;align-items:center;gap:10px;padding:6px 8px;cursor:pointer;border-radius:3px;transition:background .1s" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'            +'<input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
+            +'<span style="font-size:12px;color:#333;flex:1;word-break:break-all">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'            +'<span style="font-size:10px;color:#aaa">'+escA(f.name.split('.').pop().toUpperCase())+'</span>'            +'</label>';
         }).join('');
         const overlay=document.createElement('div');
         overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-        overlay.innerHTML='<div style="background:#fff;border-radius:6px;padding:20px;width:min(480px,92vw);max-height:80vh;display:flex;flex-direction:column;gap:12px">'
-          +'<div style="font-weight:700;font-size:15px">選取病理影像</div>'
-          +'<div style="font-size:12px;color:#666">資料夾：'+escA(pathImgFolderHandle.name)+'</div>'
-          +'<div id="pathfolder-list" style="overflow-y:auto;flex:1;border:1px solid #ddd;border-radius:3px;padding:8px">'+list+'</div>'
-          +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+        overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
+          +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取病理影像</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(pathImgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
+          +'<div style="display:flex;gap:6px;align-items:center">'
+          +'<button id="pathfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
+          +'<button id="pathfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
+          +'<span id="pathfolder-count" style="font-size:11px;color:#888;margin-left:4px"></span>'
+          +'</div>'
+          +'<div id="pathfolder-list" style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px;padding:4px;min-height:120px;max-height:50vh">'+list+'</div>'
+          +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #eee">'
           +'<button id="pathfolder-cancel" class="btn btn-b btn-sm">取消</button>'
           +'<button id="pathfolder-change" class="btn btn-b btn-sm">換資料夾</button>'
           +'<button id="pathfolder-ok" class="btn btn-a btn-sm">確認</button>'
           +'</div></div>';
         document.body.appendChild(overlay);
         document.getElementById('pathfolder-cancel').onclick=function(){document.body.removeChild(overlay);};
+        function updateCount(){var n=overlay.querySelectorAll('#pathfolder-list input:checked').length;document.getElementById('pathfolder-count').textContent=n+' 張已選';}
+        overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.onchange=updateCount;});
+        updateCount();
+        document.getElementById('pathfolder-selall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=true;});updateCount();};
+        document.getElementById('pathfolder-clrall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=false;});updateCount();};
         document.getElementById('pathfolder-change').onclick=async function(){
           try{pathImgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
           document.body.removeChild(overlay);
@@ -4793,6 +4814,27 @@ document.addEventListener('click',function(e){
       });
     };
     document.body.appendChild(inp);inp.click();document.body.removeChild(inp);return;
+  }
+  const clearpathimgs=e.target.closest('[data-action="clearpathimgs"]');
+  if(clearpathimgs){
+    const cid=clearpathimgs.dataset.cid,idx=parseInt(clearpathimgs.dataset.idx);
+    if(!confirm('清除所有病理影像？'))return;
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    c.pathologyImages=[];markDirty();
+    const el=document.getElementById('pathimgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
+  const previewpathimg=e.target.closest('[data-action="previewpathimg"]');
+  if(previewpathimg){
+    const name=(previewpathimg.dataset.name||'').trim();
+    const dataUrl=(previewpathimg.dataset.dataurl||'').trim();
+    if(dataUrl){viewImg(dataUrl);return;}
+    if(name&&pathImgFolderHandle){
+      pathImgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
+        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
+      }).catch(function(){alert('無法讀取影像：'+name);});
+    }else{alert(name?'請先選擇資料夾':'無法預覽');} return;
   }
   const delpathimg=e.target.closest('[data-action="delpathimg"]');
   if(delpathimg){
