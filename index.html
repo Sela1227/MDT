@@ -689,6 +689,7 @@ textarea{resize:vertical}
           <button class="btn btn-b btn-sm" onclick="calPrev()" style="padding:5px 10px">&#8249;</button>
           <button class="btn btn-b btn-sm" onclick="calToday()" style="padding:5px 10px">本月</button>
           <button class="btn btn-b btn-sm" onclick="calNext()" style="padding:5px 10px">&#8250;</button>
+          <button class="btn btn-a btn-sm" onclick="openNewModal()" style="padding:5px 12px">+ 新建</button>
         </div>
       </div>
       <div class="wrap">
@@ -739,7 +740,7 @@ textarea{resize:vertical}
               <div class="fg"><label>會議日期</label><input type="date" id="f-date" oninput="onDateChange()"></div>
               <div class="fg"><label>時間</label><select id="f-time"><option value="07:30-08:30">07:30-08:30　早會</option><option value="12:30-13:30">12:30-13:30　午會</option></select></div>
               <div class="fg full"><label>地點</label><select id="f-loc"><option value="">— 選擇地點 —</option></select></div>
-              <div class="fg"><label>視訊密碼 <span style="font-size:10px;color:var(--textlt);font-weight:400">（依月份自動）</span></label><div id="f-zpwd-display" style="padding:8px 10px;font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px"></div><input type="hidden" id="f-zpwd"></div><div class="fg full"><label>會議連結</label><input type="text" id="f-zurl" placeholder="https://zoom.us/j/..." oninput="onZoomUrlChange(this.value)" style="font-size:12px"></div>
+              <div class="fg"><label>Zoom ID 後兩碼</label><div style="display:flex;align-items:center;gap:4px"><span style="font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px;padding:6px 10px;white-space:nowrap">725-616-60</span><input type="text" id="f-zsuffix" maxlength="2" placeholder="00" style="width:52px;font-size:15px;font-weight:600;text-align:center;letter-spacing:.1em" oninput="onZoomSuffixChange(this.value)"></div><input type="hidden" id="f-zid"></div><div class="fg"><label>視訊密碼 <span style="font-size:10px;color:var(--textlt);font-weight:400">（依月份自動）</span></label><div id="f-zpwd-display" style="padding:8px 10px;font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px"></div><input type="hidden" id="f-zpwd"></div><div class="fg full"><label>會議連結 <span style="font-size:10px;color:var(--textlt);font-weight:400">（可直接貼上）</span></label><input type="text" id="f-zurl" placeholder="https://zoom.us/j/..." oninput="onZoomUrlChange(this.value)" style="font-size:12px"></div>
               <div class="fg full"><label>聯絡人 <span style="font-size:10px;color:var(--textlt);font-weight:400">自動帶入</span></label><div id="f-contact" style="padding:8px 10px;font-size:13px;color:var(--fog);background:var(--surface);border:1px solid var(--blt);border-radius:2px"></div></div>
             </div>
           </div>
@@ -778,24 +779,32 @@ textarea{resize:vertical}
         <div class="section output-section">
           <div class="sec-hdr"><span class="sec-title">產出</span><span class="sec-sub">已完稿，可匯出</span></div>
           <div class="sec-body">
-            <div class="brow">
+            <!-- 資料夾授權：優先顯示 -->
+            <div id="folder-status-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"></div>
+            <!-- 投影片分享 -->
+            <div class="brow" style="margin-bottom:4px">
               <button class="btn btn-a" onclick="doOutput('line')">LINE 通知</button>
-              <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
-              <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
               <button class="btn btn-b" id="btn-share-slides" onclick="shareHTMLSlides()" title="上傳至 GitHub Pages 產生可分享連結">HTML 分享</button>
-              <div id="slide-share-link" style="display:contents"></div>
-              <button class="btn btn-b" onclick="printMeeting()">列印 / PDF</button>
+              <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
+            </div>
+            <div id="slide-share-link"></div>
+            <!-- 資料匯入匯出 -->
+            <div class="brow" style="margin-bottom:4px">
               <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-b" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
               <button class="btn btn-b" onclick="document.getElementById('json-import-input').click()" title="匯入 AI 產出的 JSON 檔，支援多筆多癌別">JSON 批次匯入</button>
               <button class="btn btn-b" onclick="exportCaseJSON()" title="將本次會議所有病人資料匯出為 JSON 檔，可再次匯入">JSON 個案匯出</button>
-              <button class="btn btn-b" onclick="exportMeetingJSON()" title="匯出完整會議（含追蹤/醫療小組/特殊議程/會議資訊），可用備份還原功能匯入">JSON 完整會議匯出</button>
-              <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
-              <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
+              <button class="btn btn-b" onclick="exportMeetingJSON()" title="匯出完整會議（含追蹤/醫療小組/特殊議程/會議資訊），可用備份還原功能匯入">JSON 完整匯出</button>
+            </div>
+            <!-- AI 工具 -->
+            <div class="brow">
+              <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
               <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
             </div>
+            <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
+            <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
             <div class="lib-status" id="lib-status"></div>
             <div id="out-area" style="display:none">
               <div class="outbox" id="out-text"></div>
@@ -1138,7 +1147,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.7.5';
+const VERSION='V3.9.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1255,7 +1264,6 @@ function getMemberStr(ca){return mkStr(ca.memberKeys)||ca.members||''}
 /* ════ State ════ */
 let S={user:null,meeting:null,cids:[],conflict:null,viewMode:false,meetingMode:'record'};
 let folderHandle=null;
-let pathImgFolderHandle=null;
 let imgFolderHandle=null;
 
 /* ════ Library loader (jsdelivr confirmed) ════ */
@@ -1488,6 +1496,9 @@ function addStruct(cid,i,field){
     </div>`;
   }
   if(div.firstElementChild)container.appendChild(div.firstElementChild);
+  // Auto-focus first input in new row
+  const fi=div.firstElementChild?.querySelector('input,textarea,select');
+  if(fi)setTimeout(function(){fi.focus();},50);
 }
 
 
@@ -1667,7 +1678,7 @@ function calCreateMtgOnDate(cid,date){
   S.viewMode=false;S.meetingMode='record';
   setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
-  renderEditor();showView('meeting');
+  renderEditor();updateFolderStatusBar();showView('meeting');
 }
 
 function calCreateMtg(cid,date){
@@ -1692,6 +1703,7 @@ function migrateCaseFields(){
     (S.meeting.sections[cid].cases||[]).forEach(function(c){
       if(c.familyHistory===undefined)c.familyHistory='';
       if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
+      if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
       if(!c.mammo||typeof c.mammo!=='object')c.mammo={date:'',report:'',images:[]};
       if(!Array.isArray(c.mammo.images))c.mammo.images=[];
       if(!Array.isArray(c.markers))c.markers=[];
@@ -1830,7 +1842,21 @@ function renderHistory(){
 
 
 function closeNewModal(){document.getElementById('new-modal').classList.remove('open')}
-function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;S.viewMode=false;renderEditor();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
+function openNewModal(preDate){
+  const el=document.getElementById('nm-date');
+  if(el)el.value=preDate||'';
+  // Populate cancer select with user's cancers
+  const sel=document.getElementById('nm-cancer');
+  if(sel&&S.user){
+    const cancers=Object.values(CFG).filter(ca=>!ca.role||ca.role==='first');
+    const mine=cancers.filter(ca=>S.user.cancers.includes(ca.id));
+    const others=cancers.filter(ca=>!S.user.cancers.includes(ca.id));
+    sel.innerHTML=[...mine,...others].map(ca=>'<option value="'+ca.id+'">'+escA(ca.name+(ca.partner?'+'+( CFG[ca.partner]?.name||''):''))+'</option>').join('');
+  }
+  document.getElementById('new-modal').classList.add('open');
+  setTimeout(function(){const d=document.getElementById('nm-date');if(d)d.focus();},100);
+}
+function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;S.viewMode=false;renderEditor();updateFolderStatusBar();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
 function openFromSb(cid){
   const cids=pairIds(cid);S.cids=cids;setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -1906,7 +1932,7 @@ function startNewMtgForCancer(){
     if(day<=dim)S.meeting.date=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
   }
   S.viewMode=false;S.meetingMode='schedule';
-  renderEditor();showView('meeting');
+  renderEditor();updateFolderStatusBar();showView('meeting');
 }
 async function _loadMtg(id){
   const local=loadLocal(id);if(!local){alert('找不到會議資料');return null}
@@ -1918,7 +1944,7 @@ async function openMtgById(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.viewMode=!editMode;S.meetingMode='record';
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
-  renderEditor();showView('meeting');
+  renderEditor();updateFolderStatusBar();showView('meeting');
 }
 async function openMtgSmart(id){
   // Decide mode: no cases → edit; has cases → view
@@ -1931,17 +1957,17 @@ async function openMtgSchedule(id){
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.viewMode=false;S.meetingMode='schedule';
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
-  renderEditor();showView('meeting');
+  renderEditor();updateFolderStatusBar();showView('meeting');
 }
 async function openMtgRecord(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.viewMode=!editMode;S.meetingMode='record';
   if(m.cids.length>1)m.cids.forEach(cid=>{const s=loadSec(cid,m.date);if(s)m.sections[cid]=s});
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
-  renderEditor();showView('meeting');
+  renderEditor();updateFolderStatusBar();showView('meeting');
 }
 function showConflict(c){S.conflict=c;const fmt=m=>`<div class="csr"><span class="csr-k">版本</span><span class="csr-v">v${m.version}</span></div><div class="csr"><span class="csr-k">儲存者</span><span class="csr-v">${m.savedBy||'—'}</span></div><div class="csr"><span class="csr-k">時間</span><span class="csr-v">${m.savedAt?new Date(m.savedAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):'—'}</span></div>`;document.getElementById('cf-shared').innerHTML=`<div class="csl ${c.newerIs==='shared'?'newer':''}">共享資料夾 ${c.newerIs==='shared'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.shared)}`;document.getElementById('cf-local').innerHTML=`<div class="csl ${c.newerIs==='local'?'newer':''}">本機備份 ${c.newerIs==='local'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.local)}`;document.getElementById('cf-note').textContent=`建議使用 v${Math.max(c.shared.version,c.local.version)}`;document.getElementById('cf-modal').classList.add('open')}
-async function resolveConflict(choice){document.getElementById('cf-modal').classList.remove('open');const winner=choice==='shared'?S.conflict.shared:S.conflict.local;saveLocal(winner);await saveShared(winner);S.meeting=winner;S.cids=winner.cids;setSbActive(winner.cids.find(c=>S.user.cancers.includes(c)));renderEditor();showView('meeting');S.conflict=null}
+async function resolveConflict(choice){document.getElementById('cf-modal').classList.remove('open');const winner=choice==='shared'?S.conflict.shared:S.conflict.local;saveLocal(winner);await saveShared(winner);S.meeting=winner;S.cids=winner.cids;setSbActive(winner.cids.find(c=>S.user.cancers.includes(c)));renderEditor();updateFolderStatusBar();showView('meeting');S.conflict=null}
 
 /* ════ Settings ════ */
 function showStab(id,el){document.querySelectorAll('.stab').forEach(s=>s.classList.remove('on'));document.querySelectorAll('#st-tabs .tab').forEach(n=>n.classList.remove('active'));document.getElementById('stab-'+id).classList.add('on');el.classList.add('active');if(id==='examtypes')renderExamTypesTab();}
@@ -1979,6 +2005,15 @@ function zoomPwdByMonth(dateStr){
   if([2,5,8,11].includes(mo))return'2609926';
   if([3,6,9,12].includes(mo))return'6222131';
   return'';
+}
+function onZoomSuffixChange(suffix){
+  const dateStr=document.getElementById('f-date')?.value||'';
+  const pwd=zoomPwdByMonth(dateStr);
+  const fullId='725-616-60'+suffix.replace(/\D/g,'').slice(0,2);
+  document.getElementById('f-zid').value=fullId;
+  document.getElementById('f-zpwd').value=pwd;
+  document.getElementById('f-zpwd-display').textContent=pwd||'—';
+  if(S.meeting){if(!S.meeting.zoom)S.meeting.zoom={id:'',pwd:'',url:''};S.meeting.zoom.id=fullId;S.meeting.zoom.pwd=pwd;markDirty();}
 }
 function onZoomUrlChange(url){
   if(S.meeting){if(!S.meeting.zoom)S.meeting.zoom={id:'',pwd:'',url:''};S.meeting.zoom.url=url;markDirty();}
@@ -2257,12 +2292,14 @@ function renderEditor(){
   // Location: dropdown
   (()=>{const sel=document.getElementById('f-loc');sel.innerHTML='<option value="">— 選擇地點 —</option>'+LOCS.map(l=>'<option'+(l===m.loc?' selected':'')+'>'+escA(l)+'</option>').join('');})();
   // Zoom fields
-  // Auto-fill pwd based on meeting date
   const autoPwd=zoomPwdByMonth(m.date||'');
-  const autoUrl='';
-  document.getElementById('f-zpwd').value=m.zoom?.pwd||autoPwd;
+  const zoomSuffix=(m.zoom?.id||'').replace('725-616-60','').replace(/\D/g,'').slice(0,2);
+  const zsEl=document.getElementById('f-zsuffix');if(zsEl)zsEl.value=zoomSuffix;
+  if(document.getElementById('f-zid'))document.getElementById('f-zid').value=m.zoom?.id||'';
   const pwdDis=document.getElementById('f-zpwd-display');if(pwdDis)pwdDis.textContent=m.zoom?.pwd||autoPwd||'—';
+  if(document.getElementById('f-zpwd'))document.getElementById('f-zpwd').value=m.zoom?.pwd||autoPwd;
   const urlEl=document.getElementById('f-zurl');if(urlEl)urlEl.value=m.zoom?.url||'';
+
   // Contact: auto-display (not editable)
   const owners2=[];
   (S.cids||[]).forEach(cid=>{
@@ -2326,7 +2363,8 @@ function renderEditor(){
   }
 }
 function onDateChange(){document.getElementById('mtg-sub').textContent=rocDate(document.getElementById('f-date').value)}
-function readForm(){const m=S.meeting;m.date=document.getElementById('f-date').value;m.time=document.getElementById('f-time').value;m.loc=document.getElementById('f-loc').value;m.zoom.id='';
+function readForm(){const m=S.meeting;m.date=document.getElementById('f-date').value;m.time=document.getElementById('f-time').value;m.loc=document.getElementById('f-loc').value;const _zsuf=(document.getElementById('f-zsuffix')?.value||'').replace(/\D/g,'').slice(0,2);
+  m.zoom.id='725-616-60'+_zsuf;
   m.zoom.pwd=document.getElementById('f-zpwd')?.value||zoomPwdByMonth(m.date||'');
   m.zoom.url=document.getElementById('f-zurl')?.value||'';// contact is auto-set, read from hidden field
   m.contact=(document.getElementById('f-contact')?.textContent||'').trim()||m.contact||'';m.title=mtgTitle(m.cids)}
@@ -2511,12 +2549,10 @@ function buildMammoImgArea(cid,i,d){
     });
     h+='</div>';
   }
-  if(imgs.length<2){
-    h+='<div style="display:flex;gap:8px">'
-      +'<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="mammo" data-max="2" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇影像資料夾')+'</button>';
-    if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearmammoimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除</button>';
-    h+='</div>';
-  }
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="mammo" data-max="2" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
+  if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearmammoimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除</button>';
+  h+='</div>';
   h+='</div>';
   return h;
 }
@@ -2533,9 +2569,45 @@ function compressImage(dataUrl,maxW,maxH,quality,cb){
   };
   img.src=dataUrl;
 }
+
+function buildSurgicalImgArea(cid,i,d){
+  const imgs=(d.surgicalImages||[]);
+  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
+  let h='<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0" id="surgimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
+  if(imgs.length){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    imgs.forEach(function(img,j){
+      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
+      if(img.dataUrl){
+        const safe=escA(img.dataUrl);
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
+          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
+          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delsurgimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      } else {
+        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
+          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
+          +'<span style="font-size:20px">🔬</span>'
+          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
+          +'</div>'
+          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delsurgimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
+          +'</div>';
+      }
+    });
+    h+='</div>';
+  }
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  h+='<button class="btn btn-b btn-sm" data-action="picksurgfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
+  if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearsurgimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
+  h+='</div>';
+  h+='</div>';
+  return h;
+}
 function buildPathImgArea(cid,i,d){
   const imgs=(d.pathologyImages||[]);
-  const folderName=pathImgFolderHandle?escA(pathImgFolderHandle.name):'';
+  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
   let h='<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0" id="pathimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
   // Image tiles row
   if(imgs.length){
@@ -2600,7 +2672,7 @@ function buildImgArea(cid,i,d){
     h+='</div>';
   }
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  if(imgs.length<5)h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="images" data-max="5" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇影像資料夾')+'</button>';
+  if(imgs.length<5)h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="images" data-max="5" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
   if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
   h+='</div>';
   h+='</div>';
@@ -2635,8 +2707,11 @@ function drSelDept(cid,type,i,val,idx){
 function onDrDeptChange(uid_str,cid,type,i,idx){
   const dept=document.getElementById(uid_str+'_d').value;
   const drSel=document.getElementById(uid_str+'_n');
-  drSel.innerHTML=`<option value="">— 醫師 —</option>`+(dept?getDrsByDept(dept):[]).map(n=>`<option>${escA(n)}</option>`).join('');
-  updDr(cid,type,i,idx,'');
+  const drs=dept?getDrsByDept(dept):[];
+  drSel.innerHTML=`<option value="">— 醫師 —</option>`+drs.map(n=>`<option>${escA(n)}</option>`).join('');
+  // Auto-select if only one doctor in this department
+  if(drs.length===1){drSel.value=drs[0];updDr(cid,type,i,idx,drs[0]);}
+  else{updDr(cid,type,i,idx,'');}
 }
 function updDr(cid,type,i,idx,val){
   ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;
@@ -2792,7 +2867,7 @@ function caseHTML(cid,i,d){
   const examRows=exams.map((ex,ei)=>`
     <div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="其他"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>
+        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${ei},'${cid}')">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="__other__"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>${!EXAM_TYPES.includes(ex.name)?`<input placeholder="檢查類型" value="${escA(ex.name)}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:100px;font-size:12px">`:``}
         <input type="date" value="${escA(ex.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" style="margin-left:auto">×</button>
       </div>
@@ -2827,7 +2902,7 @@ function caseHTML(cid,i,d){
   const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
   const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
-  return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
+  return`<div class="casecard" id="cc-${cid}-cases-${i}">
 <div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 
@@ -2880,6 +2955,10 @@ function caseHTML(cid,i,d){
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
 
+  <div class="fg full"><div class="field-hdr"><label>手術照片</label></div>
+    ${buildSurgicalImgArea(cid,i,d)}
+  </div>
+
   <div class="fsec">討論</div>
   <div class="fg full"><label>討論要點</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
   <div class="fg full"><label>討論項目</label><div class="trow">${topicChips}</div></div>
@@ -2900,7 +2979,7 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups'){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups'){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
@@ -2918,10 +2997,17 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],markers:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
     specialHTML(cid,i,blank);
-  const newCard=div.firstElementChild;cont.appendChild(newCard);}
+  const newCard=div.firstElementChild;cont.appendChild(newCard);
+  // Scroll to new card and focus first input
+  setTimeout(function(){
+    newCard.scrollIntoView({behavior:'smooth',block:'nearest'});
+    const fi=newCard.querySelector('input:not([type="date"]),textarea');
+    if(fi)fi.focus();
+  },80);
+}
 function upd(cid,type,i,field,val){
   ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;item[field]=val;markDirty();const card=document.getElementById('cc-'+cid+'-'+type+'-'+i);if(!card)return;if(field==='name'){card.querySelector('.cnm').textContent=val?maskName(val):'姓名'}if(field==='chartNo')card.querySelector('.cno').textContent=val||'病歷號';if(field==='title')card.querySelector('.cnm').textContent=val||'議程項目'}
 function delItem(cid,type,i){
@@ -2942,7 +3028,7 @@ function delItem(cid,type,i){
 }
 
 
-const GH_REPO='sela1227/MDT';
+const GH_REPO='Sela1227/MDT-slides';
 const GH_BRANCH='main';
 const GH_SLIDES_PATH='slides';
 
@@ -2987,7 +3073,13 @@ async function shareHTMLSlides(){
     showSaveToast('已上傳！佈署約 3 分鐘後生效');
     // Show link in output area
     const linkEl=document.getElementById('slide-share-link');
-    if(linkEl){linkEl.innerHTML='<div style="margin-top:8px;padding:8px 12px;background:var(--surface);border-radius:4px;font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--textlt)">分享連結：</span><a href="'+escA(shareUrl)+'" target="_blank" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--acc)">'+escA(shareUrl)+'</a><button onclick="navigator.clipboard.writeText('+JSON.stringify(shareUrl)+').then(()=>this.textContent=\'✓ 已複製\').catch(()=>{})" style="flex-shrink:0;font-size:11px;padding:2px 8px;border:1px solid var(--border);border-radius:2px;cursor:pointer;background:none">複製</button><button onclick="this.closest(\'div\').parentElement.innerHTML=\'\'" style="color:var(--textlt);background:none;border:none;cursor:pointer;font-size:14px">×</button></div>';
+    if(linkEl){
+      linkEl.innerHTML='<div style="margin:8px 0;padding:10px 14px;background:var(--surface);border:1px solid var(--blt);border-radius:6px;display:flex;align-items:center;gap:10px;font-size:12px">'
+        +'<span style="color:var(--fog-md);white-space:nowrap;font-weight:600">分享連結</span>'
+        +'<a href="'+escA(shareUrl)+'" target="_blank" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--acc);text-decoration:none">'+escA(shareUrl)+'</a>'
+        +'<button data-action="copyshareurlbtn" data-url="'+escA(shareUrl)+'" style="flex-shrink:0;font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:3px;cursor:pointer;background:#fff;font-weight:500">複製連結</button>'
+        +'<button data-action="closeshareurlbtn" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--textlt);font-size:16px;line-height:1;padding:0 2px">×</button>'
+        +'</div>';
     }
     // Show share result modal with copy button
     const modal=document.createElement('div');
@@ -3057,6 +3149,11 @@ function renderSharedSlides(){
   }).join('');
 }
 
+async function _folderEntries(handle){
+  const arr=[];
+  for await(const e of handle.values())arr.push(e);
+  return arr;
+}
 function getGhToken(){return localStorage.getItem('mdt_gh_token')||'';}
 function saveGhToken(){
   const t=document.getElementById('gh-token-input').value.trim();
@@ -3106,7 +3203,62 @@ async function uploadSlidesToGitHub(htmlContent, fname){
     const err=await resp.json().catch(()=>({}));
     throw new Error((err.message||resp.status)+' — 請確認 Token 權限（需 Contents: Read and write）');
   }
-  return 'https://sela1227.github.io/MDT/'+path;
+  return 'https://sela1227.github.io/MDT-slides/'+(GH_SLIDES_PATH?GH_SLIDES_PATH+'/':'')+fname;
+}
+
+
+function updateFolderStatusBar(){
+  const el=document.getElementById('folder-status-bar');if(!el)return;
+  let h='';
+  if(imgFolderHandle){
+    h='<span style="background:#e8f4e8;color:#2a6;border:1px solid #b8ddb8;border-radius:3px;padding:3px 10px;font-size:12px">📂 '+escA(imgFolderHandle.name)+'</span>'
+     +'<button onclick="(async function(){try{imgFolderHandle=await window.showDirectoryPicker({mode:\'read\'});updateFolderStatusBar();showSaveToast(\'資料夾已更新\');}catch(e){}})()" style="background:none;border:1px solid #b8ddb8;color:#2a6;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px">更換</button>';
+  } else {
+    const needs=S.meeting&&S.cids.some(function(cid){
+      return(S.meeting.sections[cid]?.cases||[]).some(function(c){
+        return(c.pathologyImages||[]).some(function(i){return i.fromFolder;})
+          ||(c.surgicalImages||[]).some(function(i){return i.fromFolder;})
+          ||(c.images||[]).some(function(i){return i.fromFolder;})
+          ||(c.mammo&&(c.mammo.images||[]).some(function(i){return i.fromFolder;}));
+      });
+    });
+    if(needs){
+      h='<button onclick="(async function(){try{imgFolderHandle=await window.showDirectoryPicker({mode:\'read\'});updateFolderStatusBar();showSaveToast(\'資料夾已授權\');}catch(e){}})()" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:600">⚠️ 點此授權影像資料夾（病理 / 手術 / 相關影像）</button>';
+    }
+  }
+  el.innerHTML=h;
+}
+
+
+function onExamTypeChange(sel,caseIdx,examIdx,cid){
+  if(sel.value==='__other__'){
+    // Insert text input after select
+    let inp=sel.nextElementSibling;
+    if(!inp||inp.tagName!=='INPUT'){
+      inp=document.createElement('input');
+      inp.placeholder='檢查類型';
+      inp.style.cssText='width:100px;font-size:12px;margin-left:4px';
+      inp.dataset.action='updstruct';
+      inp.dataset.cid=cid;
+      inp.dataset.caseidx=caseIdx;
+      inp.dataset.field='exams';
+      inp.dataset.rowid=examIdx;
+      inp.dataset.key='name';
+      sel.parentNode.insertBefore(inp,sel.nextSibling);
+      inp.focus();
+    }
+    // Set name to empty so user fills it
+    const c=S.meeting?.sections[cid]?.cases[caseIdx];
+    if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name='';
+    markDirty();
+  } else {
+    // Remove custom input if present
+    const inp=sel.nextElementSibling;
+    if(inp&&inp.tagName==='INPUT')inp.remove();
+    const c=S.meeting?.sections[cid]?.cases[caseIdx];
+    if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name=sel.value;
+    markDirty();
+  }
 }
 
 /* ════ Save ════ */
@@ -3154,13 +3306,8 @@ async function saveMeeting(){
   if(!S.viewMode){
     setTimeout(()=>{
       S._snapshot=null;_dirty=false;const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
-      if(S.meetingMode==='schedule'){
-        // After saving schedule, go directly to case editing
-        S.viewMode=false;S.meetingMode='record';renderEditor();
-      } else {
-        S.viewMode=true;S.meetingMode='record';
-        renderEditor();
-      }
+      // Always stay in edit mode after save; user can manually switch to view
+      S.viewMode=false;S.meetingMode='record';
     },1200);
   }
 }
@@ -3695,15 +3842,28 @@ async function genHTMLSlides(){
   readForm();
   const m=S.meeting,cids=S.cids;
   const slides=[];
+  // Check if any folder-based images exist without dataUrl
+  // Check if any folder-based images need re-authorization
+  const _needsFolder=S.cids.some(function(cid){return(m.sections[cid]?.cases||[]).some(function(c){
+    return(c.pathologyImages||[]).some(function(i){return i.fromFolder&&!i.dataUrl;})
+      ||(c.surgicalImages||[]).some(function(i){return i.fromFolder&&!i.dataUrl;})
+      ||(c.images||[]).some(function(i){return i.fromFolder&&!i.dataUrl;})
+      ||(c.mammo&&(c.mammo.images||[]).some(function(i){return i.fromFolder&&!i.dataUrl;}));
+  });});
+  if(_needsFolder&&!imgFolderHandle){
+    if(confirm('此次會議包含來自資料夾的影像，需要授權資料夾才能嵌入投影片。\n\n點確認選擇資料夾，點取消略過（圖片將不顯示）')){
+      try{imgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
+    }
+  }
   // Pre-load folder-based pathology images to base64 (TEMP COPY ONLY - never write back to S.meeting)
   const _pathImgCache={};
-  if(pathImgFolderHandle){
+  if(imgFolderHandle){
     for(const cid of cids){
       for(const c of (m.sections[cid]?.cases||[])){
         for(const img of (c.pathologyImages||[])){
           if(img.fromFolder&&!img.dataUrl){
             try{
-              const fh=await pathImgFolderHandle.getFileHandle(img.name);
+              const fh=await imgFolderHandle.getFileHandle(img.name);
               const file=await fh.getFile();
               _pathImgCache[img.name]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
             }catch(e){console.warn('無法讀取病理影像:',img.name,e);}
@@ -3876,6 +4036,12 @@ async function genHTMLSlides(){
 
     }); // end cases.forEach
 
+      // Surgical photo slides - one per image
+      (c.surgicalImages||[]).forEach(function(img){
+        const photoName=escA(img.caption||img.name||'手術照片');
+        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+photoName+'</span>'          +'<span class="cat">手術照片</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'          +'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+photoName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'          +'</div>'          +'</section>');
+      });
+
     // ── Team / Events ──
     if(team.length||events.length){
       slides.push('<section class="slide tbl">'
@@ -3930,7 +4096,25 @@ async function genHTMLSlides(){
     +'.ex{display:block;margin-bottom:.5vh;}'
     +'.ct{padding:1.4vh 2.5vw;display:flex;gap:1vw;flex-wrap:wrap;background:#f8f9fa;border-top:3px solid var(--ca,var(--acc));flex-shrink:0;}'
     +'.tp{border:2.5px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.55vh 1.5vw;border-radius:4px;font-size:clamp(14px,1.5vw,21px);font-weight:700;}'
-    +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'+'.img-slide img{transform-origin:center center;will-change:transform;user-select:none;}'
+    +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'
+    +'@media(max-width:600px){'
+    +'.cb-cols{flex-direction:column!important;}'
+    +'.cb-l{border-right:none!important;border-bottom:2px solid #eef0f3;}'
+    +'.cb-r{flex:1;}'
+    +'.rl{width:auto;min-width:60px;padding:1.2vh 2vw 1.2vh 3vw;font-size:13px;}'
+    +'.rv{padding:1.2vh 3vw 1.2vh 1vw;font-size:14px;line-height:1.5;}'
+    +'.ci{font-size:clamp(20px,5vw,32px)!important;}'
+    +'.cn{font-size:clamp(18px,4.5vw,30px)!important;}'
+    +'.cd,.cdr{font-size:clamp(13px,3.5vw,20px)!important;}'
+    +'.cdx{font-size:clamp(13px,3.5vw,20px)!important;}'
+    +'.cat{font-size:clamp(12px,3vw,18px)!important;padding:.4vh 2.5vw;}'
+    +'.tp{font-size:clamp(12px,3vw,18px)!important;padding:.5vh 2.5vw;}'
+    +'.disc-text{font-size:clamp(13px,3.5vw,20px)!important;}'
+    +'.disc-label{font-size:clamp(12px,3vw,18px)!important;}'
+    +'.nav-pill{bottom:1.5vh;right:2vw;padding:.6vh 2.5vw;gap:1vw;}'
+    +'.nb{width:clamp(40px,10vw,52px)!important;height:clamp(40px,10vw,52px)!important;font-size:clamp(16px,4vw,22px)!important;}'
+    +'.ni{font-size:clamp(13px,3.5vw,18px)!important;}'
+    +'}'+'.img-slide img{transform-origin:center center;will-change:transform;user-select:none;}'
     +'.img-grid{flex:1;display:flex;flex-wrap:wrap;gap:1vw;padding:2vh 2.5vw;align-items:center;justify-content:center;overflow:hidden;}'
     +'.img-wrap{flex:1;min-width:30%;max-width:48%;display:flex;flex-direction:column;align-items:center;gap:.5vh;max-height:80vh;}'
     +'.img-cap{font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7);text-align:center;}'
@@ -3948,7 +4132,7 @@ async function genHTMLSlides(){
     +'tr:nth-child(even) td{background:#f9fafc;}'
     +'.bar{position:fixed;top:0;left:0;height:4px;background:var(--acc);transition:width .25s;z-index:200;}'
     +'.nav-pill{position:fixed;bottom:2.5vh;right:2.5vw;display:flex;align-items:center;gap:.8vw;z-index:100;background:rgba(20,30,40,.72);backdrop-filter:blur(8px);padding:.8vh 1.6vw;border-radius:30px;}'
-    +'.nb{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;width:clamp(36px,3vw,46px);height:clamp(36px,3vw,46px);border-radius:50%;cursor:pointer;font-size:clamp(14px,1.3vw,19px);display:flex;align-items:center;justify-content:center;transition:all .15s;}'
+    +'.nb{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;width:clamp(40px,3vw,46px);height:clamp(40px,3vw,46px);border-radius:50%;cursor:pointer;font-size:clamp(14px,1.3vw,19px);display:flex;align-items:center;justify-content:center;transition:all .15s;touch-action:manipulation;}'
     +'.nb:hover:not(:disabled){background:rgba(255,255,255,.38);border-color:rgba(255,255,255,.78);}'
     +'.nb:disabled{opacity:.25;cursor:default;}'
     +'.ni{color:rgba(255,255,255,.85);font-size:clamp(13px,1.2vw,18px);padding:0 .8vw;min-width:4vw;text-align:center;font-variant-numeric:tabular-nums;}'
@@ -3978,7 +4162,8 @@ async function genHTMLSlides(){
     +'go(0);';
   const extraJs=`var _hlSel=null;
 document.addEventListener('mouseup',function(e){if(e.target.closest('#hl-toolbar'))return;var sel=window.getSelection();if(!sel||sel.isCollapsed||!sel.toString().trim()){document.getElementById('hl-toolbar').style.display='none';return;}_hlSel=sel.getRangeAt(0);var r=_hlSel.getBoundingClientRect();var tb=document.getElementById('hl-toolbar');tb.style.display='flex';var top=r.top-48;if(top<4)top=r.bottom+8;var left=r.left+r.width/2-80;if(left<4)left=4;if(left+200>window.innerWidth)left=window.innerWidth-204;tb.style.top=top+'px';tb.style.left=left+'px';});
-document.addEventListener('keydown',function(e){if(e.key==='Escape')document.getElementById('hl-toolbar').style.display='none';});
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();if(S.meeting)saveMeeting();return;}if(e.key==='Escape')document.getElementById('hl-toolbar').style.display='none';});
 function hlApply(color){if(!_hlSel)return;try{var span=document.createElement('mark');span.style.background=color;span.style.color='inherit';_hlSel.surroundContents(span);}catch(ex){try{var frag=_hlSel.extractContents();var sp=document.createElement('mark');sp.style.background=color;sp.style.color='inherit';sp.appendChild(frag);_hlSel.insertNode(sp);}catch(e2){}}window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;}
 function hlClear(){document.querySelectorAll('mark').forEach(function(m){var p=m.parentNode;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);});document.getElementById('hl-toolbar').style.display='none';}
 var _magMode=false,_magCv=null;
@@ -3996,6 +4181,18 @@ document.addEventListener('mousedown',function(e){var slide=document.querySelect
 document.addEventListener('mousemove',function(e){if(!_dragging)return;_panX=_dragPx+(e.clientX-_dragSx)/_zoom;_panY=_dragPy+(e.clientY-_dragSy)/_zoom;_zoomImg();});
 document.addEventListener('mouseup',function(e){if(_dragging){_dragging=false;_zoomImg();}});
 var _origGo=go;go=function(i){_resetZoom();if(_magCv)_magCv.style.display='none';_origGo(i);};
+/* Swipe navigation */
+var _tx=0,_ty=0;
+document.addEventListener('touchstart',function(e){if(e.touches.length===1){_tx=e.touches[0].clientX;_ty=e.touches[0].clientY;}},{passive:true});
+document.addEventListener('touchend',function(e){
+  if(e.changedTouches.length!==1)return;
+  var dx=e.changedTouches[0].clientX-_tx,dy=e.changedTouches[0].clientY-_ty;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){
+    var slide=document.querySelectorAll('.slide')[c];
+    if(slide&&slide.classList.contains('img-slide'))return; // let zoom handle
+    if(dx<0)go(c+1);else go(c-1);
+  }
+},{passive:true});
 var _t0=null;document.addEventListener('touchstart',function(e){if(e.touches.length===2)_t0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
 document.addEventListener('touchmove',function(e){if(e.touches.length===2&&_t0){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide')){_zoom=Math.max(1,Math.min(8,_zoom*(d/_t0)));_t0=d;_zoomImg();}e.preventDefault();}},{passive:false});`;
 
@@ -4507,69 +4704,80 @@ function genLine(){
 
     const tag=function(c){
       const dx=(c.diagnosis||'').toLowerCase();
+      const caId=ca.id||'';
       let sub=ca.name;
-      // 頭頸癌
-      if(/nasopharyn|鼻咽/.test(dx))sub='鼻咽癌';
-      else if(/oropharyn|口咽/.test(dx))sub='口咽癌';
-      else if(/hypopharyn|下咽/.test(dx))sub='下咽癌';
-      else if(/laryn|喉/.test(dx))sub='喉癌';
-      else if(/oral|tongue|舌|口腔|buccal|gingiv/.test(dx))sub='口腔癌';
-      else if(/thyroid|甲狀腺/.test(dx))sub='甲狀腺癌';
-      else if(/sinus|nasal|鼻竇|鼻腔/.test(dx))sub='鼻竇癌';
-      else if(/parotid|salivary|腮腺|唾液腺/.test(dx))sub='唾液腺癌';
-      // 胸腔癌
-      else if(/urothelial|膀胱|bladder/.test(dx))sub='膀胱癌';
-      else if(/lung|肺|pulmon/.test(dx))sub='肺癌';
-      else if(/esophag|食道/.test(dx))sub='食道癌';
-      else if(/mesothelioma|間皮/.test(dx))sub='間皮瘤';
-      else if(/thymoma|胸腺/.test(dx))sub='胸腺瘤';
-      // 乳癌
-      else if(/breast|乳癌|乳房|乳腺/.test(dx))sub='乳癌';
-      // 消化道癌
-      else if(/rectal|rectum|直腸/.test(dx))sub='直腸癌';
-      else if(/colon|結腸/.test(dx))sub='結腸癌';
-      else if(/colorectal|大腸/.test(dx))sub='大腸癌';
-      else if(/gastric|stomach|胃/.test(dx))sub='胃癌';
-      else if(/appendix|闌尾/.test(dx))sub='闌尾癌';
-      else if(/anal|肛門/.test(dx))sub='肛門癌';
-      else if(/small bowel|小腸/.test(dx))sub='小腸癌';
-      // 肝膽胰癌
-      else if(/hepatocellular|hcc|肝細胞/.test(dx))sub='肝細胞癌';
-      else if(/cholangiocarcinoma|bile duct|膽管/.test(dx))sub='膽管癌';
-      else if(/gallbladder|膽囊/.test(dx))sub='膽囊癌';
-      else if(/pancreatic|pancreas|胰臟|胰腺/.test(dx))sub='胰臟癌';
-      else if(/ampulla|壺腹/.test(dx))sub='壺腹癌';
-      else if(/hepatic|liver|肝/.test(dx))sub='肝癌';
-      // 泌尿道癌
-      else if(/bladder|膀胱|urothelial/.test(dx))sub='膀胱癌';
-      else if(/prostate|攝護腺|prostatic/.test(dx))sub='攝護腺癌';
-      else if(/renal|kidney|腎|ccrc|clear cell/.test(dx))sub='腎臟癌';
-      else if(/ureter|ureteral|輸尿管/.test(dx))sub='輸尿管癌';
-      else if(/testicular|睪丸/.test(dx))sub='睪丸癌';
-      else if(/penile|陰莖/.test(dx))sub='陰莖癌';
-      // 婦癌
-      else if(/cervix|cervical|子宮頸/.test(dx))sub='子宮頸癌';
-      else if(/endometri|子宮內膜/.test(dx))sub='子宮內膜癌';
-      else if(/ovarian|ovary|卵巢/.test(dx))sub='卵巢癌';
-      else if(/uterine|子宮|uterus/.test(dx))sub='子宮癌';
-      else if(/vaginal|陰道/.test(dx))sub='陰道癌';
-      else if(/vulvar|外陰/.test(dx))sub='外陰癌';
-      // 血液淋巴癌
-      else if(/dlbcl|diffuse large b|瀰漫性大b/.test(dx))sub='DLBCL';
-      else if(/hodgkin/.test(dx))sub='Hodgkin Lymphoma';
-      else if(/follicular/.test(dx))sub='Follicular Lymphoma';
-      else if(/mantle cell/.test(dx))sub='Mantle Cell Lymphoma';
-      else if(/marginal zone|malt/.test(dx))sub='Marginal Zone Lymphoma';
-      else if(/burkitt/.test(dx))sub='Burkitt Lymphoma';
-      else if(/t.cell|nk.cell/.test(dx))sub='T/NK-cell Lymphoma';
-      else if(/lymphoma|淋巴瘤/.test(dx))sub='Lymphoma';
-      else if(/multiple myeloma|骨髓瘤/.test(dx))sub='Multiple Myeloma';
-      else if(/aml|acute myeloid/.test(dx))sub='AML';
-      else if(/all|acute lymph/.test(dx))sub='ALL';
-      else if(/cml|chronic myeloid/.test(dx))sub='CML';
-      else if(/cll|chronic lymph/.test(dx))sub='CLL';
-      else if(/mds|myelodysplastic/.test(dx))sub='MDS';
-      else if(/leukemia|白血病/.test(dx))sub='Leukemia';
+      // 依癌別分組查找，避免轉移灶描述誤判
+      if(caId==='head_neck'||caId==='lymphoma'||sub==='頭頸癌'){
+        if(/nasopharyn|鼻咽/.test(dx))sub='鼻咽癌';
+        else if(/oropharyn|口咽|tonsil|扁桃/.test(dx))sub='口咽癌';
+        else if(/hypopharyn|下咽/.test(dx))sub='下咽癌';
+        else if(/laryn|喉癌|laryngeal/.test(dx))sub='喉癌';
+        else if(/oral|tongue|舌|口腔|buccal|gingiv/.test(dx))sub='口腔癌';
+        else if(/thyroid|甲狀腺/.test(dx))sub='甲狀腺癌';
+        else if(/sinus|nasal cav|鼻竇|鼻腔/.test(dx))sub='鼻竇癌';
+        else if(/parotid|salivary|腮腺|唾液腺/.test(dx))sub='唾液腺癌';
+        else if(/dlbcl|diffuse large b/.test(dx))sub='DLBCL';
+        else if(/hodgkin/.test(dx))sub='Hodgkin Lymphoma';
+        else if(/follicular lymph/.test(dx))sub='Follicular Lymphoma';
+        else if(/mantle cell/.test(dx))sub='Mantle Cell Lymphoma';
+        else if(/marginal zone|malt/.test(dx))sub='Marginal Zone Lymphoma';
+        else if(/lymphoma/.test(dx))sub='Lymphoma';
+        else if(/myeloma/.test(dx))sub='Multiple Myeloma';
+        else if(/leukemia/.test(dx))sub='Leukemia';
+      } else if(caId==='thoracic'||sub==='胸腔癌'){
+        if(/lung|肺|pulmon/.test(dx))sub='肺癌';
+        else if(/esophag|食道/.test(dx))sub='食道癌';
+        else if(/mesothelioma|間皮/.test(dx))sub='間皮瘤';
+        else if(/thymoma|胸腺/.test(dx))sub='胸腺瘤';
+      } else if(caId==='breast'||sub==='乳癌'){
+        sub='乳癌';
+      } else if(caId==='digestive'||sub==='消化道癌'){
+        if(/rectal|rectum|直腸/.test(dx))sub='直腸癌';
+        else if(/colon|結腸/.test(dx))sub='結腸癌';
+        else if(/colorectal|大腸/.test(dx))sub='大腸癌';
+        else if(/gastric|stomach|胃癌|gastric/.test(dx))sub='胃癌';
+        else if(/esophag|食道/.test(dx))sub='食道癌';
+        else if(/appendix|闌尾/.test(dx))sub='闌尾癌';
+        else if(/anal|肛門/.test(dx))sub='肛門癌';
+        else if(/small bowel|小腸/.test(dx))sub='小腸癌';
+      } else if(caId==='hepatobiliary'||sub==='肝膽胰癌'){
+        if(/hepatocellular|hcc|肝細胞/.test(dx))sub='肝細胞癌';
+        else if(/cholangiocarcinoma|bile duct|膽管/.test(dx))sub='膽管癌';
+        else if(/gallbladder|膽囊/.test(dx))sub='膽囊癌';
+        else if(/pancreatic|pancreas|胰臟|胰腺/.test(dx))sub='胰臟癌';
+        else if(/ampulla|壺腹/.test(dx))sub='壺腹癌';
+        else if(/hepatic|liver|肝/.test(dx))sub='肝細胞癌';
+      } else if(caId==='urology'||sub==='泌尿道癌'){
+        if(/urothelial|膀胱|bladder/.test(dx))sub='膀胱癌';
+        else if(/prostate|攝護腺|prostatic/.test(dx))sub='攝護腺癌';
+        else if(/renal|kidney|腎|ccrc|clear cell/.test(dx))sub='腎臟癌';
+        else if(/ureter|ureteral|輸尿管/.test(dx))sub='輸尿管癌';
+        else if(/testicular|睪丸/.test(dx))sub='睪丸癌';
+        else if(/penile|陰莖/.test(dx))sub='陰莖癌';
+      } else if(caId==='gynecology'||sub==='婦癌'){
+        if(/cervix|cervical|子宮頸/.test(dx))sub='子宮頸癌';
+        else if(/endometri|子宮內膜/.test(dx))sub='子宮內膜癌';
+        else if(/ovarian|ovary|卵巢/.test(dx))sub='卵巢癌';
+        else if(/uterine|子宮|uterus/.test(dx))sub='子宮癌';
+        else if(/vaginal|陰道/.test(dx))sub='陰道癌';
+        else if(/vulvar|外陰/.test(dx))sub='外陰癌';
+      } else if(caId==='lymphoma'){
+        if(/dlbcl|diffuse large b|瀰漫性大b/.test(dx))sub='DLBCL';
+        else if(/hodgkin/.test(dx))sub='Hodgkin Lymphoma';
+        else if(/follicular/.test(dx))sub='Follicular Lymphoma';
+        else if(/mantle cell/.test(dx))sub='Mantle Cell Lymphoma';
+        else if(/marginal zone|malt/.test(dx))sub='Marginal Zone Lymphoma';
+        else if(/burkitt/.test(dx))sub='Burkitt Lymphoma';
+        else if(/t.cell|nk.cell/.test(dx))sub='T/NK-cell Lymphoma';
+        else if(/lymphoma|淋巴瘤/.test(dx))sub='Lymphoma';
+        else if(/multiple myeloma|骨髓瘤/.test(dx))sub='Multiple Myeloma';
+        else if(/aml|acute myeloid/.test(dx))sub='AML';
+        else if(/all|acute lymph/.test(dx))sub='ALL';
+        else if(/cml|chronic myeloid/.test(dx))sub='CML';
+        else if(/cll|chronic lymph/.test(dx))sub='CLL';
+        else if(/mds|myelodysplastic/.test(dx))sub='MDS';
+        else if(/leukemia|白血病/.test(dx))sub='Leukemia';
+      }
       return'【'+sub+'】';
     };
 
@@ -5050,15 +5258,17 @@ document.addEventListener('click',function(e){
     (async function(){
       try{
         // Re-use existing handle or pick new one
-        if(!pathImgFolderHandle){
-          pathImgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+        if(!imgFolderHandle){
+          imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
         }
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
+      if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
         // List image files in folder
         const files=[];
-        for await(const entry of pathImgFolderHandle.values()){
-          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp|tiff?)$/i.test(entry.name))files.push(entry);
+        const _entries3=await _folderEntries(imgFolderHandle);
+        for(const entry of _entries3){
+          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
         }
         if(!files.length){alert('資料夾內沒有找到圖檔');return;}
         // Build selection dialog
@@ -5073,7 +5283,7 @@ document.addEventListener('click',function(e){
         overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
         overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
           +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取病理影像</div>'
-          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(pathImgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
           +'<div style="display:flex;gap:6px;align-items:center">'
           +'<button id="pathfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
           +'<button id="pathfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
@@ -5093,7 +5303,7 @@ document.addEventListener('click',function(e){
         document.getElementById('pathfolder-selall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=true;});updateCount();};
         document.getElementById('pathfolder-clrall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=false;});updateCount();};
         document.getElementById('pathfolder-change').onclick=async function(){
-          try{pathImgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
+          try{imgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
           document.body.removeChild(overlay);
           // Rebuild area and re-trigger
           const el2=document.getElementById('pathimgs-'+cid+'-'+idx);
@@ -5121,6 +5331,7 @@ document.addEventListener('click',function(e){
       const files=Array.from(ev.target.files);if(!files.length)return;
       ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
       if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
+      if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
       let loaded=0;
       files.forEach(function(file){
         const reader=new FileReader();
@@ -5139,6 +5350,77 @@ document.addEventListener('click',function(e){
     };
     document.body.appendChild(inp);inp.click();document.body.removeChild(inp);return;
   }
+  const picksurgfolder=e.target.closest('[data-action="picksurgfolder"]');
+  if(picksurgfolder){
+    const cid=picksurgfolder.dataset.cid,idx=parseInt(picksurgfolder.dataset.idx);
+    (async function(){
+      try{
+        if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+        updateFolderStatusBar();
+        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+        if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
+        const files=[];
+        const _entries1=await _folderEntries(imgFolderHandle);
+        for(const entry of _entries1){
+          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
+        }
+        files.sort(function(a,b){return a.name.localeCompare(b.name);});
+        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
+        const existing=new Set(c.surgicalImages.map(function(x){return x.name;}));
+        const list=files.map(function(f){
+          var base=f.name.replace(/\.[^.]+$/,''),ext=f.name.split('.').pop().toUpperCase();
+          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'
+            +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
+            +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(base)+'</span>'
+            +'<span style="font-size:10px;color:#aaa;flex-shrink:0">'+escA(ext)+'</span>'+'</label>';
+        }).join('');
+        const overlay=document.createElement('div');
+        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+        overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
+          +'<div style="font-weight:700;font-size:16px">選取手術照片</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
+          +'<div style="display:flex;gap:6px"><button id="surgsela" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer">全選</button>'
+          +'<button id="surgclr" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer">清除</button>'
+          +'<span id="surgcnt" style="font-size:11px;color:#888;margin-left:4px"></span></div>'
+          +'<div id="surg-list" style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px;padding:4px;min-height:120px;max-height:50vh">'+list+'</div>'
+          +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #eee">'
+          +'<button id="surgcancel" class="btn btn-b btn-sm">取消</button>'
+          +'<button id="surgok" class="btn btn-a btn-sm">確認</button></div></div>';
+        document.body.appendChild(overlay);
+        function updCnt(){var n=overlay.querySelectorAll('#surg-list input:checked').length;document.getElementById('surgcnt').textContent=n+' 張已選';}
+        overlay.querySelectorAll('#surg-list input').forEach(function(cb){cb.onchange=updCnt;});updCnt();
+        document.getElementById('surgsela').onclick=function(){overlay.querySelectorAll('#surg-list input').forEach(function(cb){cb.checked=true;});updCnt();};
+        document.getElementById('surgclr').onclick=function(){overlay.querySelectorAll('#surg-list input').forEach(function(cb){cb.checked=false;});updCnt();};
+        document.getElementById('surgcancel').onclick=function(){document.body.removeChild(overlay);};
+        document.getElementById('surgok').onclick=function(){
+          const checked=[...overlay.querySelectorAll('#surg-list input:checked')].map(function(x){return x.value;});
+          c.surgicalImages=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});
+          markDirty();document.body.removeChild(overlay);
+          const el3=document.getElementById('surgimgs-'+cid+'-'+idx);
+          if(el3){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el3.replaceWith(tmp.firstElementChild);}
+        };
+      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+    })();return;
+  }
+  const delsurgimg=e.target.closest('[data-action="delsurgimg"]');
+  if(delsurgimg){
+    const cid=delsurgimg.dataset.cid,idx=parseInt(delsurgimg.dataset.idx),j=parseInt(delsurgimg.dataset.imgidx);
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    c.surgicalImages.splice(j,1);markDirty();
+    const el=document.getElementById('surgimgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
+  const clearsurgimgs=e.target.closest('[data-action="clearsurgimgs"]');
+  if(clearsurgimgs){
+    const cid=clearsurgimgs.dataset.cid,idx=parseInt(clearsurgimgs.dataset.idx);
+    if(!confirm('清除所有手術照片？'))return;
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    c.surgicalImages=[];markDirty();
+    const el=document.getElementById('surgimgs-'+cid+'-'+idx);
+    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
   const clearpathimgs=e.target.closest('[data-action="clearpathimgs"]');
   if(clearpathimgs){
     const cid=clearpathimgs.dataset.cid,idx=parseInt(clearpathimgs.dataset.idx);
@@ -5147,6 +5429,20 @@ document.addEventListener('click',function(e){
     c.pathologyImages=[];markDirty();
     const el=document.getElementById('pathimgs-'+cid+'-'+idx);
     if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+    return;
+  }
+  const copyshareurlbtn=e.target.closest('[data-action="copyshareurlbtn"]');
+  if(copyshareurlbtn){
+    const url=copyshareurlbtn.dataset.url;
+    navigator.clipboard.writeText(url).then(function(){
+      copyshareurlbtn.textContent='✓ 已複製';
+      setTimeout(function(){copyshareurlbtn.textContent='複製連結';},2000);
+    }).catch(function(){alert('請手動複製：'+url);});
+    return;
+  }
+  const closeshareurlbtn=e.target.closest('[data-action="closeshareurlbtn"]');
+  if(closeshareurlbtn){
+    const el=document.getElementById('slide-share-link');if(el)el.innerHTML='';
     return;
   }
   const copyslideurl=e.target.closest('[data-action="copyslideurl"]');
@@ -5167,8 +5463,8 @@ document.addEventListener('click',function(e){
     const name=(previewpathimg.dataset.name||'').trim();
     const dataUrl=(previewpathimg.dataset.dataurl||'').trim();
     if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&pathImgFolderHandle){
-      pathImgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
+    if(name&&imgFolderHandle){
+      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
         const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
       }).catch(function(){alert('無法讀取影像：'+name);});
     }else{alert(name?'請先選擇資料夾':'無法預覽');} return;
@@ -5192,7 +5488,8 @@ document.addEventListener('click',function(e){
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         const arr=type==='mammo'?(c.mammo=c.mammo||{date:'',report:'',images:[]},c.mammo.images=c.mammo.images||[],c.mammo.images):c.images=(c.images||[]);
         const files=[];
-        for await(const entry of imgFolderHandle.values()){
+        const _entries2=await _folderEntries(imgFolderHandle);
+        for(const entry of _entries2){
           if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
         }
         files.sort(function(a,b){return a.name.localeCompare(b.name);});
