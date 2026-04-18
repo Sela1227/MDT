@@ -1147,7 +1147,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.9.2';
+const VERSION='V3.9.4';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2907,11 +2907,14 @@ function caseHTML(cid,i,d){
 <div class="cg2">
 
   <div class="fsec">基本資料</div>
-  <div class="fg"><label>病歷號</label>${inp('chartNo',d.chartNo,'病歷號')}</div>
-  <div class="fg"><label>姓名</label>${inp('name',d.name,'姓名')}</div>
-  <div class="fg"><label>年齡</label>${inp('age',d.age,'年齡')}</div>
-  <div class="fg"><label>性別</label><select onchange="upd('${cid}','cases',${i},'gender',this.value)" style="font-size:12px;padding:5px 8px"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select></div>
-
+  <div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','cases',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','cases',${i},'chartNo',this.value)" placeholder="病歷號" style="font-size:12px;padding:5px 8px;width:100%"></div>
+  <div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','cases',${i},'name',this.value)" placeholder="姓名" style="font-size:12px;padding:5px 8px;width:100%"></div>
+  <div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>年齡 / 性別</label>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input value="${escA(d.age||'')}" oninput="upd('${cid}','cases',${i},'age',this.value)" placeholder="年齡" style="font-size:12px;padding:5px 8px;width:72px">
+      <select onchange="upd('${cid}','cases',${i},'gender',this.value)" style="font-size:12px;padding:5px 8px"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
+    </div>
+  </div>
   <div class="fg full"><label>主治醫師</label>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
       <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
@@ -2921,16 +2924,14 @@ function caseHTML(cid,i,d){
   </div>
 
   <div class="fsec">病情摘要</div>
-  <div class="fg full"><label>診斷</label>${ta('diagnosis',d.diagnosis,2,'診斷（含分期）')}</div>
-  <div class="fg full"><label>現病史</label>${ta('cc',d.cc,3,'現病史')}</div>
+  <div class="fg full"><label>診斷</label>${ta('diagnosis',d.diagnosis,3,'診斷（含分期，如：SCC tonsillar T3N1M0 Stage III）')}</div>
+  <div class="fg full"><label>現病史</label>${ta('cc',d.cc,3,'現病史（病程、主要症狀、就醫經過）')}</div>
   <div class="fg full"><label>過去病史</label>
-    <div class="trow" style="margin-bottom:6px">${chips2}</div>
-    ${inp('ph',d.ph,'其他病史')}
+    <div style="font-size:10px;color:var(--textlt);margin-bottom:4px">慢性病勾選</div>
+    <div class="trow" style="margin-bottom:8px">${chips2}</div>
+    <input value="${escA(d.ph||'')}" oninput="upd('${cid}','cases',${i},'ph',this.value)" placeholder="其他病史（如手術史、藥物史）" style="font-size:12px;padding:5px 8px;width:100%">
   </div>
   ${(cid==='breast'||cid==='gynecology')?`<div class="fg full"><label>家族史</label><textarea rows="2" oninput="upd('${cid}','cases',${i},'familyHistory',this.value)" placeholder="如：乳癌（母親）、婦癌（姊）" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>`:''}
-  <div class="fg full"><div class="field-hdr"><label>癌指數</label>${addBtn('markers')}</div>
-    <div id="marklist-${cid}-${i}">${markerRows}</div>
-  </div>
 
   <div class="fsec">臨床資料</div>
   <div class="fg full"><div class="field-hdr"><label>病理</label>${addBtn('pathologies')}</div>
@@ -2939,41 +2940,38 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>病理染色影像</label></div>
     ${buildPathImgArea(cid,i,d)}
   </div>
-  <div class="fg full"><div class="field-hdr"><label>檢查</label>${addBtn('exams')}</div>
+  <div class="fg full"><div class="field-hdr"><label>影像檢查</label>${addBtn('exams')}</div>
     <div id="examlist-${cid}-${i}">${examRows}</div>
   </div>
-  ${cid==='breast'?`<div class="fg full" style="margin-top:4px;padding-top:8px;border-top:1px dashed var(--blt)">
+  ${cid==='breast'?`<div class="fg full">
     <div class="field-hdr"><label>乳房攝影</label></div>
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+      <span style="font-size:11px;color:var(--textlt)">日期</span>
       <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" style="font-size:12px;padding:5px 8px">
     </div>
     <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
     <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像（最多2張）</div>
     <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${buildMammoImgArea(cid,i,d)}</div>
-  </div>`:''}
+  </div>`:''}  <div class="fg full"><div class="field-hdr"><label>癌指數</label>${addBtn('markers')}</div>
+    <div id="marklist-${cid}-${i}">${markerRows}</div>
+  </div>
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
-
   <div class="fg full"><div class="field-hdr"><label>手術照片</label></div>
     ${buildSurgicalImgArea(cid,i,d)}
+  </div>
+  <div class="fg full"><div class="field-hdr"><label>相關影像</label></div>
+    ${buildImgArea(cid,i,d)}
   </div>
 
   <div class="fsec">討論</div>
   <div class="fg full"><label>討論要點</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
   <div class="fg full"><label>討論項目</label><div class="trow">${topicChips}</div></div>
 
-  <div class="fg full" style="margin-top:4px;padding-top:8px;border-top:1px dashed var(--blt)">
-    <label>相關影像（點擊放大・最多5張）</label>
-    ${buildImgArea(cid,i,d)}
-  </div>
-  <div class="fg full" style="border-top:1px solid var(--blt);padding-top:10px;margin-top:4px">
-    <label style="color:var(--fog);font-weight:600">會議記錄 — 開會後填入</label>
-    <div class="cg2" style="margin-top:8px">
-      <div class="fg full"><label>討論摘要</label>${ta('summary',d.summary,3,'影像討論：...')}</div>
-      <div class="fg full"><label>決策結論</label>${ta('decision',d.decision,2,'建議...')}</div>
-    </div>
-  </div>
+  <div class="fsec" style="color:var(--fog)">會議記錄（開會後填入）</div>
+  <div class="fg full"><label>討論摘要</label>${ta('summary',d.summary,3,'影像討論：...')}</div>
+  <div class="fg full"><label>決策結論</label>${ta('decision',d.decision,2,'建議...')}</div>
 
 </div></div>`;
 }
@@ -4536,23 +4534,29 @@ diagnosis：完整診斷（含分期）
 cc：現病史（Present Illness）
 ph：過去病史（Past History），若無請填 "Nil"
 phChips：慢性病陣列，從以下選填：["HTN","DM","CAD","CVA","HBV","HCV","CKD","COPD"]，無則空陣列
-pathologies：病理檢查，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}；IHC 結果（ER/PR/HER2/Ki-67 等）請放在 content 裡，不要放 markers
-exams：影像及其他檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/PET-CT/SONO...","date":"YYYY-MM-DD","content":"..."}
-treatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"說明"}
-markers：癌指數（隨時間追蹤的數值，如 PSA/CEA/CA125/AFP/CA199），陣列，每筆 {"name":"PSA","date":"第一筆日期YYYY-MM-DD","content":"數值趨勢，格式：值(日期) → 值(日期)，例如：7.10(2025-03-07) → 11.32(2025-07-10) → 7226(2026-02-23)；content 不要重複名稱"}
-familyHistory：家族癌症史，自由文字（如：乳癌（母親）、無）；僅 _cancer 為「乳癌」或「婦癌」時填寫，其他癌別省略或填空字串
-mammo：乳房攝影（僅 _cancer 為「乳癌」時填寫），格式：{"date":"YYYY-MM-DD","report":"Findings:...
-Impression:...","images":[]}；其他癌別省略此欄位
-discussion：討論要點（一句話摘要）
-topics：討論議題，從以下選填陣列：["影像討論","病理討論","分期討論","治療策略討論"]
+pathologies：病理，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}
+  - IHC 結果（ER/PR/HER2/Ki-67 等）放在 content 裡，不要放 markers
+exams：影像檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/PET-CT/SONO/X-Ray/Echo/Endoscopy/Lab...","date":"YYYY-MM-DD","content":"..."}
+  - 若檢查類型不在上述清單，name 填實際名稱
+treatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"劑量/說明"}
+markers：癌指數（PSA/CEA/CA125/AFP/CA19-9/CA15-3 等），陣列，每筆：
+  {"name":"CEA","date":"最早一筆的日期YYYY-MM-DD","content":"值(日期)→值(日期)，如：5.2(2025-01-10)→8.7(2025-04-15)"}
+  - content 不重複指數名稱；若僅一次檢驗則 content 只填 值(日期)
+familyHistory：家族癌症史，自由文字；僅 _cancer 為「乳癌」或「婦癌」時填寫，其他癌別填空字串 ""
+mammo：乳房攝影，僅 _cancer 為「乳癌」時填寫，格式：{"date":"YYYY-MM-DD","report":"Findings:...\nImpression:...","images":[]}；其他癌別省略此欄位
+discussion：討論要點，一句話摘要本次討論重點
+topics：討論議題，從以下選填一或多項：["影像討論","病理討論","分期討論","治療策略討論"]
 
 以下是病人資料：
+
+
 `;
   document.getElementById('out-text').textContent=prompt;
   document.getElementById('out-area').style.display='block';
   document.getElementById('copy-ok').style.display='none';
   document.getElementById('out-area').scrollIntoView({behavior:'smooth',block:'start'});
 }
+
 function exportMeetingJSON(){
   readForm();
   const m=S.meeting;
