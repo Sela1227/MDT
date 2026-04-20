@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.4';
+const VERSION='V4.3.5';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3408,6 +3408,155 @@ document.addEventListener('change',function(e){
 });
 
 /* ════ Init ════ */
+function checkBackupReminder(){
+  const last=parseInt(localStorage.getItem('mdt_last_backup')||'0');
+  const now=Date.now();
+  if(now-last<=7*24*60*60*1000)return;
+  const el=document.getElementById('backup-reminder');if(!el)return;
+  const daysAgo=last?Math.floor((now-last)/86400000)+'天前':'從未';
+  el.innerHTML='<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+    +'<span style="font-weight:600;color:#856404">备份提醒：上次備份 '+daysAgo+'，建議定期匯出備份</span>'
+    +'<button onclick="exportAllJSON();localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="margin-left:auto;background:#B87D3A;color:#fff;border:none;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px">立即備份</button>'
+    +'<button onclick="localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="background:none;border:1px solid #ffc107;color:#856404;border-radius:3px;padding:3px 8px;cursor:pointer;font-size:12px">略過</button>'
+    +'</div>';
+}
+
+
+
+function loadGhTokenStatus(){
+  const el=document.getElementById('gh-token-status');
+  if(!el)return;
+  el.textContent=getGhToken()?'✓ Token 已設定':'尚未設定 Token';
+  renderSharedSlides();
+}
+
+async function uploadSlidesToGitHub(htmlContent, fname){
+  const token=getGhToken();
+  if(!token){alert('請先到設定頁填入 GitHub Token');return;}
+  const path=GH_SLIDES_PATH+'/'+fname;
+  const url='https://api.github.com/repos/'+GH_REPO+'/contents/'+path;
+  // Check if file exists (need SHA to update)
+  let sha='';
+  try{
+    const r=await fetch(url,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(r.ok){const j=await r.json();sha=j.sha||'';}
+  }catch(e){}
+  // Encode content (handle Unicode)
+  const bytes=new TextEncoder().encode(htmlContent);
+  let b64='';
+  const chunk=8192;
+  for(let i=0;i<bytes.length;i+=chunk){
+    b64+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+  }
+  b64=btoa(b64);
+  const body={message:'Upload slides: '+fname,content:b64,branch:GH_BRANCH};
+  if(sha)body.sha=sha;
+  const resp=await fetch(url,{
+    method:'PUT',
+    headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+    body:JSON.stringify(body)
+  });
+  if(!resp.ok){
+    const err=await resp.json().catch(()=>({}));
+    throw new Error((err.message||resp.status)+' — 請確認 Token 權限（需 Contents: Read and write）');
+  }
+  return 'https://sela1227.github.io/MDT-slides/'+(GH_SLIDES_PATH?GH_SLIDES_PATH+'/':'')+fname;
+}
+
+
+
+function setMNav(id,title){
+  document.querySelectorAll('.mob-nav-item').forEach(el=>el.classList.remove('on'));
+  const el=document.getElementById(id);if(el)el.classList.add('on');
+  const pt=document.getElementById('mob-page-title');
+  if(pt&&title)pt.textContent=title;
+}
+
+function applyAICfg(){
+  const p=document.getElementById('ai-provider'),k=document.getElementById('ai-key'),m=document.getElementById('ai-model');
+  if(p)p.value=AI_CFG.provider;if(k)k.value=AI_CFG.key;if(m)m.value=AI_CFG.model;
+  // Show file:// warning
+  const warn=document.getElementById('ai-file-warn');
+  if(warn)warn.style.display=window.location.protocol==='file:'?'block':'none';
+  // Show AI button in meeting view if key is set
+  const btn=document.getElementById('btn-ai-gen');
+  if(btn)btn.style.display=AI_CFG.key?'inline-flex':'none';
+}
+async function testAIKey(){
+  saveAICfg();const key=AI_CFG.key;if(!key){alert('請先填入 API Key');return}
+  const el=document.getElementById('ai-test-msg');
+  el.className='ai-status warn';el.textContent='連線測試中...';
+  try{
+    const text=await callAI('回覆「測試成功」四個字即可',20);
+    el.className='ai-status ok';el.textContent='連線成功：'+text;
+  }catch(e){
+    el.className='ai-status err';
+    if(e.message.includes('Failed to fetch')||e.message.includes('ERR_FAILED')){
+      el.innerHTML='院內防火牆擋住 API 呼叫（CORS 限制）。<br>目前請改用「複製 AI 提示詞」按鈕，貼到 claude.ai 使用。<br>或請 IT 開放 api.anthropic.com 的 CORS 通行。';
+    } else {el.textContent='錯誤：'+e.message}
+  }
+}
+async function callAI(prompt,maxTokens=800){
+  const{provider,key,model}=AI_CFG;
+  if(!key)throw new Error('尚未設定 API Key，請前往設定頁填入');
+  if(provider==='anthropic'){
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({model,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
+    });
+    const d=await r.json();if(!r.ok)throw new Error(d.error?.message||r.status);
+    return d.content?.[0]?.text||'';
+  } else {
+    const r=await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
+    });
+    const d=await r.json();if(!r.ok)throw new Error(d.error?.message||r.status);
+    return d.choices?.[0]?.message?.content||'';
+  }
+}
+async function genAIInline(){
+  readForm();const m=S.meeting,cids=S.cids;
+  const btn=document.getElementById('btn-ai-gen');
+  btn.disabled=true;btn.textContent='生成中...';
+  document.getElementById('ai-result-area').style.display='none';
+  // Build prompt with full clinical data
+  let prompt=`你是彰濱秀傳癌症中心的MDT會議記錄助理。請根據以下個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出會議討論摘要，每段2-4句，語言專業精簡，使用繁體中文。\n\n會議：${mtgTitle(cids)}　${rocDate(m.date)}\n`;
+  let hasCase=false;
+  cids.forEach(id=>{
+    const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];
+    if(!cases.length)return;
+    hasCase=true;
+    prompt+=`\n【${ca.name}】\n`;
+    cases.forEach((c,i)=>{
+      prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name||''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
+      if(c.cc)prompt+=`現病史: ${c.cc}\n`;
+      if(c.ph)prompt+=`過去病史: ${c.ph}\n`;
+      if((c.exams||[]).length)prompt+=`檢查:\n`+(c.exams||[]).map(e=>e.name+' '+e.date+' : '+e.content).join('\n')+'\n';
+      if(c.treatment)prompt+=`治療：\n${c.treatment}\n`;
+      const disc=c.discussion||(c.topics||[]).join('、');
+      if(disc)prompt+=`討論重點：${disc}\n`;
+    });
+  });
+  if(!hasCase){btn.disabled=false;btn.textContent='AI 生成摘要';alert('請先新增個案討論資料');return}
+  prompt+='\n請對每個個案分別產出結構化討論摘要。';
+  try{
+    const result=await callAI(prompt,1000);
+    document.getElementById('ai-result-text').value=result;
+    document.getElementById('ai-model-badge').textContent=AI_CFG.model;
+    document.getElementById('ai-result-area').style.display='block';
+    document.getElementById('ai-result-area').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){setLibStatus('AI 生成失敗：'+e.message,'var(--err)');}
+  btn.disabled=false;btn.textContent='AI 生成摘要';
+}
+
 loadAll();renderLogin();
 // Show version on login page
 const lgVer=document.getElementById('lg-ver');
