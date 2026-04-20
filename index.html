@@ -1158,7 +1158,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.18';
+const VERSION='V4.2.19';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3085,7 +3085,7 @@ async function shareHTMLSlides(){
   try{
     readForm();
     const m=S.meeting,cids=S.cids;
-    const ghFname=m.date+'_'+(CFG[cids[0]]?.name||cids[0])+'.html';
+    const ghFname=m.date+'_'+(CFG[cids[0]]?.name||cids[0])+'多專科會議.html';
     if(!confirm('將上傳「'+ghFname+'」至 GitHub Pages\n\n佈署需約 3 分鐘後才能分享連結\n\n確定上傳？'))return;
     if(btn){btn.textContent='上傳中...';}
     showSaveToast('正在產生並上傳...');
@@ -4798,7 +4798,7 @@ document.addEventListener('touchmove',function(e){if(e.touches.length===2&&_t0){
     +'<button class="nb" id="nb-mag" onclick="_toggleMag()" title="放大鏡 L" style="font-size:clamp(12px,1.1vw,16px)">&#128269;</button>'
     +'</div>\n<div class="bar" id="bar" style="width:'+(1/N*100)+'%"></div>\n'
     +'<script>'+js+sc+'\n</'+'script>\n'+('<script>'+extraJs+'\n</'+'script>')+'\n</body></html>'
-  const fname=m.date+'_'+(CFG[cids[0]]?.name||cids[0])+'.html';
+  const fname=m.date+'_'+(CFG[cids[0]]?.name||cids[0])+'多專科會議.html';
   _lastSlidesHTML=fullHTML;
   const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
