@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.1.7
+修正 HTML 分享上傳失敗：shareHTMLSlides 缺少 async 關鍵字導致 await 語法錯誤；移除殘留的 existUrl/token 未定義死碼
+
 ### V4.1.6
 合併開會各癌別獨立產出（LINE/HTML/PPTX/DOCX/Excel/JSON 均依目前 tab 產出）；產出區顯示目前產出癌別並可一鍵切換
 

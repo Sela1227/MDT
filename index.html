@@ -1149,7 +1149,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.1.6';
+const VERSION='V4.1.7';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3061,19 +3061,6 @@ async function shareHTMLSlides(){
     // Generate slides HTML without downloading
     const fullHTML=await buildSlidesHTMLOnly();
     if(!fullHTML){throw new Error('無法產生投影片內容');}
-    // Delete old file for this meeting
-    try{
-      const _er=await fetch(existUrl,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
-      if(_er.ok){
-        const _ej=await _er.json();
-        if(_ej.sha){
-          await fetch(existUrl,{method:'DELETE',
-            headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
-            body:JSON.stringify({message:'Replace: '+ghFname,sha:_ej.sha})
-          });
-        }
-      }
-    }catch(_e){}
     const shareUrl=await uploadSlidesToGitHub(fullHTML,ghFname);
     const arr=getSharedSlides();
     const existing=arr.findIndex(s=>s.fname===ghFname);

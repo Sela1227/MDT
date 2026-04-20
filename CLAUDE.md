@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.1.6 → V4.1.6）
-#    新功能 / 新欄位       → +0.1   （如 V4.1.6 → V4.1.6）
-#    大改版 / 架構重構     → +1.0   （如 V4.1.6 → V4.1.6）
+#    bug fix / hotfix      → +0.01  （如 V4.1.7 → V4.1.7）
+#    新功能 / 新欄位       → +0.1   （如 V4.1.7 → V4.1.7）
+#    大改版 / 架構重構     → +1.0   （如 V4.1.7 → V4.1.7）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.1.6）
+## 十二、版本（當前 V4.1.7）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.1.7 | 修正 HTML 分享上傳失敗：shareHTMLSlides 缺 async；移除 existUrl/token 未定義死碼 |
 | V4.1.6 | 合併開會各癌別獨立產出（LINE/HTML/PPTX/DOCX/Excel/JSON 均依目前 tab）；產出區顯示目前癌別並可切換 |
 | V4.1.5 | 標籤「前次醫療小組日期」改名為「上次多專科日期」；新建會議自動帶入：個案討論 + 醫療小組同時帶入前期追蹤 |
 | V4.1.4 | 前期追蹤卡片加入 ▶/▼ 收合圖示；產出第三排按鈕統一為 grid repeat(5,1fr) |
