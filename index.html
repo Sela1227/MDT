@@ -1148,7 +1148,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.1.0';
+const VERSION='V4.1.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3352,6 +3352,7 @@ function doCaseSearch(q){
 }
 
 
+let _fupImportCid=null,_fupImportAll=[];
 function openFollowupImport(cid){
   // Collect 個案討論 from all previous meetings of same cancer
   const idx=getIdx();
@@ -3404,8 +3405,10 @@ function openFollowupImport(cid){
     +'<button class="btn btn-b btn-sm" onclick="document.getElementById(\'followup-import-modal\').querySelectorAll(\'input\').forEach(function(c){c.checked=true;});updateFupCount()">全選</button>'
     +'<span id="fup-sel-count" style="font-size:12px;color:var(--textlt);margin-right:auto">已選 0 筆</span>'
     +'<button class="btn btn-b btn-sm" onclick="document.getElementById(\'followup-import-modal\').remove()">取消</button>'
-    +'<button class="btn btn-a btn-sm" onclick="doFollowupImport(\''+cid+'\','+JSON.stringify(all)+')">帶入選取</button>'
+    +'<button class="btn btn-a btn-sm" onclick="doFollowupImport()">帶入選取</button>'
     +'</div></div>';
+  _fupImportCid=cid;
+  _fupImportAll=all;
   document.body.appendChild(modal);
   modal.querySelectorAll('input[type=checkbox]').forEach(function(cb){cb.onchange=updateFupCount;});
 }
@@ -3421,7 +3424,8 @@ function filterFupRows(q){
   });
 }
 
-function doFollowupImport(cid, all){
+function doFollowupImport(){
+  const cid=_fupImportCid,all=_fupImportAll;
   const modal=document.getElementById('followup-import-modal');
   const checked=[...modal.querySelectorAll('input:checked')].map(function(cb){return parseInt(cb.value);});
   if(!checked.length){alert('請先勾選要帶入的個案');return;}
