@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.2.1 → V4.2.1）
-#    新功能 / 新欄位       → +0.1   （如 V4.2.1 → V4.2.1）
-#    大改版 / 架構重構     → +1.0   （如 V4.2.1 → V4.2.1）
+#    bug fix / hotfix      → +0.01  （如 V4.2.2 → V4.2.2）
+#    新功能 / 新欄位       → +0.1   （如 V4.2.2 → V4.2.2）
+#    大改版 / 架構重構     → +1.0   （如 V4.2.2 → V4.2.2）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.2.1）
+## 十二、版本（當前 V4.2.2）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.2.2 | 修正 JSON 匯入後病人消失：繞過 renderCasesInner 改直接 DOM append，避免 loadMergedSections 蓋掉未儲存新個案 |
 | V4.2.1 | caseHTML 預設 cc-collapsed；addItem 新卡展開其他收合；doImportCase 匯入後展開最後一筆 |
 | V4.2.0 | renderEditor 初始化 activeCid；getOutputCid 驗證 activeCid 在 S.cids；autoImportPrevFollowups 加 try/catch |
 | V4.1.9 | addItem 新增個案時自動收合同區塊其他個案；JSON 匯入後展開並捲動到最後匯入個案 |

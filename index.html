@@ -1149,7 +1149,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.1';
+const VERSION='V4.2.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4223,22 +4223,39 @@ function doImportCase(){
     S.meeting.sections[cid].cases.push(blank);
   });
   closeImportCase();
-  renderCasesInner();
   markDirty();
   showSaveToast('已匯入 ' + cases.length + ' 筆個案資料');
-  // Expand and scroll to last imported case
-  setTimeout(function(){
-    const cont=document.getElementById('div-cases-'+cid);
-    if(!cont)return;
-    const cards=cont.querySelectorAll('.casecard:not(.track-card)');
-    if(cards.length){
-      const last=cards[cards.length-1];
-      last.classList.remove('cc-collapsed');
-      const tgi=last.querySelector('[data-action="togglecase"]');
-      if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▼';}
-      last.scrollIntoView({behavior:'smooth',block:'start'});
+  // Directly update DOM without renderCasesInner (avoid loadMergedSections overwriting new cases)
+  const cont=document.getElementById('div-cases-'+cid);
+  if(cont){
+    const allCases=S.meeting.sections[cid].cases;
+    // Collapse all existing cards
+    cont.querySelectorAll('.casecard:not(.track-card)').forEach(function(c){
+      c.classList.add('cc-collapsed');
+      const tgi=c.querySelector('[data-action="togglecase"]');
+      if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▶';}
+    });
+    // Append only the newly added cases
+    const startIdx=allCases.length-cases.length;
+    for(let i=startIdx;i<allCases.length;i++){
+      const div=document.createElement('div');
+      div.innerHTML=caseHTML(cid,i,allCases[i]);
+      const newCard=div.firstElementChild;
+      if(newCard){
+        newCard.classList.remove('cc-collapsed');
+        const tgi=newCard.querySelector('[data-action="togglecase"]');
+        if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▼';}
+        cont.appendChild(newCard);
+      }
     }
-  },150);
+    setTimeout(function(){
+      const cards=cont.querySelectorAll('.casecard:not(.track-card)');
+      if(cards.length){cards[cards.length-1].scrollIntoView({behavior:'smooth',block:'start'});}
+    },80);
+  } else {
+    // Fallback to full re-render
+    renderCasesInner();
+  }
 }
 
 
@@ -5102,23 +5119,43 @@ function importCaseJSON(inputEl){
       imported++;
     });
     if(imported){
-      renderCasesInner();
       markDirty();
       showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));
-      // Scroll to and expand the last imported case
-      setTimeout(function(){
-        const containers=document.querySelectorAll('[id^="div-cases-"]');
-        containers.forEach(function(cont){
-          const cards=cont.querySelectorAll('.casecard:not(.track-card)');
-          if(cards.length){
-            const last=cards[cards.length-1];
-            last.classList.remove('cc-collapsed');
-            const tid=last.querySelector('[data-action="togglecase"]');
-            if(tid){const icon=document.getElementById('tgi-'+tid.dataset.card.slice(3));if(icon)icon.textContent='▼';}
-            last.scrollIntoView({behavior:'smooth',block:'start'});
-          }
+      // Directly append new cards without renderCasesInner (avoids loadMergedSections overwrite)
+      // Group newly added cases by cid
+      const addedByCid={};
+      cases.forEach(function(d){
+        const caName=d._cancer||d['癌別']||'';
+        const tcid=nameMap[caName]||(S.cids&&S.cids[0]);
+        if(!tcid||!S.cids.includes(tcid))return;
+        if(!addedByCid[tcid])addedByCid[tcid]=[];
+        addedByCid[tcid].push(d);
+      });
+      Object.keys(addedByCid).forEach(function(tcid){
+        const allCases=S.meeting.sections[tcid].cases;
+        const addedCount=addedByCid[tcid].length;
+        const startIdx=allCases.length-addedCount;
+        const cont=document.getElementById('div-cases-'+tcid);
+        if(!cont)return;
+        cont.querySelectorAll('.casecard:not(.track-card)').forEach(function(c){
+          c.classList.add('cc-collapsed');
+          const tgi=c.querySelector('[data-action="togglecase"]');
+          if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▶';}
         });
-      },200);
+        for(let i=startIdx;i<allCases.length;i++){
+          const div=document.createElement('div');
+          div.innerHTML=caseHTML(tcid,i,allCases[i]);
+          const nc=div.firstElementChild;
+          if(nc){nc.classList.remove('cc-collapsed');
+            const tgi=nc.querySelector('[data-action="togglecase"]');
+            if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▼';}
+            cont.appendChild(nc);}
+        }
+        setTimeout(function(){
+          const cards=cont.querySelectorAll('.casecard:not(.track-card)');
+          if(cards.length)cards[cards.length-1].scrollIntoView({behavior:'smooth',block:'start'});
+        },80);
+      });
     } else alert('沒有成功匯入任何個案，請確認 JSON 格式與癌別名稱');
   };
   reader.readAsText(file,'utf-8');

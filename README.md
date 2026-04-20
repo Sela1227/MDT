@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.2
+修正 JSON 匯入病人消失：renderCasesInner 在合併會議時呼叫 loadMergedSections 覆蓋尚未儲存的新個案；改為直接 DOM 操作 append
+
 ### V4.2.1
 caseHTML 預設收合（cc-collapsed）；addItem 新卡片先移除 cc-collapsed 再收合其他；doImportCase 匯入後展開最後一筆
 
