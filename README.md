@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.17
+閱覽模式加入手術照片區塊（previewsurgimg），補齊與病理影像、乳攝、相關影像相同的預覽功能
+
 ### V4.2.16
 修正相關影像預覽失效：改用 data-action="previewrelatedimg" + event delegation（同乳攝修正模式）
 
