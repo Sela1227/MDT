@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.21
+修正 buildImgArea / buildMammoImgArea 缺少 const cap= 定義，導致編輯模式 cap is not defined 錯誤
+
 ### V4.2.20
 修正 HTML 投影片 _pathImgCache 只讀病理影像：擴充為同時讀入手術/相關/乳攝三種 fromFolder 影像
 

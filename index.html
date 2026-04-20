@@ -1158,7 +1158,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.20';
+const VERSION='V4.2.21';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2673,7 +2673,8 @@ function buildImgArea(cid,i,d){
   if(imgs.length){
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
     imgs.forEach(function(img,j){
-      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
+      const cap=escA(img.caption||(img.name||'').replace(/\.[^.]+$/,''));
+      const shortCap=cap;
       if(img.dataUrl){
         const safe=escA(img.dataUrl);
         h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
