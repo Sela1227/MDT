@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.22
+修正乳攝清除後無法新增：addmammoimg / delmammoimg 改用 replaceWith（避免 innerHTML 嵌套 mammo-imgs 容器）；caption 欄位樣式加框線加深色，明顯度提升
+
 ### V4.2.21
 修正 buildImgArea / buildMammoImgArea 缺少 const cap= 定義，導致編輯模式 cap is not defined 錯誤
 
