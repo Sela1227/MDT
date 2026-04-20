@@ -1148,7 +1148,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.1.1';
+const VERSION='V4.1.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1679,6 +1679,7 @@ function askCreateMtg(dateStr){
 function calCreateMtgOnDate(cid,date){
   const cids=pairIds(cid);S.cids=cids;
   const m=newMeetingObj(S.user.id,cids);m.date=date;S.meeting=m;
+  autoImportPrevFollowups(cids);
   S.viewMode=false;S.meetingMode='record';
   setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -1860,7 +1861,7 @@ function openNewModal(preDate){
   document.getElementById('new-modal').classList.add('open');
   setTimeout(function(){const d=document.getElementById('nm-date');if(d)d.focus();},100);
 }
-function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;S.viewMode=false;renderEditor();updateFolderStatusBar();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
+function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;autoImportPrevFollowups(cids);S.viewMode=false;renderEditor();updateFolderStatusBar();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
 function openFromSb(cid){
   const cids=pairIds(cid);S.cids=cids;setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -1935,6 +1936,7 @@ function startNewMtgForCancer(){
     const dim=new Date(y,mo+1,0).getDate();
     if(day<=dim)S.meeting.date=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
   }
+  autoImportPrevFollowups(cids);
   S.viewMode=false;S.meetingMode='schedule';
   renderEditor();updateFolderStatusBar();showView('meeting');
 }
@@ -3596,6 +3598,40 @@ function renderMonthStats(){
     +(firstCount?'<span>首次 <b>'+firstCount+'</b> 筆</span>':'')
     +'<span style="margin-left:4px;color:var(--textlt)">'+caList+'</span>'
     +'</div>';
+}
+
+
+function autoImportPrevFollowups(cids){
+  // For each cancer in this meeting, find the most recent previous meeting
+  // and auto-populate 前期追蹤 with cases from that meeting
+  const idx=getIdx();
+  cids.forEach(function(cid){
+    if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],team:[],events:[],special:[]};
+    // Find most recent previous meeting for this cid (exclude current)
+    const prev=idx.find(function(mi){
+      return mi.id!==S.meeting.id&&(mi.cids||[]).includes(cid);
+    });
+    if(!prev)return;
+    const m=loadLocal(prev.id);if(!m)return;
+    const prevCases=((m.sections||{})[cid]?.cases||[]);
+    if(!prevCases.length)return;
+    const fups=S.meeting.sections[cid].followups;
+    const existing=new Set(fups.map(function(f){return f.chartNo;}));
+    prevCases.forEach(function(c){
+      if(!c.chartNo&&!c.name)return;
+      if(c.chartNo&&existing.has(c.chartNo))return;
+      fups.push({
+        id:uid(),
+        chartNo:c.chartNo||'',
+        name:c.name||'',
+        doctors:Array.isArray(c.doctors)?c.doctors.slice(0,2):[(c.doctor||''),''],
+        doctor:c.doctor||'',
+        prevDate:prev.date||'',
+        note:''
+      });
+      if(c.chartNo)existing.add(c.chartNo);
+    });
+  });
 }
 
 /* ════ Save ════ */
