@@ -482,131 +482,7 @@ textarea{resize:vertical}
   .btn-sm{padding:4px 9px;font-size:11px}
   /* History: stack layout on tiny screens */
   .hist-month-body [style*="display:flex"]{flex-wrap:wrap!important;gap:6px!important}
-}
-
-@media print {
-  /* ── Hide all UI chrome ── */
-  #sb-left, #mobile-nav, .mob-sheet, #mobile-cancer-sheet,
-  #mobile-user-sheet, #mtg-top-bar,
-  [id^="infobar"], .sec-foot, .info-edit, .rec-edit-ctrl, .rec-save-ctrl,
-  #btn-back-mtg, #btn-del-mtg, #mtg-mode-tag,
-  #del-confirm-modal, #cf-modal, #img-modal, #import-case-modal,
-  .btnadd, .delbtn, #rec-save-msg, #save-msg, #cases-sub,
-  .output-section, .sec-hdr-btns, .sec-hdr button,
-  .view-mode .info-edit { display:none !important; }
-  /* Hide the cases section header toolbar */
-  .sec-hdr { pointer-events:none; }
-  .sec-hdr .sec-title { display:block !important; font-size:13pt; font-weight:bold; }
-
-  /* ── Page setup ── */
-  @page { size: A4 landscape; margin: 10mm 14mm 10mm; }
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  body, #sh-app { background: white !important; }
-
-  /* ── Show only meeting view ── */
-  #sh-login, #sh-loading { display: none !important; }
-  #sh-app { display: block !important; }
-  #view-meeting { display: block !important; }
-  #view-home, #view-settings, #view-history, #view-cancer { display: none !important; }
-
-  /* ── Print header (injected by printMeeting) ── */
-  #print-header {
-    display: block !important;
-    background: #3A4550 !important;
-    color: white !important;
-    padding: 10mm 12mm 8mm;
-    margin: -12mm -14mm 8mm;
-    page-break-after: avoid;
-  }
-  #print-header .ph-title {
-    font-size: 17pt; font-weight: bold; margin-bottom: 3mm; letter-spacing: .5px;
-  }
-  #print-header .ph-meta {
-    font-size: 10pt; opacity: .85; line-height: 1.8;
-  }
-  #print-header .ph-members {
-    font-size: 9pt; opacity: .65; margin-top: 2mm; border-top: 1px solid rgba(255,255,255,.2); padding-top: 2mm;
-  }
-
-  /* ── Cases section title ── */
-  #cases-hdr-title { font-size: 12pt; font-weight: bold; color: #3A4550;
-    border-bottom: 2px solid #3A4550; padding-bottom: 2mm; margin-bottom: 4mm; }
-
-  /* ── Section headers ── */
-  .sh-track-hdr, .subhdr {
-    font-size: 11pt; font-weight: bold;
-    padding: 3px 0; border-bottom: 2px solid #3A4550;
-    margin: 6mm 0 3mm; color: #3A4550;
-  }
-  .sh-track-dot, .sh-dot { display: none; }
-
-  /* ── Track / followup cards ── */
-  .vc[style*="border-left"] {
-    border-left: 3px solid #9BAAB6 !important;
-    margin-bottom: 3mm;
-    page-break-inside: avoid;
-  }
-
-  /* ── Case cards ── */
-  .vc {
-    margin-bottom: 0;
-    page-break-before: always;
-    page-break-inside: avoid;
-    border: none;
-  }
-  .vc:first-of-type { page-break-before: avoid; }
-
-  .vc-hdr {
-    background: #3A4550 !important;
-    color: white !important;
-    padding: 6px 10px;
-    border-radius: 3px 3px 0 0;
-  }
-  .vc-hdr-sub { color: #B0C8D0 !important; font-size: 9pt; display: block; margin-top: 2px; }
-
-  .vc-body { border: 1px solid #ddd; border-top: none; border-radius: 0 0 3px 3px; }
-
-  .vc-r {
-    display: flex;
-    border-bottom: 1px solid #f0f0f0;
-    padding: 4px 10px;
-    font-size: 10pt;
-    page-break-inside: avoid;
-  }
-  .vc-r:last-child { border-bottom: none; }
-  .vc-l {
-    width: 70px; min-width: 70px; color: #637281; flex-shrink: 0;
-    font-size: 9pt; padding-top: 1px;
-  }
-  .vc-v { flex: 1; white-space: pre-wrap; line-height: 1.6; word-break: break-word; }
-
-  /* ── Topics chips ── */
-  .vc-chips { padding: 5px 10px; display: flex; flex-wrap: wrap; gap: 4px; }
-  .vc-chip {
-    border: 1px solid #3A4550; padding: 2px 8px;
-    border-radius: 2px; font-size: 9pt; color: #3A4550;
-  }
-
-  /* ── Summary box ── */
-  .vc-rec { background: #f7f8fa !important; padding: 6px 10px; border-top: 1px solid #eee; }
-
-  /* ── Special agenda ── */
-  hr.rule { border: none; border-top: 1px solid #ddd; margin: 3mm 0; }
-  .sh-empty { display: none; }
-
-  /* ── Hide wrap padding ── */
-  .wrap { padding: 0 !important; max-width: 100% !important; }
-  #view-meeting { padding: 0 !important; }
-}
-
-</style>>
-</head>
-<body>
-
-<!-- LOGIN -->
-<div class="shell active" id="sh-login">
-  <div class="lg-l">
-    <img src="data:image/png;base64,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" style="width:56px;height:56px;border-radius:6px;margin-bottom:28px;display:block">
+}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" style="width:56px;height:56px;border-radius:6px;margin-bottom:28px;display:block">
     <div class="lg-mark">彰濱秀傳癌症中心</div>
     <h1 class="lg-title">MDT<br>會議<br>管理系統</h1>
     <div class="lg-rule"></div>
@@ -668,6 +544,7 @@ textarea{resize:vertical}
       <div id="sb-cancers"></div>
     </div>
     <div class="sb-bottom">
+      <div class="sb-navi" id="nav-search" onclick="openCaseSearch()" title="搜尋個案">&#128269;</div>
       <div class="sb-navi" id="nav-history" onclick="openHistory()">&#9776; 歷史記錄</div>
       <div class="sb-navi" id="nav-settings" onclick="openSettings()">&#9881; 設定</div>
       <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:4px;margin-top:2px">
@@ -694,6 +571,8 @@ textarea{resize:vertical}
       </div>
       <div class="wrap">
         <div class="section">
+          <div id="backup-reminder"></div>
+          <div id="month-stats"></div>
           <!-- Legend -->
           <div style="padding:8px 14px;border-bottom:1px solid var(--blt);display:flex;flex-wrap:wrap;gap:6px;align-items:center;line-height:1.6" id="cal-legend"></div>
           <!-- Calendar grid -->
@@ -780,28 +659,27 @@ textarea{resize:vertical}
           <div class="sec-hdr"><span class="sec-title">產出</span><span class="sec-sub">已完稿，可匯出</span></div>
           <div class="sec-body">
             <!-- 資料夾授權：優先顯示 -->
-            <div id="folder-status-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"></div>
-            <!-- 投影片分享 -->
-            <div class="brow" style="margin-bottom:4px">
-              <button class="btn btn-a" onclick="doOutput('line')">LINE 通知</button>
-              <button class="btn btn-b" id="btn-html-slides" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
-              <button class="btn btn-b" id="btn-share-slides" onclick="shareHTMLSlides()" title="上傳至 GitHub Pages 產生可分享連結">HTML 分享</button>
-              <button class="btn btn-b" id="btn-pptx" onclick="genPPTX()">PPTX 簡報</button>
-              <button class="btn btn-b" id="btn-docx" onclick="genDOCX()">DOCX 會議記錄</button>
+            <div id="output-cid-label" style="display:none;gap:8px;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:12px;margin-bottom:8px"></div>
+            <div id="folder-status-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"></div>
+            <!-- 5-per-row grid layout -->
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
+              <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
+              <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
+              <button class="btn btn-b" id="btn-share-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="shareHTMLSlides()">HTML 分享</button>
+              <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPPTX()">PPTX 簡報</button>
+              <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
             </div>
             <div id="slide-share-link"></div>
-            <!-- 資料匯入匯出 -->
-            <div class="brow" style="margin-bottom:4px">
-              <button class="btn btn-b" id="btn-xlsx" onclick="genXLSX()">Excel 匯出</button>
-              <button class="btn btn-b" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
-              <button class="btn btn-b" onclick="document.getElementById('json-import-input').click()" title="匯入 AI 產出的 JSON 檔，支援多筆多癌別">JSON 批次匯入</button>
-              <button class="btn btn-b" onclick="exportCaseJSON()" title="將本次會議所有病人資料匯出為 JSON 檔，可再次匯入">JSON 個案匯出</button>
-              <button class="btn btn-b" onclick="exportMeetingJSON()" title="匯出完整會議（含追蹤/醫療小組/特殊議程/會議資訊），可用備份還原功能匯入">JSON 完整匯出</button>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
+              <button class="btn btn-b" id="btn-xlsx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genXLSX()">Excel 匯出</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="document.getElementById('json-import-input').click()">JSON 批次匯入</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportCaseJSON()">JSON 個案匯出</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportMeetingJSON()">JSON 完整匯出</button>
             </div>
-            <!-- AI 工具 -->
-            <div class="brow">
-              <button class="btn btn-b" onclick="genImportPrompt()" title="複製後貼到 AI，讓 AI 將病歷資料轉成可匯入的 JSON">AI 匯入提示詞</button>
-              <button class="btn btn-a" id="btn-ai-gen" onclick="genAIInline()" style="background:var(--fog);display:none" title="需院內網路開放 api.anthropic.com">AI 生成摘要</button>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;text-align:center;justify-content:center" onclick="genImportPrompt()">AI 匯入提示詞</button>
+              <button class="btn btn-a" id="btn-ai-gen" style="padding:10px 4px;font-size:13px;background:var(--fog);display:none;text-align:center;justify-content:center" onclick="genAIInline()">AI 生成摘要</button>
             </div>
             <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
             <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
@@ -845,6 +723,7 @@ textarea{resize:vertical}
               <div class="tab" onclick="showStab('cancers',this)">癌別</div>
               <div class="tab" onclick="showStab('ai',this)">AI</div>
               <div class="tab" onclick="showStab('testdata',this)">測試</div>
+              <div class="tab" onclick="showStab('imgfolder',this)">影像資料夾</div>
               <div class="tab" onclick="showStab('github',this)">GitHub 分享</div>
               <div class="tab" onclick="showStab('backup',this)">備份還原</div>
             </div>
@@ -911,7 +790,15 @@ textarea{resize:vertical}
               </div>
             </div>
 
-            <div class="stab" id="stab-github">
+            <div class="stab" id="stab-imgfolder">
+  <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定根目錄後，進入每場會議時自動在根目錄下建立以日期+癌別命名的子目錄（如 <b>20260416 乳癌</b>），圖片放進去即可。亦可在產出區手動為每場會議指定不同資料夾。</div>
+  <div id="imgfolder-status" style="margin-bottom:12px;font-size:13px;color:var(--textmd)">載入中...</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-a btn-sm" onclick="pickRootFolder()">選擇根目錄</button>
+    <button class="btn btn-b btn-sm" onclick="clearRootFolder()">清除根目錄</button>
+  </div>
+</div>
+<div class="stab" id="stab-github">
   <div class="st-title">GitHub 投影片分享</div>
   <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結<br>需先至 GitHub 申請 Personal Access Token（Contents: Read and write）</div>
 
@@ -1114,7 +1001,7 @@ textarea{resize:vertical}
 
 /* ════ DEFAULT CONFIG ════ */
 const DEFAULT_LOCS=['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪','彰濱-2樓 185會議室','彰濱-1F 人文藝術館會議室','彰濱-7F 愛書人會議室','彰濱-3樓 甲狀腺會議室'];
-const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','PET-CT','X-Ray','Echo','Endoscopy','Lab'];
+const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','Breast SONO','PET-CT','X-Ray','Echo','Endoscopy','Lab'];
 let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
 const DEFAULT_DRS=[
@@ -1147,7 +1034,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.9.4';
+const VERSION='V4.2.6';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1157,6 +1044,7 @@ function loadAll(){
   try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS]}
   try{const e=localStorage.getItem('mdt_exam_types');if(e){EXAM_TYPES=JSON.parse(e);DEFAULT_EXAM_TYPES.forEach(function(t){if(!EXAM_TYPES.includes(t))EXAM_TYPES.push(t);});}else{EXAM_TYPES=[...DEFAULT_EXAM_TYPES];}}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
   if(!EXAM_TYPES.includes('Bone scan')){EXAM_TYPES.splice(2,0,'Bone scan');saveAll();}
+  if(!EXAM_TYPES.includes('Breast SONO')){const s=EXAM_TYPES.indexOf('SONO');EXAM_TYPES.splice(s>=0?s+1:4,0,'Breast SONO');saveAll();}
   migrateLOCS();
   migrateCFG();
   migrateLOCS();
@@ -1314,7 +1202,7 @@ function showView(id){['home','meeting','settings','history','cancer'].forEach(v
 
 /* ════ Login ════ */
 function renderLogin(){document.getElementById('login-users').innerHTML=USERS.map(u=>`<button class="ubtn" onclick="pickUser('${u.id}')"><div class="u-init">${u.name[0]}</div><div><div class="u-name">${u.name}</div><div class="u-ext">${u.ext?'分機 '+u.ext:'兼任個管師'}</div><div class="u-tags">${u.cancers.map(c=>CFG[c]?.name||c).join('・')}</div></div><span class="u-arr">›</span></button>`).join('')}
-function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){
@@ -1398,6 +1286,8 @@ function goBackFromMeeting(){
 
 function showHome(){
   document.getElementById('home-t').textContent=greet()+'，'+S.user.name;
+  setTimeout(checkBackupReminder,400);
+  renderMonthStats();
   setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
   const navCal=document.getElementById('nav-cal');
@@ -1410,9 +1300,9 @@ function showHome(){
 /* ════ Calendar ════ */
 let _calYear=new Date().getFullYear(), _calMonth=new Date().getMonth();
 
-function calPrev(){_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--}renderCalendar()}
-function calNext(){_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++}renderCalendar()}
-function calToday(){_calYear=new Date().getFullYear();_calMonth=new Date().getMonth();renderCalendar()}
+function calPrev(){renderMonthStats();_calMonth--;if(_calMonth<0){_calMonth=11;_calYear--}renderCalendar()}
+function calNext(){renderMonthStats();_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++}renderCalendar()}
+function calToday(){renderMonthStats();_calYear=new Date().getFullYear();_calMonth=new Date().getMonth();renderCalendar()}
 
 function togglePhChip(cid,i,chip,el){
   ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
@@ -1470,7 +1360,7 @@ function addStruct(cid,i,field){
     const opts=EXAM_TYPES.map(t=>'<option>'+escA(t)+'</option>').join('');
     div.innerHTML=`<div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="name" style="width:120px"><option value="">— 選擇 —</option>${opts}</select>
+        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${rowIdx},'${cid}')"><option value="">— 選擇 —</option>${opts}<option value="__other__">其他</option></select>
         <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
@@ -1675,10 +1565,11 @@ function askCreateMtg(dateStr){
 function calCreateMtgOnDate(cid,date){
   const cids=pairIds(cid);S.cids=cids;
   const m=newMeetingObj(S.user.id,cids);m.date=date;S.meeting=m;
+  autoImportPrevFollowups(cids);
   S.viewMode=false;S.meetingMode='record';
   setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
-  renderEditor();updateFolderStatusBar();showView('meeting');
+  renderEditor();restoreImgFolderHandle();showView('meeting');
 }
 
 function calCreateMtg(cid,date){
@@ -1856,7 +1747,7 @@ function openNewModal(preDate){
   document.getElementById('new-modal').classList.add('open');
   setTimeout(function(){const d=document.getElementById('nm-date');if(d)d.focus();},100);
 }
-function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;S.viewMode=false;renderEditor();updateFolderStatusBar();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
+function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;autoImportPrevFollowups(cids);S.viewMode=false;renderEditor();restoreImgFolderHandle();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
 function openFromSb(cid){
   const cids=pairIds(cid);S.cids=cids;setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -1931,8 +1822,9 @@ function startNewMtgForCancer(){
     const dim=new Date(y,mo+1,0).getDate();
     if(day<=dim)S.meeting.date=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
   }
+  autoImportPrevFollowups(cids);
   S.viewMode=false;S.meetingMode='schedule';
-  renderEditor();updateFolderStatusBar();showView('meeting');
+  renderEditor();restoreImgFolderHandle();showView('meeting');
 }
 async function _loadMtg(id){
   const local=loadLocal(id);if(!local){alert('找不到會議資料');return null}
@@ -1942,9 +1834,9 @@ async function _loadMtg(id){
 }
 async function openMtgById(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
-  S.meeting=m;S.cids=m.cids;S.viewMode=!editMode;S.meetingMode='record';
+  S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
-  renderEditor();updateFolderStatusBar();showView('meeting');
+  renderEditor();restoreImgFolderHandle();showView('meeting');
 }
 async function openMtgSmart(id){
   // Decide mode: no cases → edit; has cases → view
@@ -1957,20 +1849,20 @@ async function openMtgSchedule(id){
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.viewMode=false;S.meetingMode='schedule';
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
-  renderEditor();updateFolderStatusBar();showView('meeting');
+  renderEditor();restoreImgFolderHandle();showView('meeting');
 }
 async function openMtgRecord(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
-  S.meeting=m;S.cids=m.cids;S.viewMode=!editMode;S.meetingMode='record';
+  S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
   if(m.cids.length>1)m.cids.forEach(cid=>{const s=loadSec(cid,m.date);if(s)m.sections[cid]=s});
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
-  renderEditor();updateFolderStatusBar();showView('meeting');
+  renderEditor();restoreImgFolderHandle();showView('meeting');
 }
 function showConflict(c){S.conflict=c;const fmt=m=>`<div class="csr"><span class="csr-k">版本</span><span class="csr-v">v${m.version}</span></div><div class="csr"><span class="csr-k">儲存者</span><span class="csr-v">${m.savedBy||'—'}</span></div><div class="csr"><span class="csr-k">時間</span><span class="csr-v">${m.savedAt?new Date(m.savedAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):'—'}</span></div>`;document.getElementById('cf-shared').innerHTML=`<div class="csl ${c.newerIs==='shared'?'newer':''}">共享資料夾 ${c.newerIs==='shared'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.shared)}`;document.getElementById('cf-local').innerHTML=`<div class="csl ${c.newerIs==='local'?'newer':''}">本機備份 ${c.newerIs==='local'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.local)}`;document.getElementById('cf-note').textContent=`建議使用 v${Math.max(c.shared.version,c.local.version)}`;document.getElementById('cf-modal').classList.add('open')}
-async function resolveConflict(choice){document.getElementById('cf-modal').classList.remove('open');const winner=choice==='shared'?S.conflict.shared:S.conflict.local;saveLocal(winner);await saveShared(winner);S.meeting=winner;S.cids=winner.cids;setSbActive(winner.cids.find(c=>S.user.cancers.includes(c)));renderEditor();updateFolderStatusBar();showView('meeting');S.conflict=null}
+async function resolveConflict(choice){document.getElementById('cf-modal').classList.remove('open');const winner=choice==='shared'?S.conflict.shared:S.conflict.local;saveLocal(winner);await saveShared(winner);S.meeting=winner;S.cids=winner.cids;setSbActive(winner.cids.find(c=>S.user.cancers.includes(c)));renderEditor();restoreImgFolderHandle();showView('meeting');S.conflict=null}
 
 /* ════ Settings ════ */
-function showStab(id,el){document.querySelectorAll('.stab').forEach(s=>s.classList.remove('on'));document.querySelectorAll('#st-tabs .tab').forEach(n=>n.classList.remove('active'));document.getElementById('stab-'+id).classList.add('on');el.classList.add('active');if(id==='examtypes')renderExamTypesTab();}
+function showStab(id,el){document.querySelectorAll('.stab').forEach(s=>s.classList.remove('on'));document.querySelectorAll('#st-tabs .tab').forEach(n=>n.classList.remove('active'));document.getElementById('stab-'+id).classList.add('on');el.classList.add('active');if(id==='examtypes')renderExamTypesTab();if(id==='imgfolder')updateImgFolderSettingsStatus();}
 function renderExamTypesTab(){
   const el=document.getElementById('exam-types-list');if(!el)return;
   el.innerHTML='';
@@ -2283,6 +2175,10 @@ function newMeetingObj(userId,cids){
 function ensureSec(cid){if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],special:[],team:[]};const s=S.meeting.sections[cid];if(!s.followups)s.followups=[];if(!s.cases)s.cases=[];if(!s.special)s.special=[];if(!s.team)s.team=[];if(!s.events)s.events=[]}
 
 function renderEditor(){
+  // Ensure activeCid is valid for current meeting
+  if(!S.activeCid||!S.cids.includes(S.activeCid)){
+    S.activeCid=S.cids.find(function(c){return S.user?.cancers.includes(c);})||S.cids[0];
+  }
   const m=S.meeting,cids=S.cids;
   document.getElementById('mtg-title').textContent=mtgTitle(cids);
   document.getElementById('mtg-sub').textContent=rocDate(m.date)+(m.time?' · '+m.time:'');
@@ -2463,7 +2359,7 @@ function renderCasesInner(){
     el.innerHTML=tabsHtml+panesHtml;
   }
 }
-function switchTab(cid){const mf=[...S.cids].sort((a,b)=>S.user.cancers.includes(a)?-1:1);mf.forEach((id,i)=>{document.querySelectorAll('#ctabs .tab')[i]?.classList.toggle('active',id===cid);document.getElementById('tp-'+id)?.classList.toggle('active',id===cid)})}
+function switchTab(cid){S.activeCid=cid;const mf=[...S.cids].sort((a,b)=>S.user.cancers.includes(a)?-1:1);mf.forEach((id,i)=>{document.querySelectorAll('#ctabs .tab')[i]?.classList.toggle('active',id===cid);document.getElementById('tp-'+id)?.classList.toggle('active',id===cid)});updateOutputLabel();}
 
 
 
@@ -2762,7 +2658,7 @@ function followupViewHTML(cid,i,d,type='followups'){
   return`<div class="vc" style="border-left:4px solid var(--fog-xlt)">
 <div class="vc-hdr">${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> VS ${escA(drs)}</span>
 <span class="vc-hdr-sub" style="margin-top:2px;font-size:10px;background:rgba(255,255,255,.12);padding:1px 7px;border-radius:2px;margin-left:6px">${lbl}</span>
-<button onclick="event.stopPropagation();editFollowup('${cid}',${i},'${type}')" style="margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 10px;border-radius:2px;font-size:11px;cursor:pointer">編輯</button>
+<button onclick="event.stopPropagation();openCaseHistoryPanel('${escA(d.chartNo||'')}','${escA(d.name||'')}')" style="margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 10px;border-radius:2px;font-size:11px;cursor:pointer">歷史</button><button onclick="event.stopPropagation();editFollowup('${cid}',${i},'${type}')" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 10px;border-radius:2px;font-size:11px;cursor:pointer;margin-left:4px">編輯</button>
 </div>
 <div class="vc-body">
 ${d.prevDate?`<div class="vc-r"><span class="vc-l">前次</span><span class="vc-v">${rocDate(d.prevDate)}</span></div>`:''}
@@ -2788,10 +2684,10 @@ function casesPane(cid){
   const fups=sec.followups||[],cases=sec.cases||[],sp=sec.special||[],team=sec.team||[];
   const vm=S.viewMode;
   const cFn=vm?caseViewHTML:caseHTML;
-  const fFn=vm?followupViewHTML:followupHTML;
+  const fFn=vm?followupViewHTML:function(cid,i,d,type){return followupHTML(cid,i,d,type,!!d._autoImported);};
   const sFn=vm?specialViewHTML:specialHTML;
   // Pre-build add buttons (cid is in scope, no complex concat)
-  const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>');
+  const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>'+'<button class="btnadd" style="background:none;border:1px solid var(--blt);color:var(--fog-dk)" onclick="openFollowupImport(\'' + cid + '\')">↩ 從上次帶入</button>');
   const bCase=vm?'':('<button class="btnadd" data-add-cid="' + cid + '" onclick="openAddCaseModal(this.dataset.addCid)">+ 新增討論個案</button>');
   const bSpec=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'special\')">+ 新增特殊議程</button>');
   const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">+ 新增醫療小組討論個案</button>');
@@ -2902,10 +2798,15 @@ function caseHTML(cid,i,d){
   const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
   const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
-  return`<div class="casecard" id="cc-${cid}-cases-${i}">
-<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
+  return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
+<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span>${(d.flags||[]).map(function(fl){const c2=fl==='緊急'?'#C0392B':fl==='複雜案例'?'#B87D3A':'#4A7C8E';return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1)" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1)" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 
+  <div class="fg full" style="padding-bottom:2px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${['首次討論','複雜案例','緊急'].map(function(fl){const on=(d.flags||[]).includes(fl);const col=fl==='緊急'?'#C0392B':fl==='複雜案例'?'#B87D3A':'#4A7C8E';return'<span data-action="caseflag" data-cid="'+cid+'" data-idx="'+i+'" data-flag="'+fl+'" style="cursor:pointer;font-size:11px;padding:2px 10px;border-radius:10px;border:1.5px solid '+col+';color:'+(on?'#fff':col)+';background:'+(on?col:'transparent')+';font-weight:600">'+fl+'</span>';}).join('')}
+    </div>
+  </div>
   <div class="fsec">基本資料</div>
   <div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','cases',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','cases',${i},'chartNo',this.value)" placeholder="病歷號" style="font-size:12px;padding:5px 8px;width:100%"></div>
   <div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','cases',${i},'name',this.value)" placeholder="姓名" style="font-size:12px;padding:5px 8px;width:100%"></div>
@@ -2977,11 +2878,11 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups'){return`<div class="casecard track-card" id="cc-${cid}-${type}-${i}"><div class="casetop"><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-</div></div><div class="fg"><label>前次醫療小組日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
+</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
 function specialHTML(cid,i,d){
   const STYPES=['核心指標','品質指標','修改指引','其他'];
   const typeChips=STYPES.map(t=>{
@@ -2995,10 +2896,24 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
     specialHTML(cid,i,blank);
-  const newCard=div.firstElementChild;cont.appendChild(newCard);
+  const newCard=div.firstElementChild;
+  // For new cases: remove cc-collapsed so new card starts expanded
+  if(type==='cases'){newCard.classList.remove('cc-collapsed');const tgi=newCard.querySelector('[data-action="togglecase"]');if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▼';}}
+  cont.appendChild(newCard);
+  // Accordion: collapse all sibling casecards before opening new one
+  if(type==='cases'){
+    cont.querySelectorAll('.casecard').forEach(function(sib){
+      if(sib!==newCard&&!sib.classList.contains('track-card')){
+        sib.classList.add('cc-collapsed');
+        const sid=sib.id;if(!sid)return;
+        const icon=document.getElementById('tgi-'+sid.slice(3));
+        if(icon)icon.textContent='▶';
+      }
+    });
+  }
   // Scroll to new card and focus first input
   setTimeout(function(){
     newCard.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -3049,19 +2964,6 @@ async function shareHTMLSlides(){
     // Generate slides HTML without downloading
     const fullHTML=await buildSlidesHTMLOnly();
     if(!fullHTML){throw new Error('無法產生投影片內容');}
-    // Delete old file for this meeting
-    try{
-      const _er=await fetch(existUrl,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
-      if(_er.ok){
-        const _ej=await _er.json();
-        if(_ej.sha){
-          await fetch(existUrl,{method:'DELETE',
-            headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
-            body:JSON.stringify({message:'Replace: '+ghFname,sha:_ej.sha})
-          });
-        }
-      }
-    }catch(_e){}
     const shareUrl=await uploadSlidesToGitHub(fullHTML,ghFname);
     const arr=getSharedSlides();
     const existing=arr.findIndex(s=>s.fname===ghFname);
@@ -3209,8 +3111,13 @@ function updateFolderStatusBar(){
   const el=document.getElementById('folder-status-bar');if(!el)return;
   let h='';
   if(imgFolderHandle){
-    h='<span style="background:#e8f4e8;color:#2a6;border:1px solid #b8ddb8;border-radius:3px;padding:3px 10px;font-size:12px">📂 '+escA(imgFolderHandle.name)+'</span>'
-     +'<button onclick="(async function(){try{imgFolderHandle=await window.showDirectoryPicker({mode:\'read\'});updateFolderStatusBar();showSaveToast(\'資料夾已更新\');}catch(e){}})()" style="background:none;border:1px solid #b8ddb8;color:#2a6;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px">更換</button>';
+    const isAutoSub=imgRootHandle&&imgFolderHandle.name===_mtgSubName();
+    const label=isAutoSub?'自動：'+escA(imgFolderHandle.name):escA(imgFolderHandle.name);
+    h='<span style="background:#e8f4e8;color:#2a6;border:1px solid #b8ddb8;border-radius:3px;padding:3px 10px;font-size:12px">📂 '+label+'</span>'
+     +'<button onclick="pickAndSetImgFolder()" style="background:none;border:1px solid #b8ddb8;color:#2a6;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px">自訂</button>'
+     +(isAutoSub?'':'<button onclick="clearMtgFolderHandle()" style="background:none;border:1px solid var(--border);color:var(--textlt);border-radius:3px;padding:2px 8px;cursor:pointer;font-size:11px">清除</button>');
+  } else if(_pendingFolderHandle){
+    h='<button onclick="reAuthFolder()" style="background:#e8f4f8;color:#2a6;border:1px solid #b8ddb8;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:600">📂 點此恢復授權：'+escA(_pendingFolderHandle.name)+'</button>';
   } else {
     const needs=S.meeting&&S.cids.some(function(cid){
       return(S.meeting.sections[cid]?.cases||[]).some(function(c){
@@ -3220,13 +3127,13 @@ function updateFolderStatusBar(){
           ||(c.mammo&&(c.mammo.images||[]).some(function(i){return i.fromFolder;}));
       });
     });
-    if(needs){
-      h='<button onclick="(async function(){try{imgFolderHandle=await window.showDirectoryPicker({mode:\'read\'});updateFolderStatusBar();showSaveToast(\'資料夾已授權\');}catch(e){}})()" style="background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:600">⚠️ 點此授權影像資料夾（病理 / 手術 / 相關影像）</button>';
-    }
+    const style=needs
+      ?'background:#fff3cd;color:#856404;border:1px solid #ffc107;font-weight:600'
+      :'background:none;border:1px solid var(--blt);color:var(--fog)';
+    h='<button onclick="pickAndSetImgFolder()" style="'+style+';border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px">'+(needs?'⚠️ ':'📂 ')+'設定此會議影像資料夾</button>';
   }
   el.innerHTML=h;
 }
-
 
 function onExamTypeChange(sel,caseIdx,examIdx,cid){
   if(sel.value==='__other__'){
@@ -3259,6 +3166,501 @@ function onExamTypeChange(sel,caseIdx,examIdx,cid){
   }
 }
 
+
+// ── Auto-save every 2 minutes when dirty ──
+setInterval(async function(){
+  if(_dirty&&S.meeting&&S.meeting.version){
+    await saveMeeting();
+  }
+},2*60*1000);
+
+window.addEventListener('beforeunload', function(e){
+  if(_dirty){
+    e.preventDefault();
+    e.returnValue='尚有未儲存的修改，確定要離開？';
+  }
+});
+
+
+function moveCase(cid, idx, dir){
+  ensureSec(cid);
+  const cases=S.meeting.sections[cid].cases;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=cases.length)return;
+  const tmp=cases[idx];cases[idx]=cases[newIdx];cases[newIdx]=tmp;
+  markDirty();
+  // Re-render cases pane
+  const cont=document.getElementById('div-cases-'+cid);
+  if(cont){
+    const vm=S.viewMode;
+    const fn=vm?caseViewHTML:caseHTML;
+    cont.innerHTML=cases.map(function(c,i){
+      try{return fn(cid,i,c);}catch(e){return '';}
+    }).join('');
+  }
+}
+
+
+function openCaseSearch(){
+  const modal=document.createElement('div');
+  modal.id='case-search-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding-top:60px';
+  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(680px,95vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
+    +'<div style="padding:16px 20px;border-bottom:1px solid var(--blt);display:flex;gap:10px;align-items:center">'
+    +'<input id="case-search-input" placeholder="輸入病歷號或姓名搜尋所有歷史會議..." style="flex:1;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:4px" oninput="doCaseSearch(this.value)">'
+    +'<button onclick="document.getElementById(\'case-search-modal\').remove()" style="background:none;border:none;font-size:20px;color:var(--textlt);cursor:pointer;padding:0 4px">×</button>'
+    +'</div>'
+    +'<div id="case-search-results" style="overflow-y:auto;flex:1;padding:8px 0">'
+    +'<div style="text-align:center;padding:40px;color:var(--textlt);font-size:13px">請輸入關鍵字搜尋</div>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+  setTimeout(function(){document.getElementById('case-search-input').focus();},50);
+}
+
+function doCaseSearch(q){
+  const el=document.getElementById('case-search-results');if(!el)return;
+  if(!q||q.trim().length<1){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--textlt);font-size:13px">請輸入關鍵字搜尋</div>';return;}
+  q=q.trim().toLowerCase();
+  const idx=getIdx();
+  const results=[];
+  idx.forEach(function(mi){
+    const m=loadLocal(mi.id);if(!m)return;
+    (m.cids||[]).forEach(function(cid){
+      const ca=CFG[cid];
+      ((m.sections||{})[cid]?.cases||[]).forEach(function(c){
+        const match=(c.chartNo||'').toLowerCase().includes(q)||(c.name||'').toLowerCase().includes(q);
+        if(match)results.push({m,cid,c,ca});
+      });
+    });
+  });
+  if(!results.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--textlt);font-size:13px">找不到符合的個案</div>';return;}
+  el.innerHTML=results.slice(0,30).map(function(r){
+    const drs=getDoctors(r.c).join('、')||'—';
+    return '<div style="padding:12px 20px;border-bottom:1px solid var(--blt);cursor:pointer;transition:background .1s" onmouseover="this.style.background=\'#f5f7f9\'" onmouseout="this.style.background=\'\'" onclick="openMtgById(\''+r.m.id+'\');document.getElementById(\'case-search-modal\').remove()">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span style="font-weight:700;font-size:14px">'+escA(r.c.chartNo||'—')+'</span>'
+      +'<span style="font-size:13px">'+escA(r.c.name?maskName(r.c.name):'—')+'</span>'
+      +'<span style="font-size:11px;padding:1px 8px;border-radius:10px;background:var(--fog-xlt);color:var(--fog-dk)">'+escA(r.ca?.name||r.cid)+'</span>'
+      +'<span style="margin-left:auto;font-size:11px;color:var(--textlt)">'+escA(r.m.date)+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(r.c.diagnosis||'無診斷')+'</div>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:1px">VS '+escA(drs)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+
+let _fupImportCid=null,_fupImportAll=[];
+function openFollowupImport(cid){
+  // Collect 個案討論 from all previous meetings of same cancer
+  const idx=getIdx();
+  const all=[];
+  idx.forEach(function(mi){
+    if(mi.id===(S.meeting?.id||''))return;
+    const m=loadLocal(mi.id);if(!m)return;
+    // Check same cancer
+    if(!(m.cids||[]).includes(cid))return;
+    const cases=((m.sections||{})[cid]?.cases||[]);
+    cases.forEach(function(c){
+      if(c.chartNo||c.name)all.push({m,c,date:m.date});
+    });
+  });
+
+  if(!all.length){alert('找不到此癌別的歷史個案討論');return;}
+
+  // Sort by date desc
+  all.sort(function(a,b){return b.date.localeCompare(a.date);});
+
+  const modal=document.createElement('div');
+  modal.id='followup-import-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+
+  const rows=all.map(function(r,idx2){
+    const drs=getDoctors(r.c).join('、')||'—';
+    const already=(S.meeting?.sections[cid]?.followups||[]).some(function(f){return f.chartNo===r.c.chartNo;});
+    const alreadyTag=already?'<span style="font-size:10px;color:var(--fog);padding:1px 6px;background:var(--cream-dk);border-radius:3px;flex-shrink:0">已在清單</span>':'';
+    return '<label style="display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--blt)'+(already?';opacity:.5':'')
+      +'" onmouseover="this.style.background=\'#f5f7f9\'" onmouseout="this.style.background=\'\'">'
+      +'<input type="checkbox" value="'+idx2+'" style="flex-shrink:0;width:16px;height:16px"'+(already?' title="已在追蹤清單"':'')+'>'
+      +'<div style="width:80px;flex-shrink:0;font-weight:700;font-size:13px;color:var(--fog-dk)">'+escA(r.c.chartNo||'—')+'</div>'
+      +'<div style="width:60px;flex-shrink:0;font-size:13px">'+escA(r.c.name?maskName(r.c.name):'—')+'</div>'
+      +'<div style="flex:1;min-width:0;font-size:11px;color:var(--textlt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(r.c.diagnosis||'無診斷')+'</div>'
+      +'<div style="width:90px;flex-shrink:0;font-size:11px;color:var(--textlt)">VS '+escA(drs)+'</div>'
+      +'<div style="width:70px;flex-shrink:0;font-size:11px;color:var(--textlt);text-align:right">'+escA(r.date)+'</div>'
+      +alreadyTag
+      +'</label>';
+  }).join('');
+
+  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(620px,95vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
+    +'<div style="padding:14px 20px;border-bottom:1px solid var(--blt);display:flex;align-items:center;gap:10px">'
+    +'<div style="font-weight:700;font-size:15px">從上次帶入前期追蹤</div>'
+    +'<input id="fup-search" placeholder="篩選病歷號/姓名..." style="flex:1;font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:3px;max-width:180px;margin-left:auto" oninput="filterFupRows(this.value)">'
+    +'<button onclick="document.getElementById(\'followup-import-modal\').remove()" style="background:none;border:none;font-size:20px;color:var(--textlt);cursor:pointer">×</button>'
+    +'</div>'
+    +'<div style="padding:6px 16px;background:var(--surface);border-bottom:1px solid var(--blt);font-size:11px;color:var(--textlt)">勾選後帶入前期追蹤清單（保留病歷號、姓名、主治醫師、診斷）</div>'
+    +'<div id="fup-list" style="overflow-y:auto;flex:1">'+rows+'</div>'
+    +'<div style="padding:12px 20px;border-top:1px solid var(--blt);display:flex;gap:8px;align-items:center">'
+    +'<button class="btn btn-b btn-sm" onclick="document.getElementById(\'followup-import-modal\').querySelectorAll(\'input\').forEach(function(c){c.checked=true;});updateFupCount()">全選</button>'
+    +'<span id="fup-sel-count" style="font-size:12px;color:var(--textlt);margin-right:auto">已選 0 筆</span>'
+    +'<button class="btn btn-b btn-sm" onclick="document.getElementById(\'followup-import-modal\').remove()">取消</button>'
+    +'<button class="btn btn-a btn-sm" onclick="doFollowupImport()">帶入選取</button>'
+    +'</div></div>';
+  _fupImportCid=cid;
+  _fupImportAll=all;
+  document.body.appendChild(modal);
+  modal.querySelectorAll('input[type=checkbox]').forEach(function(cb){cb.onchange=updateFupCount;});
+}
+
+function updateFupCount(){
+  var n=document.querySelectorAll('#followup-import-modal input:checked').length;
+  var el=document.getElementById('fup-sel-count');if(el)el.textContent='已選 '+n+' 筆';
+}
+
+function filterFupRows(q){
+  document.querySelectorAll('#fup-list label').forEach(function(row){
+    row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+
+function doFollowupImport(){
+  const cid=_fupImportCid,all=_fupImportAll;
+  const modal=document.getElementById('followup-import-modal');
+  const checked=[...modal.querySelectorAll('input:checked')].map(function(cb){return parseInt(cb.value);});
+  if(!checked.length){alert('請先勾選要帶入的個案');return;}
+  modal.remove();
+  ensureSec(cid);
+  const fups=S.meeting.sections[cid].followups;
+  const existing=new Set(fups.map(function(f){return f.chartNo;}));
+  let added=0;
+  checked.forEach(function(idx2){
+    const r=all[idx2];if(!r)return;
+    const c=r.c;
+    // Skip duplicates
+    if(c.chartNo&&existing.has(c.chartNo))return;
+    fups.push({
+      id:uid(),
+      chartNo:c.chartNo||'',
+      name:c.name||'',
+      doctors:Array.isArray(c.doctors)?c.doctors.slice(0,2):[(c.doctor||''),''],
+      doctor:c.doctor||'',
+      prevDate:r.date||'',
+      note:''
+    });
+    if(c.chartNo)existing.add(c.chartNo);
+    added++;
+  });
+  markDirty();
+  // Re-render followups section
+  const cont=document.getElementById('div-followups-'+cid);
+  if(cont){
+    const vm=S.viewMode;
+    cont.innerHTML=fups.map(function(f,i){
+      try{return vm?followupViewHTML(cid,i,f,'followups'):followupHTML(cid,i,f,'followups');}catch(e){return '';}
+    }).join('');
+  }
+  showSaveToast('已帶入 '+added+' 筆，略過 '+(checked.length-added)+' 筆重複');
+}
+
+function checkBackupReminder(){
+  const last=parseInt(localStorage.getItem('mdt_last_backup')||'0');
+  const now=Date.now();
+  if(now-last<=7*24*60*60*1000)return;
+  const el=document.getElementById('backup-reminder');if(!el)return;
+  const daysAgo=last?Math.floor((now-last)/86400000)+'天前':'從未';
+  el.innerHTML='<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+    +'<span style="font-weight:600;color:#856404">备份提醒：上次備份 '+daysAgo+'，建議定期匯出備份</span>'
+    +'<button onclick="exportAllJSON();localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="margin-left:auto;background:#B87D3A;color:#fff;border:none;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px">立即備份</button>'
+    +'<button onclick="localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="background:none;border:1px solid #ffc107;color:#856404;border-radius:3px;padding:3px 8px;cursor:pointer;font-size:12px">略過</button>'
+    +'</div>';
+}
+
+
+function openCaseHistoryPanel(chartNo, name){
+  if(!chartNo){return;}
+  // Collect all decisions for this patient from history
+  const idx=getIdx();
+  const records=[];
+  idx.forEach(function(mi){
+    const m=loadLocal(mi.id);if(!m)return;
+    (m.cids||[]).forEach(function(cid){
+      ((m.sections||{})[cid]?.cases||[]).forEach(function(c){
+        if(c.chartNo===chartNo){
+          records.push({date:m.date,title:m.title,cid,
+            diagnosis:c.diagnosis||'',
+            summary:c.summary||'',
+            decision:c.decision||'',
+            discussion:c.discussion||''
+          });
+        }
+      });
+    });
+  });
+  records.sort(function(a,b){return b.date.localeCompare(a.date);});
+
+  // Remove existing panel
+  const old=document.getElementById('history-panel');if(old)old.remove();
+
+  const panel=document.createElement('div');
+  panel.id='history-panel';
+  panel.style.cssText='position:fixed;top:0;right:0;width:min(420px,95vw);height:100vh;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.18);z-index:8888;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease';
+
+  const rows=records.length?records.map(function(r){
+    return '<div style="padding:12px 16px;border-bottom:1px solid var(--blt)">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<span style="font-weight:700;font-size:12px;color:var(--fog)">'+escA(r.date)+'</span>'
+      +'<span style="font-size:11px;color:var(--textlt)">'+escA(r.title)+'</span>'
+      +'</div>'
+      +(r.diagnosis?'<div style="font-size:12px;color:var(--text);margin-bottom:4px">'+escA(r.diagnosis)+'</div>':'')
+      +(r.discussion?'<div style="font-size:11px;color:var(--textlt);margin-bottom:4px"><b>討論：</b>'+escA(r.discussion)+'</div>':'')
+      +(r.summary?'<div style="font-size:11px;color:var(--textmd);margin-bottom:3px"><b>摘要：</b>'+escA(r.summary)+'</div>':'')
+      +(r.decision?'<div style="font-size:12px;font-weight:600;color:var(--fog-dk);background:var(--surface);padding:6px 8px;border-radius:3px;border-left:3px solid var(--fog)"><b>決策：</b>'+escA(r.decision)+'</div>':'')
+      +'</div>';
+  }).join(''):'<div style="padding:40px;text-align:center;color:var(--textlt);font-size:13px">尚無歷史討論記錄</div>';
+
+  panel.innerHTML='<div style="padding:14px 16px;border-bottom:1px solid var(--blt);display:flex;align-items:center;gap:10px;background:var(--fog-dk);color:#fff;flex-shrink:0">'
+    +'<div style="flex:1"><div style="font-weight:700;font-size:14px">'+escA(chartNo)+(name?' · '+escA(maskName(name)):'')+'</div>'
+    +'<div style="font-size:11px;opacity:.75">歷史討論 '+records.length+' 筆</div></div>'
+    +'<button onclick="document.getElementById(\'history-panel\').style.transform=\'translateX(100%)\';setTimeout(function(){var p=document.getElementById(\'history-panel\');if(p)p.remove();},300)" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px">×</button>'
+    +'</div>'
+    +'<div style="overflow-y:auto;flex:1">'+rows+'</div>';
+  document.body.appendChild(panel);
+  setTimeout(function(){panel.style.transform='translateX(0)';},20);
+}
+
+
+function renderMonthStats(){
+  const el=document.getElementById('month-stats');if(!el)return;
+  const y=_calYear,mo=_calMonth;
+  const prefix=y+'-'+String(mo+1).padStart(2,'0');
+  const idx=getIdx();
+  let total=0,firstCount=0,followCount=0;
+  const byCA={};
+  idx.forEach(function(mi){
+    if(!mi.date||!mi.date.startsWith(prefix))return;
+    const m=loadLocal(mi.id);if(!m)return;
+    (m.cids||[]).forEach(function(cid){
+      const ca=CFG[cid]?.name||cid;
+      const cases=((m.sections||{})[cid]?.cases||[]);
+      const follows=((m.sections||{})[cid]?.followups||[]);
+      total+=cases.length;
+      followCount+=follows.length;
+      cases.forEach(function(c){if((c.flags||[]).includes('首次討論'))firstCount++;});
+      if(!byCA[ca])byCA[ca]=0;
+      byCA[ca]+=cases.length;
+    });
+  });
+  if(total===0&&followCount===0){el.innerHTML='';return;}
+  const caList=Object.entries(byCA).sort(function(a,b){return b[1]-a[1];}).map(function(kv){
+    const col=Object.values(CFG).find(function(c){return c.name===kv[0];})?.color||'#637281';
+    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--textmd)">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:'+col+';flex-shrink:0"></span>'
+      +escA(kv[0])+' '+kv[1]+'</span>';
+  }).join('<span style="color:var(--blt)"> · </span>');
+  el.innerHTML='<div style="padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--blt);display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px">'
+    +'<span style="color:var(--fog-dk);font-weight:600">本月</span>'
+    +'<span>個案討論 <b>'+total+'</b> 筆</span>'
+    +'<span>追蹤 <b>'+followCount+'</b> 筆</span>'
+    +(firstCount?'<span>首次 <b>'+firstCount+'</b> 筆</span>':'')
+    +'<span style="margin-left:4px;color:var(--textlt)">'+caList+'</span>'
+    +'</div>';
+}
+
+
+function autoImportPrevFollowups(cids){
+  try{const idx=getIdx();
+  cids.forEach(function(cid){
+    if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],team:[],events:[],special:[]};
+    const prev=idx.find(function(mi){
+      return mi.id!==S.meeting.id&&(mi.cids||[]).includes(cid);
+    });
+    if(!prev)return;
+    const m=loadLocal(prev.id);if(!m)return;
+    const sec=(m.sections||{})[cid]||{};
+    // 個案討論 + 醫療小組 都帶入
+    const sources=[...(sec.cases||[]),...(sec.team||[])];
+    if(!sources.length)return;
+    const fups=S.meeting.sections[cid].followups;
+    const existing=new Set(fups.map(function(f){return f.chartNo;}));
+    sources.forEach(function(c){
+      if(!c.chartNo&&!c.name)return;
+      if(c.chartNo&&existing.has(c.chartNo))return;
+      fups.push({
+        id:uid(),
+        chartNo:c.chartNo||'',
+        name:c.name||'',
+        doctors:Array.isArray(c.doctors)?c.doctors.slice(0,2):[(c.doctor||''),''],
+        doctor:c.doctor||'',
+        prevDate:prev.date||'',
+        note:'',
+        _autoImported:true
+      });
+      if(c.chartNo)existing.add(c.chartNo);
+    });
+  });
+  }catch(e){console.warn('autoImportPrevFollowups error:',e);}
+}
+
+
+function getOutputCid(){
+  if(S.cids&&S.cids.length>1&&S.activeCid&&S.cids.includes(S.activeCid))return S.activeCid;
+  return S.cids?S.cids[0]:null;
+}
+function updateOutputLabel(){
+  const el=document.getElementById('output-cid-label');if(!el)return;
+  const cid=getOutputCid();if(!cid){el.style.display='none';return;}
+  const ca=CFG[cid];if(!ca){el.style.display='none';return;}
+  if(S.cids&&S.cids.length>1){
+    el.innerHTML='';
+    el.style.display='flex';
+    const lbl=document.createElement('span');
+    lbl.innerHTML='目前產出：<b style="color:'+escA(ca.color||'#637281')+'">'+escA(ca.name)+'</b>';
+    el.appendChild(lbl);
+    S.cids.filter(function(c){return c!==cid;}).forEach(function(c2){
+      const btn=document.createElement('span');
+      btn.textContent='切換到 '+(CFG[c2]?.name||c2);
+      btn.style.cssText='cursor:pointer;color:var(--textlt);font-size:11px;text-decoration:underline;margin-left:8px';
+      btn.onclick=function(){switchTab(c2);};
+      el.appendChild(btn);
+    });
+  } else {
+    el.innerHTML='';el.style.display='none';
+  }
+}
+
+
+// ── Image folder: root + per-meeting subfolders, persisted in IndexedDB ──
+const _IDB_NAME='mdt_fs',_IDB_STORE='handles';
+function _openIDB(){
+  return new Promise(function(res,rej){
+    const r=indexedDB.open(_IDB_NAME,1);
+    r.onupgradeneeded=function(e){e.target.result.createObjectStore(_IDB_STORE);};
+    r.onsuccess=function(e){res(e.target.result);};
+    r.onerror=function(){rej();};
+  });
+}
+function _idbGet(key){return _openIDB().then(function(db){return new Promise(function(res){const r=db.transaction(_IDB_STORE,'readonly').objectStore(_IDB_STORE).get(key);r.onsuccess=function(){res(r.result||null);};r.onerror=function(){res(null);};});}).catch(function(){return null;});}
+function _idbPut(key,val){return _openIDB().then(function(db){return new Promise(function(res){const tx=db.transaction(_IDB_STORE,'readwrite');tx.objectStore(_IDB_STORE).put(val,key);tx.oncomplete=res;tx.onerror=res;});}).catch(function(){});}
+function _idbDel(key){return _openIDB().then(function(db){db.transaction(_IDB_STORE,'readwrite').objectStore(_IDB_STORE).delete(key);}).catch(function(){});}
+
+let _pendingFolderHandle=null;
+let imgRootHandle=null; // global root folder
+
+// Derive subfolder name for current meeting
+function _mtgSubName(){
+  if(!S.meeting)return null;
+  const date=(S.meeting.date||'').replace(/-/g,'');
+  const names=(S.cids||[]).map(function(id){return CFG[id]?.name||id;}).join('+');
+  return date+' '+names;
+}
+function _mtgFolderKey(){return S.meeting?'imgFolder_'+S.meeting.id:'imgFolder_global';}
+
+// Try to get permission for a handle
+async function _checkPerm(handle){
+  if(!handle)return false;
+  try{
+    let p=await handle.queryPermission({mode:'read'});
+    if(p==='granted')return true;
+    if(p==='prompt'){p=await handle.requestPermission({mode:'read'});return p==='granted';}
+    return false;
+  }catch(e){return false;}
+}
+
+// Set root folder (from settings)
+async function pickRootFolder(){
+  try{
+    const h=await window.showDirectoryPicker({mode:'read'});
+    imgRootHandle=h;
+    await _idbPut('imgFolder_root',h);
+    updateImgFolderSettingsStatus();
+    showSaveToast('根目錄已設定：'+h.name);
+  }catch(e){if(e.name!=='AbortError')console.warn(e);}
+}
+
+async function clearRootFolder(){
+  imgRootHandle=null;
+  await _idbDel('imgFolder_root');
+  updateImgFolderSettingsStatus();
+  showSaveToast('根目錄已清除');
+}
+
+// Set per-meeting override folder
+async function setImgFolder(handle){
+  imgFolderHandle=handle;
+  _pendingFolderHandle=null;
+  await _idbPut(_mtgFolderKey(),handle);
+  updateFolderStatusBar();
+  showSaveToast('此會議影像資料夾已設定：'+handle.name);
+}
+
+async function pickAndSetImgFolder(){
+  try{
+    // Default to root if available
+    const startIn=imgRootHandle||undefined;
+    const h=await window.showDirectoryPicker({mode:'read',startIn:startIn||'documents'});
+    await setImgFolder(h);
+  }catch(e){if(e.name!=='AbortError')console.warn(e);}
+}
+
+async function clearMtgFolderHandle(){
+  imgFolderHandle=null;_pendingFolderHandle=null;
+  await _idbDel(_mtgFolderKey());
+  updateFolderStatusBar();
+  showSaveToast('已清除此會議的資料夾設定，將改用根目錄設定');
+  // Try to use root subfolder instead
+  await restoreImgFolderHandle();
+}
+
+async function reAuthFolder(){
+  if(!_pendingFolderHandle)return;
+  const ok=await _checkPerm(_pendingFolderHandle);
+  if(ok){imgFolderHandle=_pendingFolderHandle;_pendingFolderHandle=null;updateFolderStatusBar();showSaveToast('影像資料夾授權成功');}
+}
+
+// Restore on meeting open: priority = per-meeting override > root+subfolder > root
+async function restoreImgFolderHandle(){
+  imgFolderHandle=null;_pendingFolderHandle=null;
+  if(!S.meeting)return;
+
+  // 1. Check per-meeting override
+  const overrideHandle=await _idbGet(_mtgFolderKey());
+  if(overrideHandle){
+    const ok=await _checkPerm(overrideHandle);
+    if(ok){imgFolderHandle=overrideHandle;updateFolderStatusBar();return;}
+    else{_pendingFolderHandle=overrideHandle;updateFolderStatusBar();return;}
+  }
+
+  // 2. Try root → subfolder
+  if(!imgRootHandle){
+    const rootSaved=await _idbGet('imgFolder_root');
+    if(rootSaved){const ok=await _checkPerm(rootSaved);if(ok)imgRootHandle=rootSaved;}
+  }
+  if(imgRootHandle){
+    const subName=_mtgSubName();
+    if(subName){
+      try{
+        // Create subfolder if not exists
+        const subHandle=await imgRootHandle.getDirectoryHandle(subName,{create:true});
+        imgFolderHandle=subHandle;
+        updateFolderStatusBar();
+        return;
+      }catch(e){
+        // Subfolder failed, use root itself
+        imgFolderHandle=imgRootHandle;
+        updateFolderStatusBar();
+        return;
+      }
+    }
+  }
+  updateFolderStatusBar();
+}
+
+// Restore root on startup
+async function restoreRootHandle(){
+  const h=await _idbGet('imgFolder_root');
+  if(!h)return;
+  const ok=await _checkPerm(h);
+  if(ok){imgRootHandle=h;}
+}
 /* ════ Save ════ */
 let _dirty=false;
 function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}}
@@ -3317,7 +3719,7 @@ async function genPPTX(){
   const ok=await loadLib('pptxgenjs@3.12.0/dist/pptxgen.bundle.js','PptxGenJS');
   if(!ok)return;
   const btn=document.getElementById('btn-pptx');btn.disabled=true;btn.textContent='產生中...';
-  const m=S.meeting,cids=S.cids;
+  const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
   const pptx=new PptxGenJS();
   pptx.layout='LAYOUT_16x9';
   pptx.author='彰濱秀傳癌症中心';
@@ -3525,7 +3927,7 @@ async function genDOCX(){
   if(!ok)return;
   const btn=document.getElementById('btn-docx');btn.disabled=true;btn.textContent='產生中...';
   try{
-    const m=S.meeting,cids=S.cids;
+    const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const{Document,Paragraph,TextRun,HeadingLevel,Packer,
           Table,TableRow,TableCell,WidthType,ShadingType}=docx;
 
@@ -3677,7 +4079,7 @@ async function genDOCX(){
 }
 
 /* ════ Generators ════ */
-function exportAllJSON(){
+function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
   const backup={
     version:VERSION,
     exportedAt:new Date().toISOString(),
@@ -3814,9 +4216,39 @@ function doImportCase(){
     S.meeting.sections[cid].cases.push(blank);
   });
   closeImportCase();
-  renderCasesInner();
   markDirty();
   showSaveToast('已匯入 ' + cases.length + ' 筆個案資料');
+  // Directly update DOM without renderCasesInner (avoid loadMergedSections overwriting new cases)
+  const cont=document.getElementById('div-cases-'+cid);
+  if(cont){
+    const allCases=S.meeting.sections[cid].cases;
+    // Collapse all existing cards
+    cont.querySelectorAll('.casecard:not(.track-card)').forEach(function(c){
+      c.classList.add('cc-collapsed');
+      const tgi=c.querySelector('[data-action="togglecase"]');
+      if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▶';}
+    });
+    // Append only the newly added cases
+    const startIdx=allCases.length-cases.length;
+    for(let i=startIdx;i<allCases.length;i++){
+      const div=document.createElement('div');
+      div.innerHTML=caseHTML(cid,i,allCases[i]);
+      const newCard=div.firstElementChild;
+      if(newCard){
+        newCard.classList.remove('cc-collapsed');
+        const tgi=newCard.querySelector('[data-action="togglecase"]');
+        if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▼';}
+        cont.appendChild(newCard);
+      }
+    }
+    setTimeout(function(){
+      const cards=cont.querySelectorAll('.casecard:not(.track-card)');
+      if(cards.length){cards[cards.length-1].scrollIntoView({behavior:'smooth',block:'start'});}
+    },80);
+  } else {
+    // Fallback to full re-render
+    renderCasesInner();
+  }
 }
 
 
@@ -3838,7 +4270,7 @@ let _lastSlidesHTML=null;
 async function genHTMLSlides(){
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   readForm();
-  const m=S.meeting,cids=S.cids;
+  const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
   const slides=[];
   // Check if any folder-based images exist without dataUrl
   // Check if any folder-based images need re-authorization
@@ -3850,7 +4282,7 @@ async function genHTMLSlides(){
   });});
   if(_needsFolder&&!imgFolderHandle){
     if(confirm('此次會議包含來自資料夾的影像，需要授權資料夾才能嵌入投影片。\n\n點確認選擇資料夾，點取消略過（圖片將不顯示）')){
-      try{imgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
+      try{const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}catch(e){}
     }
   }
   // Pre-load folder-based pathology images to base64 (TEMP COPY ONLY - never write back to S.meeting)
@@ -4032,13 +4464,13 @@ async function genHTMLSlides(){
         slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'          +'</section>');
       });
 
-    }); // end cases.forEach
-
       // Surgical photo slides - one per image
       (c.surgicalImages||[]).forEach(function(img){
         const photoName=escA(img.caption||img.name||'手術照片');
         slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+photoName+'</span>'          +'<span class="cat">手術照片</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'          +'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+photoName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'          +'</div>'          +'</section>');
       });
+
+    }); // end cases.forEach
 
     // ── Team / Events ──
     if(team.length||events.length){
@@ -4349,178 +4781,6 @@ async function importXLSX(inputEl){
 }
 
 
-function printMeeting(){
-  if(!S.meeting?.version){alert('請先儲存會議資料');return;}
-  if(!S.viewMode){
-    S.viewMode=true;S.meetingMode='record';renderEditor();
-  }
-  // Inject print header
-  let ph=document.getElementById('print-header');
-  if(!ph){ph=document.createElement('div');ph.id='print-header';ph.style.display='none';
-    document.getElementById('view-meeting').prepend(ph);}
-  const m=S.meeting,cids=S.cids;
-  const owners=[];
-  cids.forEach(cid=>{const o=USERS.find(u=>u.cancers?.includes(cid));if(o&&!owners.find(x=>x.id===o.id))owners.push(o);});
-  const contact=owners.filter(o=>o.ext).map(o=>o.name+'('+o.ext+')').join(' ')||'暫無專職個管師';
-  const memberLines=cids.map(cid=>{const ca=CFG[cid];const convName=ca.conv?.includes('::')?ca.conv.split('::')[1]:ca.conv||'';return`${ca.name}　召集人：${convName}　核心成員：${getMemberStr(ca)}`}).join('<br>');
-  ph.innerHTML=`<div class="ph-title">${escA(mtgTitle(cids))}</div>`
-    +`<div class="ph-meta">`
-    +`${rocDate(m.date)}&nbsp;&nbsp;${m.time||''}<br>`
-    +`地點：${escA(m.loc||'')}　　聯絡人：${escA(contact)}`
-    +(m.zoom?.id?`<br>Zoom：${escA(m.zoom.id)}　密碼：${escA(m.zoom.pwd||'')}`:'')+`</div>`
-    +(memberLines?`<div class="ph-members">${memberLines}</div>`:'');
-  setTimeout(()=>{window.print();},400);
-}
-
-
-async function genXLSX(){
-  const btn=document.getElementById('btn-xlsx');
-  if(btn){btn.disabled=true;btn.textContent='匯出中...';}
-  const ok=await loadLib('xlsx@0.18.5/dist/xlsx.full.min.js','XLSX');
-  if(!ok){setLibStatus('SheetJS 無法載入','var(--err)');if(btn){btn.disabled=false;btn.textContent='Excel 匯出';}return;}
-  try{
-    readForm();
-    const m=S.meeting,cids=S.cids;
-    const wb=XLSX.utils.book_new();
-
-    // ── Sheet 1: 個案討論 ──
-    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','家族史','討論要點','討論議題','摘要','決策']];
-    cids.forEach(cid=>{
-      const ca=CFG[cid];
-      const sec=m.sections[cid]||{};
-      (sec.cases||[]).forEach(c=>{
-        caseRows.push([
-          ca.name,
-          c.chartNo||'',
-          c.name||'',
-          c.gender||'M',
-          c.age||'',
-          getDoctorStr(c),
-          c.diagnosis||'',
-          c.cc||'',
-          (c.phChips||[]).map(x=>x+'(+)').join(' '),
-          c.ph||'',
-          c.familyHistory||'',
-          c.discussion||'',
-          (c.topics||[]).join('、'),
-          c.summary||'',
-          c.decision||''
-        ]);
-      });
-    });
-    const ws1=XLSX.utils.aoa_to_sheet(caseRows);
-    ws1['!cols']=[{wch:10},{wch:10},{wch:8},{wch:4},{wch:4},{wch:14},{wch:20},{wch:24},{wch:20},{wch:16},{wch:16},{wch:20},{wch:20},{wch:30},{wch:30}];
-    XLSX.utils.book_append_sheet(wb,ws1,'個案討論');
-
-    // ── Sheet 2: 檢查 ──
-    const examRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','項目','日期','內容']];
-    cids.forEach(cid=>{
-      const ca=CFG[cid];
-      (m.sections[cid]?.cases||[]).forEach(c=>{
-        const drs=getDoctorStr(c);
-        (c.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(ex=>{
-          examRows.push([ca.name,c.chartNo||'',c.name||'',drs,ex.name||'',ex.date||'',ex.content||'']);
-        });
-      });
-    });
-    if(examRows.length>1){
-      const ws2=XLSX.utils.aoa_to_sheet(examRows);
-      ws2['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:10},{wch:12},{wch:30}];
-      XLSX.utils.book_append_sheet(wb,ws2,'檢查記錄');
-    }
-
-    // ── Sheet 3: 治療 ──
-    const trtRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','項目','日期','內容']];
-    cids.forEach(cid=>{
-      const ca=CFG[cid];
-      (m.sections[cid]?.cases||[]).forEach(c=>{
-        const drs=getDoctorStr(c);
-        (c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(tr=>{
-          trtRows.push([ca.name,c.chartNo||'',c.name||'',drs,tr.name||'',tr.date||'',tr.content||'']);
-        });
-      });
-    });
-    if(trtRows.length>1){
-      const ws3=XLSX.utils.aoa_to_sheet(trtRows);
-      ws3['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:10},{wch:12},{wch:30}];
-      XLSX.utils.book_append_sheet(wb,ws3,'治療記錄');
-    }
-
-    // ── Sheet 4: 病理 ──
-    const pathRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','日期','病理報告']];
-    cids.forEach(cid=>{
-      const ca=CFG[cid];
-      (m.sections[cid]?.cases||[]).forEach(c=>{
-        const drs=getDoctorStr(c);
-        const pp=(c.pathologies&&c.pathologies.length)?c.pathologies:(c.pathology?[{date:c.pathologyDate||'',content:c.pathology}]:[]);
-        pp.forEach(p=>{pathRows.push([ca.name,c.chartNo||'',c.name||'',drs,p.date||'',p.content||'']);});
-      });
-    });
-    if(pathRows.length>1){
-      const wsp=XLSX.utils.aoa_to_sheet(pathRows);
-      wsp['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:12},{wch:60}];
-      XLSX.utils.book_append_sheet(wb,wsp,'病理記錄');
-    }
-
-    // ── Sheet 5: 癌指數 ──
-    const mkRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','指數','日期','數值趨勢']];
-    cids.forEach(cid=>{
-      const ca=CFG[cid];
-      (m.sections[cid]?.cases||[]).forEach(c=>{
-        const drs=getDoctorStr(c);
-        (c.markers||[]).forEach(mk=>{mkRows.push([ca.name,c.chartNo||'',c.name||'',drs,mk.name||'',mk.date||'',mk.content||'']);});
-      });
-    });
-    if(mkRows.length>1){
-      const wsmk=XLSX.utils.aoa_to_sheet(mkRows);
-      wsmk['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:8},{wch:12},{wch:40}];
-      XLSX.utils.book_append_sheet(wb,wsmk,'癌指數記錄');
-    }
-
-    // ── Sheet 6: 前期追蹤 ──
-    const fupRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','前次日期','追蹤說明']];
-    cids.forEach(cid=>{
-      const ca=CFG[cid];
-      (m.sections[cid]?.followups||[]).forEach(f=>{
-        fupRows.push([ca.name,f.chartNo||'',f.name||'',getDoctorStr(f),f.prevDate||'',f.note||'']);
-      });
-    });
-    if(fupRows.length>1){
-      const ws4=XLSX.utils.aoa_to_sheet(fupRows);
-      ws4['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:12},{wch:30}];
-      XLSX.utils.book_append_sheet(wb,ws4,'前期追蹤');
-    }
-
-    // ── Sheet 7: 會議資訊 ──
-    const infoRows=[
-      ['會議名稱',mtgTitle(cids)],
-      ['日期',m.date||''],
-      ['時間',m.time||''],
-      ['地點',m.loc||''],
-      ['聯絡人',m.contact||''],
-      ['版本','v'+(m.version||0)],
-      ['儲存者',m.savedBy||''],
-      ['儲存時間',m.savedAt?new Date(m.savedAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):''],
-    ];
-    const ws5=XLSX.utils.aoa_to_sheet(infoRows);
-    ws5['!cols']=[{wch:12},{wch:40}];
-    XLSX.utils.book_append_sheet(wb,ws5,'會議資訊');
-
-    const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_MDT.xlsx';
-    const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    const blob=new Blob([wbout],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=fname;
-    document.body.appendChild(a);a.click();
-    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
-    setLibStatus('Excel 已下載','var(--ok)');
-    setTimeout(()=>setLibStatus(''),3000);
-  }catch(e){setLibStatus('Excel 匯出失敗：'+e.message,'var(--err)');console.error(e);}
-  if(btn){btn.disabled=false;btn.textContent='Excel 匯出';}
-}
-
-
 function genImportPrompt(){
   const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON 陣列（即使只有一筆也用陣列），不要加任何說明文字或 markdown 符號。
 【重要限制】只能使用貼上的資料，絕對不可自行推斷、補充、或引用任何外部醫學知識與記憶。資料中沒有的欄位一律留空字串或空陣列。
@@ -4536,7 +4796,7 @@ ph：過去病史（Past History），若無請填 "Nil"
 phChips：慢性病陣列，從以下選填：["HTN","DM","CAD","CVA","HBV","HCV","CKD","COPD"]，無則空陣列
 pathologies：病理，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}
   - IHC 結果（ER/PR/HER2/Ki-67 等）放在 content 裡，不要放 markers
-exams：影像檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/PET-CT/SONO/X-Ray/Echo/Endoscopy/Lab...","date":"YYYY-MM-DD","content":"..."}
+exams：影像檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/SONO/Breast SONO/PET-CT/X-Ray/Echo/Endoscopy/Lab...","date":"YYYY-MM-DD","content":"..."}
   - 若檢查類型不在上述清單，name 填實際名稱
 treatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"劑量/說明"}
 markers：癌指數（PSA/CEA/CA125/AFP/CA19-9/CA15-3 等），陣列，每筆：
@@ -4589,7 +4849,7 @@ function exportMeetingJSON(){
 }
 function exportCaseJSON(){
   readForm();
-  const m=S.meeting,cids=S.cids;
+  const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
   if(!m){alert('請先開啟會議');return;}
   const result=[];
   cids.forEach(function(cid){
@@ -4679,13 +4939,50 @@ function importCaseJSON(inputEl){
       S.meeting.sections[cid].cases.push(blank);
       imported++;
     });
-    if(imported){renderCasesInner();markDirty();showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));}
-    else alert('沒有成功匯入任何個案，請確認 JSON 格式與癌別名稱');
+    if(imported){
+      markDirty();
+      showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));
+      // Directly append new cards without renderCasesInner (avoids loadMergedSections overwrite)
+      // Group newly added cases by cid
+      const addedByCid={};
+      cases.forEach(function(d){
+        const caName=d._cancer||d['癌別']||'';
+        const tcid=nameMap[caName]||(S.cids&&S.cids[0]);
+        if(!tcid||!S.cids.includes(tcid))return;
+        if(!addedByCid[tcid])addedByCid[tcid]=[];
+        addedByCid[tcid].push(d);
+      });
+      Object.keys(addedByCid).forEach(function(tcid){
+        const allCases=S.meeting.sections[tcid].cases;
+        const addedCount=addedByCid[tcid].length;
+        const startIdx=allCases.length-addedCount;
+        const cont=document.getElementById('div-cases-'+tcid);
+        if(!cont)return;
+        cont.querySelectorAll('.casecard:not(.track-card)').forEach(function(c){
+          c.classList.add('cc-collapsed');
+          const tgi=c.querySelector('[data-action="togglecase"]');
+          if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▶';}
+        });
+        for(let i=startIdx;i<allCases.length;i++){
+          const div=document.createElement('div');
+          div.innerHTML=caseHTML(tcid,i,allCases[i]);
+          const nc=div.firstElementChild;
+          if(nc){nc.classList.remove('cc-collapsed');
+            const tgi=nc.querySelector('[data-action="togglecase"]');
+            if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▼';}
+            cont.appendChild(nc);}
+        }
+        setTimeout(function(){
+          const cards=cont.querySelectorAll('.casecard:not(.track-card)');
+          if(cards.length)cards[cards.length-1].scrollIntoView({behavior:'smooth',block:'start'});
+        },80);
+      });
+    } else alert('沒有成功匯入任何個案，請確認 JSON 格式與癌別名稱');
   };
   reader.readAsText(file,'utf-8');
 }
 function genLine(){
-  readForm();const m=S.meeting,cids=S.cids,pfx=timePfx(m.time.split('-')[0]);
+  readForm();const m=S.meeting,cids=[getOutputCid()||S.cids[0]],pfx=timePfx(m.time.split('-')[0]);
   const multi=cids.length>1;
   let t=`開會通知單\n會議名稱　${m.title}\n開會時間　${rocDate(m.date)} ${pfx}${m.time}\n`;
   t+=`視訊主場　${m.loc}　聯絡人　${m.contact}\n`;
@@ -5307,7 +5604,7 @@ document.addEventListener('click',function(e){
         document.getElementById('pathfolder-selall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=true;});updateCount();};
         document.getElementById('pathfolder-clrall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=false;});updateCount();};
         document.getElementById('pathfolder-change').onclick=async function(){
-          try{imgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
+          try{const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}catch(e){}
           document.body.removeChild(overlay);
           // Rebuild area and re-trigger
           const el2=document.getElementById('pathimgs-'+cid+'-'+idx);
@@ -5359,7 +5656,7 @@ document.addEventListener('click',function(e){
     const cid=picksurgfolder.dataset.cid,idx=parseInt(picksurgfolder.dataset.idx);
     (async function(){
       try{
-        if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+        if(!imgFolderHandle){const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}
         updateFolderStatusBar();
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
@@ -5532,7 +5829,7 @@ document.addEventListener('click',function(e){
         document.getElementById('imgfolder-clrall').onclick=function(){overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.checked=false;});updateCnt();};
         document.getElementById('imgfolder-cancel').onclick=function(){document.body.removeChild(overlay);};
         document.getElementById('imgfolder-change').onclick=async function(){
-          try{imgFolderHandle=await window.showDirectoryPicker({mode:'read'});}catch(e){}
+          try{const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}catch(e){}
           document.body.removeChild(overlay);
           const elR=document.getElementById('imgs-'+cid+'-'+idx)||document.getElementById('mammo-imgs-'+cid+'-'+idx);
           if(elR){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elR.replaceWith(tmp.firstElementChild);}
@@ -5547,6 +5844,20 @@ document.addEventListener('click',function(e){
         };
       }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
     })();
+    return;
+  }
+  const caseflag=e.target.closest('[data-action="caseflag"]');
+  if(caseflag){
+    const cid=caseflag.dataset.cid,idx=parseInt(caseflag.dataset.idx),fl=caseflag.dataset.flag;
+    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    if(!Array.isArray(c.flags))c.flags=[];
+    const pos=c.flags.indexOf(fl);
+    if(pos>=0)c.flags.splice(pos,1);else c.flags.push(fl);
+    markDirty();
+    const col=fl==='緊急'?'#C0392B':fl==='複雜案例'?'#B87D3A':'#4A7C8E';
+    const isOn=c.flags.includes(fl);
+    caseflag.style.background=isOn?col:'transparent';
+    caseflag.style.color=isOn?'#fff':col;
     return;
   }
   const clearimgs=e.target.closest('[data-action="clearimgs"]');
@@ -5681,7 +5992,15 @@ loadAll();loadAICfg();renderLogin();
 const lgVer=document.getElementById('lg-ver');
 if(lgVer)lgVer.textContent=VERSION;
 
-
+function updateImgFolderSettingsStatus(){
+  const el=document.getElementById('imgfolder-status');if(!el)return;
+  if(imgRootHandle){
+    el.innerHTML='<span style="color:var(--ok)">✓ 根目錄已設定：<b>'+escA(imgRootHandle.name)+'</b></span>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:4px">進入會議時自動建立子目錄，如：<b>'+escA(_mtgSubName()||'20260416 乳癌')+'</b></div>';
+  } else {
+    el.textContent='尚未設定根目錄';
+  }
+}
 </script>
 <!-- Add Case Modal (choose method) -->
 <div id="add-case-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center">
