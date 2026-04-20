@@ -1158,7 +1158,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.14';
+const VERSION='V4.2.15';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2766,7 +2766,7 @@ ${(()=>{
   const exArr=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const exStr=exArr.map(ex=>[(ex.name||''),(ex.date?'('+ex.date+')':''),' ',(ex.content||'')].join('').trim()).filter(Boolean).join('\n');
   return row('檢查', exStr||d.exam||'');
-})()}${cid==='breast'&&d.mammo&&(d.mammo.report||d.mammo.images?.length)?`<div class="vc-r"><span class="vc-l" style="align-self:flex-start">乳攝</span><span class="vc-v">${d.mammo.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(d.mammo.date)+'</span> ':''}<br>${escA(d.mammo.report||'')}${(d.mammo.images||[]).map((img,j)=>'<button onclick="viewImg(\''+img.dataUrl+'\')" style="margin-left:8px;font-size:10px;padding:1px 7px;border:1px solid var(--border);border-radius:2px;cursor:pointer">影像 '+(j+1)+'</button>').join('')}</span></div>`:''}${(()=>{
+})()}${cid==='breast'&&d.mammo&&(d.mammo.report||d.mammo.images?.length)?`<div class="vc-r"><span class="vc-l" style="align-self:flex-start">乳攝</span><span class="vc-v">${d.mammo.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(d.mammo.date)+'</span> ':''}<br>${escA(d.mammo.report||'')}${(d.mammo.images||[]).map((img,j)=>'<button data-action="previewmammoimg" data-name="'+escA(img.name||'')+'" data-dataurl="'+escA(img.dataUrl||'')+'" style="margin-left:8px;font-size:10px;padding:1px 7px;border:1px solid var(--border);border-radius:2px;cursor:pointer">影像 '+(j+1)+'</button>').join('')}</span></div>`:''}${(()=>{
   const trArr=(d.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const trStr=trArr.map(tr=>[(tr.name||''),(tr.date?'('+tr.date+')':''),' ',(tr.content||'')].join('').trim()).filter(Boolean).join('\n');
   return row('治療', trStr||d.treatment||'');
@@ -6096,7 +6096,19 @@ document.addEventListener('click',function(e){
         const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
       }).catch(function(){alert('無法讀取影像：'+name);});
     }else{alert(name?'請先選擇資料夾':'無法預覽');} return;
+  }  const previewmammoimg=e.target.closest('[data-action="previewmammoimg"]');
+  if(previewmammoimg){
+    const name=(previewmammoimg.dataset.name||'').trim();
+    const dataUrl=(previewmammoimg.dataset.dataurl||'').trim();
+    if(dataUrl){viewImg(dataUrl);return;}
+    if(name&&imgFolderHandle){
+      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
+        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
+      }).catch(function(e){alert('無法載入乳攝影像：'+e.message);});
+    }
+    return;
   }
+
   const delpathimg=e.target.closest('[data-action="delpathimg"]');
   if(delpathimg){
     const cid=delpathimg.dataset.cid,idx=parseInt(delpathimg.dataset.idx),j=parseInt(delpathimg.dataset.imgidx);

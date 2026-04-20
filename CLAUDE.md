@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.2.14 → V4.2.14）
-#    新功能 / 新欄位       → +0.1   （如 V4.2.14 → V4.2.14）
-#    大改版 / 架構重構     → +1.0   （如 V4.2.14 → V4.2.14）
+#    bug fix / hotfix      → +0.01  （如 V4.2.15 → V4.2.15）
+#    新功能 / 新欄位       → +0.1   （如 V4.2.15 → V4.2.15）
+#    大改版 / 架構重構     → +1.0   （如 V4.2.15 → V4.2.15）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.2.14）
+## 十二、版本（當前 V4.2.15）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.2.15 | 修正乳攝預覽失效：改 data-action=previewmammoimg，與 previewpathimg 相同模式 |
 | V4.2.14 | 修正儲存後未返回閱覽模式（saveMeeting 改 S.viewMode=true + renderEditor）|
 | V4.2.13 | 修正乳攝照片跑到相關影像（elOk 先查 imgs- 的 bug）；加入圖片壓縮防卡頓 |
 | V4.2.12 | HTML 投影片檔名改為「日期_癌別.html」（日期在前，不加投影片後綴）|
