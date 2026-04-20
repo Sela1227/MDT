@@ -111,11 +111,14 @@
 
 ## 版本歷程
 
-### V4.2.7
-修正 fullHTML 字串最後一行缺少分號，導致 Invalid or unexpected token 首頁白屏
+### V4.2.13
+修正乳攝照片跑到相關影像：elOk/elR 改依 type 選擇正確 DOM 元素；addmammoimg 加入壓縮（最長邊 1200px，JPEG 0.75）解決卡頓
 
-### V4.2.6
-移除死碼：8個重複 function 定義（4.9KB）、printMeeting、doPrevCaseImport、filterPrevCases、@media print CSS（共 ~17KB）
+### V4.2.12
+HTML 投影片下載/分享檔名改為「日期_癌別.html」（如 2026-04-20_乳癌.html）
+
+### V4.2.11
+還原至 V4.2.5 基礎，只移除 extraJs 中誤植的 Ctrl+S handler（S.meeting 引用），暫不刪除重覆碼
 
 ### V4.2.5
 影像資料夾雙層架構：設定根目錄後自動按日期+癌別建立子目錄（如 20260416 乳癌）；亦可手動為每場會議自訂資料夾；優先順序：自訂 > 根目錄子目錄 > 根目錄
