@@ -111,7 +111,7 @@
 
 ## 版本歷程
 
-### V4.2.9
+### V4.2.10
 extraJs 從 template literal（反引號）改為單引號字串，避免 Chrome 多行模板字串解析問題導致 Invalid or unexpected token
 
 ### V4.2.8
