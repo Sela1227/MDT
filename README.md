@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.1.9
+新增個案時自動收合其他個案（accordion 恢復）；JSON 匯入後自動展開並捲動到最後匯入的個案
+
 ### V4.1.8
 修正 HTML 投影片 / HTML 分享失敗：cases.forEach 結尾括號錯置於 surgical images forEach 之前，導致 c is not defined
 

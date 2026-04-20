@@ -1149,7 +1149,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.1.8';
+const VERSION='V4.1.9';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3011,6 +3011,17 @@ function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;cont.appendChild(newCard);
+  // Accordion: collapse all sibling casecards before opening new one
+  if(type==='cases'){
+    cont.querySelectorAll('.casecard').forEach(function(sib){
+      if(sib!==newCard&&!sib.classList.contains('track-card')){
+        sib.classList.add('cc-collapsed');
+        const sid=sib.id;if(!sid)return;
+        const icon=document.getElementById('tgi-'+sid.slice(3));
+        if(icon)icon.textContent='▶';
+      }
+    });
+  }
   // Scroll to new card and focus first input
   setTimeout(function(){
     newCard.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -5069,8 +5080,25 @@ function importCaseJSON(inputEl){
       S.meeting.sections[cid].cases.push(blank);
       imported++;
     });
-    if(imported){renderCasesInner();markDirty();showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));}
-    else alert('沒有成功匯入任何個案，請確認 JSON 格式與癌別名稱');
+    if(imported){
+      renderCasesInner();
+      markDirty();
+      showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));
+      // Scroll to and expand the last imported case
+      setTimeout(function(){
+        const containers=document.querySelectorAll('[id^="div-cases-"]');
+        containers.forEach(function(cont){
+          const cards=cont.querySelectorAll('.casecard:not(.track-card)');
+          if(cards.length){
+            const last=cards[cards.length-1];
+            last.classList.remove('cc-collapsed');
+            const tid=last.querySelector('[data-action="togglecase"]');
+            if(tid){const icon=document.getElementById('tgi-'+tid.dataset.card.slice(3));if(icon)icon.textContent='▼';}
+            last.scrollIntoView({behavior:'smooth',block:'start'});
+          }
+        });
+      },200);
+    } else alert('沒有成功匯入任何個案，請確認 JSON 格式與癌別名稱');
   };
   reader.readAsText(file,'utf-8');
 }
