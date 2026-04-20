@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.9
+extraJs 從 template literal（反引號）改為單引號字串，避免 Chrome 多行模板字串解析問題導致 Invalid or unexpected token
+
 ### V4.2.8
 修正 extraJs template literal 含 Ctrl+S handler（引用 S.meeting/saveMeeting 等主程式變數），導致 Invalid or unexpected token 白屏；改為只保留 Escape 鍵關閉工具列
 

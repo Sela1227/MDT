@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.2.8 → V4.2.8）
-#    新功能 / 新欄位       → +0.1   （如 V4.2.8 → V4.2.8）
-#    大改版 / 架構重構     → +1.0   （如 V4.2.8 → V4.2.8）
+#    bug fix / hotfix      → +0.01  （如 V4.2.9 → V4.2.9）
+#    新功能 / 新欄位       → +0.1   （如 V4.2.9 → V4.2.9）
+#    大改版 / 架構重構     → +1.0   （如 V4.2.9 → V4.2.9）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.2.8）
+## 十二、版本（當前 V4.2.9）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.2.9 | extraJs 改單引號字串（移除 template literal 反引號），修正 Chrome 解析錯誤 |
 | V4.2.8 | 修正 extraJs 含誤植的 Ctrl+S handler（S.meeting 引用），導致 Invalid or unexpected token 白屏 |
 | V4.2.7 | 修正 fullHTML 字串末行缺分號（Invalid or unexpected token，首頁白屏）|
 | V4.2.6 | 移除死碼：重複 loadAll/saveAll/migrate*×8 函數、printMeeting、doPrevCaseImport、filterPrevCases、@media print |
