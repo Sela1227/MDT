@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.2.22 → V4.2.22）
-#    新功能 / 新欄位       → +0.1   （如 V4.2.22 → V4.2.22）
-#    大改版 / 架構重構     → +1.0   （如 V4.2.22 → V4.2.22）
+#    bug fix / hotfix      → +0.01  （如 V4.2.23 → V4.2.23）
+#    新功能 / 新欄位       → +0.1   （如 V4.2.23 → V4.2.23）
+#    大改版 / 架構重構     → +1.0   （如 V4.2.23 → V4.2.23）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.2.22）
+## 十二、版本（當前 V4.2.23）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.2.23 | 乳攝 HTML 比例 2:4:4；相關影像/手術照片每頁張數控制（imgsPerSlide/surgImgsPerSlide）|
 | V4.2.22 | addmammoimg/delmammoimg 改 replaceWith；caption input 樣式加框|
 | V4.2.21 | 修正 buildImgArea/buildMammoImgArea 缺 const cap=（打包遺漏）|
 | V4.2.20 | _pathImgCache 擴充讀入所有 fromFolder 影像（病理/手術/相關/乳攝）|

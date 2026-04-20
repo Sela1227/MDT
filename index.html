@@ -1158,7 +1158,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.22';
+const VERSION='V4.2.23';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2988,10 +2988,10 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr"><label>手術照片</label></div>
+  <div class="fg full"><div class="field-hdr"><label>手術照片</label><span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt)">每頁 <select onchange="upd('${cid}','cases',${i},'surgImgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 3px;border:1px solid var(--blt);border-radius:2px;background:transparent"><option value="1"${(d.surgImgsPerSlide||1)===1?' selected':''}>1 張</option><option value="2"${(d.surgImgsPerSlide||1)===2?' selected':''}>2 張</option><option value="4"${(d.surgImgsPerSlide||1)===4?' selected':''}>4 張</option></select></span></div>
     ${buildSurgicalImgArea(cid,i,d)}
   </div>
-  <div class="fg full"><div class="field-hdr"><label>相關影像</label></div>
+  <div class="fg full"><div class="field-hdr"><label>相關影像</label><span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt)">每頁 <select onchange="upd('${cid}','cases',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 3px;border:1px solid var(--blt);border-radius:2px;background:transparent"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div>
     ${buildImgArea(cid,i,d)}
   </div>
 
@@ -4599,13 +4599,18 @@ async function genHTMLSlides(){
         +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
         +'</section>');
       // Images - separate slide after case slide
-      const imgHtml=(c.images||[]).length
-        ?(c.images||[]).map(img=>'<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>').join(''):'';
-      if(imgHtml){
-        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
-          +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
-          +'<div class="img-grid">'+imgHtml+'</div>'
-          +'</section>');
+      // Related images: split by imgsPerSlide (default 4)
+      if((c.images||[]).length){
+        var _ips=c.imgsPerSlide||4;
+        var _imgs=c.images||[];
+        for(var _ii=0;_ii<_imgs.length;_ii+=_ips){
+          var _grp=_imgs.slice(_ii,_ii+_ips);
+          var _h=_grp.map(function(img){return '<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
+            +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
+            +'<div class="img-grid">'+_h+'</div>'
+            +'</section>');
+        }
       }
       // Mammo slide (breast only, 4:6 layout)
       if(cid==='breast'&&c.mammo&&(c.mammo.report||(c.mammo.images&&c.mammo.images.length))){
@@ -4630,11 +4635,22 @@ async function genHTMLSlides(){
         slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'          +'</section>');
       });
 
-      // Surgical photo slides - one per image
-      (c.surgicalImages||[]).forEach(function(img){
-        const photoName=escA(img.caption||img.name||'手術照片');
-        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+photoName+'</span>'          +'<span class="cat">手術照片</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'          +'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+photoName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'          +'</div>'          +'</section>');
-      });
+      // Surgical photo slides: split by surgImgsPerSlide (default 1)
+      if((c.surgicalImages||[]).length){
+        var _sps=c.surgImgsPerSlide||1;
+        var _surgs=c.surgicalImages||[];
+        for(var _si=0;_si<_surgs.length;_si+=_sps){
+          var _sgrp=_surgs.slice(_si,_si+_sps);
+          if(_sps===1){
+            var img=_sgrp[0];
+            var photoName=escA(img.caption||img.name||'手術照片');
+            slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'+'<div class="ch"><div class="cht">'+'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '+'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'+'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+photoName+'</span>'+'<span class="cat">手術照片</span></div></div>'+'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+photoName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'+'</section>');
+          } else {
+            var _sh=_sgrp.map(function(img){return '<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+            slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'+'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">手術照片</span></div></div>'+'<div class="img-grid">'+_sh+'</div>'+'</section>');
+          }
+        }
+      }
 
     }); // end cases.forEach
 
@@ -4716,8 +4732,8 @@ async function genHTMLSlides(){
     +'.img-cap{font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7);text-align:center;}'
     +'.mammo-slide{background:#1a1f24;}'
     +'.mammo-body{flex:1;display:flex;min-height:0;overflow:hidden;}'
-    +'.mammo-report{flex:0 0 40%;overflow-y:auto;padding:2vh 2vw;font-size:clamp(13px,1.35vw,18px);color:rgba(255,255,255,.88);line-height:1.7;border-right:1px solid rgba(255,255,255,.1);}'
-    +'.mammo-imgs{flex:0 0 60%;display:flex;gap:1vw;padding:2vh 1.5vw;align-items:stretch;justify-content:center;overflow:hidden;}'
+    +'.mammo-report{flex:0 0 20%;overflow-y:auto;padding:2vh 2vw;font-size:clamp(13px,1.35vw,18px);color:rgba(255,255,255,.88);line-height:1.7;border-right:1px solid rgba(255,255,255,.1);}'
+    +'.mammo-imgs{flex:0 0 80%;display:flex;gap:1vw;padding:2vh 1.5vw;align-items:stretch;justify-content:center;overflow:hidden;}'
     +'.mammo-img-wrap{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;}'
     +'.mammo-img-wrap img{width:100%;height:100%;object-fit:contain;border-radius:4px;}' +
     +'.th{font-size:clamp(18px,2.2vw,32px);font-weight:700;color:var(--dk);margin-bottom:2.5vh;}'

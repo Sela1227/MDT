@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.23
+乳攝 HTML 分頁比例改 2:4:4（說明20%，影像各40%）；相關影像/手術照片編輯欄新增每頁張數選擇（1/2/4）
+
 ### V4.2.22
 修正乳攝清除後無法新增：addmammoimg / delmammoimg 改用 replaceWith（避免 innerHTML 嵌套 mammo-imgs 容器）；caption 欄位樣式加框線加深色，明顯度提升
 
