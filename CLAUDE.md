@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.2.2 → V4.2.2）
-#    新功能 / 新欄位       → +0.1   （如 V4.2.2 → V4.2.2）
-#    大改版 / 架構重構     → +1.0   （如 V4.2.2 → V4.2.2）
+#    bug fix / hotfix      → +0.01  （如 V4.2.5 → V4.2.5）
+#    新功能 / 新欄位       → +0.1   （如 V4.2.5 → V4.2.5）
+#    大改版 / 架構重構     → +1.0   （如 V4.2.5 → V4.2.5）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,13 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.2.2）
+## 十二、版本（當前 V4.2.5）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.2.5 | 影像資料夾雙層：根目錄+自動子目錄（日期+癌別）；自訂覆蓋；設定頁選根目錄 |
+| V4.2.4 | 影像資料夾改每場會議各自設定（key=imgFolder_{meetingId}）；自動恢復授權；清除/更換各自獨立 |
+| V4.2.3 | imgFolderHandle 改 IndexedDB 持久化；pickUser 時自動恢復授權；設定頁加影像資料夾 tab |
 | V4.2.2 | 修正 JSON 匯入後病人消失：繞過 renderCasesInner 改直接 DOM append，避免 loadMergedSections 蓋掉未儲存新個案 |
 | V4.2.1 | caseHTML 預設 cc-collapsed；addItem 新卡展開其他收合；doImportCase 匯入後展開最後一筆 |
 | V4.2.0 | renderEditor 初始化 activeCid；getOutputCid 驗證 activeCid 在 S.cids；autoImportPrevFollowups 加 try/catch |
