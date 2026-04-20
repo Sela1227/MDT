@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.1
+caseHTML 預設收合（cc-collapsed）；addItem 新卡片先移除 cc-collapsed 再收合其他；doImportCase 匯入後展開最後一筆
+
 ### V4.2.0
 renderEditor 初始化 S.activeCid；getOutputCid 驗證 activeCid 在 S.cids 內；autoImportPrevFollowups 加 try/catch 防止新建會議失敗
 

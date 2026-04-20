@@ -1149,7 +1149,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.0';
+const VERSION='V4.2.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2913,7 +2913,7 @@ function caseHTML(cid,i,d){
   const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
   const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
-  return`<div class="casecard" id="cc-${cid}-cases-${i}">
+  return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
 <div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span>${(d.flags||[]).map(function(fl){const c2=fl==='緊急'?'#C0392B':fl==='複雜案例'?'#B87D3A':'#4A7C8E';return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1)" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1)" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 
@@ -3014,7 +3014,10 @@ function specialHTML(cid,i,d){
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
     specialHTML(cid,i,blank);
-  const newCard=div.firstElementChild;cont.appendChild(newCard);
+  const newCard=div.firstElementChild;
+  // For new cases: remove cc-collapsed so new card starts expanded
+  if(type==='cases'){newCard.classList.remove('cc-collapsed');const tgi=newCard.querySelector('[data-action="togglecase"]');if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▼';}}
+  cont.appendChild(newCard);
   // Accordion: collapse all sibling casecards before opening new one
   if(type==='cases'){
     cont.querySelectorAll('.casecard').forEach(function(sib){
@@ -4223,6 +4226,19 @@ function doImportCase(){
   renderCasesInner();
   markDirty();
   showSaveToast('已匯入 ' + cases.length + ' 筆個案資料');
+  // Expand and scroll to last imported case
+  setTimeout(function(){
+    const cont=document.getElementById('div-cases-'+cid);
+    if(!cont)return;
+    const cards=cont.querySelectorAll('.casecard:not(.track-card)');
+    if(cards.length){
+      const last=cards[cards.length-1];
+      last.classList.remove('cc-collapsed');
+      const tgi=last.querySelector('[data-action="togglecase"]');
+      if(tgi){const icon=document.getElementById('tgi-'+tgi.dataset.card.slice(3));if(icon)icon.textContent='▼';}
+      last.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+  },150);
 }
 
 
