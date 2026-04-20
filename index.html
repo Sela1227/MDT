@@ -668,6 +668,7 @@ textarea{resize:vertical}
       <div id="sb-cancers"></div>
     </div>
     <div class="sb-bottom">
+      <div class="sb-navi" id="nav-search" onclick="openCaseSearch()" title="搜尋個案">&#128269;</div>
       <div class="sb-navi" id="nav-history" onclick="openHistory()">&#9776; 歷史記錄</div>
       <div class="sb-navi" id="nav-settings" onclick="openSettings()">&#9881; 設定</div>
       <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:4px;margin-top:2px">
@@ -783,22 +784,22 @@ textarea{resize:vertical}
             <div id="folder-status-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"></div>
             <!-- 5-per-row grid layout -->
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
-              <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap" onclick="doOutput('line')">LINE 通知</button>
-              <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
-              <button class="btn btn-b" id="btn-share-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="shareHTMLSlides()">HTML 分享</button>
-              <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="genPPTX()">PPTX 簡報</button>
-              <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="genDOCX()">DOCX 記錄</button>
+              <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
+              <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
+              <button class="btn btn-b" id="btn-share-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="shareHTMLSlides()">HTML 分享</button>
+              <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPPTX()">PPTX 簡報</button>
+              <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
             </div>
             <div id="slide-share-link"></div>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
-              <button class="btn btn-b" id="btn-xlsx" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="genXLSX()">Excel 匯出</button>
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="document.getElementById('json-import-input').click()">JSON 批次匯入</button>
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="exportCaseJSON()">JSON 個案匯出</button>
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="exportMeetingJSON()">JSON 完整匯出</button>
+              <button class="btn btn-b" id="btn-xlsx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genXLSX()">Excel 匯出</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="document.getElementById('json-import-input').click()">JSON 批次匯入</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportCaseJSON()">JSON 個案匯出</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportMeetingJSON()">JSON 完整匯出</button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap" onclick="genImportPrompt()">AI 匯入提示詞</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genImportPrompt()">AI 匯入提示詞</button>
               <button class="btn btn-a" id="btn-ai-gen" style="padding:10px 4px;font-size:13px;background:var(--fog);display:none;white-space:nowrap" onclick="genAIInline()">AI 生成摘要</button>
             </div>
             <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
@@ -1145,7 +1146,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V3.9.6';
+const VERSION='V4.0.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2791,7 +2792,7 @@ function casesPane(cid){
   const sFn=vm?specialViewHTML:specialHTML;
   // Pre-build add buttons (cid is in scope, no complex concat)
   const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>');
-  const bCase=vm?'':('<button class="btnadd" data-add-cid="' + cid + '" onclick="openAddCaseModal(this.dataset.addCid)">+ 新增討論個案</button>');
+  const bCase=vm?'':('<button class="btnadd" data-add-cid="' + cid + '" onclick="openAddCaseModal(this.dataset.addCid)">+ 新增討論個案</button>'+'<button class="btnadd" style="background:none;border:1px solid var(--blt);color:var(--fog)" onclick="openPrevCaseImport(\'' + cid + '\')">↩ 從歷史帶入</button>');
   const bSpec=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'special\')">+ 新增特殊議程</button>');
   const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">+ 新增醫療小組討論個案</button>');
   const events=sec.events||[];
@@ -2902,7 +2903,7 @@ function caseHTML(cid,i,d){
   const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
   return`<div class="casecard" id="cc-${cid}-cases-${i}">
-<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
+<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1)" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1)" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 
   <div class="fsec">基本資料</div>
@@ -3256,6 +3257,176 @@ function onExamTypeChange(sel,caseIdx,examIdx,cid){
     if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name=sel.value;
     markDirty();
   }
+}
+
+
+// ── Auto-save every 2 minutes when dirty ──
+setInterval(async function(){
+  if(_dirty&&S.meeting&&S.meeting.version){
+    await saveMeeting();
+  }
+},2*60*1000);
+
+window.addEventListener('beforeunload', function(e){
+  if(_dirty){
+    e.preventDefault();
+    e.returnValue='尚有未儲存的修改，確定要離開？';
+  }
+});
+
+
+function moveCase(cid, idx, dir){
+  ensureSec(cid);
+  const cases=S.meeting.sections[cid].cases;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=cases.length)return;
+  const tmp=cases[idx];cases[idx]=cases[newIdx];cases[newIdx]=tmp;
+  markDirty();
+  // Re-render cases pane
+  const cont=document.getElementById('div-cases-'+cid);
+  if(cont){
+    const vm=S.viewMode;
+    const fn=vm?caseViewHTML:caseHTML;
+    cont.innerHTML=cases.map(function(c,i){
+      try{return fn(cid,i,c);}catch(e){return '';}
+    }).join('');
+  }
+}
+
+
+function openCaseSearch(){
+  const modal=document.createElement('div');
+  modal.id='case-search-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding-top:60px';
+  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(680px,95vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
+    +'<div style="padding:16px 20px;border-bottom:1px solid var(--blt);display:flex;gap:10px;align-items:center">'
+    +'<input id="case-search-input" placeholder="輸入病歷號或姓名搜尋所有歷史會議..." style="flex:1;font-size:14px;padding:8px 12px;border:1px solid var(--border);border-radius:4px" oninput="doCaseSearch(this.value)">'
+    +'<button onclick="document.getElementById(\'case-search-modal\').remove()" style="background:none;border:none;font-size:20px;color:var(--textlt);cursor:pointer;padding:0 4px">×</button>'
+    +'</div>'
+    +'<div id="case-search-results" style="overflow-y:auto;flex:1;padding:8px 0">'
+    +'<div style="text-align:center;padding:40px;color:var(--textlt);font-size:13px">請輸入關鍵字搜尋</div>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+  setTimeout(function(){document.getElementById('case-search-input').focus();},50);
+}
+
+function doCaseSearch(q){
+  const el=document.getElementById('case-search-results');if(!el)return;
+  if(!q||q.trim().length<1){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--textlt);font-size:13px">請輸入關鍵字搜尋</div>';return;}
+  q=q.trim().toLowerCase();
+  const idx=getIdx();
+  const results=[];
+  idx.forEach(function(mi){
+    const m=loadLocal(mi.id);if(!m)return;
+    (m.cids||[]).forEach(function(cid){
+      const ca=CFG[cid];
+      ((m.sections||{})[cid]?.cases||[]).forEach(function(c){
+        const match=(c.chartNo||'').toLowerCase().includes(q)||(c.name||'').toLowerCase().includes(q);
+        if(match)results.push({m,cid,c,ca});
+      });
+    });
+  });
+  if(!results.length){el.innerHTML='<div style="text-align:center;padding:40px;color:var(--textlt);font-size:13px">找不到符合的個案</div>';return;}
+  el.innerHTML=results.slice(0,30).map(function(r){
+    const drs=getDoctors(r.c).join('、')||'—';
+    return '<div style="padding:12px 20px;border-bottom:1px solid var(--blt);cursor:pointer;transition:background .1s" onmouseover="this.style.background=\'#f5f7f9\'" onmouseout="this.style.background=\'\'" onclick="openMtgById(\''+r.m.id+'\');document.getElementById(\'case-search-modal\').remove()">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span style="font-weight:700;font-size:14px">'+escA(r.c.chartNo||'—')+'</span>'
+      +'<span style="font-size:13px">'+escA(r.c.name?maskName(r.c.name):'—')+'</span>'
+      +'<span style="font-size:11px;padding:1px 8px;border-radius:10px;background:var(--fog-xlt);color:var(--fog-dk)">'+escA(r.ca?.name||r.cid)+'</span>'
+      +'<span style="margin-left:auto;font-size:11px;color:var(--textlt)">'+escA(r.m.date)+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(r.c.diagnosis||'無診斷')+'</div>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:1px">VS '+escA(drs)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+
+function openPrevCaseImport(cid){
+  const idx=getIdx();
+  const all=[];
+  idx.forEach(function(mi){
+    if(mi.id===(S.meeting?.id||''))return;
+    const m=loadLocal(mi.id);if(!m)return;
+    (m.cids||[]).forEach(function(mcid){
+      ((m.sections||{})[mcid]?.cases||[]).forEach(function(c){
+        if(c.chartNo||c.name)all.push({m,cid:mcid,c});
+      });
+    });
+  });
+  if(!all.length){alert('沒有歷史個案可帶入');return;}
+
+  const modal=document.createElement('div');
+  modal.id='prev-import-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const rows=all.slice(0,60).map(function(r,idx2){
+    const drs=getDoctors(r.c).join('、')||'—';
+    const ca=CFG[r.cid]?.name||r.cid;
+    return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--blt)" onmouseover="this.style.background=\'#f5f7f9\'" onmouseout="this.style.background=\'\'">'
+      +'<input type="checkbox" value="'+idx2+'" style="margin-top:3px;flex-shrink:0">'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;gap:8px;align-items:center">'
+      +'<span style="font-weight:700;font-size:13px">'+escA(r.c.chartNo||'—')+'</span>'
+      +'<span style="font-size:13px">'+escA(r.c.name?maskName(r.c.name):'—')+'</span>'
+      +'<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:var(--fog-xlt);color:var(--fog-dk)">'+escA(ca)+'</span>'
+      +'<span style="margin-left:auto;font-size:11px;color:var(--textlt)">'+escA(r.m.date)+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(r.c.diagnosis||'無診斷')+'</div>'
+      +'</div></label>';
+  }).join('');
+
+  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(640px,95vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
+    +'<div style="padding:14px 20px;border-bottom:1px solid var(--blt);font-weight:700;font-size:15px;display:flex;align-items:center;gap:10px">'
+    +'從歷史會議帶入個案'
+    +'<input id="prev-search" placeholder="篩選..." style="flex:1;font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:3px;margin-left:auto;max-width:180px" oninput="filterPrevCases(this.value)">'
+    +'<button onclick="document.getElementById(\'prev-import-modal\').remove()" style="background:none;border:none;font-size:20px;color:var(--textlt);cursor:pointer">×</button>'
+    +'</div>'
+    +'<div id="prev-case-list" style="overflow-y:auto;flex:1">'+rows+'</div>'
+    +'<div style="padding:12px 20px;border-top:1px solid var(--blt);display:flex;gap:8px;justify-content:flex-end">'
+    +'<span id="prev-sel-count" style="font-size:12px;color:var(--textlt);margin-right:auto;align-self:center">已選 0 筆</span>'
+    +'<button class="btn btn-b btn-sm" onclick="document.getElementById(\'prev-import-modal\').remove()">取消</button>'
+    +'<button class="btn btn-a btn-sm" onclick="doPrevCaseImport(\''+cid+'\','+JSON.stringify(all.slice(0,60))+')">帶入選取的個案</button>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+  // Track selections
+  modal.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+    cb.onchange=function(){
+      var n=modal.querySelectorAll('input:checked').length;
+      var el=document.getElementById('prev-sel-count');
+      if(el)el.textContent='已選 '+n+' 筆';
+    };
+  });
+}
+
+function filterPrevCases(q){
+  const rows=document.querySelectorAll('#prev-case-list label');
+  rows.forEach(function(row){
+    row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+
+function doPrevCaseImport(cid, all){
+  const modal=document.getElementById('prev-import-modal');
+  const checked=[...modal.querySelectorAll('input:checked')].map(function(cb){return parseInt(cb.value);});
+  if(!checked.length){alert('請先勾選要帶入的個案');return;}
+  modal.remove();
+  ensureSec(cid);
+  checked.forEach(function(idx2){
+    const r=all[idx2];if(!r)return;
+    const c=Object.assign({},r.c);
+    c.id=uid();
+    c.summary='';c.decision='';c.topics=['影像討論','分期討論','治療策略討論'];
+    S.meeting.sections[cid].cases.push(c);
+  });
+  markDirty();
+  // Re-render
+  const cont=document.getElementById('div-cases-'+cid);
+  if(cont){
+    const cases=S.meeting.sections[cid].cases;
+    cont.innerHTML=cases.map(function(c,i){try{return caseHTML(cid,i,c);}catch(e){return '';}}).join('');
+  }
+  showSaveToast('已帶入 '+checked.length+' 筆個案');
 }
 
 /* ════ Save ════ */
