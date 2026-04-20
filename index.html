@@ -1125,6 +1125,18 @@ textarea{resize:vertical}
 
 /* ════ DEFAULT CONFIG ════ */
 const DEFAULT_LOCS=['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪','彰濱-2樓 185會議室','彰濱-1F 人文藝術館會議室','彰濱-7F 愛書人會議室','彰濱-3樓 甲狀腺會議室'];
+const TL_TYPES=[
+  {id:'dx',         label:'診斷確立', color:'#C0392B'},
+  {id:'biopsy',     label:'切片/病理', color:'#8E44AD'},
+  {id:'chemo',      label:'化療',     color:'#2980B9'},
+  {id:'surgery',    label:'手術',     color:'#E67E22'},
+  {id:'rt',         label:'放療',     color:'#27AE60'},
+  {id:'imaging',    label:'影像評估', color:'#5D6D7E'},
+  {id:'follow',     label:'追蹤評估', color:'#16A085'},
+  {id:'recurrence', label:'復發',     color:'#D35400'},
+  {id:'metastasis', label:'轉移確認', color:'#7F8C8D'},
+  {id:'other',      label:'其他',     color:'#95A5A6'}
+];
 const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','Breast SONO','PET-CT','X-Ray','Echo','Endoscopy','Lab'];
 let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
@@ -1158,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.23';
+const VERSION='V4.3.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2745,6 +2757,78 @@ function updDr(cid,type,i,idx,val){
 }
 
 /* ── View mode card renderers ── */
+function renderTimelineSVG(events,caColor,mode){
+  if(!events||!events.length)return '';
+  const sorted=events.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  const n=sorted.length;
+  const perRow=5;
+  const rowCount=Math.ceil(n/perRow);
+  const W=860,padX=55,nodeR=9,labelH=35,rowH=100;
+  const totalH=rowCount*rowH+50;
+  const pos=[];
+  for(var i=0;i<n;i++){
+    var r=Math.floor(i/perRow),posInRow=i%perRow;
+    var rowItems=Math.min(perRow,n-r*perRow);
+    var ltr=r%2===0;
+    var rowTop=r*rowH+10;
+    var lineY=ltr?rowTop+labelH+nodeR:rowTop+nodeR;
+    var x;
+    if(rowItems===1){x=ltr?padX:W-padX;}
+    else{var sp=(W-2*padX)/(rowItems-1);x=ltr?padX+posInRow*sp:W-padX-posInRow*sp;}
+    pos.push({x:Math.round(x),y:Math.round(lineY),r:r,ltr:ltr});
+  }
+  var pathD='';
+  for(var i=0;i<n;i++){
+    var p=pos[i];
+    if(i===0){pathD+='M '+p.x+' '+p.y;}
+    else{
+      var prev=pos[i-1];
+      if(prev.r===p.r){pathD+=' L '+p.x+' '+p.y;}
+      else{
+        var dy=p.y-prev.y;
+        var ar=Math.abs(dy)/2;
+        var sw=prev.ltr?1:0;
+        pathD+=' A '+ar+' '+ar+' 0 0 '+sw+' '+p.x+' '+p.y;
+      }
+    }
+  }
+  var isDark=mode==='slide';
+  var lineClr=isDark?'rgba(255,255,255,.28)':'#b0bcc8';
+  var txtClr=isDark?'#fff':'#2a3540';
+  var dtClr=isDark?'rgba(255,255,255,.6)':'#637281';
+  var nodes='',labels='',diffs='';
+  for(var i=0;i<n;i++){
+    var ev=sorted[i],p=pos[i];
+    var cfg=TL_TYPES.find(function(t){return t.id===ev.type;})||TL_TYPES[TL_TYPES.length-1];
+    var lbl=escA(ev.label||cfg.label);
+    var dt=escA(ev.date||'');
+    nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(nodeR+5)+'" fill="'+cfg.color+'" opacity=".2"/>';
+    nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+nodeR+'" fill="'+cfg.color+'" stroke="'+(isDark?'#1a2530':'#fff')+'" stroke-width="2.5"/>';
+    if(p.ltr){
+      labels+='<text x="'+p.x+'" y="'+(p.y-nodeR-18)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
+      labels+='<text x="'+p.x+'" y="'+(p.y-nodeR-6)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
+    }else{
+      labels+='<text x="'+p.x+'" y="'+(p.y+nodeR+14)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
+      labels+='<text x="'+p.x+'" y="'+(p.y+nodeR+26)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
+    }
+    if(i<n-1&&pos[i].r===pos[i+1].r){
+      var d1=new Date(ev.date||''),d2=new Date(sorted[i+1].date||'');
+      if(!isNaN(d1)&&!isNaN(d2)){
+        var days=Math.round((d2-d1)/86400000);
+        if(days>0){
+          var mx=(p.x+pos[i+1].x)/2;
+          var ddy=p.ltr?p.y+nodeR+13:p.y-nodeR-6;
+          diffs+='<text x="'+mx+'" y="'+ddy+'" text-anchor="middle" font-size="9" fill="'+dtClr+'" opacity=".75">+'+days+'d</text>';
+        }
+      }
+    }
+  }
+  return '<svg viewBox="0 0 '+W+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'
+    +(isDark?'<rect width="'+W+'" height="'+totalH+'" fill="#1a2530" rx="8"/>':'')
+    +'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    +nodes+labels+diffs
+    +'</svg>';
+}
 function caseViewHTML(cid,i,d){
   const drs=getDoctors(d).join('、')||'—';
   const hasRec=d.summary||d.decision;
@@ -2779,6 +2863,7 @@ ${chips}
 ${hasRec?`<div class="vc-rec">${row('摘要',d.summary)}${row('結論',d.decision)}</div>`:''}
 ${(d.surgicalImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">手術照片</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.surgicalImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'照片'+(j+1))}</span><button data-action="previewsurgimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 ${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewrelatedimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${(d.timeline&&d.timeline.length)?'<div class=\"vc-r\" style=\"background:var(--surface)\"><span class=\"vc-l\" style=\"align-self:flex-start;padding-top:2px\">事件軸</span><div class=\"vc-v\">'+renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view')+'</div></div>':''}
 </div></div>`;
 }
 function followupViewHTML(cid,i,d,type='followups'){
@@ -2995,6 +3080,16 @@ function caseHTML(cid,i,d){
     ${buildImgArea(cid,i,d)}
   </div>
 
+  <div class="fsec">治療事件軸</div>
+  <div class="fg full">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+      <button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="timeline" style="display:inline-block;width:auto;font-size:11px;padding:3px 10px">＋ 新增事件</button>
+      <button class="btn btn-b btn-sm" onclick="importTimelineFromTreatments('${cid}',${i})" style="font-size:11px">⬇ 從治療記錄帶入</button>
+    </div>
+    <div id="tllist-${cid}-${i}">${buildTimelineRows(cid,i,d)}</div>
+    <div id="tl-svg-preview-${cid}-${i}" style="margin-top:8px">${(d.timeline&&d.timeline.length)?renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view'):''}</div>
+  </div>
+
   <div class="fsec">討論</div>
   <div class="fg full"><label>討論要點</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
   <div class="fg full"><label>討論項目</label><div class="trow">${topicChips}</div></div>
@@ -3025,7 +3120,7 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;
@@ -4370,7 +4465,7 @@ function doImportCase(){
       discussion: d.discussion||'',
       topics: Array.isArray(d.topics)?d.topics:['影像討論','分期討論','治療策略討論'],
       summary: d.summary||'', decision: d.decision||'',
-      images: [], note: d.note||''
+      images: [], timeline: Array.isArray(d.timeline)?d.timeline.slice():[], note: d.note||''
     };
     S.meeting.sections[cid].cases.push(blank);
   });
@@ -4599,16 +4694,20 @@ async function genHTMLSlides(){
         +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
         +'</section>');
       // Images - separate slide after case slide
-      // Related images: split by imgsPerSlide (default 4)
+      // Related images: auto-fill grid by imgsPerSlide
       if((c.images||[]).length){
         var _ips=c.imgsPerSlide||4;
         var _imgs=c.images||[];
         for(var _ii=0;_ii<_imgs.length;_ii+=_ips){
           var _grp=_imgs.slice(_ii,_ii+_ips);
-          var _h=_grp.map(function(img){return '<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          var _cols=_ips===1?1:2;var _rows=_ips===4?2:1;
+          var _gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_cols+',1fr);grid-template-rows:repeat('+_rows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+          var _wSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
+          var _iSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
+          var _h=_grp.map(function(img){return '<div style="'+_wSt+'"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="'+_iSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
           slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
             +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
-            +'<div class="img-grid">'+_h+'</div>'
+            +'<div style="'+_gSt+'">'+_h+'</div>'
             +'</section>');
         }
       }
@@ -4632,24 +4731,40 @@ async function genHTMLSlides(){
       // Pathology staining images - one slide per image
       (c.pathologyImages||[]).forEach(function(img){
         const stainName=escA(img.caption||img.name||'病理影像');
-        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'          +'</section>');
+        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:2vh 2.5vw;box-sizing:border-box;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;">'+'</div>'          +'</section>');
       });
 
-      // Surgical photo slides: split by surgImgsPerSlide (default 1)
+      // Surgical photo slides: auto-fill grid by surgImgsPerSlide
       if((c.surgicalImages||[]).length){
         var _sps=c.surgImgsPerSlide||1;
         var _surgs=c.surgicalImages||[];
         for(var _si=0;_si<_surgs.length;_si+=_sps){
           var _sgrp=_surgs.slice(_si,_si+_sps);
-          if(_sps===1){
-            var img=_sgrp[0];
-            var photoName=escA(img.caption||img.name||'手術照片');
-            slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'+'<div class="ch"><div class="cht">'+'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '+'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'+'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+photoName+'</span>'+'<span class="cat">手術照片</span></div></div>'+'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+photoName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'+'</section>');
-          } else {
-            var _sh=_sgrp.map(function(img){return '<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
-            slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'+'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">手術照片</span></div></div>'+'<div class="img-grid">'+_sh+'</div>'+'</section>');
-          }
+          var _scols=_sps===1?1:2;var _srows=_sps===4?2:1;
+          var _sgSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_scols+',1fr);grid-template-rows:repeat('+_srows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+          var _swSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
+          var _siSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
+          var _sCap=_sgrp.length===1?escA(_sgrp[0].caption||_sgrp[0].name||'手術照片'):'';
+          var _sh=_sgrp.map(function(img){return '<div style="'+_swSt+'"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="'+_siSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
+            +'<div class="ch"><div class="cht"><span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.style.opacity=\'.4\';setTimeout(function(){el.style.opacity=\'\'},600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+            +(_sCap?'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+_sCap+'</span>':'')
+            +'<span class="cat">手術照片</span></div></div>'
+            +'<div style="'+_sgSt+'">'+_sh+'</div>'
+            +'</section>');
         }
+      }
+
+      // Timeline slide (if events exist, placed last per case)
+      if((c.timeline||[]).length){
+        var tlSvg=renderTimelineSVG(c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}),caColor,'slide');
+        slides.push('<section class="slide" style="--ca:'+caColor+';background:#1a2530;display:flex;flex-direction:column">'
+          +'<div class="ch" style="border-bottom:5px solid '+caColor+';"><div class="cht">'
+          +'<span class="ci" style="cursor:default">'+escA(c.chartNo||'')+'</span>'
+          +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+          +'<span class="cat">治療事件軸</span></div></div>'
+          +'<div style="flex:1;padding:3vh 4vw;display:flex;align-items:center;overflow:auto">'+tlSvg+'</div>'
+          +'</section>');
       }
 
     }); // end cases.forEach
@@ -5289,7 +5404,7 @@ function importCaseJSON(inputEl){
         discussion:d.discussion||'',
         topics:Array.isArray(d.topics)?d.topics:[],
         summary:d.summary||'',decision:d.decision||'',
-        images:[],pathologyImages:Array.isArray(d.pathologyImages)?d.pathologyImages:[],note:d.note||''
+        images:[],pathologyImages:Array.isArray(d.pathologyImages)?d.pathologyImages:[],timeline:Array.isArray(d.timeline)?d.timeline.slice():[],note:d.note||''
       };
       S.meeting.sections[cid].cases.push(blank);
       imported++;
@@ -5907,6 +6022,81 @@ function closeCancerSheet(){
 }
 
 /* ════ Event delegation ════ */
+function importTimelineFromTreatments(cid,idx){
+  ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+  const existing=new Set((c.timeline||[]).map(function(t){return t.type+'_'+t.date;}));
+  const cands=[];
+  (c.pathologies||[]).forEach(function(p){
+    if(p.date&&!existing.has('biopsy_'+p.date))
+      cands.push({type:'biopsy',date:p.date,label:(p.content||'').slice(0,24)||'切片/病理',_src:'病理'});
+  });
+  (c.treatments||[]).forEach(function(t){
+    if(!t.date)return;
+    var kw=(t.name+' '+(t.content||'')).toLowerCase();
+    var type='other';
+    if(/chemo|化療|cisplatin|carboplatin|oxaliplatin|taxol|tegafur|xeloda|capecitabine|5.fu/.test(kw))type='chemo';
+    else if(/surg|手術|resect|excision|切除|lumpectomy|mastectomy|rarp|orchiectomy|prostatectomy/.test(kw))type='surgery';
+    else if(/rt|放療|radiation|radiotherapy|imrt|vmat|sbrt|srs|3dcrt|igrt|gy|gray/.test(kw))type='rt';
+    if(!existing.has(type+'_'+t.date))
+      cands.push({type:type,date:t.date,label:(t.name||'').slice(0,24)||type,_src:'治療'});
+  });
+  (c.exams||[]).forEach(function(e){
+    if(!e.date)return;
+    var kw=(e.name||'').toLowerCase();
+    if(/ct|mri|pet|bone scan|x.ray|xray|超音波|echo|ultrasound/.test(kw))
+      if(!existing.has('imaging_'+e.date))
+        cands.push({type:'imaging',date:e.date,label:(e.name||'影像評估').slice(0,24),_src:'檢查'});
+  });
+  if(!cands.length){alert('沒有找到可帶入的事件（已全部匯入或無相關記錄）');return;}
+  cands.sort(function(a,b){return a.date.localeCompare(b.date);});
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const rows=cands.map(function(cv,ci){
+    const cfg=TL_TYPES.find(function(t){return t.id===cv.type;})||TL_TYPES[TL_TYPES.length-1];
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer">'
+      +'<input type="checkbox" checked value="'+ci+'" style="width:15px;height:15px;flex-shrink:0">'
+      +'<span style="font-size:11px;color:#999;width:28px;flex-shrink:0">'+escA(cv._src)+'</span>'
+      +'<span style="font-size:11px;color:#666;width:82px;flex-shrink:0">'+escA(cv.date)+'</span>'
+      +'<span style="font-size:12px;font-weight:600;color:'+cfg.color+';width:68px;flex-shrink:0">'+escA(cfg.label)+'</span>'
+      +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(cv.label)+'</span>'
+      +'</label>';
+  }).join('');
+  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(560px,94vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
+    +'<div style="padding:14px 18px;border-bottom:1px solid #eee;font-weight:700;font-size:15px">從記錄帶入事件軸</div>'
+    +'<div style="overflow-y:auto;flex:1">'+rows+'</div>'
+    +'<div style="padding:12px 18px;border-top:1px solid #eee;display:flex;gap:8px;justify-content:flex-end">'
+    +'<button id="tl-cancel" class="btn btn-b btn-sm">取消</button>'
+    +'<button id="tl-ok" class="btn btn-a btn-sm">帶入選取</button>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+  document.getElementById('tl-cancel').onclick=function(){document.body.removeChild(modal);};
+  document.getElementById('tl-ok').onclick=function(){
+    const checked=[...modal.querySelectorAll('input:checked')].map(function(cb){return cands[parseInt(cb.value)];});
+    if(!checked.length){alert('請勾選至少一筆');return;}
+    if(!c.timeline)c.timeline=[];
+    checked.forEach(function(ev){c.timeline.push({type:ev.type,date:ev.date,label:ev.label});});
+    c.timeline.sort(function(a,b){return a.date.localeCompare(b.date);});
+    markDirty();
+    document.body.removeChild(modal);
+    const tlEl=document.getElementById('tllist-'+cid+'-'+idx);
+    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,idx,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);tmp.childNodes.forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
+    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+idx);
+    if(svgEl)svgEl.innerHTML=c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
+  };
+}
+
+function buildTimelineRows(cid,idx,c){
+  return ((c.timeline||[]).map(function(tl,ti){
+    const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'"'+(t.id===tl.type?' selected':'')+'>'+t.label+'</option>';}).join('');
+    return '<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+      +'<select data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="type" style="width:108px;font-size:12px;padding:4px 6px">'+opts+'</select>'
+      +'<input type="date" value="'+escA(tl.date||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="date" style="width:148px">'
+      +'<input placeholder="自訂說明（空白用預設）" value="'+escA(tl.label||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
+      +'<button class="delbtn" data-action="delstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" style="margin-left:auto">×</button>'
+      +'</div></div>';
+  }).join(''));
+}
+
 document.addEventListener('click',function(e){
   const pickpathfolder=e.target.closest('[data-action="pickpathfolder"]');
   if(pickpathfolder){
