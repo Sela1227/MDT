@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.2.17 → V4.2.17）
-#    新功能 / 新欄位       → +0.1   （如 V4.2.17 → V4.2.17）
-#    大改版 / 架構重構     → +1.0   （如 V4.2.17 → V4.2.17）
+#    bug fix / hotfix      → +0.01  （如 V4.2.18 → V4.2.18）
+#    新功能 / 新欄位       → +0.1   （如 V4.2.18 → V4.2.18）
+#    大改版 / 架構重構     → +1.0   （如 V4.2.18 → V4.2.18）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.2.17）
+## 十二、版本（當前 V4.2.18）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.2.18 | 四種影像加入可編輯 caption input；data-action=updimgcaption change delegation |
 | V4.2.17 | caseViewHTML 加入手術照片區塊；data-action=previewsurgimg delegation |
 | V4.2.16 | 修正相關影像預覽失效：改 data-action=previewrelatedimg，確認手術影像在閱覽模式不顯示（無此問題）|
 | V4.2.15 | 修正乳攝預覽失效：改 data-action=previewmammoimg，與 previewpathimg 相同模式 |
