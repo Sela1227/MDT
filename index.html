@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.0';
+const VERSION='V4.3.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1452,12 +1452,23 @@ function updStruct(cid,i,field,idx,key,val){
   ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
   if(!c[field])c[field]=[];if(!c[field][idx])c[field][idx]={};
   c[field][idx][key]=val;markDirty();
+  if(field==='timeline'){
+    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+i);
+    if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
+  }
 }
 function delStruct(cid,i,field,rowIdx){
   ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
   if(!c[field])return;
   c[field].splice(rowIdx,1);
   markDirty();
+  if(field==='timeline'){
+    const tlEl=document.getElementById('tllist-'+cid+'-'+i);
+    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,i,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);[...tmp.childNodes].forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
+    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+i);
+    if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
+    return;
+  }
   const listId=field==='pathologies'?('pathlist-'+cid+'-'+i)
     :field==='exams'?('examlist-'+cid+'-'+i)
     :field==='treatments'?('trtlist-'+cid+'-'+i)
@@ -1481,7 +1492,19 @@ function addStruct(cid,i,field){
   const listId=field==='pathologies'?('pathlist-'+cid+'-'+i)
                :field==='exams'?('examlist-'+cid+'-'+i)
                :field==='treatments'?('trtlist-'+cid+'-'+i)
-               :field==='markers'?('marklist-'+cid+'-'+i):null;
+               :field==='markers'?('marklist-'+cid+'-'+i)
+               :field==='timeline'?('tllist-'+cid+'-'+i):null;
+  // timeline uses buildTimelineRows, not generic struct row
+  if(field==='timeline'){
+    if(!c.timeline)c.timeline=[];
+    c.timeline.push({type:'other',date:'',label:''});
+    markDirty();
+    const tlEl=document.getElementById('tllist-'+cid+'-'+i);
+    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,i,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);[...tmp.childNodes].forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
+    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+i);
+    if(svgEl)svgEl.innerHTML=c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
+    return;
+  }
   if(!listId)return;
   const container=document.getElementById(listId);if(!container)return;
   const div=document.createElement('div');
@@ -3073,10 +3096,10 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr"><label>手術照片</label><span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt)">每頁 <select onchange="upd('${cid}','cases',${i},'surgImgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 3px;border:1px solid var(--blt);border-radius:2px;background:transparent"><option value="1"${(d.surgImgsPerSlide||1)===1?' selected':''}>1 張</option><option value="2"${(d.surgImgsPerSlide||1)===2?' selected':''}>2 張</option><option value="4"${(d.surgImgsPerSlide||1)===4?' selected':''}>4 張</option></select></span></div>
+  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','cases',${i},'surgImgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.surgImgsPerSlide||1)===1?' selected':''}>1 張</option><option value="2"${(d.surgImgsPerSlide||1)===2?' selected':''}>2 張</option><option value="4"${(d.surgImgsPerSlide||1)===4?' selected':''}>4 張</option></select></span></div>
     ${buildSurgicalImgArea(cid,i,d)}
   </div>
-  <div class="fg full"><div class="field-hdr"><label>相關影像</label><span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt)">每頁 <select onchange="upd('${cid}','cases',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 3px;border:1px solid var(--blt);border-radius:2px;background:transparent"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div>
+  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>相關影像</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','cases',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div>
     ${buildImgArea(cid,i,d)}
   </div>
 
