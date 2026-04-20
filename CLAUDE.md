@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.2.5 → V4.2.5）
-#    新功能 / 新欄位       → +0.1   （如 V4.2.5 → V4.2.5）
-#    大改版 / 架構重構     → +1.0   （如 V4.2.5 → V4.2.5）
+#    bug fix / hotfix      → +0.01  （如 V4.2.11 → V4.2.11）
+#    新功能 / 新欄位       → +0.1   （如 V4.2.11 → V4.2.11）
+#    大改版 / 架構重構     → +1.0   （如 V4.2.11 → V4.2.11）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.2.5）
+## 十二、版本（當前 V4.2.11）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.2.11 | 還原至 V4.2.5，僅修正 extraJs 中誤植的 Ctrl+S handler（S.meeting 引用白屏 bug）|
 | V4.2.5 | 影像資料夾雙層：根目錄+自動子目錄（日期+癌別）；自訂覆蓋；設定頁選根目錄 |
 | V4.2.4 | 影像資料夾改每場會議各自設定（key=imgFolder_{meetingId}）；自動恢復授權；清除/更換各自獨立 |
 | V4.2.3 | imgFolderHandle 改 IndexedDB 持久化；pickUser 時自動恢復授權；設定頁加影像資料夾 tab |
