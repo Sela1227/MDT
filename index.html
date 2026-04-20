@@ -1158,7 +1158,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.19';
+const VERSION='V4.2.20';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4448,13 +4448,20 @@ async function genHTMLSlides(){
   if(imgFolderHandle){
     for(const cid of cids){
       for(const c of (m.sections[cid]?.cases||[])){
-        for(const img of (c.pathologyImages||[])){
-          if(img.fromFolder&&!img.dataUrl){
+        // Load all fromFolder images into cache: pathology, surgical, related, mammo
+        const _allImgs=[
+          ...(c.pathologyImages||[]),
+          ...(c.surgicalImages||[]),
+          ...(c.images||[]),
+          ...((c.mammo&&c.mammo.images)||[])
+        ];
+        for(const img of _allImgs){
+          if(img.fromFolder&&!img.dataUrl&&!_pathImgCache[img.name]){
             try{
               const fh=await imgFolderHandle.getFileHandle(img.name);
               const file=await fh.getFile();
               _pathImgCache[img.name]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
-            }catch(e){console.warn('無法讀取病理影像:',img.name,e);}
+            }catch(e){console.warn('無法讀取影像:',img.name,e);}
           }
         }
       }
