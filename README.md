@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.14
+修正儲存後未返回閱覽模式：saveMeeting setTimeout 改為儲存後切換 S.viewMode=true 並呼叫 renderEditor
+
 ### V4.2.13
 修正乳攝照片跑到相關影像：elOk/elR 改依 type 選擇正確 DOM 元素；addmammoimg 加入壓縮（最長邊 1200px，JPEG 0.75）解決卡頓
 

@@ -1158,7 +1158,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.13';
+const VERSION='V4.2.14';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3857,14 +3857,13 @@ async function saveMeeting(){
   if(sok){document.getElementById('sync-label').textContent='共享：'+folderHandle.name;document.getElementById('sync-dot').className='sync-dot on'}
   document.querySelectorAll('.sec-foot .btn-a, #btn-save-all').forEach(b=>{b.disabled=false;b.textContent='儲存'})
   renderSbRecent();
-  // Auto switch after save
-  if(!S.viewMode){
-    setTimeout(()=>{
-      S._snapshot=null;_dirty=false;const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
-      // Always stay in edit mode after save; user can manually switch to view
-      S.viewMode=false;S.meetingMode='record';
-    },1200);
-  }
+  // Switch to view mode after save
+  setTimeout(()=>{
+    S._snapshot=null;_dirty=false;
+    const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
+    S.viewMode=true;S.meetingMode='record';
+    renderEditor();
+  },1200);
 }
 
 /* ════ PPTX ════ */
