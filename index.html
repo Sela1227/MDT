@@ -1146,7 +1146,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.0.0';
+const VERSION='V4.0.1';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2791,8 +2791,8 @@ function casesPane(cid){
   const fFn=vm?followupViewHTML:followupHTML;
   const sFn=vm?specialViewHTML:specialHTML;
   // Pre-build add buttons (cid is in scope, no complex concat)
-  const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>');
-  const bCase=vm?'':('<button class="btnadd" data-add-cid="' + cid + '" onclick="openAddCaseModal(this.dataset.addCid)">+ 新增討論個案</button>'+'<button class="btnadd" style="background:none;border:1px solid var(--blt);color:var(--fog)" onclick="openPrevCaseImport(\'' + cid + '\')">↩ 從歷史帶入</button>');
+  const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>'+'<button class="btnadd" style="background:none;border:1px solid var(--blt);color:var(--fog-dk)" onclick="openFollowupImport(\'' + cid + '\')">↩ 從上次帶入</button>');
+  const bCase=vm?'':('<button class="btnadd" data-add-cid="' + cid + '" onclick="openAddCaseModal(this.dataset.addCid)">+ 新增討論個案</button>');
   const bSpec=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'special\')">+ 新增特殊議程</button>');
   const bTeam=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'team\')">+ 新增醫療小組討論個案</button>');
   const events=sec.events||[];
@@ -3343,60 +3343,114 @@ function doCaseSearch(q){
 }
 
 
-function openPrevCaseImport(cid){
+function openFollowupImport(cid){
+  // Collect 個案討論 from all previous meetings of same cancer
   const idx=getIdx();
   const all=[];
   idx.forEach(function(mi){
     if(mi.id===(S.meeting?.id||''))return;
     const m=loadLocal(mi.id);if(!m)return;
-    (m.cids||[]).forEach(function(mcid){
-      ((m.sections||{})[mcid]?.cases||[]).forEach(function(c){
-        if(c.chartNo||c.name)all.push({m,cid:mcid,c});
-      });
+    // Check same cancer
+    if(!(m.cids||[]).includes(cid))return;
+    const cases=((m.sections||{})[cid]?.cases||[]);
+    cases.forEach(function(c){
+      if(c.chartNo||c.name)all.push({m,c,date:m.date});
     });
   });
-  if(!all.length){alert('沒有歷史個案可帶入');return;}
+
+  if(!all.length){alert('找不到此癌別的歷史個案討論');return;}
+
+  // Sort by date desc
+  all.sort(function(a,b){return b.date.localeCompare(a.date);});
 
   const modal=document.createElement('div');
-  modal.id='prev-import-modal';
+  modal.id='followup-import-modal';
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-  const rows=all.slice(0,60).map(function(r,idx2){
+
+  const rows=all.map(function(r,idx2){
     const drs=getDoctors(r.c).join('、')||'—';
-    const ca=CFG[r.cid]?.name||r.cid;
-    return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--blt)" onmouseover="this.style.background=\'#f5f7f9\'" onmouseout="this.style.background=\'\'">'
-      +'<input type="checkbox" value="'+idx2+'" style="margin-top:3px;flex-shrink:0">'
+    // Check if already in current followups
+    const already=(S.meeting?.sections[cid]?.followups||[]).some(function(f){return f.chartNo===r.c.chartNo;});
+    return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--blt)'+(already?';opacity:.45':'')
+      +'" onmouseover="this.style.background=\'#f5f7f9\'" onmouseout="this.style.background=\'\'">'
+      +'<input type="checkbox" value="'+idx2+'" style="margin-top:3px;flex-shrink:0"'+(already?' title="已在追蹤清單"':'')+'>'
       +'<div style="flex:1;min-width:0">'
       +'<div style="display:flex;gap:8px;align-items:center">'
       +'<span style="font-weight:700;font-size:13px">'+escA(r.c.chartNo||'—')+'</span>'
       +'<span style="font-size:13px">'+escA(r.c.name?maskName(r.c.name):'—')+'</span>'
-      +'<span style="font-size:11px;padding:1px 6px;border-radius:10px;background:var(--fog-xlt);color:var(--fog-dk)">'+escA(ca)+'</span>'
-      +'<span style="margin-left:auto;font-size:11px;color:var(--textlt)">'+escA(r.m.date)+'</span>'
+      +'<span style="margin-left:auto;font-size:11px;color:var(--textlt)">'+escA(r.date)+'</span>'
+      +(already?'<span style="font-size:10px;color:var(--fog);padding:1px 6px;background:var(--cream);border-radius:3px">已在清單</span>':'')
       +'</div>'
       +'<div style="font-size:11px;color:var(--textlt);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(r.c.diagnosis||'無診斷')+'</div>'
+      +'<div style="font-size:11px;color:var(--textlt)">VS '+escA(drs)+'</div>'
       +'</div></label>';
   }).join('');
 
-  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(640px,95vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
-    +'<div style="padding:14px 20px;border-bottom:1px solid var(--blt);font-weight:700;font-size:15px;display:flex;align-items:center;gap:10px">'
-    +'從歷史會議帶入個案'
-    +'<input id="prev-search" placeholder="篩選..." style="flex:1;font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:3px;margin-left:auto;max-width:180px" oninput="filterPrevCases(this.value)">'
-    +'<button onclick="document.getElementById(\'prev-import-modal\').remove()" style="background:none;border:none;font-size:20px;color:var(--textlt);cursor:pointer">×</button>'
+  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(620px,95vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
+    +'<div style="padding:14px 20px;border-bottom:1px solid var(--blt);display:flex;align-items:center;gap:10px">'
+    +'<div style="font-weight:700;font-size:15px">從上次帶入前期追蹤</div>'
+    +'<input id="fup-search" placeholder="篩選病歷號/姓名..." style="flex:1;font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:3px;max-width:180px;margin-left:auto" oninput="filterFupRows(this.value)">'
+    +'<button onclick="document.getElementById(\'followup-import-modal\').remove()" style="background:none;border:none;font-size:20px;color:var(--textlt);cursor:pointer">×</button>'
     +'</div>'
-    +'<div id="prev-case-list" style="overflow-y:auto;flex:1">'+rows+'</div>'
-    +'<div style="padding:12px 20px;border-top:1px solid var(--blt);display:flex;gap:8px;justify-content:flex-end">'
-    +'<span id="prev-sel-count" style="font-size:12px;color:var(--textlt);margin-right:auto;align-self:center">已選 0 筆</span>'
-    +'<button class="btn btn-b btn-sm" onclick="document.getElementById(\'prev-import-modal\').remove()">取消</button>'
-    +'<button class="btn btn-a btn-sm" onclick="doPrevCaseImport(\''+cid+'\','+JSON.stringify(all.slice(0,60))+')">帶入選取的個案</button>'
+    +'<div style="padding:6px 16px;background:var(--surface);border-bottom:1px solid var(--blt);font-size:11px;color:var(--textlt)">勾選後帶入前期追蹤清單（保留病歷號、姓名、主治醫師、診斷）</div>'
+    +'<div id="fup-list" style="overflow-y:auto;flex:1">'+rows+'</div>'
+    +'<div style="padding:12px 20px;border-top:1px solid var(--blt);display:flex;gap:8px;align-items:center">'
+    +'<button class="btn btn-b btn-sm" onclick="document.getElementById(\'followup-import-modal\').querySelectorAll(\'input\').forEach(function(c){c.checked=true;});updateFupCount()">全選</button>'
+    +'<span id="fup-sel-count" style="font-size:12px;color:var(--textlt);margin-right:auto">已選 0 筆</span>'
+    +'<button class="btn btn-b btn-sm" onclick="document.getElementById(\'followup-import-modal\').remove()">取消</button>'
+    +'<button class="btn btn-a btn-sm" onclick="doFollowupImport(\''+cid+'\','+JSON.stringify(all)+')">帶入選取</button>'
     +'</div></div>';
   document.body.appendChild(modal);
-  // Track selections
-  modal.querySelectorAll('input[type=checkbox]').forEach(function(cb){
-    cb.onchange=function(){
-      var n=modal.querySelectorAll('input:checked').length;
-      var el=document.getElementById('prev-sel-count');
-      if(el)el.textContent='已選 '+n+' 筆';
-    };
+  modal.querySelectorAll('input[type=checkbox]').forEach(function(cb){cb.onchange=updateFupCount;});
+}
+
+function updateFupCount(){
+  var n=document.querySelectorAll('#followup-import-modal input:checked').length;
+  var el=document.getElementById('fup-sel-count');if(el)el.textContent='已選 '+n+' 筆';
+}
+
+function filterFupRows(q){
+  document.querySelectorAll('#fup-list label').forEach(function(row){
+    row.style.display=row.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';
   });
+}
+
+function doFollowupImport(cid, all){
+  const modal=document.getElementById('followup-import-modal');
+  const checked=[...modal.querySelectorAll('input:checked')].map(function(cb){return parseInt(cb.value);});
+  if(!checked.length){alert('請先勾選要帶入的個案');return;}
+  modal.remove();
+  ensureSec(cid);
+  const fups=S.meeting.sections[cid].followups;
+  const existing=new Set(fups.map(function(f){return f.chartNo;}));
+  let added=0;
+  checked.forEach(function(idx2){
+    const r=all[idx2];if(!r)return;
+    const c=r.c;
+    // Skip duplicates
+    if(c.chartNo&&existing.has(c.chartNo))return;
+    fups.push({
+      id:uid(),
+      chartNo:c.chartNo||'',
+      name:c.name||'',
+      doctors:Array.isArray(c.doctors)?c.doctors.slice(0,2):[(c.doctor||''),''],
+      doctor:c.doctor||'',
+      prevDate:r.date||'',
+      note:''
+    });
+    if(c.chartNo)existing.add(c.chartNo);
+    added++;
+  });
+  markDirty();
+  // Re-render followups section
+  const cont=document.getElementById('div-followups-'+cid);
+  if(cont){
+    const vm=S.viewMode;
+    cont.innerHTML=fups.map(function(f,i){
+      try{return vm?followupViewHTML(cid,i,f,'followups'):followupHTML(cid,i,f,'followups');}catch(e){return '';}
+    }).join('');
+  }
+  showSaveToast('已帶入 '+added+' 筆，略過 '+(checked.length-added)+' 筆重複');
 }
 
 function filterPrevCases(q){
