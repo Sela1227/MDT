@@ -798,9 +798,9 @@ textarea{resize:vertical}
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportCaseJSON()">JSON 個案匯出</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportMeetingJSON()">JSON 完整匯出</button>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genImportPrompt()">AI 匯入提示詞</button>
-              <button class="btn btn-a" id="btn-ai-gen" style="padding:10px 4px;font-size:13px;background:var(--fog);display:none;white-space:nowrap" onclick="genAIInline()">AI 生成摘要</button>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-b" style="padding:10px 16px;font-size:13px" onclick="genImportPrompt()">AI 匯入提示詞</button>
+              <button class="btn btn-a" id="btn-ai-gen" style="padding:10px 16px;font-size:13px;background:var(--fog);display:none" onclick="genAIInline()">AI 生成摘要</button>
             </div>
             <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
             <input type="file" id="xl-import-input" accept=".xlsx" style="display:none" onchange="importXLSX(this)">
@@ -1146,7 +1146,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.0.1';
+const VERSION='V4.0.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3369,21 +3369,18 @@ function openFollowupImport(cid){
 
   const rows=all.map(function(r,idx2){
     const drs=getDoctors(r.c).join('、')||'—';
-    // Check if already in current followups
     const already=(S.meeting?.sections[cid]?.followups||[]).some(function(f){return f.chartNo===r.c.chartNo;});
-    return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--blt)'+(already?';opacity:.45':'')
+    const alreadyTag=already?'<span style="font-size:10px;color:var(--fog);padding:1px 6px;background:var(--cream-dk);border-radius:3px;flex-shrink:0">已在清單</span>':'';
+    return '<label style="display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--blt)'+(already?';opacity:.5':'')
       +'" onmouseover="this.style.background=\'#f5f7f9\'" onmouseout="this.style.background=\'\'">'
-      +'<input type="checkbox" value="'+idx2+'" style="margin-top:3px;flex-shrink:0"'+(already?' title="已在追蹤清單"':'')+'>'
-      +'<div style="flex:1;min-width:0">'
-      +'<div style="display:flex;gap:8px;align-items:center">'
-      +'<span style="font-weight:700;font-size:13px">'+escA(r.c.chartNo||'—')+'</span>'
-      +'<span style="font-size:13px">'+escA(r.c.name?maskName(r.c.name):'—')+'</span>'
-      +'<span style="margin-left:auto;font-size:11px;color:var(--textlt)">'+escA(r.date)+'</span>'
-      +(already?'<span style="font-size:10px;color:var(--fog);padding:1px 6px;background:var(--cream);border-radius:3px">已在清單</span>':'')
-      +'</div>'
-      +'<div style="font-size:11px;color:var(--textlt);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(r.c.diagnosis||'無診斷')+'</div>'
-      +'<div style="font-size:11px;color:var(--textlt)">VS '+escA(drs)+'</div>'
-      +'</div></label>';
+      +'<input type="checkbox" value="'+idx2+'" style="flex-shrink:0;width:16px;height:16px"'+(already?' title="已在追蹤清單"':'')+'>'
+      +'<div style="width:80px;flex-shrink:0;font-weight:700;font-size:13px;color:var(--fog-dk)">'+escA(r.c.chartNo||'—')+'</div>'
+      +'<div style="width:60px;flex-shrink:0;font-size:13px">'+escA(r.c.name?maskName(r.c.name):'—')+'</div>'
+      +'<div style="flex:1;min-width:0;font-size:11px;color:var(--textlt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(r.c.diagnosis||'無診斷')+'</div>'
+      +'<div style="width:90px;flex-shrink:0;font-size:11px;color:var(--textlt)">VS '+escA(drs)+'</div>'
+      +'<div style="width:70px;flex-shrink:0;font-size:11px;color:var(--textlt);text-align:right">'+escA(r.date)+'</div>'
+      +alreadyTag
+      +'</label>';
   }).join('');
 
   modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(620px,95vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
