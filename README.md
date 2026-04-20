@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.1.8
+修正 HTML 投影片 / HTML 分享失敗：cases.forEach 結尾括號錯置於 surgical images forEach 之前，導致 c is not defined
+
 ### V4.1.7
 修正 HTML 分享上傳失敗：shareHTMLSlides 缺少 async 關鍵字導致 await 語法錯誤；移除殘留的 existUrl/token 未定義死碼
 
