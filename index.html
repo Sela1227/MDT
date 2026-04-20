@@ -1158,7 +1158,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.15';
+const VERSION='V4.2.16';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2773,7 +2773,7 @@ ${(()=>{
 })()}${row('討論',d.discussion)}
 ${chips}
 ${hasRec?`<div class="vc-rec">${row('摘要',d.summary)}${row('結論',d.decision)}</div>`:''}
-${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button onclick="viewImg('${escA(img.dataUrl)}')" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewrelatedimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 </div></div>`;
 }
 function followupViewHTML(cid,i,d,type='followups'){
@@ -6105,6 +6105,18 @@ document.addEventListener('click',function(e){
       imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
         const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
       }).catch(function(e){alert('無法載入乳攝影像：'+e.message);});
+    }
+    return;
+  }
+  const previewrelatedimg=e.target.closest('[data-action="previewrelatedimg"]');
+  if(previewrelatedimg){
+    const name=(previewrelatedimg.dataset.name||'').trim();
+    const dataUrl=(previewrelatedimg.dataset.dataurl||'').trim();
+    if(dataUrl){viewImg(dataUrl);return;}
+    if(name&&imgFolderHandle){
+      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
+        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
+      }).catch(function(e){alert('無法載入影像：'+e.message);});
     }
     return;
   }

@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.16
+修正相關影像預覽失效：改用 data-action="previewrelatedimg" + event delegation（同乳攝修正模式）
+
 ### V4.2.15
 修正乳攝預覽失效：閱覽模式乳攝按鈕改用 data-action="previewmammoimg" + event delegation，不再用 onclick 內嵌 base64
 
