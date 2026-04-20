@@ -783,6 +783,7 @@ textarea{resize:vertical}
           <div class="sec-hdr"><span class="sec-title">產出</span><span class="sec-sub">已完稿，可匯出</span></div>
           <div class="sec-body">
             <!-- 資料夾授權：優先顯示 -->
+            <div id="output-cid-label" style="display:none;gap:8px;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:12px;margin-bottom:8px"></div>
             <div id="folder-status-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"></div>
             <!-- 5-per-row grid layout -->
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
@@ -1148,7 +1149,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.1.5';
+const VERSION='V4.1.6';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1948,7 +1949,7 @@ async function _loadMtg(id){
 }
 async function openMtgById(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
-  S.meeting=m;S.cids=m.cids;S.viewMode=!editMode;S.meetingMode='record';
+  S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
   renderEditor();updateFolderStatusBar();showView('meeting');
 }
@@ -1967,7 +1968,7 @@ async function openMtgSchedule(id){
 }
 async function openMtgRecord(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
-  S.meeting=m;S.cids=m.cids;S.viewMode=!editMode;S.meetingMode='record';
+  S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
   if(m.cids.length>1)m.cids.forEach(cid=>{const s=loadSec(cid,m.date);if(s)m.sections[cid]=s});
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
   renderEditor();updateFolderStatusBar();showView('meeting');
@@ -2469,7 +2470,7 @@ function renderCasesInner(){
     el.innerHTML=tabsHtml+panesHtml;
   }
 }
-function switchTab(cid){const mf=[...S.cids].sort((a,b)=>S.user.cancers.includes(a)?-1:1);mf.forEach((id,i)=>{document.querySelectorAll('#ctabs .tab')[i]?.classList.toggle('active',id===cid);document.getElementById('tp-'+id)?.classList.toggle('active',id===cid)})}
+function switchTab(cid){S.activeCid=cid;const mf=[...S.cids].sort((a,b)=>S.user.cancers.includes(a)?-1:1);mf.forEach((id,i)=>{document.querySelectorAll('#ctabs .tab')[i]?.classList.toggle('active',id===cid);document.getElementById('tp-'+id)?.classList.toggle('active',id===cid)});updateOutputLabel();}
 
 
 
@@ -3634,6 +3635,33 @@ function autoImportPrevFollowups(cids){
   });
 }
 
+
+function getOutputCid(){
+  if(S.cids&&S.cids.length>1&&S.activeCid)return S.activeCid;
+  return S.cids?S.cids[0]:null;
+}
+function updateOutputLabel(){
+  const el=document.getElementById('output-cid-label');if(!el)return;
+  const cid=getOutputCid();if(!cid){el.style.display='none';return;}
+  const ca=CFG[cid];if(!ca){el.style.display='none';return;}
+  if(S.cids&&S.cids.length>1){
+    el.innerHTML='';
+    el.style.display='flex';
+    const lbl=document.createElement('span');
+    lbl.innerHTML='目前產出：<b style="color:'+escA(ca.color||'#637281')+'">'+escA(ca.name)+'</b>';
+    el.appendChild(lbl);
+    S.cids.filter(function(c){return c!==cid;}).forEach(function(c2){
+      const btn=document.createElement('span');
+      btn.textContent='切換到 '+(CFG[c2]?.name||c2);
+      btn.style.cssText='cursor:pointer;color:var(--textlt);font-size:11px;text-decoration:underline;margin-left:8px';
+      btn.onclick=function(){switchTab(c2);};
+      el.appendChild(btn);
+    });
+  } else {
+    el.innerHTML='';el.style.display='none';
+  }
+}
+
 /* ════ Save ════ */
 let _dirty=false;
 function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}}
@@ -3692,7 +3720,7 @@ async function genPPTX(){
   const ok=await loadLib('pptxgenjs@3.12.0/dist/pptxgen.bundle.js','PptxGenJS');
   if(!ok)return;
   const btn=document.getElementById('btn-pptx');btn.disabled=true;btn.textContent='產生中...';
-  const m=S.meeting,cids=S.cids;
+  const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
   const pptx=new PptxGenJS();
   pptx.layout='LAYOUT_16x9';
   pptx.author='彰濱秀傳癌症中心';
@@ -3900,7 +3928,7 @@ async function genDOCX(){
   if(!ok)return;
   const btn=document.getElementById('btn-docx');btn.disabled=true;btn.textContent='產生中...';
   try{
-    const m=S.meeting,cids=S.cids;
+    const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const{Document,Paragraph,TextRun,HeadingLevel,Packer,
           Table,TableRow,TableCell,WidthType,ShadingType}=docx;
 
@@ -4213,7 +4241,7 @@ let _lastSlidesHTML=null;
 async function genHTMLSlides(){
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   readForm();
-  const m=S.meeting,cids=S.cids;
+  const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
   const slides=[];
   // Check if any folder-based images exist without dataUrl
   // Check if any folder-based images need re-authorization
@@ -4755,7 +4783,7 @@ async function genXLSX(){
   if(!ok){setLibStatus('SheetJS 無法載入','var(--err)');if(btn){btn.disabled=false;btn.textContent='Excel 匯出';}return;}
   try{
     readForm();
-    const m=S.meeting,cids=S.cids;
+    const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const wb=XLSX.utils.book_new();
 
     // ── Sheet 1: 個案討論 ──
@@ -4964,7 +4992,7 @@ function exportMeetingJSON(){
 }
 function exportCaseJSON(){
   readForm();
-  const m=S.meeting,cids=S.cids;
+  const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
   if(!m){alert('請先開啟會議');return;}
   const result=[];
   cids.forEach(function(cid){
@@ -5060,7 +5088,7 @@ function importCaseJSON(inputEl){
   reader.readAsText(file,'utf-8');
 }
 function genLine(){
-  readForm();const m=S.meeting,cids=S.cids,pfx=timePfx(m.time.split('-')[0]);
+  readForm();const m=S.meeting,cids=[getOutputCid()||S.cids[0]],pfx=timePfx(m.time.split('-')[0]);
   const multi=cids.length>1;
   let t=`開會通知單\n會議名稱　${m.title}\n開會時間　${rocDate(m.date)} ${pfx}${m.time}\n`;
   t+=`視訊主場　${m.loc}　聯絡人　${m.contact}\n`;
