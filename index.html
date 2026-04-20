@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.3';
+const VERSION='V4.3.4';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3408,7 +3408,7 @@ document.addEventListener('change',function(e){
 });
 
 /* ════ Init ════ */
-loadAll();loadAICfg();renderLogin();
+loadAll();renderLogin();
 // Show version on login page
 const lgVer=document.getElementById('lg-ver');
 if(lgVer)lgVer.textContent=VERSION;
