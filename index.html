@@ -1149,7 +1149,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.1.9';
+const VERSION='V4.2.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2290,6 +2290,10 @@ function newMeetingObj(userId,cids){
 function ensureSec(cid){if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],special:[],team:[]};const s=S.meeting.sections[cid];if(!s.followups)s.followups=[];if(!s.cases)s.cases=[];if(!s.special)s.special=[];if(!s.team)s.team=[];if(!s.events)s.events=[]}
 
 function renderEditor(){
+  // Ensure activeCid is valid for current meeting
+  if(!S.activeCid||!S.cids.includes(S.activeCid)){
+    S.activeCid=S.cids.find(function(c){return S.user?.cancers.includes(c);})||S.cids[0];
+  }
   const m=S.meeting,cids=S.cids;
   document.getElementById('mtg-title').textContent=mtgTitle(cids);
   document.getElementById('mtg-sub').textContent=rocDate(m.date)+(m.time?' · '+m.time:'');
@@ -3601,7 +3605,7 @@ function renderMonthStats(){
 
 
 function autoImportPrevFollowups(cids){
-  const idx=getIdx();
+  try{const idx=getIdx();
   cids.forEach(function(cid){
     if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],team:[],events:[],special:[]};
     const prev=idx.find(function(mi){
@@ -3631,11 +3635,12 @@ function autoImportPrevFollowups(cids){
       if(c.chartNo)existing.add(c.chartNo);
     });
   });
+  }catch(e){console.warn('autoImportPrevFollowups error:',e);}
 }
 
 
 function getOutputCid(){
-  if(S.cids&&S.cids.length>1&&S.activeCid)return S.activeCid;
+  if(S.cids&&S.cids.length>1&&S.activeCid&&S.cids.includes(S.activeCid))return S.activeCid;
   return S.cids?S.cids[0]:null;
 }
 function updateOutputLabel(){

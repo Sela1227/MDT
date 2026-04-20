@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.2.0
+renderEditor 初始化 S.activeCid；getOutputCid 驗證 activeCid 在 S.cids 內；autoImportPrevFollowups 加 try/catch 防止新建會議失敗
+
 ### V4.1.9
 新增個案時自動收合其他個案（accordion 恢復）；JSON 匯入後自動展開並捲動到最後匯入的個案
 
