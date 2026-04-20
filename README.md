@@ -111,6 +111,12 @@
 
 ## 版本歷程
 
+### V4.2.7
+修正 fullHTML 字串最後一行缺少分號，導致 Invalid or unexpected token 首頁白屏
+
+### V4.2.6
+移除死碼：8個重複 function 定義（4.9KB）、printMeeting、doPrevCaseImport、filterPrevCases、@media print CSS（共 ~17KB）
+
 ### V4.2.5
 影像資料夾雙層架構：設定根目錄後自動按日期+癌別建立子目錄（如 20260416 乳癌）；亦可手動為每場會議自訂資料夾；優先順序：自訂 > 根目錄子目錄 > 根目錄
 
