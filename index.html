@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.6';
+const VERSION='V4.3.2';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2796,48 +2796,20 @@ function renderTimelineSVG(events,caColor,mode){
   const n=sorted.length;
   const perRow=5;
   const rowCount=Math.ceil(n/perRow);
-  const W=860,padX=55;
-  const labelH=35,rowH=100;
+  const W=860,padX=55,nodeR=9,labelH=35,rowH=100;
   const totalH=rowCount*rowH+50;
-  const usableW=W-2*padX;
-
-  // Node size by type: key milestones large, treatments medium, monitoring small
-  const TL_SIZE={dx:14,surgery:14,recurrence:12,metastasis:11,chemo:9,rt:9,biopsy:9,follow:7,imaging:7,other:7};
-
-  // Compute positions with proportional spacing per row
   const pos=[];
   for(var i=0;i<n;i++){
-    var r=Math.floor(i/perRow);
-    var posInRow=i%perRow;
+    var r=Math.floor(i/perRow),posInRow=i%perRow;
+    var rowItems=Math.min(perRow,n-r*perRow);
     var ltr=r%2===0;
-    var rowStart=r*perRow;
-    var rowEnd=Math.min(n,(r+1)*perRow);
-    var rowItems=rowEnd-rowStart;
-    var rowEvs=sorted.slice(rowStart,rowEnd);
-
-    // Parse dates for proportional x
-    var parsedMs=rowEvs.map(function(ev){var d=new Date(ev.date||'');return isNaN(d.getTime())?null:d.getTime();});
-    var validMs=parsedMs.filter(function(d){return d!==null;});
-    var minD=validMs.length?Math.min.apply(null,validMs):0;
-    var maxD=validMs.length?Math.max.apply(null,validMs):0;
-    var span=maxD-minD;
-
-    var t;
-    if(parsedMs[posInRow]===null||span===0){
-      t=rowItems===1?0.5:posInRow/(rowItems-1);
-    }else{
-      t=(parsedMs[posInRow]-minD)/span;
-      // Clamp with small padding so nodes don't crowd the very edge
-      t=0.04+t*0.92;
-    }
-
     var rowTop=r*rowH+10;
-    var lineY=ltr?rowTop+labelH+14:rowTop+14;
-    var x=ltr?padX+t*usableW:W-padX-t*usableW;
+    var lineY=ltr?rowTop+labelH+nodeR:rowTop+nodeR;
+    var x;
+    if(rowItems===1){x=ltr?padX:W-padX;}
+    else{var sp=(W-2*padX)/(rowItems-1);x=ltr?padX+posInRow*sp:W-padX-posInRow*sp;}
     pos.push({x:Math.round(x),y:Math.round(lineY),r:r,ltr:ltr});
   }
-
-  // Build path
   var pathD='';
   for(var i=0;i<n;i++){
     var p=pos[i];
@@ -2853,773 +2825,43 @@ function renderTimelineSVG(events,caColor,mode){
       }
     }
   }
-
   var isDark=mode==='slide';
-  var lineClr=isDark?'rgba(255,255,255,.22)':'#c0cad4';
+  var lineClr=isDark?'rgba(255,255,255,.28)':'#b0bcc8';
   var txtClr=isDark?'#fff':'#2a3540';
-  var dtClr=isDark?'rgba(255,255,255,.58)':'#637281';
-
+  var dtClr=isDark?'rgba(255,255,255,.6)':'#637281';
   var nodes='',labels='',diffs='';
   for(var i=0;i<n;i++){
     var ev=sorted[i],p=pos[i];
     var cfg=TL_TYPES.find(function(t){return t.id===ev.type;})||TL_TYPES[TL_TYPES.length-1];
-    var nr=TL_SIZE[ev.type]||9;
     var lbl=escA(ev.label||cfg.label);
     var dt=escA(ev.date||'');
-    // Glow ring
-    nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(nr+5)+'" fill="'+cfg.color+'" opacity=".18"/>';
-    // Node
-    nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+nr+'" fill="'+cfg.color+'" stroke="'+(isDark?'#1a2530':'#fff')+'" stroke-width="2.5"/>';
-    // Labels: LTR rows above line, RTL rows below
+    nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(nodeR+5)+'" fill="'+cfg.color+'" opacity=".2"/>';
+    nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+nodeR+'" fill="'+cfg.color+'" stroke="'+(isDark?'#1a2530':'#fff')+'" stroke-width="2.5"/>';
     if(p.ltr){
-      labels+='<text x="'+p.x+'" y="'+(p.y-nr-16)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
-      labels+='<text x="'+p.x+'" y="'+(p.y-nr-4)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
+      labels+='<text x="'+p.x+'" y="'+(p.y-nodeR-18)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
+      labels+='<text x="'+p.x+'" y="'+(p.y-nodeR-6)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
     }else{
-      labels+='<text x="'+p.x+'" y="'+(p.y+nr+15)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
-      labels+='<text x="'+p.x+'" y="'+(p.y+nr+27)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
+      labels+='<text x="'+p.x+'" y="'+(p.y+nodeR+14)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
+      labels+='<text x="'+p.x+'" y="'+(p.y+nodeR+26)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
     }
-    // Day diffs on same row
     if(i<n-1&&pos[i].r===pos[i+1].r){
       var d1=new Date(ev.date||''),d2=new Date(sorted[i+1].date||'');
-      if(!isNaN(d1.getTime())&&!isNaN(d2.getTime())){
+      if(!isNaN(d1)&&!isNaN(d2)){
         var days=Math.round((d2-d1)/86400000);
         if(days>0){
           var mx=(p.x+pos[i+1].x)/2;
-          var ddy=p.ltr?p.y+nr+12:p.y-nr-7;
-          diffs+='<text x="'+mx+'" y="'+ddy+'" text-anchor="middle" font-size="9" fill="'+dtClr+'" opacity=".72">+'+days+'d</text>';
+          var ddy=p.ltr?p.y+nodeR+13:p.y-nodeR-6;
+          diffs+='<text x="'+mx+'" y="'+ddy+'" text-anchor="middle" font-size="9" fill="'+dtClr+'" opacity=".75">+'+days+'d</text>';
         }
       }
     }
   }
-
   return '<svg viewBox="0 0 '+W+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'
     +(isDark?'<rect width="'+W+'" height="'+totalH+'" fill="#1a2530" rx="8"/>':'')
-    +'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    +'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'
     +nodes+labels+diffs
     +'</svg>';
 }
-
-function importTimelineFromTreatments(cid,idx){
-  ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-  const existing=new Set((c.timeline||[]).map(function(t){return t.type+'_'+t.date;}));
-  const cands=[];
-  (c.pathologies||[]).forEach(function(p){
-    if(p.date&&!existing.has('biopsy_'+p.date))
-      cands.push({type:'biopsy',date:p.date,label:(p.content||'').slice(0,24)||'切片/病理',_src:'病理'});
-  });
-  (c.treatments||[]).forEach(function(t){
-    if(!t.date)return;
-    var kw=(t.name+' '+(t.content||'')).toLowerCase();
-    var type='other';
-    if(/chemo|化療|cisplatin|carboplatin|oxaliplatin|taxol|tegafur|xeloda|capecitabine|5.fu/.test(kw))type='chemo';
-    else if(/surg|手術|resect|excision|切除|lumpectomy|mastectomy|rarp|orchiectomy|prostatectomy/.test(kw))type='surgery';
-    else if(/\brt\b|放療|radiation|radiotherapy|imrt|vmat|sbrt|srs|3dcrt|igrt|\bgy\b|gray/.test(kw))type='rt';
-    if(!existing.has(type+'_'+t.date))
-      cands.push({type:type,date:t.date,label:(t.name||'').slice(0,24)||type,_src:'治療'});
-  });
-  (c.exams||[]).forEach(function(e){
-    if(!e.date)return;
-    var kw=(e.name||'').toLowerCase();
-    if(/ct|mri|pet|bone scan|x.ray|xray|超音波|echo|ultrasound/.test(kw))
-      if(!existing.has('imaging_'+e.date))
-        cands.push({type:'imaging',date:e.date,label:(e.name||'影像評估').slice(0,24),_src:'檢查'});
-  });
-  if(!cands.length){alert('沒有找到可帶入的事件（已全部匯入或無相關記錄）');return;}
-  cands.sort(function(a,b){return a.date.localeCompare(b.date);});
-  const modal=document.createElement('div');
-  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-  const rows=cands.map(function(cv,ci){
-    const cfg=TL_TYPES.find(function(t){return t.id===cv.type;})||TL_TYPES[TL_TYPES.length-1];
-    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer">'
-      +'<input type="checkbox" checked value="'+ci+'" style="width:15px;height:15px;flex-shrink:0">'
-      +'<span style="font-size:11px;color:#999;width:28px;flex-shrink:0">'+escA(cv._src)+'</span>'
-      +'<span style="font-size:11px;color:#666;width:82px;flex-shrink:0">'+escA(cv.date)+'</span>'
-      +'<span style="font-size:12px;font-weight:600;color:'+cfg.color+';width:68px;flex-shrink:0">'+escA(cfg.label)+'</span>'
-      +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(cv.label)+'</span>'
-      +'</label>';
-  }).join('');
-  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(560px,94vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
-    +'<div style="padding:14px 18px;border-bottom:1px solid #eee;font-weight:700;font-size:15px">從記錄帶入事件軸</div>'
-    +'<div style="overflow-y:auto;flex:1">'+rows+'</div>'
-    +'<div style="padding:12px 18px;border-top:1px solid #eee;display:flex;gap:8px;justify-content:flex-end">'
-    +'<button id="tl-cancel" class="btn btn-b btn-sm">取消</button>'
-    +'<button id="tl-ok" class="btn btn-a btn-sm">帶入選取</button>'
-    +'</div></div>';
-  document.body.appendChild(modal);
-  document.getElementById('tl-cancel').onclick=function(){document.body.removeChild(modal);};
-  document.getElementById('tl-ok').onclick=function(){
-    const checked=[...modal.querySelectorAll('input:checked')].map(function(cb){return cands[parseInt(cb.value)];});
-    if(!checked.length){alert('請勾選至少一筆');return;}
-    if(!c.timeline)c.timeline=[];
-    checked.forEach(function(ev){c.timeline.push({type:ev.type,date:ev.date,label:ev.label});});
-    c.timeline.sort(function(a,b){return a.date.localeCompare(b.date);});
-    markDirty();
-    document.body.removeChild(modal);
-    const tlEl=document.getElementById('tllist-'+cid+'-'+idx);
-    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,idx,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);tmp.childNodes.forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
-    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+idx);
-    if(svgEl)svgEl.innerHTML=c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
-  };
-}
-
-function buildTimelineRows(cid,idx,c){
-  return ((c.timeline||[]).map(function(tl,ti){
-    const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'"'+(t.id===tl.type?' selected':'')+'>'+t.label+'</option>';}).join('');
-    return '<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-      +'<select data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="type" style="width:108px;font-size:12px;padding:4px 6px">'+opts+'</select>'
-      +'<input type="date" value="'+escA(tl.date||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="date" style="width:148px">'
-      +'<input placeholder="自訂說明（空白用預設）" value="'+escA(tl.label||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
-      +'<button class="delbtn" data-action="delstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" style="margin-left:auto">×</button>'
-      +'</div></div>';
-  }).join(''));
-}
-
-document.addEventListener('click',function(e){
-  const pickpathfolder=e.target.closest('[data-action="pickpathfolder"]');
-  if(pickpathfolder){
-    const cid=pickpathfolder.dataset.cid,idx=parseInt(pickpathfolder.dataset.idx);
-    (async function(){
-      try{
-        // Re-use existing handle or pick new one
-        if(!imgFolderHandle){
-          imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
-        }
-        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-        if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
-      if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
-        // List image files in folder
-        const files=[];
-        const _entries3=await _folderEntries(imgFolderHandle);
-        for(const entry of _entries3){
-          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
-        }
-        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
-        // Build selection dialog
-        const existing=new Set(c.pathologyImages.map(function(x){return x.name;}));
-        // Sort files alphabetically
-        files.sort(function(a,b){return a.name.localeCompare(b.name);});
-        const list=files.map(function(f){
-          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;transition:background .1s;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'            +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
-            +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'            +'<span style="font-size:10px;color:#aaa">'+escA(f.name.split('.').pop().toUpperCase())+'</span>'            +'</label>';
-        }).join('');
-        const overlay=document.createElement('div');
-        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-        overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
-          +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取病理影像</div>'
-          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
-          +'<div style="display:flex;gap:6px;align-items:center">'
-          +'<button id="pathfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
-          +'<button id="pathfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
-          +'<span id="pathfolder-count" style="font-size:11px;color:#888;margin-left:4px"></span>'
-          +'</div>'
-          +'<div id="pathfolder-list" style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px;padding:4px;min-height:120px;max-height:50vh">'+list+'</div>'
-          +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #eee">'
-          +'<button id="pathfolder-cancel" class="btn btn-b btn-sm">取消</button>'
-          +'<button id="pathfolder-change" class="btn btn-b btn-sm">換資料夾</button>'
-          +'<button id="pathfolder-ok" class="btn btn-a btn-sm">確認</button>'
-          +'</div></div>';
-        document.body.appendChild(overlay);
-        document.getElementById('pathfolder-cancel').onclick=function(){document.body.removeChild(overlay);};
-        function updateCount(){var n=overlay.querySelectorAll('#pathfolder-list input:checked').length;document.getElementById('pathfolder-count').textContent=n+' 張已選';}
-        overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.onchange=updateCount;});
-        updateCount();
-        document.getElementById('pathfolder-selall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=true;});updateCount();};
-        document.getElementById('pathfolder-clrall').onclick=function(){overlay.querySelectorAll('#pathfolder-list input').forEach(function(cb){cb.checked=false;});updateCount();};
-        document.getElementById('pathfolder-change').onclick=async function(){
-          try{const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}catch(e){}
-          document.body.removeChild(overlay);
-          // Rebuild area and re-trigger
-          const el2=document.getElementById('pathimgs-'+cid+'-'+idx);
-          if(el2){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el2.replaceWith(tmp.firstElementChild);}
-        };
-        document.getElementById('pathfolder-ok').onclick=async function(){
-          const checked=[...overlay.querySelectorAll('#pathfolder-list input:checked')].map(function(x){return x.value;});
-          // Keep existing non-folder images; replace folder refs
-          c.pathologyImages=c.pathologyImages.filter(function(x){return x.dataUrl&&!existing.has(x.name);});
-          checked.forEach(function(fname){c.pathologyImages.push({name:fname,caption:fname.replace(/\.[^.]+$/,''),fromFolder:true});});
-          markDirty();
-          document.body.removeChild(overlay);
-          const el3=document.getElementById('pathimgs-'+cid+'-'+idx);
-          if(el3){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el3.replaceWith(tmp.firstElementChild);}
-        };
-      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
-    })();
-    return;
-  }
-  const addpathimg=e.target.closest('[data-action="addpathimg"]');
-  if(addpathimg){
-    const cid=addpathimg.dataset.cid,idx=parseInt(addpathimg.dataset.idx);
-    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
-    inp.onchange=function(ev){
-      const files=Array.from(ev.target.files);if(!files.length)return;
-      ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-      if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
-      if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
-      let loaded=0;
-      files.forEach(function(file){
-        const reader=new FileReader();
-        reader.onload=function(re){
-          compressImage(re.target.result,2400,2400,0.82,function(compressed){
-            c.pathologyImages.push({dataUrl:compressed,name:file.name,caption:file.name.replace(/\.[^.]+$/,'')});
-            markDirty();loaded++;
-            if(loaded===files.length){
-              const el=document.getElementById('pathimgs-'+cid+'-'+idx);
-              if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-            }
-          });
-        };
-        reader.readAsDataURL(file);
-      });
-    };
-    document.body.appendChild(inp);inp.click();document.body.removeChild(inp);return;
-  }
-  const picksurgfolder=e.target.closest('[data-action="picksurgfolder"]');
-  if(picksurgfolder){
-    const cid=picksurgfolder.dataset.cid,idx=parseInt(picksurgfolder.dataset.idx);
-    (async function(){
-      try{
-        if(!imgFolderHandle){const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}
-        updateFolderStatusBar();
-        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-        if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
-        const files=[];
-        const _entries1=await _folderEntries(imgFolderHandle);
-        for(const entry of _entries1){
-          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
-        }
-        files.sort(function(a,b){return a.name.localeCompare(b.name);});
-        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
-        const existing=new Set(c.surgicalImages.map(function(x){return x.name;}));
-        const list=files.map(function(f){
-          var base=f.name.replace(/\.[^.]+$/,''),ext=f.name.split('.').pop().toUpperCase();
-          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'
-            +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
-            +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(base)+'</span>'
-            +'<span style="font-size:10px;color:#aaa;flex-shrink:0">'+escA(ext)+'</span>'+'</label>';
-        }).join('');
-        const overlay=document.createElement('div');
-        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-        overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
-          +'<div style="font-weight:700;font-size:16px">選取手術照片</div>'
-          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
-          +'<div style="display:flex;gap:6px"><button id="surgsela" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer">全選</button>'
-          +'<button id="surgclr" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer">清除</button>'
-          +'<span id="surgcnt" style="font-size:11px;color:#888;margin-left:4px"></span></div>'
-          +'<div id="surg-list" style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px;padding:4px;min-height:120px;max-height:50vh">'+list+'</div>'
-          +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #eee">'
-          +'<button id="surgcancel" class="btn btn-b btn-sm">取消</button>'
-          +'<button id="surgok" class="btn btn-a btn-sm">確認</button></div></div>';
-        document.body.appendChild(overlay);
-        function updCnt(){var n=overlay.querySelectorAll('#surg-list input:checked').length;document.getElementById('surgcnt').textContent=n+' 張已選';}
-        overlay.querySelectorAll('#surg-list input').forEach(function(cb){cb.onchange=updCnt;});updCnt();
-        document.getElementById('surgsela').onclick=function(){overlay.querySelectorAll('#surg-list input').forEach(function(cb){cb.checked=true;});updCnt();};
-        document.getElementById('surgclr').onclick=function(){overlay.querySelectorAll('#surg-list input').forEach(function(cb){cb.checked=false;});updCnt();};
-        document.getElementById('surgcancel').onclick=function(){document.body.removeChild(overlay);};
-        document.getElementById('surgok').onclick=function(){
-          const checked=[...overlay.querySelectorAll('#surg-list input:checked')].map(function(x){return x.value;});
-          c.surgicalImages=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});
-          markDirty();document.body.removeChild(overlay);
-          const el3=document.getElementById('surgimgs-'+cid+'-'+idx);
-          if(el3){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el3.replaceWith(tmp.firstElementChild);}
-        };
-      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
-    })();return;
-  }
-  const delsurgimg=e.target.closest('[data-action="delsurgimg"]');
-  if(delsurgimg){
-    const cid=delsurgimg.dataset.cid,idx=parseInt(delsurgimg.dataset.idx),j=parseInt(delsurgimg.dataset.imgidx);
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.surgicalImages.splice(j,1);markDirty();
-    const el=document.getElementById('surgimgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
-  }
-  const clearsurgimgs=e.target.closest('[data-action="clearsurgimgs"]');
-  if(clearsurgimgs){
-    const cid=clearsurgimgs.dataset.cid,idx=parseInt(clearsurgimgs.dataset.idx);
-    if(!confirm('清除所有手術照片？'))return;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.surgicalImages=[];markDirty();
-    const el=document.getElementById('surgimgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
-  }
-  const clearpathimgs=e.target.closest('[data-action="clearpathimgs"]');
-  if(clearpathimgs){
-    const cid=clearpathimgs.dataset.cid,idx=parseInt(clearpathimgs.dataset.idx);
-    if(!confirm('清除所有病理影像？'))return;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.pathologyImages=[];markDirty();
-    const el=document.getElementById('pathimgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
-  }
-  const copyshareurlbtn=e.target.closest('[data-action="copyshareurlbtn"]');
-  if(copyshareurlbtn){
-    const url=copyshareurlbtn.dataset.url;
-    navigator.clipboard.writeText(url).then(function(){
-      copyshareurlbtn.textContent='✓ 已複製';
-      setTimeout(function(){copyshareurlbtn.textContent='複製連結';},2000);
-    }).catch(function(){alert('請手動複製：'+url);});
-    return;
-  }
-  const closeshareurlbtn=e.target.closest('[data-action="closeshareurlbtn"]');
-  if(closeshareurlbtn){
-    const el=document.getElementById('slide-share-link');if(el)el.innerHTML='';
-    return;
-  }
-  const copyslideurl=e.target.closest('[data-action="copyslideurl"]');
-  if(copyslideurl){
-    const idx=parseInt(copyslideurl.dataset.idx);
-    const arr=getSharedSlides();
-    const url=(arr[idx]||{}).url||'';
-    navigator.clipboard.writeText(url).then(function(){
-      copyslideurl.textContent='✓ 已複製';
-      setTimeout(function(){copyslideurl.textContent='複製連結';},2000);
-    }).catch(function(){alert('請手動複製：'+url);});
-    return;
-  }
-  const deleteslide=e.target.closest('[data-action="deleteslide"]');
-  if(deleteslide){deleteSharedSlide(deleteslide.dataset.fname);return;}
-  const previewpathimg=e.target.closest('[data-action="previewpathimg"]');
-  if(previewpathimg){
-    const name=(previewpathimg.dataset.name||'').trim();
-    const dataUrl=(previewpathimg.dataset.dataurl||'').trim();
-    if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
-        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(){alert('無法讀取影像：'+name);});
-    }else{alert(name?'請先選擇資料夾':'無法預覽');} return;
-  }  const previewmammoimg=e.target.closest('[data-action="previewmammoimg"]');
-  if(previewmammoimg){
-    const name=(previewmammoimg.dataset.name||'').trim();
-    const dataUrl=(previewmammoimg.dataset.dataurl||'').trim();
-    if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
-        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(e){alert('無法載入乳攝影像：'+e.message);});
-    }
-    return;
-  }
-  const previewrelatedimg=e.target.closest('[data-action="previewrelatedimg"]');
-  if(previewrelatedimg){
-    const name=(previewrelatedimg.dataset.name||'').trim();
-    const dataUrl=(previewrelatedimg.dataset.dataurl||'').trim();
-    if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
-        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(e){alert('無法載入影像：'+e.message);});
-    }
-    return;
-  }
-
-  const delpathimg=e.target.closest('[data-action="delpathimg"]');
-  if(delpathimg){
-    const cid=delpathimg.dataset.cid,idx=parseInt(delpathimg.dataset.idx),j=parseInt(delpathimg.dataset.imgidx);
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.pathologyImages.splice(j,1);markDirty();
-    const el=document.getElementById('pathimgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
-  }
-  const pickimgfolder=e.target.closest('[data-action="pickimgfolder"]');
-  if(pickimgfolder){
-    const cid=pickimgfolder.dataset.cid,idx=parseInt(pickimgfolder.dataset.idx);
-    const type=pickimgfolder.dataset.type||'images',maxN=parseInt(pickimgfolder.dataset.max)||5;
-    (async function(){
-      try{
-        if(!imgFolderHandle) imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
-        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-        const arr=type==='mammo'?(c.mammo=c.mammo||{date:'',report:'',images:[]},c.mammo.images=c.mammo.images||[],c.mammo.images):c.images=(c.images||[]);
-        const files=[];
-        const _entries2=await _folderEntries(imgFolderHandle);
-        for(const entry of _entries2){
-          if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
-        }
-        files.sort(function(a,b){return a.name.localeCompare(b.name);});
-        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
-        const existing=new Set(arr.map(function(x){return x.name;}));
-        const list=files.map(function(f){
-          var baseName=f.name.replace(/\.[^.]+$/,'');
-          var ext=f.name.split('.').pop().toUpperCase();
-          return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'
-            +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
-            +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(baseName)+'</span>'
-            +'<span style="font-size:10px;color:#aaa;flex-shrink:0">'+escA(ext)+'</span>'
-            +'</label>';
-        }).join('');
-        const overlay=document.createElement('div');
-        overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-        overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
-          +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取影像</div>'
-          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔　最多 '+maxN+' 張</div>'
-          +'<div style="display:flex;gap:6px;align-items:center">'
-          +'<button id="imgfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
-          +'<button id="imgfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
-          +'<span id="imgfolder-count" style="font-size:11px;color:#888;margin-left:4px"></span>'
-          +'</div>'
-          +'<div id="imgfolder-list" style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px;padding:4px;min-height:120px;max-height:50vh">'+list+'</div>'
-          +'<div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid #eee">'
-          +'<button id="imgfolder-cancel" class="btn btn-b btn-sm">取消</button>'
-          +'<button id="imgfolder-change" class="btn btn-b btn-sm">換資料夾</button>'
-          +'<button id="imgfolder-ok" class="btn btn-a btn-sm">確認</button>'
-          +'</div></div>';
-        document.body.appendChild(overlay);
-        function updateCnt(){var n=overlay.querySelectorAll('#imgfolder-list input:checked').length;document.getElementById('imgfolder-count').textContent=n+' 張已選';}
-        overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.onchange=updateCnt;});
-        updateCnt();
-        document.getElementById('imgfolder-selall').onclick=function(){overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.checked=true;});updateCnt();};
-        document.getElementById('imgfolder-clrall').onclick=function(){overlay.querySelectorAll('#imgfolder-list input').forEach(function(cb){cb.checked=false;});updateCnt();};
-        document.getElementById('imgfolder-cancel').onclick=function(){document.body.removeChild(overlay);};
-        document.getElementById('imgfolder-change').onclick=async function(){
-          try{const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}catch(e){}
-          document.body.removeChild(overlay);
-          const elR=type==='mammo'?document.getElementById('mammo-imgs-'+cid+'-'+idx):document.getElementById('imgs-'+cid+'-'+idx);
-          if(elR){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elR.replaceWith(tmp.firstElementChild);}
-        };
-        document.getElementById('imgfolder-ok').onclick=function(){
-          const checked=[...overlay.querySelectorAll('#imgfolder-list input:checked')].map(function(x){return x.value;}).slice(0,maxN);
-          if(type==='mammo'){c.mammo.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});}
-          else{c.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});}
-          markDirty();document.body.removeChild(overlay);
-          const elOk=type==='mammo'?document.getElementById('mammo-imgs-'+cid+'-'+idx):document.getElementById('imgs-'+cid+'-'+idx);
-          if(elOk){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elOk.replaceWith(tmp.firstElementChild);}
-        };
-      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
-    })();
-    return;
-  }
-  const caseflag=e.target.closest('[data-action="caseflag"]');
-  if(caseflag){
-    const cid=caseflag.dataset.cid,idx=parseInt(caseflag.dataset.idx),fl=caseflag.dataset.flag;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    if(!Array.isArray(c.flags))c.flags=[];
-    const pos=c.flags.indexOf(fl);
-    if(pos>=0)c.flags.splice(pos,1);else c.flags.push(fl);
-    markDirty();
-    const col=fl==='緊急'?'#C0392B':fl==='複雜案例'?'#B87D3A':'#4A7C8E';
-    const isOn=c.flags.includes(fl);
-    caseflag.style.background=isOn?col:'transparent';
-    caseflag.style.color=isOn?'#fff':col;
-    return;
-  }
-  const clearimgs=e.target.closest('[data-action="clearimgs"]');
-  if(clearimgs){
-    const cid=clearimgs.dataset.cid,idx=parseInt(clearimgs.dataset.idx);
-    if(!confirm('清除所有相關影像？'))return;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.images=[];markDirty();
-    const el=document.getElementById('imgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
-  }
-  const clearmammoimgs=e.target.closest('[data-action="clearmammoimgs"]');
-  if(clearmammoimgs){
-    const cid=clearmammoimgs.dataset.cid,idx=parseInt(clearmammoimgs.dataset.idx);
-    if(!confirm('清除乳攝影像？'))return;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    if(c.mammo)c.mammo.images=[];markDirty();
-    const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildMammoImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
-  }
-  const del=e.target.closest('[data-action="delimg"]');
-  if(del){delImg(del.dataset.cid,parseInt(del.dataset.idx),parseInt(del.dataset.imgidx));return;}
-  const addmammo=e.target.closest('[data-action="addmammoimg"]');
-  if(addmammo){
-    const cid=addmammo.dataset.cid,idx=parseInt(addmammo.dataset.idx);
-    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
-    inp.onchange=function(ev){
-      const file=ev.target.files[0];if(!file)return;
-      const reader=new FileReader();
-      reader.onload=function(re){
-        ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-        if(!c.mammo)c.mammo={date:'',report:'',images:[]};
-        if(c.mammo.images.length>=2)return;
-        // Compress image before storing
-        const img2=new Image();
-        img2.onload=function(){
-          const MAX=1200;
-          const scale=Math.min(1,MAX/Math.max(img2.width,img2.height));
-          const cv=document.createElement('canvas');
-          cv.width=Math.round(img2.width*scale);cv.height=Math.round(img2.height*scale);
-          cv.getContext('2d').drawImage(img2,0,0,cv.width,cv.height);
-          const compressed=cv.toDataURL('image/jpeg',0.75);
-          ensureSec(cid);const c2=S.meeting.sections[cid].cases[idx];if(!c2)return;
-          if(!c2.mammo)c2.mammo={date:'',report:'',images:[]};
-          if(c2.mammo.images.length>=2)return;
-          c2.mammo.images.push({dataUrl:compressed,name:file.name,caption:''});
-          markDirty();
-          const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
-          if(el){const tmp2=document.createElement('div');tmp2.innerHTML=buildMammoImgArea(cid,idx,c2);el.replaceWith(tmp2.firstElementChild);}
-        };
-        img2.src=re.target.result;
-      };
-      reader.readAsDataURL(file);
-    };
-    document.body.appendChild(inp);inp.click();document.body.removeChild(inp);
-    return;
-  }
-  const delmammo=e.target.closest('[data-action="delmammoimg"]');
-  if(delmammo){
-    const cid=delmammo.dataset.cid,idx=parseInt(delmammo.dataset.idx),j=parseInt(delmammo.dataset.imgidx);
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c||!c.mammo)return;
-    c.mammo.images.splice(j,1);markDirty();
-    const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
-    if(el){const tmp2=document.createElement('div');tmp2.innerHTML=buildMammoImgArea(cid,idx,c);el.replaceWith(tmp2.firstElementChild);}
-    return;
-  }
-  const previewsurgimg=e.target.closest('[data-action="previewsurgimg"]');
-  if(previewsurgimg){
-    const name=(previewsurgimg.dataset.name||'').trim();
-    const dataUrl=(previewsurgimg.dataset.dataurl||'').trim();
-    if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
-        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(e){alert('無法載入手術照片：'+e.message);});
-    }
-    return;
-  }
-  const view=e.target.closest('[data-action="viewimg"]');
-  if(view){viewImg(view.dataset.src);return;}
-  const chip=e.target.closest('[data-action="phchip"]');
-  if(chip){const {cid,idx:ci,chip:c}=chip.dataset;togglePhChip(cid,parseInt(ci),c,chip);return;}
-  const st=e.target.closest('[data-action="specialtype"]');
-  if(st){
-    ensureSec(st.dataset.cid);
-    const item=S.meeting.sections[st.dataset.cid].special[parseInt(st.dataset.idx)];
-    if(!item)return;
-    item.topicType=item.topicType===st.dataset.type?'':st.dataset.type;
-    st.closest('.fg').querySelectorAll('.tchip').forEach(el=>el.classList.toggle('on',el.dataset.type===item.topicType));
-    const cnm=st.closest('.casecard')?.querySelector('.cnm');
-    if(cnm)cnm.textContent=item.topicType||item.title||'特殊議程';
-    markDirty();return;
-  }
-  const tp=e.target.closest('[data-action="topic"]');
-  if(tp){
-    ensureSec(tp.dataset.cid);
-    const c=S.meeting.sections[tp.dataset.cid].cases[parseInt(tp.dataset.idx)];
-    if(!c)return;
-    if(!c.topics)c.topics=[];
-    const t=tp.dataset.topic;
-    const tidx=c.topics.indexOf(t);
-    if(tidx>=0){c.topics.splice(tidx,1);tp.classList.remove('on');}
-    else{c.topics.push(t);tp.classList.add('on');}
-    markDirty();return;
-  }
-  const addst=e.target.closest('[data-action="addstruct"]');
-  if(addst){e.stopPropagation();addStruct(addst.dataset.cid,parseInt(addst.dataset.caseidx),addst.dataset.field);return;}
-  const delst=e.target.closest('[data-action="delstruct"]');
-  if(delst){delStruct(delst.dataset.cid,parseInt(delst.dataset.caseidx),delst.dataset.field,parseInt(delst.dataset.rowid));return;}
-  const tog=e.target.closest('[data-action="togglecase"]');
-  if(tog&&e.target.closest('.casetop')){
-    const card=document.getElementById(tog.dataset.card);if(!card)return;
-    const willOpen=card.classList.contains('cc-collapsed');
-    // Accordion: close all sibling casecards in same container
-    if(willOpen){
-      const container=card.parentElement;
-      if(container){
-        container.querySelectorAll('.casecard').forEach(sib=>{
-          if(sib!==card){
-            sib.classList.add('cc-collapsed');
-            const sid=sib.id;if(!sid)return;
-            const icon2=document.getElementById('tgi-'+sid.slice(3));
-            if(icon2)icon2.textContent='▶';
-          }
-        });
-      }
-    }
-    card.classList.toggle('cc-collapsed');
-    const icon=document.getElementById('tgi-'+tog.dataset.card.slice(3));
-    if(icon)icon.textContent=willOpen?'▼':'▶';
-    // Scroll to top of opened card
-    if(willOpen){
-      setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),30);
-    }
-    return;
-  }
-});
-
-// Input/change delegation for struct fields
-document.addEventListener('change',function(e){
-  const cap=e.target.closest('[data-action="updimgcaption"]');
-  if(cap){
-    const cid=cap.dataset.cid,idx=parseInt(cap.dataset.idx),j=parseInt(cap.dataset.imgidx);
-    const itype=cap.dataset.imgtype;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    const arr=itype==='mammo'?(c.mammo=c.mammo||{images:[]},c.mammo.images):c[itype]||[];
-    if(arr[j])arr[j].caption=cap.value.trim();
-    markDirty();
-    return;
-  }
-});
-document.addEventListener('input',function(e){
-  const el=e.target.closest('[data-action="updstruct"]');
-  if(!el)return;
-  const {cid,caseidx,field,rowid,key}=el.dataset;
-  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,el.value);
-});
-document.addEventListener('change',function(e){
-  const el=e.target.closest('[data-action="updstruct"]');
-  if(!el)return;
-  const {cid,caseidx,field,rowid,key}=el.dataset;
-  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,el.value);
-});
-
-/* ════ Init ════ */
-function checkBackupReminder(){
-  const last=parseInt(localStorage.getItem('mdt_last_backup')||'0');
-  const now=Date.now();
-  if(now-last<=7*24*60*60*1000)return;
-  const el=document.getElementById('backup-reminder');if(!el)return;
-  const daysAgo=last?Math.floor((now-last)/86400000)+'天前':'從未';
-  el.innerHTML='<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-    +'<span style="font-weight:600;color:#856404">备份提醒：上次備份 '+daysAgo+'，建議定期匯出備份</span>'
-    +'<button onclick="exportAllJSON();localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="margin-left:auto;background:#B87D3A;color:#fff;border:none;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px">立即備份</button>'
-    +'<button onclick="localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="background:none;border:1px solid #ffc107;color:#856404;border-radius:3px;padding:3px 8px;cursor:pointer;font-size:12px">略過</button>'
-    +'</div>';
-}
-
-
-
-function loadGhTokenStatus(){
-  const el=document.getElementById('gh-token-status');
-  if(!el)return;
-  el.textContent=getGhToken()?'✓ Token 已設定':'尚未設定 Token';
-  renderSharedSlides();
-}
-
-async function uploadSlidesToGitHub(htmlContent, fname){
-  const token=getGhToken();
-  if(!token){alert('請先到設定頁填入 GitHub Token');return;}
-  const path=GH_SLIDES_PATH+'/'+fname;
-  const url='https://api.github.com/repos/'+GH_REPO+'/contents/'+path;
-  // Check if file exists (need SHA to update)
-  let sha='';
-  try{
-    const r=await fetch(url,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
-    if(r.ok){const j=await r.json();sha=j.sha||'';}
-  }catch(e){}
-  // Encode content (handle Unicode)
-  const bytes=new TextEncoder().encode(htmlContent);
-  let b64='';
-  const chunk=8192;
-  for(let i=0;i<bytes.length;i+=chunk){
-    b64+=String.fromCharCode(...bytes.subarray(i,i+chunk));
-  }
-  b64=btoa(b64);
-  const body={message:'Upload slides: '+fname,content:b64,branch:GH_BRANCH};
-  if(sha)body.sha=sha;
-  const resp=await fetch(url,{
-    method:'PUT',
-    headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
-    body:JSON.stringify(body)
-  });
-  if(!resp.ok){
-    const err=await resp.json().catch(()=>({}));
-    throw new Error((err.message||resp.status)+' — 請確認 Token 權限（需 Contents: Read and write）');
-  }
-  return 'https://sela1227.github.io/MDT-slides/'+(GH_SLIDES_PATH?GH_SLIDES_PATH+'/':'')+fname;
-}
-
-
-
-function setMNav(id,title){
-  document.querySelectorAll('.mob-nav-item').forEach(el=>el.classList.remove('on'));
-  const el=document.getElementById(id);if(el)el.classList.add('on');
-  const pt=document.getElementById('mob-page-title');
-  if(pt&&title)pt.textContent=title;
-}
-
-function applyAICfg(){
-  const p=document.getElementById('ai-provider'),k=document.getElementById('ai-key'),m=document.getElementById('ai-model');
-  if(p)p.value=AI_CFG.provider;if(k)k.value=AI_CFG.key;if(m)m.value=AI_CFG.model;
-  // Show file:// warning
-  const warn=document.getElementById('ai-file-warn');
-  if(warn)warn.style.display=window.location.protocol==='file:'?'block':'none';
-  // Show AI button in meeting view if key is set
-  const btn=document.getElementById('btn-ai-gen');
-  if(btn)btn.style.display=AI_CFG.key?'inline-flex':'none';
-}
-async function testAIKey(){
-  saveAICfg();const key=AI_CFG.key;if(!key){alert('請先填入 API Key');return}
-  const el=document.getElementById('ai-test-msg');
-  el.className='ai-status warn';el.textContent='連線測試中...';
-  try{
-    const text=await callAI('回覆「測試成功」四個字即可',20);
-    el.className='ai-status ok';el.textContent='連線成功：'+text;
-  }catch(e){
-    el.className='ai-status err';
-    if(e.message.includes('Failed to fetch')||e.message.includes('ERR_FAILED')){
-      el.innerHTML='院內防火牆擋住 API 呼叫（CORS 限制）。<br>目前請改用「複製 AI 提示詞」按鈕，貼到 claude.ai 使用。<br>或請 IT 開放 api.anthropic.com 的 CORS 通行。';
-    } else {el.textContent='錯誤：'+e.message}
-  }
-}
-async function callAI(prompt,maxTokens=800){
-  const{provider,key,model}=AI_CFG;
-  if(!key)throw new Error('尚未設定 API Key，請前往設定頁填入');
-  if(provider==='anthropic'){
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body:JSON.stringify({model,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
-    });
-    const d=await r.json();if(!r.ok)throw new Error(d.error?.message||r.status);
-    return d.content?.[0]?.text||'';
-  } else {
-    const r=await fetch('https://api.openai.com/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
-    });
-    const d=await r.json();if(!r.ok)throw new Error(d.error?.message||r.status);
-    return d.choices?.[0]?.message?.content||'';
-  }
-}
-async function genAIInline(){
-  readForm();const m=S.meeting,cids=S.cids;
-  const btn=document.getElementById('btn-ai-gen');
-  btn.disabled=true;btn.textContent='生成中...';
-  document.getElementById('ai-result-area').style.display='none';
-  // Build prompt with full clinical data
-  let prompt=`你是彰濱秀傳癌症中心的MDT會議記錄助理。請根據以下個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出會議討論摘要，每段2-4句，語言專業精簡，使用繁體中文。\n\n會議：${mtgTitle(cids)}　${rocDate(m.date)}\n`;
-  let hasCase=false;
-  cids.forEach(id=>{
-    const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];
-    if(!cases.length)return;
-    hasCase=true;
-    prompt+=`\n【${ca.name}】\n`;
-    cases.forEach((c,i)=>{
-      prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name||''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
-      if(c.cc)prompt+=`現病史: ${c.cc}\n`;
-      if(c.ph)prompt+=`過去病史: ${c.ph}\n`;
-      if((c.exams||[]).length)prompt+=`檢查:\n`+(c.exams||[]).map(e=>e.name+' '+e.date+' : '+e.content).join('\n')+'\n';
-      if(c.treatment)prompt+=`治療：\n${c.treatment}\n`;
-      const disc=c.discussion||(c.topics||[]).join('、');
-      if(disc)prompt+=`討論重點：${disc}\n`;
-    });
-  });
-  if(!hasCase){btn.disabled=false;btn.textContent='AI 生成摘要';alert('請先新增個案討論資料');return}
-  prompt+='\n請對每個個案分別產出結構化討論摘要。';
-  try{
-    const result=await callAI(prompt,1000);
-    document.getElementById('ai-result-text').value=result;
-    document.getElementById('ai-model-badge').textContent=AI_CFG.model;
-    document.getElementById('ai-result-area').style.display='block';
-    document.getElementById('ai-result-area').scrollIntoView({behavior:'smooth',block:'start'});
-  }catch(e){setLibStatus('AI 生成失敗：'+e.message,'var(--err)');}
-  btn.disabled=false;btn.textContent='AI 生成摘要';
-}
-
 function caseViewHTML(cid,i,d){
   const drs=getDoctors(d).join('、')||'—';
   const hasRec=d.summary||d.decision;
@@ -3654,6 +2896,7 @@ ${chips}
 ${hasRec?`<div class="vc-rec">${row('摘要',d.summary)}${row('結論',d.decision)}</div>`:''}
 ${(d.surgicalImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">手術照片</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.surgicalImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'照片'+(j+1))}</span><button data-action="previewsurgimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 ${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewrelatedimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${(d.timeline&&d.timeline.length)?'<div class=\"vc-r\" style=\"background:var(--surface)\"><span class=\"vc-l\" style=\"align-self:flex-start;padding-top:2px\">事件軸</span><div class=\"vc-v\">'+renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view')+'</div></div>':''}
 </div></div>`;
 }
 function followupViewHTML(cid,i,d,type='followups'){
@@ -3863,11 +3106,21 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr"><label>手術照片</label><span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt)">每頁 <select onchange="upd('${cid}','cases',${i},'surgImgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 3px;border:1px solid var(--blt);border-radius:2px;background:transparent"><option value="1"${(d.surgImgsPerSlide||1)===1?' selected':''}>1 張</option><option value="2"${(d.surgImgsPerSlide||1)===2?' selected':''}>2 張</option><option value="4"${(d.surgImgsPerSlide||1)===4?' selected':''}>4 張</option></select></span></div>
+  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','cases',${i},'surgImgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.surgImgsPerSlide||1)===1?' selected':''}>1 張</option><option value="2"${(d.surgImgsPerSlide||1)===2?' selected':''}>2 張</option><option value="4"${(d.surgImgsPerSlide||1)===4?' selected':''}>4 張</option></select></span></div>
     ${buildSurgicalImgArea(cid,i,d)}
   </div>
-  <div class="fg full"><div class="field-hdr"><label>相關影像</label><span style="margin-left:auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt)">每頁 <select onchange="upd('${cid}','cases',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 3px;border:1px solid var(--blt);border-radius:2px;background:transparent"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div>
+  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>相關影像</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','cases',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div>
     ${buildImgArea(cid,i,d)}
+  </div>
+
+  <div class="fsec">治療事件軸</div>
+  <div class="fg full">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+      <button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="timeline" style="display:inline-block;width:auto;font-size:11px;padding:3px 10px">＋ 新增事件</button>
+      <button class="btn btn-b btn-sm" onclick="importTimelineFromTreatments('${cid}',${i})" style="font-size:11px">⬇ 從治療記錄帶入</button>
+    </div>
+    <div id="tllist-${cid}-${i}">${buildTimelineRows(cid,i,d)}</div>
+    <div id="tl-svg-preview-${cid}-${i}" style="margin-top:8px">${(d.timeline&&d.timeline.length)?renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view'):''}</div>
   </div>
 
   <div class="fsec">討論</div>
@@ -3900,7 +3153,7 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 </div></div>`;
 }
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;
@@ -3929,6 +3182,13 @@ function upd(cid,type,i,field,val){
   ensureSec(cid);const item=S.meeting.sections[cid][type][i];if(!item)return;item[field]=val;markDirty();const card=document.getElementById('cc-'+cid+'-'+type+'-'+i);if(!card)return;if(field==='name'){card.querySelector('.cnm').textContent=val?maskName(val):'姓名'}if(field==='chartNo')card.querySelector('.cno').textContent=val||'病歷號';if(field==='title')card.querySelector('.cnm').textContent=val||'議程項目'}
 function delItem(cid,type,i){
   ensureSec(cid);
+  if(type==='cases'){
+    const c=S.meeting.sections[cid]?.cases[i];
+    if(c&&(c.chartNo||c.name||c.diagnosis)){
+      const label=(c.chartNo?c.chartNo+' ':'')+( c.name||'');
+      if(!confirm('確定刪除個案「'+label.trim()+'」？\n（此操作無法還原）'))return;
+    }
+  }
   S.meeting.sections[cid][type].splice(i,1);
   const cont=document.getElementById('div-'+type+'-'+cid);
   if(!cont)return;
@@ -4070,6 +3330,47 @@ function clearGhToken(){
   localStorage.removeItem('mdt_gh_token');
   document.getElementById('gh-token-status').textContent='Token 已清除';
 }
+function loadGhTokenStatus(){
+  const el=document.getElementById('gh-token-status');
+  if(!el)return;
+  el.textContent=getGhToken()?'✓ Token 已設定':'尚未設定 Token';
+  renderSharedSlides();
+}
+
+async function uploadSlidesToGitHub(htmlContent, fname){
+  const token=getGhToken();
+  if(!token){alert('請先到設定頁填入 GitHub Token');return;}
+  const path=GH_SLIDES_PATH+'/'+fname;
+  const url='https://api.github.com/repos/'+GH_REPO+'/contents/'+path;
+  // Check if file exists (need SHA to update)
+  let sha='';
+  try{
+    const r=await fetch(url,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    if(r.ok){const j=await r.json();sha=j.sha||'';}
+  }catch(e){}
+  // Encode content (handle Unicode)
+  const bytes=new TextEncoder().encode(htmlContent);
+  let b64='';
+  const chunk=8192;
+  for(let i=0;i<bytes.length;i+=chunk){
+    b64+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+  }
+  b64=btoa(b64);
+  const body={message:'Upload slides: '+fname,content:b64,branch:GH_BRANCH};
+  if(sha)body.sha=sha;
+  const resp=await fetch(url,{
+    method:'PUT',
+    headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+    body:JSON.stringify(body)
+  });
+  if(!resp.ok){
+    const err=await resp.json().catch(()=>({}));
+    throw new Error((err.message||resp.status)+' — 請確認 Token 權限（需 Contents: Read and write）');
+  }
+  return 'https://sela1227.github.io/MDT-slides/'+(GH_SLIDES_PATH?GH_SLIDES_PATH+'/':'')+fname;
+}
+
+
 function updateFolderStatusBar(){
   const el=document.getElementById('folder-status-bar');if(!el)return;
   let h='';
@@ -4352,6 +3653,20 @@ function doPrevCaseImport(cid, all){
     cont.innerHTML=cases.map(function(c,i){try{return caseHTML(cid,i,c);}catch(e){return '';}}).join('');
   }
   showSaveToast('已帶入 '+checked.length+' 筆個案');
+}
+
+
+function checkBackupReminder(){
+  const last=parseInt(localStorage.getItem('mdt_last_backup')||'0');
+  const now=Date.now();
+  if(now-last<=7*24*60*60*1000)return;
+  const el=document.getElementById('backup-reminder');if(!el)return;
+  const daysAgo=last?Math.floor((now-last)/86400000)+'天前':'從未';
+  el.innerHTML='<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+    +'<span style="font-weight:600;color:#856404">备份提醒：上次備份 '+daysAgo+'，建議定期匯出備份</span>'
+    +'<button onclick="exportAllJSON();localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="margin-left:auto;background:#B87D3A;color:#fff;border:none;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px">立即備份</button>'
+    +'<button onclick="localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="background:none;border:1px solid #ffc107;color:#856404;border-radius:3px;padding:3px 8px;cursor:pointer;font-size:12px">略過</button>'
+    +'</div>';
 }
 
 
@@ -5190,7 +4505,7 @@ function doImportCase(){
       discussion: d.discussion||'',
       topics: Array.isArray(d.topics)?d.topics:['影像討論','分期討論','治療策略討論'],
       summary: d.summary||'', decision: d.decision||'',
-      images: [], note: d.note||''
+      images: [], timeline: Array.isArray(d.timeline)?d.timeline.slice():[], note: d.note||''
     };
     S.meeting.sections[cid].cases.push(blank);
   });
@@ -5419,16 +4734,20 @@ async function genHTMLSlides(){
         +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
         +'</section>');
       // Images - separate slide after case slide
-      // Related images: split by imgsPerSlide (default 4)
+      // Related images: auto-fill grid by imgsPerSlide
       if((c.images||[]).length){
         var _ips=c.imgsPerSlide||4;
         var _imgs=c.images||[];
         for(var _ii=0;_ii<_imgs.length;_ii+=_ips){
           var _grp=_imgs.slice(_ii,_ii+_ips);
-          var _h=_grp.map(function(img){return '<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          var _cols=_ips===1?1:2;var _rows=_ips===4?2:1;
+          var _gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_cols+',1fr);grid-template-rows:repeat('+_rows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+          var _wSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
+          var _iSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
+          var _h=_grp.map(function(img){return '<div style="'+_wSt+'"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="'+_iSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
           slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
             +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
-            +'<div class="img-grid">'+_h+'</div>'
+            +'<div style="'+_gSt+'">'+_h+'</div>'
             +'</section>');
         }
       }
@@ -5452,24 +4771,40 @@ async function genHTMLSlides(){
       // Pathology staining images - one slide per image
       (c.pathologyImages||[]).forEach(function(img){
         const stainName=escA(img.caption||img.name||'病理影像');
-        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'          +'</section>');
+        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:2vh 2.5vw;box-sizing:border-box;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;">'+'</div>'          +'</section>');
       });
 
-      // Surgical photo slides: split by surgImgsPerSlide (default 1)
+      // Surgical photo slides: auto-fill grid by surgImgsPerSlide
       if((c.surgicalImages||[]).length){
         var _sps=c.surgImgsPerSlide||1;
         var _surgs=c.surgicalImages||[];
         for(var _si=0;_si<_surgs.length;_si+=_sps){
           var _sgrp=_surgs.slice(_si,_si+_sps);
-          if(_sps===1){
-            var img=_sgrp[0];
-            var photoName=escA(img.caption||img.name||'手術照片');
-            slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'+'<div class="ch"><div class="cht">'+'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '+'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'+'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+photoName+'</span>'+'<span class="cat">手術照片</span></div></div>'+'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+photoName+'" style="max-width:100%;max-height:100%;object-fit:contain;">'+'</div>'+'</section>');
-          } else {
-            var _sh=_sgrp.map(function(img){return '<div class="img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
-            slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'+'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">手術照片</span></div></div>'+'<div class="img-grid">'+_sh+'</div>'+'</section>');
-          }
+          var _scols=_sps===1?1:2;var _srows=_sps===4?2:1;
+          var _sgSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_scols+',1fr);grid-template-rows:repeat('+_srows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+          var _swSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
+          var _siSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
+          var _sCap=_sgrp.length===1?escA(_sgrp[0].caption||_sgrp[0].name||'手術照片'):'';
+          var _sh=_sgrp.map(function(img){return '<div style="'+_swSt+'"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="'+_siSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
+            +'<div class="ch"><div class="cht"><span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.style.opacity=\'.4\';setTimeout(function(){el.style.opacity=\'\'},600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+            +(_sCap?'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+_sCap+'</span>':'')
+            +'<span class="cat">手術照片</span></div></div>'
+            +'<div style="'+_sgSt+'">'+_sh+'</div>'
+            +'</section>');
         }
+      }
+
+      // Timeline slide (if events exist, placed last per case)
+      if((c.timeline||[]).length){
+        var tlSvg=renderTimelineSVG(c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}),caColor,'slide');
+        slides.push('<section class="slide" style="--ca:'+caColor+';background:#1a2530;display:flex;flex-direction:column">'
+          +'<div class="ch" style="border-bottom:5px solid '+caColor+';"><div class="cht">'
+          +'<span class="ci" style="cursor:default">'+escA(c.chartNo||'')+'</span>'
+          +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+          +'<span class="cat">治療事件軸</span></div></div>'
+          +'<div style="flex:1;padding:3vh 4vw;display:flex;align-items:center;overflow:auto">'+tlSvg+'</div>'
+          +'</section>');
       }
 
     }); // end cases.forEach
@@ -6109,7 +5444,7 @@ function importCaseJSON(inputEl){
         discussion:d.discussion||'',
         topics:Array.isArray(d.topics)?d.topics:[],
         summary:d.summary||'',decision:d.decision||'',
-        images:[],pathologyImages:Array.isArray(d.pathologyImages)?d.pathologyImages:[],note:d.note||''
+        images:[],pathologyImages:Array.isArray(d.pathologyImages)?d.pathologyImages:[],timeline:Array.isArray(d.timeline)?d.timeline.slice():[],note:d.note||''
       };
       S.meeting.sections[cid].cases.push(blank);
       imported++;
@@ -6327,6 +5662,90 @@ function doSaveAICfg(){
   const el=document.getElementById('ai-save-msg');
   el.className='ai-status ok';el.textContent='設定已儲存';
   setTimeout(()=>{el.className='ai-status';el.textContent=''},3000);
+}
+function applyAICfg(){
+  const p=document.getElementById('ai-provider'),k=document.getElementById('ai-key'),m=document.getElementById('ai-model');
+  if(p)p.value=AI_CFG.provider;if(k)k.value=AI_CFG.key;if(m)m.value=AI_CFG.model;
+  // Show file:// warning
+  const warn=document.getElementById('ai-file-warn');
+  if(warn)warn.style.display=window.location.protocol==='file:'?'block':'none';
+  // Show AI button in meeting view if key is set
+  const btn=document.getElementById('btn-ai-gen');
+  if(btn)btn.style.display=AI_CFG.key?'inline-flex':'none';
+}
+async function testAIKey(){
+  saveAICfg();const key=AI_CFG.key;if(!key){alert('請先填入 API Key');return}
+  const el=document.getElementById('ai-test-msg');
+  el.className='ai-status warn';el.textContent='連線測試中...';
+  try{
+    const text=await callAI('回覆「測試成功」四個字即可',20);
+    el.className='ai-status ok';el.textContent='連線成功：'+text;
+  }catch(e){
+    el.className='ai-status err';
+    if(e.message.includes('Failed to fetch')||e.message.includes('ERR_FAILED')){
+      el.innerHTML='院內防火牆擋住 API 呼叫（CORS 限制）。<br>目前請改用「複製 AI 提示詞」按鈕，貼到 claude.ai 使用。<br>或請 IT 開放 api.anthropic.com 的 CORS 通行。';
+    } else {el.textContent='錯誤：'+e.message}
+  }
+}
+async function callAI(prompt,maxTokens=800){
+  const{provider,key,model}=AI_CFG;
+  if(!key)throw new Error('尚未設定 API Key，請前往設定頁填入');
+  if(provider==='anthropic'){
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({model,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
+    });
+    const d=await r.json();if(!r.ok)throw new Error(d.error?.message||r.status);
+    return d.content?.[0]?.text||'';
+  } else {
+    const r=await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model,max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})
+    });
+    const d=await r.json();if(!r.ok)throw new Error(d.error?.message||r.status);
+    return d.choices?.[0]?.message?.content||'';
+  }
+}
+async function genAIInline(){
+  readForm();const m=S.meeting,cids=S.cids;
+  const btn=document.getElementById('btn-ai-gen');
+  btn.disabled=true;btn.textContent='生成中...';
+  document.getElementById('ai-result-area').style.display='none';
+  // Build prompt with full clinical data
+  let prompt=`你是彰濱秀傳癌症中心的MDT會議記錄助理。請根據以下個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出會議討論摘要，每段2-4句，語言專業精簡，使用繁體中文。\n\n會議：${mtgTitle(cids)}　${rocDate(m.date)}\n`;
+  let hasCase=false;
+  cids.forEach(id=>{
+    const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];
+    if(!cases.length)return;
+    hasCase=true;
+    prompt+=`\n【${ca.name}】\n`;
+    cases.forEach((c,i)=>{
+      prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name||''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
+      if(c.cc)prompt+=`現病史: ${c.cc}\n`;
+      if(c.ph)prompt+=`過去病史: ${c.ph}\n`;
+      if((c.exams||[]).length)prompt+=`檢查:\n`+(c.exams||[]).map(e=>e.name+' '+e.date+' : '+e.content).join('\n')+'\n';
+      if(c.treatment)prompt+=`治療：\n${c.treatment}\n`;
+      const disc=c.discussion||(c.topics||[]).join('、');
+      if(disc)prompt+=`討論重點：${disc}\n`;
+    });
+  });
+  if(!hasCase){btn.disabled=false;btn.textContent='AI 生成摘要';alert('請先新增個案討論資料');return}
+  prompt+='\n請對每個個案分別產出結構化討論摘要。';
+  try{
+    const result=await callAI(prompt,1000);
+    document.getElementById('ai-result-text').value=result;
+    document.getElementById('ai-model-badge').textContent=AI_CFG.model;
+    document.getElementById('ai-result-area').style.display='block';
+    document.getElementById('ai-result-area').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){setLibStatus('AI 生成失敗：'+e.message,'var(--err)');}
+  btn.disabled=false;btn.textContent='AI 生成摘要';
 }
 function copyAI(){navigator.clipboard.writeText(document.getElementById('ai-result-text').value).then(()=>{const el=document.getElementById('ai-copy-ok');el.style.display='inline';setTimeout(()=>el.style.display='none',2000)})}
 
@@ -6585,6 +6004,12 @@ function generateTestData(){
 
 
 /* ════ Mobile Navigation ════ */
+function setMNav(id,title){
+  document.querySelectorAll('.mob-nav-item').forEach(el=>el.classList.remove('on'));
+  const el=document.getElementById(id);if(el)el.classList.add('on');
+  const pt=document.getElementById('mob-page-title');
+  if(pt&&title)pt.textContent=title;
+}
 function openUserSheet(){
   const sheet=document.getElementById('mobile-user-sheet');
   const list=document.getElementById('mob-user-list');
@@ -6637,6 +6062,81 @@ function closeCancerSheet(){
 }
 
 /* ════ Event delegation ════ */
+function importTimelineFromTreatments(cid,idx){
+  ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+  const existing=new Set((c.timeline||[]).map(function(t){return t.type+'_'+t.date;}));
+  const cands=[];
+  (c.pathologies||[]).forEach(function(p){
+    if(p.date&&!existing.has('biopsy_'+p.date))
+      cands.push({type:'biopsy',date:p.date,label:(p.content||'').slice(0,24)||'切片/病理',_src:'病理'});
+  });
+  (c.treatments||[]).forEach(function(t){
+    if(!t.date)return;
+    var kw=(t.name+' '+(t.content||'')).toLowerCase();
+    var type='other';
+    if(/chemo|化療|cisplatin|carboplatin|oxaliplatin|taxol|tegafur|xeloda|capecitabine|5.fu/.test(kw))type='chemo';
+    else if(/surg|手術|resect|excision|切除|lumpectomy|mastectomy|rarp|orchiectomy|prostatectomy/.test(kw))type='surgery';
+    else if(/rt|放療|radiation|radiotherapy|imrt|vmat|sbrt|srs|3dcrt|igrt|gy|gray/.test(kw))type='rt';
+    if(!existing.has(type+'_'+t.date))
+      cands.push({type:type,date:t.date,label:(t.name||'').slice(0,24)||type,_src:'治療'});
+  });
+  (c.exams||[]).forEach(function(e){
+    if(!e.date)return;
+    var kw=(e.name||'').toLowerCase();
+    if(/ct|mri|pet|bone scan|x.ray|xray|超音波|echo|ultrasound/.test(kw))
+      if(!existing.has('imaging_'+e.date))
+        cands.push({type:'imaging',date:e.date,label:(e.name||'影像評估').slice(0,24),_src:'檢查'});
+  });
+  if(!cands.length){alert('沒有找到可帶入的事件（已全部匯入或無相關記錄）');return;}
+  cands.sort(function(a,b){return a.date.localeCompare(b.date);});
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const rows=cands.map(function(cv,ci){
+    const cfg=TL_TYPES.find(function(t){return t.id===cv.type;})||TL_TYPES[TL_TYPES.length-1];
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer">'
+      +'<input type="checkbox" checked value="'+ci+'" style="width:15px;height:15px;flex-shrink:0">'
+      +'<span style="font-size:11px;color:#999;width:28px;flex-shrink:0">'+escA(cv._src)+'</span>'
+      +'<span style="font-size:11px;color:#666;width:82px;flex-shrink:0">'+escA(cv.date)+'</span>'
+      +'<span style="font-size:12px;font-weight:600;color:'+cfg.color+';width:68px;flex-shrink:0">'+escA(cfg.label)+'</span>'
+      +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(cv.label)+'</span>'
+      +'</label>';
+  }).join('');
+  modal.innerHTML='<div style="background:#fff;border-radius:8px;width:min(560px,94vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.25)">'
+    +'<div style="padding:14px 18px;border-bottom:1px solid #eee;font-weight:700;font-size:15px">從記錄帶入事件軸</div>'
+    +'<div style="overflow-y:auto;flex:1">'+rows+'</div>'
+    +'<div style="padding:12px 18px;border-top:1px solid #eee;display:flex;gap:8px;justify-content:flex-end">'
+    +'<button id="tl-cancel" class="btn btn-b btn-sm">取消</button>'
+    +'<button id="tl-ok" class="btn btn-a btn-sm">帶入選取</button>'
+    +'</div></div>';
+  document.body.appendChild(modal);
+  document.getElementById('tl-cancel').onclick=function(){document.body.removeChild(modal);};
+  document.getElementById('tl-ok').onclick=function(){
+    const checked=[...modal.querySelectorAll('input:checked')].map(function(cb){return cands[parseInt(cb.value)];});
+    if(!checked.length){alert('請勾選至少一筆');return;}
+    if(!c.timeline)c.timeline=[];
+    checked.forEach(function(ev){c.timeline.push({type:ev.type,date:ev.date,label:ev.label});});
+    c.timeline.sort(function(a,b){return a.date.localeCompare(b.date);});
+    markDirty();
+    document.body.removeChild(modal);
+    const tlEl=document.getElementById('tllist-'+cid+'-'+idx);
+    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,idx,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);tmp.childNodes.forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
+    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+idx);
+    if(svgEl)svgEl.innerHTML=c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
+  };
+}
+
+function buildTimelineRows(cid,idx,c){
+  return ((c.timeline||[]).map(function(tl,ti){
+    const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'"'+(t.id===tl.type?' selected':'')+'>'+t.label+'</option>';}).join('');
+    return '<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+      +'<select data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="type" style="width:108px;font-size:12px;padding:4px 6px">'+opts+'</select>'
+      +'<input type="date" value="'+escA(tl.date||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="date" style="width:148px">'
+      +'<input placeholder="自訂說明（空白用預設）" value="'+escA(tl.label||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
+      +'<button class="delbtn" data-action="delstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" style="margin-left:auto">×</button>'
+      +'</div></div>';
+  }).join(''));
+}
+
 document.addEventListener('click',function(e){
   const pickpathfolder=e.target.closest('[data-action="pickpathfolder"]');
   if(pickpathfolder){
@@ -7136,8 +6636,6 @@ document.addEventListener('change',function(e){
 /* ════ Init ════ */
 loadAll();loadAICfg();renderLogin();
 // Show version on login page
-loadAll();renderLogin();
-// Show version on login page
 const lgVer=document.getElementById('lg-ver');
 if(lgVer)lgVer.textContent=VERSION;
 
@@ -7151,6 +6649,115 @@ function updateImgFolderSettingsStatus(){
   }
 }
 
+function loadAll(){
+  try{const c=localStorage.getItem('mdt_cfg');if(c){const stored=JSON.parse(c);CFG={...DEFAULT_C};Object.keys(DEFAULT_C).forEach(cid=>{if(stored[cid])CFG[cid]={...DEFAULT_C[cid],...stored[cid]};});}else{CFG={...DEFAULT_C};}}catch{CFG={...DEFAULT_C}}
+  try{const l=localStorage.getItem('mdt_locs');LOCS=l?JSON.parse(l):[...DEFAULT_LOCS]}catch{LOCS=[...DEFAULT_LOCS]}
+  try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS]}
+  try{const e=localStorage.getItem('mdt_exam_types');if(e){EXAM_TYPES=JSON.parse(e);DEFAULT_EXAM_TYPES.forEach(function(t){if(!EXAM_TYPES.includes(t))EXAM_TYPES.push(t);});}else{EXAM_TYPES=[...DEFAULT_EXAM_TYPES];}}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
+  if(!EXAM_TYPES.includes('Bone scan')){EXAM_TYPES.splice(2,0,'Bone scan');saveAll();}
+  if(!EXAM_TYPES.includes('Breast SONO')){const s=EXAM_TYPES.indexOf('SONO');EXAM_TYPES.splice(s>=0?s+1:4,0,'Breast SONO');saveAll();}
+  migrateLOCS();
+  migrateCFG();
+  migrateLOCS();
+  migrateDRS();
+  migrateCFGConv();
+}
+
+function migrateLOCS(){
+  // Rename old location strings
+  const rename={'彰濱-2樓  185會議室':'彰濱-2樓 185會議室','彰濱-1F  人文會議室':'彰濱-1F 人文藝術館會議室'};
+  let changed=false;
+  LOCS=LOCS.map(l=>{if(rename[l]){changed=true;return rename[l];}return l;});
+  // Remove duplicate 人文 entries
+  const seen=new Set();
+  LOCS=LOCS.filter(l=>{if(seen.has(l))return false;seen.add(l);return true;});
+  // Add new rooms if missing
+  ['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪'].forEach(r=>{if(!LOCS.includes(r)){LOCS.unshift(r);changed=true;}});
+  if(changed)saveAll();
+}
+
+function migrateDRS(){
+  // Rename depts and reassign doctors in localStorage DRS
+  const renames={'腫瘤外科':'一般外科','腫瘤內科':'消化內科'};
+  // Doctors that need dept reassignment: {name: newDept}
+  const reassign={
+    '劉大智醫師':'血液腫瘤科','張正雄醫師':'血液腫瘤科',
+    '王威群醫師':'頭頸外科','歐金俊醫師':'一般外科',
+    '李岳聰醫師':'一般外科','林建華醫師':'一般外科','吳鴻昇醫師':'一般外科',
+  };
+  // Doctors to remove from specific depts (侯柏年 from 影像診斷科)
+  const removeFrom={'侯柏年醫師':['影像診斷科','腫瘤內科']};
+  let changed=false;
+  // Remove duplicates and apply migrations
+  const seen=new Set();
+  DRS=DRS.map(dr=>{
+    let dept=renames[dr.dept]||dr.dept;
+    if(reassign[dr.name])dept=reassign[dr.name];
+    return{...dr,dept};
+  }).filter(dr=>{
+    // Remove 侯柏年 from non-核醫科 depts
+    if(removeFrom[dr.name]&&removeFrom[dr.name].includes(dr.dept))return false;
+    // Remove exact duplicates
+    const key=dr.dept+'::'+dr.name;
+    if(seen.has(key))return false;
+    seen.add(key);return true;
+  });
+  // Ensure 侯柏年 is in 核醫科
+  if(!DRS.some(d=>d.name==='侯柏年醫師'&&d.dept==='核醫科')){
+    DRS.push({dept:'核醫科',name:'侯柏年醫師'});changed=true;
+  }
+  saveAll();
+}
+
+function migrateCFG(){
+  // Update CFG locations to match DEFAULT_C (for head_neck and lymphoma → 8樓 圓桌)
+  const locFix={'彰濱-2樓  185會議室':'彰濱-2樓 185會議室'};
+  const cidLocs={'head_neck':'彰濱-8樓 圓桌會議室','lymphoma':'彰濱-8樓 圓桌會議室'};
+  let changed=false;
+  Object.entries(cidLocs).forEach(([cid,loc])=>{
+    if(CFG[cid]&&CFG[cid].loc!==loc){CFG[cid].loc=loc;changed=true;}
+  });
+  Object.values(CFG).forEach(ca=>{
+    if(ca.loc&&locFix[ca.loc]){ca.loc=locFix[ca.loc];changed=true;}
+  });
+  if(changed)saveAll();
+}
+
+function migrateCFGConv(){
+  // Update conv fields in CFG to use dept::name format and correct dept names
+  const nameMap={
+    '張建明醫師':'頭頸外科::張建明醫師',
+    '劉大智醫師':'血液腫瘤科::劉大智醫師',
+    '張竣期醫師':'胸腔內科::張竣期醫師',
+    '李岳聰醫師':'一般外科::李岳聰醫師',
+    '歐金俊醫師':'一般外科::歐金俊醫師',
+    '張正雄醫師':'血液腫瘤科::張正雄醫師',
+    '楊哲學醫師':'泌尿科::楊哲學醫師',
+    '吳宏明醫師':'婦科::吳宏明醫師',
+  };
+  let changed=false;
+  Object.values(CFG).forEach(ca=>{
+    if(ca.conv&&nameMap[ca.conv]){ca.conv=nameMap[ca.conv];changed=true;}
+    // Also fix memberKeys dept names
+    if(ca.memberKeys){
+      ca.memberKeys=ca.memberKeys.map(k=>{
+        return k
+          .replace('腫瘤外科::','一般外科::')
+          .replace('腫瘤內科::劉大智醫師','血液腫瘤科::劉大智醫師')
+          .replace('腫瘤內科::張正雄醫師','血液腫瘤科::張正雄醫師')
+          .replace('腫瘤內科::陳忠宏醫師','消化內科::陳忠宏醫師')
+          .replace('腫瘤內科::王俊偉醫師','消化內科::王俊偉醫師')
+          .replace('影像診斷科::侯柏年醫師','核醫科::侯柏年醫師');
+      });
+      // Remove duplicate memberKeys
+      ca.memberKeys=[...new Set(ca.memberKeys)];
+      changed=true;
+    }
+  });
+  if(changed)saveAll();
+}
+function saveAll(){localStorage.setItem('mdt_cfg',JSON.stringify(CFG));localStorage.setItem('mdt_locs',JSON.stringify(LOCS));localStorage.setItem('mdt_exam_types',JSON.stringify(EXAM_TYPES));localStorage.setItem('mdt_drs',JSON.stringify(DRS))}
+function mkStr(keys){const dm={};(keys||[]).forEach(k=>{const s=k.indexOf('::');const d=k.slice(0,s),n=k.slice(s+2);if(!dm[d])dm[d]=[];dm[d].push(n)});return Object.entries(dm).map(([d,ns])=>`${d}${ns.join('、')}`).join('；')}
 function getMemberStr(ca){return mkStr(ca.memberKeys)||ca.members||''}
 
 </script>
