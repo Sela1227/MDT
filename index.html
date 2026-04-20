@@ -1034,7 +1034,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.2.6';
+const VERSION='V4.2.8';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4593,7 +4593,8 @@ async function genHTMLSlides(){
   const extraJs=`var _hlSel=null;
 document.addEventListener('mouseup',function(e){if(e.target.closest('#hl-toolbar'))return;var sel=window.getSelection();if(!sel||sel.isCollapsed||!sel.toString().trim()){document.getElementById('hl-toolbar').style.display='none';return;}_hlSel=sel.getRangeAt(0);var r=_hlSel.getBoundingClientRect();var tb=document.getElementById('hl-toolbar');tb.style.display='flex';var top=r.top-48;if(top<4)top=r.bottom+8;var left=r.left+r.width/2-80;if(left<4)left=4;if(left+200>window.innerWidth)left=window.innerWidth-204;tb.style.top=top+'px';tb.style.left=left+'px';});
 document.addEventListener('keydown',function(e){
-  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();if(S.meeting)saveMeeting();return;}if(e.key==='Escape')document.getElementById('hl-toolbar').style.display='none';});
+if(e.key==='Escape')document.getElementById('hl-toolbar').style.display='none';
+});
 function hlApply(color){if(!_hlSel)return;try{var span=document.createElement('mark');span.style.background=color;span.style.color='inherit';_hlSel.surroundContents(span);}catch(ex){try{var frag=_hlSel.extractContents();var sp=document.createElement('mark');sp.style.background=color;sp.style.color='inherit';sp.appendChild(frag);_hlSel.insertNode(sp);}catch(e2){}}window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;}
 function hlClear(){document.querySelectorAll('mark').forEach(function(m){var p=m.parentNode;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);});document.getElementById('hl-toolbar').style.display='none';}
 var _magMode=false,_magCv=null;
@@ -4638,7 +4639,7 @@ document.addEventListener('touchmove',function(e){if(e.touches.length===2&&_t0){
     +'<button class="nb" onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()" title="F">&#9974;</button>'
     +'<button class="nb" id="nb-mag" onclick="_toggleMag()" title="放大鏡 L" style="font-size:clamp(12px,1.1vw,16px)">&#128269;</button>'
     +'</div>\n<div class="bar" id="bar" style="width:'+(1/N*100)+'%"></div>\n'
-    +'<script>'+js+sc+'\n</'+'script>\n'+('<script>'+extraJs+'\n</'+'script>')+'\n</body></html>'
+    +'<script>'+js+sc+'\n</'+'script>\n'+('<script>'+extraJs+'\n</'+'script>')+'\n</body></html>';
   const fname=cids.map(id=>CFG[id]?.name).join('_')+'_'+m.date+'_投影片.html';
   _lastSlidesHTML=fullHTML;
   const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
