@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.5';
+const VERSION='V4.3.6';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -6677,10 +6677,22 @@ document.addEventListener('click',function(e){
     const item=S.meeting.sections[st.dataset.cid].special[parseInt(st.dataset.idx)];
     if(!item)return;
     item.topicType=item.topicType===st.dataset.type?'':st.dataset.type;
+    markDirty();
+    // If switching to/from completion_rate, full re-render needed
+    if(item.topicType==='完治率'||st.dataset.type==='完治率'){
+      const card=st.closest('.casecard');
+      if(card){
+        const cid=st.dataset.cid,idx2=parseInt(st.dataset.idx);
+        const tmp=document.createElement('div');
+        tmp.innerHTML=specialHTML(cid,idx2,item);
+        card.replaceWith(tmp.firstElementChild);
+      }
+      return;
+    }
     st.closest('.fg').querySelectorAll('.tchip').forEach(el=>el.classList.toggle('on',el.dataset.type===item.topicType));
     const cnm=st.closest('.casecard')?.querySelector('.cnm');
     if(cnm)cnm.textContent=item.topicType||item.title||'特殊議程';
-    markDirty();return;
+    return;
   }
   const tp=e.target.closest('[data-action="topic"]');
   if(tp){
