@@ -228,7 +228,15 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 | 版本 | 關鍵變更 |
 |------|---------|
-| V4.3.14 | 影像投影片 CSS Grid 自動填滿（1/2/4張）+ 邊距 2vh 2.5vw |
+| V4.3.14 | 特殊議程影像：📂選取、每頁張數、img-slide 產出（放大/放大鏡）|
+| V4.3.13 | 修正四率 chips data-action 誤植於 class 屬性，點選無效 |
+| V4.3.12 | 四率 HTML 投影片產出；達標顏色 |
+| V4.3.11 | 乳攝 img-slide；_zoomTarget 多圖獨立縮放；elementFromPoint 放大鏡 |
+| V4.3.10 | 事件軸比例分佈 + 節點大小分級 + 線條 2px |
+| V4.3.9 | 三率編輯模式；完治率重建；全 data-action delegation |
+| V4.3.2 | 刪除個案二次確認；事件軸逐筆 append |
+| V4.3.1 | 修正 timeline addStruct/delStruct/updStruct；每頁選單排版 |
+| V4.3.0 | 治療事件軸新功能（SVG 蛇形、帶入記錄、HTML 投影片）
 | V4.2.23 | 乳攝 HTML 比例 2:4:4；相關影像/手術照片每頁張數控制（imgsPerSlide/surgImgsPerSlide）|
 | V4.2.22 | addmammoimg/delmammoimg 改 replaceWith；caption input 樣式加框|
 | V4.2.21 | 修正 buildImgArea/buildMammoImgArea 缺 const cap=（打包遺漏）|
