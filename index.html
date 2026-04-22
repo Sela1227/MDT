@@ -1174,7 +1174,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.20';
+const VERSION='V4.3.21';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2625,116 +2625,66 @@ function compressImage(dataUrl,maxW,maxH,quality,cb){
 }
 
 function buildSurgicalImgArea(cid,i,d){
-  const imgs=(d.surgicalImages||[]);
-  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
-  let h='<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0" id="surgimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
-  if(imgs.length){
-    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;">';
-    imgs.forEach(function(img,j){
-      const cap=escA(img.caption||img.name||'').replace(/\.[^.]+$/,'');
-      const shortCap=cap;
-      if(img.dataUrl){
-        const safe=escA(img.dataUrl);
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
-          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
-          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
-          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="surgicalImages" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delsurgimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      } else {
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
-          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
-          +'<span style="font-size:20px">🔬</span>'
-          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
-          +'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="surgicalImages" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delsurgimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      }
-    });
-    h+='</div>';
-  }
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  h+='<button class="btn btn-b btn-sm" data-action="picksurgfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
-  if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearsurgimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
-  h+='</div>';
-  h+='</div>';
-  return h;
+  return buildGenericImgArea({cid:cid,idx:i,imgs:d.surgicalImages||[],
+    containerId:'surgimgs-'+cid+'-'+i,
+    pickAction:'picksurgfolder',delAction:'delsurgimg',capAction:'updimgcaption',clearAction:'clearsurgimgs',
+    imgtype:'surgicalImages',maxImgs:99,placeholderIcon:'🔬'});
 }
 function buildPathImgArea(cid,i,d){
-  const imgs=(d.pathologyImages||[]);
-  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
-  let h='<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0" id="pathimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
-  // Image tiles row
-  if(imgs.length){
-    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;">';
-    imgs.forEach(function(img,j){
-      const cap=escA(img.caption||img.name||'');
-      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
-      if(img.dataUrl){
-        const safe=escA(img.dataUrl);
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
-          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
-          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover;"></div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="pathologyImages" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      } else {
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
-          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
-          +'<span style="font-size:20px">🔬</span>'
-          +'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="pathologyImages" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      }
-    });
-    h+='</div>';
-  }
-  // Action buttons row
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  h+='<button class="btn btn-b btn-sm" data-action="pickpathfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
-  if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearpathimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
-  h+='</div>';
-  h+='</div>';
-  return h;
+  return buildGenericImgArea({cid:cid,idx:i,imgs:d.pathologyImages||[],
+    containerId:'pathimgs-'+cid+'-'+i,
+    pickAction:'pickpathfolder',delAction:'delpathimg',capAction:'updimgcaption',clearAction:'clearpathimgs',
+    imgtype:'pathologyImages',maxImgs:99,placeholderIcon:'🔬'});
 }
-function buildImgArea(cid,i,d){
-  const imgs=d.images||[];
-  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
-  let h='<div id="imgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'" style="display:flex;flex-direction:column;gap:8px">';
+function buildGenericImgArea(cfg){
+  var cid=cfg.cid,idx=cfg.idx,imgs=cfg.imgs||[];
+  var containerId=cfg.containerId,pickAction=cfg.pickAction;
+  var delAction=cfg.delAction,capAction=cfg.capAction;
+  var clearAction=cfg.clearAction||'';
+  var idxKey=cfg.idxKey||'idx';
+  var maxImgs=cfg.maxImgs||99;
+  var icon=cfg.placeholderIcon||'🖼';
+  var imgtype=cfg.imgtype||'';
+  var folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
+  var secAttr='data-'+idxKey+'="'+idx+'"';
+  var h='<div id="'+containerId+'" data-cid="'+cid+'" '+secAttr+' style="display:flex;flex-direction:column;gap:8px">';
   if(imgs.length){
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
     imgs.forEach(function(img,j){
-      const cap=escA(img.caption||(img.name||'').replace(/\.[^.]+$/,''));
-      const shortCap=cap;
-      if(img.dataUrl){
-        const safe=escA(img.dataUrl);
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
-          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
-          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="images" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      } else {
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
-          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
-          +'<span style="font-size:20px">🖼</span>'
-          +'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="images" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
+      var cap=escA(img.caption||img.name||'');
+      var safe=img.dataUrl?escA(img.dataUrl):'';
+      var imgtypeAttr=imgtype?' data-imgtype="'+imgtype+'"':'';
+      h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">';
+      if(safe){
+        h+='<div data-action="viewimg" data-src="'+safe+'" style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>';
+      }else{
+        h+='<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center">'
+          +'<span style="font-size:20px">'+icon+'</span></div>';
       }
+      h+='<input value="'+cap+'" placeholder="說明" data-action="'+capAction+'" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'"'+imgtypeAttr+' style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
+        +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="'+delAction+'" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'">×</button>'
+        +'</div>';
     });
     h+='</div>';
   }
+  var pickExtras=imgtype?' data-type="'+imgtype+'" data-max="'+maxImgs+'"':'';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  if(imgs.length<5)h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="images" data-max="5" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
-  if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
-  h+='</div>';
-  h+='</div>';
+  if(imgs.length<maxImgs){
+    h+='<button class="btn btn-b btn-sm" data-action="'+pickAction+'" data-cid="'+cid+'" '+secAttr+pickExtras+' style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
+  }
+  if(imgs.length&&clearAction){
+    h+='<button class="btn btn-b btn-sm" data-action="'+clearAction+'" data-cid="'+cid+'" '+secAttr+' style="color:var(--err)">✕ 清除全部</button>';
+  }
+  h+='</div></div>';
   return h;
+}
+
+function buildImgArea(cid,i,d){
+  return buildGenericImgArea({cid:cid,idx:i,imgs:d.images||[],
+    containerId:'imgs-'+cid+'-'+i,
+    pickAction:'pickimgfolder',delAction:'delimg',capAction:'updimgcaption',clearAction:'clearimgs',
+    imgtype:'images',maxImgs:5,placeholderIcon:'🖼'});
 }
 
 function viewImg(dataUrl){
@@ -3306,25 +3256,10 @@ function specialCRHTML(cid,i,d){
 }
 
 function buildSpecialImgArea(cid,si,d){
-  if(!d.images)d.images=[];
-  var h2='';
-  (d.images||[]).forEach(function(img,j){
-    var safe=img.dataUrl?img.dataUrl:'';
-    var cap=escA(img.caption||img.name||'');
-    h2+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">';
-    if(safe){
-      h2+='<div data-action="viewimg" data-src="'+safe+'" style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);overflow:hidden;cursor:zoom-in">'
-        +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>';
-    }else{
-      h2+='<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center">'
-        +'<span style="font-size:20px">🖼</span></div>';
-    }
-    h2+='<input value="'+cap+'" placeholder="說明" data-action="updspecialimgcap" data-cid="'+cid+'" data-si="'+si+'" data-imgidx="'+j+'" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;padding:1px 3px">'
-      +'<button class="delbtn" data-action="delspecialimg" data-cid="'+cid+'" data-si="'+si+'" data-imgidx="'+j+'">×</button>'
-      +'</div>';
-  });
-  return'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;margin-bottom:6px">'+h2+'</div>'
-    +'<button class="btn btn-b btn-sm" data-action="pickspecialimgs" data-cid="'+cid+'" data-si="'+si+'" style="font-size:11px">📂 '+escA(CFG[cid]&&CFG[cid].name||'')+' 選取</button>';
+  return buildGenericImgArea({cid:cid,idx:si,imgs:d.images||[],
+    containerId:'special-img-area-'+cid+'-'+si,
+    pickAction:'pickspecialimgs',delAction:'delspecialimg',capAction:'updspecialimgcap',
+    idxKey:'si',maxImgs:99,placeholderIcon:'🖼'});
 }
 
 function pickSpecialImgs(cid,si){

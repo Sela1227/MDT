@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.3.21
+整併 buildImgArea / buildPathImgArea / buildSurgicalImgArea / buildSpecialImgArea 四個函數為一個通用 buildGenericImgArea，各原函數保留為薄包裝層，省約 40KB
+
 ### V4.3.20
 移除死碼 addImg()（直接上傳相關影像，已無任何呼叫點），僅此一函數，其餘不動
 

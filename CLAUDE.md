@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.3.20 → V4.3.20）
-#    新功能 / 新欄位       → +0.1   （如 V4.3.20 → V4.3.20）
-#    大改版 / 架構重構     → +1.0   （如 V4.3.20 → V4.3.20）
+#    bug fix / hotfix      → +0.01  （如 V4.3.21 → V4.3.21）
+#    新功能 / 新欄位       → +0.1   （如 V4.3.21 → V4.3.21）
+#    大改版 / 架構重構     → +1.0   （如 V4.3.21 → V4.3.21）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.3.20）
+## 十二、版本（當前 V4.3.21）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.21 | 整併四個 buildXxxImgArea 為 buildGenericImgArea，省 ~40KB |
 | V4.3.20 | 移除死碼 addImg()（直接上傳，無呼叫點）|
 | V4.3.19 | localStorage：上限 100、自動清孤兒、設定頁使用量儀表板 |
 | V4.3.18 | 特殊議程投影片 cat 標籤改為「特殊議程」|
