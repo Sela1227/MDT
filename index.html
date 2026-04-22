@@ -1174,7 +1174,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.19';
+const VERSION='V4.3.20';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2559,36 +2559,6 @@ function getDoctors(d){
 }
 function getDoctorStr(d){return getDoctors(d).join('、')||'—'}
 /* ── Image handling ── */
-function addImg(cid,i){
-  // Use a hidden file input via label trick for better mobile support
-  const uid_='addimg_'+cid+'_'+i+'_'+Date.now();
-  const input=document.createElement('input');
-  input.type='file';input.accept='image/*;capture=camera';input.id=uid_;
-  input.style.cssText='position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;top:0;left:0;z-index:-1';
-  document.body.appendChild(input);
-  input.addEventListener('change',function(){
-    const file=this.files[0];
-    document.body.removeChild(input);
-    if(!file)return;
-    if(file.size>3*1024*1024){alert('圖片請小於 3MB');return}
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      ensureSec(cid);
-      const item=S.meeting?.sections?.[cid]?.cases?.[i];if(!item)return;
-      if(!item.images)item.images=[];
-      if(item.images.length>=5){alert('每個個案最多5張');return}
-      const caption=prompt('影像說明（選填）：','') || '';
-      item.images.push({dataUrl:ev.target.result,name:file.name,caption});
-      markDirty();
-      const el=document.getElementById('imgs-'+cid+'-'+i);
-      if(el){const tmp=document.createElement('div');tmp.innerHTML=buildImgArea(cid,i,item);el.replaceWith(tmp.firstElementChild);}
-    };
-    reader.readAsDataURL(file);
-  });
-  input.addEventListener('cancel',()=>{try{document.body.removeChild(input)}catch{}});
-  // Trigger via programmatic click
-  setTimeout(()=>input.click(), 50);
-}
 
 function delImg(cid,i,j){
   ensureSec(cid);
