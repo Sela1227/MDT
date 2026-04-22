@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.16';
+const VERSION='V4.3.17';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2891,7 +2891,24 @@ function editFollowup(cid,i,type){
 }
 
 function specialViewHTML(cid,i,d){
-  return`<div class="vc"><div class="vc-r" style="padding:10px 14px"><span style="font-weight:600;color:var(--fog-dk)">${escA(d.title||'')}</span>${d.note?` <span class="vc-v" style="margin-left:8px;color:var(--textlt)">${escA(d.note)}</span>`:''}</div></div>`;
+  var imgs=d.images||[];
+  var imgRow='';
+  if(imgs.length){
+    imgRow='<div class="vc-r"><span class="vc-l">影像</span><span class="vc-v">'
+      +imgs.map(function(img,j){
+        return'<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;color:var(--textlt);font-size:13px">'
+          +(j+1)+'. '+escA((img.caption||img.name||'').replace(/\.[^.]+$/,''))
+          +' <button class="btn btn-b btn-sm" data-action="previewspecialimg"'
+          +' data-cid="'+escA(cid)+'" data-si="'+i+'" data-imgidx="'+j+'"'
+          +' style="font-size:11px;padding:1px 8px">預覽</button>'
+          +'</span>';
+      }).join('')
+      +'</span></div>';
+  }
+  return'<div class="vc"><div class="vc-r" style="padding:10px 14px">'
+    +'<span style="font-weight:600;color:var(--fog-dk)">'+escA(d.title||d.topicType||'')+'</span>'
+    +(d.note?' <span class="vc-v" style="margin-left:8px;color:var(--textlt)">'+escA(d.note)+'</span>':'')
+    +'</div>'+imgRow+'</div>';
 }
 
 
@@ -7010,6 +7027,20 @@ document.addEventListener('click',function(e){
   if(delspecialitem){delItem(delspecialitem.dataset.cid,delspecialitem.dataset.type,parseInt(delspecialitem.dataset.idx));return;}
   const updspecial=e.target.closest('[data-action="updspecial"]');
   if(updspecial){var _cid=updspecial.dataset.cid,_idx=parseInt(updspecial.dataset.idx),_key=updspecial.dataset.key;ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_idx];if(_d){_d[_key]=updspecial.type==='number'?parseInt(updspecial.value)||0:updspecial.value;markDirty();}return;}
+  const previewspecialimg=e.target.closest('[data-action="previewspecialimg"]');
+  if(previewspecialimg){
+    var _cid=previewspecialimg.dataset.cid,_si=parseInt(previewspecialimg.dataset.si),_ji=parseInt(previewspecialimg.dataset.imgidx);
+    ensureSec(_cid);var _sp=S.meeting.sections[_cid].special[_si];
+    if(!_sp||!_sp.images||!_sp.images[_ji])return;
+    var _img=_sp.images[_ji];
+    if(_img.dataUrl){viewImg(_img.dataUrl);return;}
+    if(_img.name&&imgFolderHandle){
+      imgFolderHandle.getFileHandle(_img.name).then(function(fh){return fh.getFile();}).then(function(file){
+        var r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
+      }).catch(function(e){alert('無法載入影像：'+e.message);});
+    }
+    return;
+  }
   const view=e.target.closest('[data-action="viewimg"]');
   if(view){viewImg(view.dataset.src);return;}
   const chip=e.target.closest('[data-action="phchip"]');
