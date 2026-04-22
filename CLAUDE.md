@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.3.17 → V4.3.17）
-#    新功能 / 新欄位       → +0.1   （如 V4.3.17 → V4.3.17）
-#    大改版 / 架構重構     → +1.0   （如 V4.3.17 → V4.3.17）
+#    bug fix / hotfix      → +0.01  （如 V4.3.18 → V4.3.18）
+#    新功能 / 新欄位       → +0.1   （如 V4.3.18 → V4.3.18）
+#    大改版 / 架構重構     → +1.0   （如 V4.3.18 → V4.3.18）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.3.17）
+## 十二、版本（當前 V4.3.18）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.18 | 特殊議程投影片 cat 標籤改為「特殊議程」|
 | V4.3.17 | specialViewHTML 加影像預覽（previewspecialimg delegation）|
 | V4.3.16 | 前期追蹤預設收合；刪除二次確認；特殊議程圖片選擇器顯示完整檔名 |
 | V4.3.15 | 「其他」移到最後；自動儲存 silent（不跳閱覽模式）|

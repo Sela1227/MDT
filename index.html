@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.17';
+const VERSION='V4.3.18';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -5066,7 +5066,7 @@ async function genHTMLSlides(){
         slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
           +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
           +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">完治率</span>'
-          +'<span class="cat">'+cancer+'</span></div>'
+          +'<span class="cat">特殊議程</span></div>'
           +(period?'<div style="font-size:clamp(12px,1.2vw,17px);color:rgba(255,255,255,.78)">'+period+'</div>':'')
           +'</div>'
           +'<div style="padding:2.5vh 3vw;display:flex;flex-direction:column;gap:2.5vh;flex:1;overflow:auto">'
@@ -5112,7 +5112,7 @@ async function genHTMLSlides(){
             slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
               +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
               +'<span style="font-size:clamp(15px,1.7vw,24px);font-weight:800">未完治病人清單</span>'
-              +'<span class="cat">'+cancer+'</span>'
+              +'<span class="cat">特殊議程</span>'
               +'<span style="margin-left:auto;font-size:clamp(11px,.9vw,13px);color:rgba(255,255,255,.7)">第'+pageNum+'頁／共'+totalPages+'頁</span>'
               +'</div></div>'
               +'<div style="padding:2vh 2.5vw;flex:1;overflow:hidden">'
@@ -5175,7 +5175,7 @@ async function genHTMLSlides(){
         slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
           +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
           +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">'+escA(t)+'</span>'
-          +'<span class="cat">'+escA(CFG[cid]&&CFG[cid].name||cid)+'</span></div>'
+          +'<span class="cat">特殊議程</span></div>'
           +(period2?'<div style="font-size:clamp(12px,1.2vw,17px);color:rgba(255,255,255,.78)">'+period2+'（閾值 '+threshold2+'）</div>':'')
           +'</div>'
           +'<div style="padding:2.5vh 3vw;display:flex;flex-direction:column;gap:2.5vh;flex:1;overflow:auto">'
@@ -5265,7 +5265,7 @@ async function genHTMLSlides(){
             slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
               +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
               +'<span style="font-size:clamp(15px,1.7vw,24px);font-weight:700">'+escA(sp.title||sp.topicType||'特殊議程')+'</span>'
-              +'<span class="cat">'+escA(CFG[cid]&&CFG[cid].name||cid)+'</span></div></div>'
+              +'<span class="cat">特殊議程</span></div></div>'
               +'<div style="'+_sgSt+'">'+_sImgH.join('')+'</div></section>');
           }
         }
