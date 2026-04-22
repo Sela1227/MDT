@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.8';
+const VERSION='V4.3.10';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2792,39 +2792,27 @@ function updDr(cid,type,i,idx,val){
 /* ── View mode card renderers ── */
 function renderTimelineSVG(events,caColor,mode){
   if(!events||!events.length)return '';
-  const sorted=events.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
-  const n=sorted.length;
-  const perRow=5;
-  const rowCount=Math.ceil(n/perRow);
-  const W=860,padX=55,labelH=35,rowH=100;
-  const totalH=rowCount*rowH+50;
-  const usableW=W-2*padX;
-  const TL_SIZE={dx:14,surgery:14,recurrence:12,metastasis:11,chemo:9,rt:9,biopsy:9,follow:7,imaging:7,other:7};
-  const pos=[];
+  var sorted=events.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  var n=sorted.length,perRow=5,rowCount=Math.ceil(n/perRow);
+  var W=860,padX=55,labelH=35,rowH=100,totalH=rowCount*rowH+50,usableW=W-2*padX;
+  var TL_SIZE={dx:14,surgery:14,recurrence:12,metastasis:11,chemo:9,rt:9,biopsy:9,follow:7,imaging:7,other:7};
+  var pos=[];
   for(var i=0;i<n;i++){
     var r=Math.floor(i/perRow),posInRow=i%perRow,ltr=r%2===0;
     var rowStart=r*perRow,rowEnd=Math.min(n,(r+1)*perRow),rowItems=rowEnd-rowStart;
     var rowEvs=sorted.slice(rowStart,rowEnd);
     var parsedMs=rowEvs.map(function(ev){var d=new Date(ev.date||'');return isNaN(d.getTime())?null:d.getTime();});
     var validMs=parsedMs.filter(function(d){return d!==null;});
-    var minD=validMs.length?Math.min.apply(null,validMs):0;
-    var maxD=validMs.length?Math.max.apply(null,validMs):0;
-    var span=maxD-minD;
+    var minD=validMs.length?Math.min.apply(null,validMs):0,maxD=validMs.length?Math.max.apply(null,validMs):0,span=maxD-minD;
     var t=parsedMs[posInRow]===null||span===0?(rowItems===1?0.5:posInRow/(rowItems-1)):0.04+((parsedMs[posInRow]-minD)/span)*0.92;
-    var rowTop=r*rowH+10;
-    var lineY=ltr?rowTop+labelH+14:rowTop+14;
-    var x=ltr?padX+t*usableW:W-padX-t*usableW;
+    var rowTop=r*rowH+10,lineY=ltr?rowTop+labelH+14:rowTop+14,x=ltr?padX+t*usableW:W-padX-t*usableW;
     pos.push({x:Math.round(x),y:Math.round(lineY),r:r,ltr:ltr});
   }
   var pathD='';
   for(var i=0;i<n;i++){
     var p=pos[i];
     if(i===0){pathD+='M '+p.x+' '+p.y;}
-    else{
-      var prev=pos[i-1];
-      if(prev.r===p.r){pathD+=' L '+p.x+' '+p.y;}
-      else{var dy=p.y-prev.y,ar=Math.abs(dy)/2,sw=prev.ltr?1:0;pathD+=' A '+ar+' '+ar+' 0 0 '+sw+' '+p.x+' '+p.y;}
-    }
+    else{var prev=pos[i-1];if(prev.r===p.r){pathD+=' L '+p.x+' '+p.y;}else{var dy=p.y-prev.y,ar=Math.abs(dy)/2,sw=prev.ltr?1:0;pathD+=' A '+ar+' '+ar+' 0 0 '+sw+' '+p.x+' '+p.y;}}
   }
   var isDark=mode==='slide';
   var lineClr=isDark?'rgba(255,255,255,.22)':'#c0cad4';
@@ -2834,29 +2822,14 @@ function renderTimelineSVG(events,caColor,mode){
   for(var i=0;i<n;i++){
     var ev=sorted[i],p=pos[i];
     var cfg=TL_TYPES.find(function(t){return t.id===ev.type;})||TL_TYPES[TL_TYPES.length-1];
-    var nr=TL_SIZE[ev.type]||9;
-    var lbl=escA(ev.label||cfg.label),dt=escA(ev.date||'');
+    var nr=TL_SIZE[ev.type]||9,lbl=escA(ev.label||cfg.label),dt=escA(ev.date||'');
     nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(nr+5)+'" fill="'+cfg.color+'" opacity=".18"/>';
     nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+nr+'" fill="'+cfg.color+'" stroke="'+(isDark?'#1a2530':'#fff')+'" stroke-width="2.5"/>';
-    if(p.ltr){
-      labels+='<text x="'+p.x+'" y="'+(p.y-nr-16)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
-      labels+='<text x="'+p.x+'" y="'+(p.y-nr-4)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
-    }else{
-      labels+='<text x="'+p.x+'" y="'+(p.y+nr+15)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
-      labels+='<text x="'+p.x+'" y="'+(p.y+nr+27)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
-    }
-    if(i<n-1&&pos[i].r===pos[i+1].r){
-      var d1=new Date(ev.date||''),d2=new Date(sorted[i+1].date||'');
-      if(!isNaN(d1.getTime())&&!isNaN(d2.getTime())){
-        var days=Math.round((d2-d1)/86400000);
-        if(days>0){var mx=(p.x+pos[i+1].x)/2,ddy=p.ltr?p.y+nr+12:p.y-nr-7;diffs+='<text x="'+mx+'" y="'+ddy+'" text-anchor="middle" font-size="9" fill="'+dtClr+'" opacity=".72">+'+days+'d</text>';}
-      }
-    }
+    if(p.ltr){labels+='<text x="'+p.x+'" y="'+(p.y-nr-16)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';labels+='<text x="'+p.x+'" y="'+(p.y-nr-4)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';}
+    else{labels+='<text x="'+p.x+'" y="'+(p.y+nr+15)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';labels+='<text x="'+p.x+'" y="'+(p.y+nr+27)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';}
+    if(i<n-1&&pos[i].r===pos[i+1].r){var d1=new Date(ev.date||''),d2=new Date(sorted[i+1].date||'');if(!isNaN(d1.getTime())&&!isNaN(d2.getTime())){var days=Math.round((d2-d1)/86400000);if(days>0){var mx=(p.x+pos[i+1].x)/2,ddy=p.ltr?p.y+nr+12:p.y-nr-7;diffs+='<text x="'+mx+'" y="'+ddy+'" text-anchor="middle" font-size="9" fill="'+dtClr+'" opacity=".72">+'+days+'d</text>';}}}
   }
-  return '<svg viewBox="0 0 '+W+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'
-    +(isDark?'<rect width="'+W+'" height="'+totalH+'" fill="#1a2530" rx="8"/>':'')
-    +'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-    +nodes+labels+diffs+'</svg>';
+  return '<svg viewBox="0 0 '+W+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'+(isDark?'<rect width="'+W+'" height="'+totalH+'" fill="#1a2530" rx="8"/>':'')+'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+nodes+labels+diffs+'</svg>';
 }
 function caseViewHTML(cid,i,d){
   const drs=getDoctors(d).join('、')||'—';
@@ -3138,7 +3111,8 @@ function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='c
 </div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
 function specialHTML(cid,i,d){
   if(d.topicType==='完治率') return specialCRHTML(cid,i,d);
-  const STYPES=['核心指標','品質指標','修改指引','其他','完治率'];
+  if(['失聯率','留治率','訪視率'].includes(d.topicType)) return specialRateHTML(cid,i,d);
+  const STYPES=['核心指標','品質指標','修改指引','其他','完治率','失聯率','留治率','訪視率'];
   const typeChips=STYPES.map(t=>{
     const on=(d.topicType||'')===t;
     return`<span class="tchip ${on?'on':''}" data-action="specialtype" data-cid="${cid}" data-idx="${i}" data-type="${t}">${t}</span>`;
@@ -3151,126 +3125,175 @@ function specialHTML(cid,i,d){
 </div></div>`;
 }
 
+const RATE_CFG={
+  '\u5931\u806f\u7387':{threshold:'<3%',dir:'<',cols:['totalCases','deaths'],colLabels:['\u7e3d\u6536\u6848\u6578','\u6b7b\u4ea1\u500b\u6848'],defText:'\u5206\u5b50\uff1a\u61c9\u8ffd\u8e64\u500b\u6848\u5931\u806f\u81f3\u5c11\u9054 12 \u500b\u6708\u4eba\u6578\n\u5206\u6bcd\uff1a\u5404\u7652\u5225Class 1~2\u61c9\u8ffd\u8e64\u500b\u6848\u6578\uff08\u7e3d\u6536\u6848\u4eba\u6578-\u5df2\u6b7b\u4ea1\u4eba\u6578\uff09'},
+  '\u7559\u6cbb\u7387':{threshold:'>90%',dir:'>',cols:[],colLabels:[],defText:'\u5206\u5b50\uff1a\u5206\u6bcd\u4e2d\u6709\u5728\u672c\u9662\u6cbb\u7642\u4e4b\u500b\u6848\u6578\u3002\n\u5206\u6bcd\uff1a\u7576\u5e74\u5ea6\u9662\u5167\u5e38\u898b\u7652\u5225\u65b0\u8a3a\u65b7\uff08Class 0~2\uff09\u500b\u6848\u6578\u3002\n\u5099\u8a3b\uff1a\u542b\u5b89\u5be7\u7167\u8b77\u3002'},
+  '\u8a2a\u8996\u7387':{threshold:'>70%',dir:'>',cols:[],colLabels:[],defText:'\u5206\u5b50\uff1a\u51e1\u662f\u6709\u806f\u7e6b\u6216\u670d\u52d9\u7d00\u9304\u8005\uff0c\u7686\u8a08\u5165\u8a2a\u8996\u7387\u7684\u5206\u5b50\u3002\n\u5206\u6bcd\uff1a\u7576\u5e74\u5ea6\u5404\u7652\u5225\u65b0\u8a3a\u65b7\uff08Class 0~3\uff09\u500b\u6848\u6578\u3002\n\u5099\u8a3b\uff1a\u8a08\u7b97\u65b9\u5f0f\uff1a\u4ee5\u8a2a\u8996\u4eba\u6578\u70ba\u4e3b\uff0c\u4e0d\u4ee5\u6b21\u6578\u8a08\u7b97\u3002'}
+};
+
+function rateUpdRow(cid,si,ri,key,val){
+  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.rows)return;
+  if(!d.rows[ri])d.rows[ri]={};
+  d.rows[ri][key]=val;markDirty();
+  var rate=rateCalcRow(d.rows[ri],d);
+  var el=document.getElementById('rate-val-'+cid+'-'+si+'-'+ri);
+  if(el){el.textContent=rate.text;el.style.color=rate.color;}
+}
+function rateCalcRow(row,d){
+  var cfg=RATE_CFG[d.topicType]||{threshold:'',dir:'>'};
+  var n=parseInt(row.numerator)||0,m=parseInt(row.denominator)||0;
+  if(!m)return{text:'\u2014',color:'var(--textlt)'};
+  var pct=(n/m*100).toFixed(1)+'%';
+  var thNum=parseFloat((cfg.threshold||'').replace(/[^0-9.]/g,''))||0;
+  var actual=n/m*100;
+  var pass=cfg.dir==='<'?actual<=thNum:actual>=thNum;
+  return{text:pct,color:pass?'#2e7d32':'#c62828'};
+}
+function rateAddRow(cid,si){
+  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;
+  if(!d.rows)d.rows=[];
+  d.rows.push({label:'',numerator:'',denominator:'',totalCases:'',deaths:''});
+  markDirty();
+  var cont=document.getElementById('rate-rows-'+cid+'-'+si);
+  if(!cont)return;
+  var ri=d.rows.length-1;
+  var div=document.createElement('div');
+  div.innerHTML=rateRowHTML(cid,si,ri,d.rows[ri],d);
+  cont.appendChild(div.firstElementChild);
+}
+function rateDelRow(cid,si,ri){
+  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.rows)return;
+  d.rows.splice(ri,1);markDirty();
+  var cont=document.getElementById('rate-rows-'+cid+'-'+si);
+  if(!cont)return;
+  cont.innerHTML=((d.rows||[]).map(function(r,i2){return rateRowHTML(cid,si,i2,r,d);}).join(''));
+}
+function rateRowHTML(cid,si,ri,row,d){
+  var cfg=RATE_CFG[d.topicType]||{cols:[],colLabels:[],threshold:''};
+  var rate=rateCalcRow(row,d);
+  var extraCols=cfg.cols.map(function(col,ci){return '<input value="'+escA(String(row[col]||''))+'" oninput="rateUpdRow(\''+cid+'\','+si+','+ri+',\''+col+'\',this.value)" placeholder="'+escA(cfg.colLabels[ci]||'')+'" style="width:70px;font-size:12px;padding:3px 5px">';}).join('');
+  return '<div style="display:flex;gap:6px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--blt)">'
+    +'<input value="'+escA(row.label||'')+'" oninput="rateUpdRow(\''+cid+'\','+si+','+ri+',\'label\',this.value)" placeholder="\u7652\u5225" style="width:90px;font-size:12px;padding:3px 5px">'
+    +'<input value="'+escA(String(row.numerator||''))+'" oninput="rateUpdRow(\''+cid+'\','+si+','+ri+',\'numerator\',this.value)" placeholder="\u5206\u5b50" style="width:55px;font-size:12px;padding:3px 5px">'
+    +'<input value="'+escA(String(row.denominator||''))+'" oninput="rateUpdRow(\''+cid+'\','+si+','+ri+',\'denominator\',this.value)" placeholder="\u5206\u6bcd" style="width:55px;font-size:12px;padding:3px 5px">'
+    +extraCols
+    +'<span id="rate-val-'+cid+'-'+si+'-'+ri+'" style="font-size:13px;font-weight:700;width:60px;text-align:right;color:'+rate.color+'">'+rate.text+'</span>'
+    +'<button class="delbtn" onclick="rateDelRow(\''+cid+'\','+si+','+ri+')">×</button>'
+    +'</div>';
+}
+function specialRateHTML(cid,i,d){
+  var cfg=RATE_CFG[d.topicType]||{threshold:'',dir:'>',cols:[],colLabels:[],defText:''};
+  if(!d.definition)d.definition=cfg.defText;
+  if(!d.rows)d.rows=[];
+  if(!d.threshold)d.threshold=cfg.threshold;
+  var rows=(d.rows||[]).map(function(r,ri){return rateRowHTML(cid,i,ri,r,d);}).join('');
+  var colHdrs=cfg.colLabels.map(function(l){return '<span style="width:70px">'+escA(l)+'</span>';}).join('');
+  var defId='rate-def-'+cid+'-'+i;
+  var contId='rate-rows-'+cid+'-'+i;
+  var patId='cr-patients-'+cid+'-'+i;
+  return '<div class="casecard" id="cc-'+cid+'-special-'+i+'">'
+    +'<div class="casetop"><span class="cnm">'+escA(d.topicType)+'</span><button class="delbtn" onclick="delItem(\''+cid+'\',\'special\','+i+')">×</button></div>'
+    +'<div class="cg2">'
+    +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
+    +'<div class="fg full"><div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:2px">\u671f\u9593</div><input value="'+escA(d.period||'')+'" oninput="upd(\''+cid+'\',\'special\','+i+',\'period\',this.value)" placeholder="114\u5e7401-12\u6708" style="width:130px;font-size:12px;padding:4px 6px"></div>'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:2px">\u95be\u5024</div><input value="'+escA(d.threshold||cfg.threshold)+'" oninput="upd(\''+cid+'\',\'special\','+i+',\'threshold\',this.value)" style="width:80px;font-size:12px;padding:4px 6px"></div>'
+    +'</div>'
+    +'<div style="border:1px solid var(--blt);border-radius:4px;overflow:hidden">'
+    +'<div style="display:flex;align-items:center;gap:6px;background:var(--fog-dk);color:#fff;padding:5px 8px;font-size:11px;font-weight:700">'
+    +'<span style="width:90px">\u7652\u5225</span><span style="width:55px">\u5206\u5b50</span><span style="width:55px">\u5206\u6bcd</span>'+colHdrs+'<span style="width:60px;text-align:right">\u7d50\u679c</span>'
+    +'</div>'
+    +'<div id="'+contId+'">'+rows+'</div>'
+    +'</div>'
+    +'<button class="btnadd" onclick="rateAddRow(\''+cid+'\','+i+')" style="margin-top:4px">＋ \u65b0\u589e\u7652\u5225\u884c</button>'
+    +'</div>'
+    +'<div class="fsec">\u6307\u6a19\u5b9a\u7fa9 &amp; \u5099\u8a3b</div>'
+    +'<div class="fg full"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px;display:flex;align-items:center;justify-content:space-between"><span>\u6307\u6a19\u5b9a\u7fa9</span>'
+    +'<button class="btn btn-b btn-sm" onclick="crSaveDef(document.getElementById(\''+defId+'\').value)" style="font-size:10px;padding:1px 8px">\u5132\u5b58\u70ba\u9810\u8a2d</button></div>'
+    +'<textarea id="'+defId+'" rows="5" oninput="upd(\''+cid+'\',\'special\','+i+',\'definition\',this.value)" style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(d.definition||cfg.defText)+'</textarea></div>'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">\u5099\u8a3b/\u6703\u8b70\u6c7a\u8b70</div>'
+    +'<textarea rows="5" oninput="upd(\''+cid+'\',\'special\','+i+',\'remarks\',this.value)" placeholder="\u5099\u8a3b\uff1a..." style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(d.remarks||'')+'</textarea></div>'
+    +'</div></div>'
+    +'<div class="fsec">\u75c5\u4eba\u6e05\u55ae\uff08\u9078\u586b\uff09</div>'
+    +'<div class="fg full"><div id="'+patId+'">'+((d.patients||[]).map(function(p,pi){return crPatientRow(cid,i,pi,p);}).join(''))+'</div>'
+    +'<button class="btnadd" onclick="crAddPatient(\''+cid+'\','+i+')" style="margin-top:4px">＋ \u65b0\u589e\u75c5\u4eba</button>'
+    +'</div>'
+    +'</div></div>';
+}
+
 const CR_DEF_DEFAULT='分子：分母中，已完成治療計畫書所預定治療之個案數\n分母：新診斷（Class 1~2）在本院進行治療性治療（手術/化療/放療/賀爾蒙服用半年）之個案數，（總收案人數－治療療程未完成）';
 function crGetDef(){try{return localStorage.getItem('mdt_cr_template')||CR_DEF_DEFAULT;}catch{return CR_DEF_DEFAULT;}}
 function crSaveDef(txt){try{localStorage.setItem('mdt_cr_template',txt);showSaveToast('指標定義已儲存為預設');}catch(e){}}
-
-function crUpdPatient(cid,si,pi,key,val){
-  ensureSec(cid);const d=S.meeting.sections[cid].special[si];if(!d)return;
-  if(!d.patients)d.patients=[];if(!d.patients[pi])d.patients[pi]={};
-  d.patients[pi][key]=val;markDirty();
-}
-function crAddPatient(cid,si){
-  ensureSec(cid);const d=S.meeting.sections[cid].special[si];if(!d)return;
-  if(!d.patients)d.patients=[];
-  d.patients.push({chartNo:'',name:'',doctor:'',note:'',images:[]});
-  markDirty();
-  const cont=document.getElementById('cr-patients-'+cid+'-'+si);
-  if(!cont)return;
-  const pi=d.patients.length-1;
-  const div=document.createElement('div');
-  div.innerHTML=crPatientRow(cid,si,pi,d.patients[pi]);
-  cont.appendChild(div.firstElementChild);
-}
-function crDelPatient(cid,si,pi){
-  ensureSec(cid);const d=S.meeting.sections[cid].special[si];if(!d||!d.patients)return;
-  if(!confirm('確定刪除此病人？'))return;
-  d.patients.splice(pi,1);markDirty();
-  const cont=document.getElementById('cr-patients-'+cid+'-'+si);
-  if(!cont)return;
-  cont.innerHTML=((d.patients||[]).map((p,i2)=>crPatientRow(cid,si,i2,p)).join(''));
-}
-function crPickImages(cid,si,pi){
-  ensureSec(cid);const d=S.meeting.sections[cid].special[si];
-  if(!d||!d.patients||!d.patients[pi])return;
-  const p=d.patients[pi];
-  if(!p.images)p.images=[];
-  (async function(){
-    try{
-      if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
-      const entries=await _folderEntries(imgFolderHandle);
-      const files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));
-      files.sort((a,b)=>a.name.localeCompare(b.name));
-      if(!files.length){alert('資料夾內沒有圖檔');return;}
-      const existing=new Set(p.images.map(x=>x.name));
-      const list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0">'
-        +'<input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
-        +'<span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'
-        +'</label>').join('');
-      const overlay=document.createElement('div');
-      overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-      overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px">'
-        +'<div style="font-weight:700;font-size:15px">選取佐証圖片</div>'
-        +'<div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div>'
-        +'<div style="display:flex;gap:8px;justify-content:flex-end">'
-        +'<button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button>'
-        +'<button id="cr-img-ok" class="btn btn-a btn-sm">確認</button>'
-        +'</div></div>';
-      document.body.appendChild(overlay);
-      overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);
-      overlay.querySelector('#cr-img-ok').onclick=()=>{
-        const checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);
-        p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true}));
-        markDirty();document.body.removeChild(overlay);
-        const el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);
-        if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';
-      };
-    }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
-  })();
-}
+function crUpdPatient(cid,si,pi,key,val){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;if(!d.patients)d.patients=[];if(!d.patients[pi])d.patients[pi]={};d.patients[pi][key]=val;markDirty();}
+function crAddPatient(cid,si){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;if(!d.patients)d.patients=[];d.patients.push({chartNo:'',name:'',doctor:'',note:'',images:[]});markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;var pi=d.patients.length-1;var div=document.createElement('div');div.innerHTML=crPatientRow(cid,si,pi,d.patients[pi]);cont.appendChild(div.firstElementChild);}
+function crDelPatient(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients)return;if(!confirm('確定刪除此病人？'))return;d.patients.splice(pi,1);markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;cont.innerHTML=((d.patients||[]).map(function(p,i2){return crPatientRow(cid,si,i2,p);}).join(''));}
+function crPickImages(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients||!d.patients[pi])return;var p=d.patients[pi];if(!p.images)p.images=[];(async function(){try{if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});var entries=await _folderEntries(imgFolderHandle);var files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));files.sort((a,b)=>a.name.localeCompare(b.name));if(!files.length){alert('資料夾內沒有圖檔');return;}var existing=new Set(p.images.map(x=>x.name));var list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0"><input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span></label>').join('');var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px"><div style="font-weight:700;font-size:15px">選取佐証圖片</div><div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button><button id="cr-img-ok" class="btn btn-a btn-sm">確認</button></div></div>';document.body.appendChild(overlay);overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);overlay.querySelector('#cr-img-ok').onclick=()=>{var checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true}));markDirty();document.body.removeChild(overlay);var el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';};}catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}})();}
 function crPatientRow(cid,si,pi,p){
-  const imgLabel=(p.images&&p.images.length)?p.images.length+'張已選':'未選圖片';
-  return`<div class="struct-row" style="background:var(--surface);border-radius:4px;padding:10px;margin-bottom:8px;position:relative">
-  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start">
-    <input value="${escA(p.chartNo||'')}" oninput="crUpdPatient('${cid}',${si},${pi},'chartNo',this.value)" placeholder="病歷號" style="width:100px;font-size:12px;padding:4px 6px">
-    <input value="${escA(p.name||'')}" oninput="crUpdPatient('${cid}',${si},${pi},'name',this.value)" placeholder="姓名" style="width:80px;font-size:12px;padding:4px 6px">
-    <input value="${escA(p.doctor||'')}" oninput="crUpdPatient('${cid}',${si},${pi},'doctor',this.value)" placeholder="主治醫師" style="width:90px;font-size:12px;padding:4px 6px">
-    <button class="btn btn-b btn-sm" onclick="crPickImages('${cid}',${si},${pi})" style="font-size:11px">📂 圖片</button>
-    <span id="cr-img-list-${cid}-${si}-${pi}" style="font-size:11px;color:var(--textlt);align-self:center">${escA(imgLabel)}</span>
-    <button class="delbtn" onclick="crDelPatient('${cid}',${si},${pi})" style="margin-left:auto">×</button>
-  </div>
-  <textarea rows="3" oninput="crUpdPatient('${cid}',${si},${pi},'note',this.value)" placeholder="未完治備註（原因、追蹤記錄等）" style="width:100%;margin-top:6px;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">${escA(p.note||'')}</textarea>
-</div>`;
+  var imgLabel=(p.images&&p.images.length)?p.images.length+'張已選':'未選圖片';
+  var cidE=escA(cid);
+  return'<div class="struct-row" style="background:var(--surface);border-radius:4px;padding:10px;margin-bottom:8px;position:relative">'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start">'
+    +'<input value="'+escA(p.chartNo||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="chartNo" placeholder="病歷號" style="width:100px;font-size:12px;padding:4px 6px">'
+    +'<input value="'+escA(p.name||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="name" placeholder="姓名" style="width:80px;font-size:12px;padding:4px 6px">'
+    +'<input value="'+escA(p.doctor||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="doctor" placeholder="主治醫師" style="width:90px;font-size:12px;padding:4px 6px">'
+    +'<button class="btn btn-b btn-sm" data-action="crpickimg" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" style="font-size:11px">📂 圖片</button>'
+    +'<span id="cr-img-list-'+cidE+'-'+si+'-'+pi+'" style="font-size:11px;color:var(--textlt);align-self:center">'+escA(imgLabel)+'</span>'
+    +'<button class="delbtn" data-action="crdelpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" style="margin-left:auto">×</button>'
+    +'</div>'
+    +'<textarea rows="3" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="note" placeholder="備註（原因、追蹤記錄等）" style="width:100%;margin-top:6px;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(p.note||'')+'</textarea>'
+    +'</div>';
 }
 function specialCRHTML(cid,i,d){
   if(!d.definition)d.definition=crGetDef();
   if(!d.patients)d.patients=[];
-  const rate=d.denominator>0?((d.numerator/d.denominator)*100).toFixed(1)+'%':'—';
-  const patients=(d.patients||[]).map((p,pi)=>crPatientRow(cid,i,pi,p)).join('');
-  return`<div class="casecard" id="cc-${cid}-special-${i}">
-<div class="casetop"><span class="cnm">完治率</span><button class="delbtn" onclick="delItem('${cid}','special',${i})">×</button></div>
-<div class="cg2">
-<div class="fsec">統計數字</div>
-<div class="fg full"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">期間</div><input value="${escA(d.period||'')}" oninput="upd('${cid}','special',${i},'period',this.value)" placeholder="114年01-12月" style="width:130px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">癌別</div><input value="${escA(d.cancer||CFG[cid]?.name||'')}" oninput="upd('${cid}','special',${i},'cancer',this.value)" placeholder="乳癌" style="width:80px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">分子</div><input type="number" value="${d.numerator||''}" oninput="upd('${cid}','special',${i},'numerator',parseInt(this.value)||0)" style="width:60px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">分母</div><input type="number" value="${d.denominator||''}" oninput="upd('${cid}','special',${i},'denominator',parseInt(this.value)||0)" style="width:60px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">未完成</div><input type="number" value="${d.incomplete||''}" oninput="upd('${cid}','special',${i},'incomplete',parseInt(this.value)||0)" style="width:60px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">Class 1~2</div><input type="number" value="${d.totalClass12||''}" oninput="upd('${cid}','special',${i},'totalClass12',parseInt(this.value)||0)" style="width:70px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">閾值</div><input value="${escA(d.threshold||'>80%')}" oninput="upd('${cid}','special',${i},'threshold',this.value)" style="width:70px;font-size:12px;padding:4px 6px"></div>
-  <div style="padding:4px 12px;background:var(--ok-bg,#e8f5e9);border-radius:4px;font-size:13px;font-weight:700;color:var(--ok,#2e7d32)">完治率 ${escA(rate)}</div>
-</div></div>
-<div class="fsec">指標定義 & 備註</div>
-<div class="fg full"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-  <div>
-    <div style="font-size:10px;color:var(--textlt);margin-bottom:3px;display:flex;align-items:center;justify-content:space-between">
-      <span>指標定義</span>
-      <button class="btn btn-b btn-sm" onclick="crSaveDef(document.getElementById('cr-def-${cid}-${i}').value)" style="font-size:10px;padding:1px 8px">儲存為預設</button>
-    </div>
-    <textarea id="cr-def-${cid}-${i}" rows="5" oninput="upd('${cid}','special',${i},'definition',this.value)" style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">${escA(d.definition||crGetDef())}</textarea>
-  </div>
-  <div>
-    <div style="font-size:10px;color:var(--textlt);margin-bottom:3px">備註/會議決議</div>
-    <textarea rows="5" oninput="upd('${cid}','special',${i},'remarks',this.value)" placeholder="備註：..." style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">${escA(d.remarks||'')}</textarea>
-  </div>
-</div></div>
-<div class="fsec">未完治病人清單</div>
-<div class="fg full">
-  <div id="cr-patients-${cid}-${i}">${patients}</div>
-  <button class="btnadd" onclick="crAddPatient('${cid}',${i})" style="margin-top:4px">＋ 新增病人</button>
-</div>
-</div></div>`;
+  var n=d.numerator||0,m=d.denominator||0;
+  var rate=m>0?((n/m)*100).toFixed(1)+'%':'\u2014';
+  var thNum=parseFloat((d.threshold||'>80%').replace(/[^0-9.]/g,''))||80;
+  var actual=m>0?(n/m)*100:null;
+  var pass2=actual!==null?actual>=thNum:null;
+  var rateColor=pass2===null?'var(--textlt)':pass2?'#2e7d32':'#c62828';
+  var patients=(d.patients||[]).map(function(p,pi){return crPatientRow(cid,i,pi,p);}).join('');
+  var defId='cr-def-'+cid+'-'+i;
+  var patId='cr-patients-'+cid+'-'+i;
+  function inp(key,label,val,w,tp){
+    var t=tp||'text';
+    return '<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">'+label+'</div>'
+      +'<input type="'+t+'" value="'+escA(String(val||''))+'"'
+      +' data-action="updspecial" data-cid="'+cid+'" data-idx="'+i+'" data-key="'+key+'"'
+      +' style="width:'+w+';font-size:12px;padding:4px 6px"></div>';
+  }
+  return '<div class="casecard" id="cc-'+cid+'-special-'+i+'">'
+    +'<div class="casetop">'
+    +'<span class="cnm">\u5b8c\u6cbb\u7387</span>'
+    +'<button class="delbtn" data-action="delspecialitem" data-cid="'+cid+'" data-type="special" data-idx="'+i+'">\u00d7</button>'
+    +'</div>'
+    +'<div class="cg2">'
+    +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
+    +'<div class="fg full"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
+    +inp('period','\u671f\u9593',d.period,'130px')
+    +inp('cancer','\u7652\u5225',d.cancer||CFG[cid]&&CFG[cid].name||'乳癌','80px')
+    +inp('numerator','\u5206\u5b50',d.numerator,'60px','number')
+    +inp('denominator','\u5206\u6bcd',d.denominator,'60px','number')
+    +inp('incomplete','\u672a\u5b8c\u6210',d.incomplete,'60px','number')
+    +inp('totalClass12','Class 1~2',d.totalClass12,'70px','number')
+    +inp('threshold','\u95be\u5024',d.threshold||'>80%','70px')
+    +'<div style="padding:4px 12px;background:#e8f5e9;border-radius:4px;font-size:13px;font-weight:700;color:'+rateColor+'">\u5b8c\u6cbb\u7387 '+escA(rate)+'</div>'
+    +'</div></div>'
+    +'<div class="fsec">\u6307\u6a19\u5b9a\u7fa9 &amp; \u5099\u8a3b</div>'
+    +'<div class="fg full"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px;display:flex;align-items:center;justify-content:space-between">'
+    +'<span>\u6307\u6a19\u5b9a\u7fa9</span>'
+    +'<button class="btn btn-b btn-sm" data-action="savecrdeftpl" data-defid="'+defId+'" style="font-size:10px;padding:1px 8px">\u5132\u5b58\u70ba\u9810\u8a2d</button>'
+    +'</div>'
+    +'<textarea id="'+defId+'" rows="5" data-action="updspecial" data-cid="'+cid+'" data-idx="'+i+'" data-key="definition" style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(d.definition||crGetDef())+'</textarea></div>'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">\u5099\u8a3b/\u6703\u8b70\u6c7a\u8b70</div>'
+    +'<textarea rows="5" data-action="updspecial" data-cid="'+cid+'" data-idx="'+i+'" data-key="remarks" placeholder="\u5099\u8a3b\uff1a..." style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(d.remarks||'')+'</textarea></div>'
+    +'</div></div>'
+    +'<div class="fsec">\u672a\u5b8c\u6cbb\u75c5\u4eba\u6e05\u55ae</div>'
+    +'<div class="fg full"><div id="'+patId+'">'+patients+'</div>'
+    +'<button class="btnadd" data-action="craddpatient" data-cid="'+cid+'" data-si="'+i+'" style="margin-top:4px">\uff0b \u65b0\u589e\u75c5\u4eba</button>'
+    +'</div></div></div>';
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
@@ -4876,7 +4899,7 @@ async function genHTMLSlides(){
         const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
         const mDate=c.mammo.date?'<div style="font-size:.85em;opacity:.65;margin-bottom:.6vh">'+escA(c.mammo.date)+'</div>':'';
         const mRep=escA(c.mammo.report||'').replace(/\n/g,'<br>');
-        slides.push('<section class="slide img-slide mammo-slide" style="--ca:'+caColor+';">'
+        slides.push('<section class="slide mammo-slide" style="--ca:'+caColor+';">'
           +'<div class="ch"><div class="cht">'
           +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.dataset.oc=el.style.opacity;el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=el.dataset.oc||\'\'}, 600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
           +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
@@ -4939,113 +4962,6 @@ async function genHTMLSlides(){
            ...events.map(c=>'<tr><td>必要事件</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>')].join('')
         +'</tbody></table></section>');
     }
-    // ── Special items (完治率 etc.) ──
-    const sp2=sec.special||[];
-    sp2.forEach(function(sp){
-      if(sp.topicType!=='完治率')return;
-      const rate=sp.denominator>0?((sp.numerator/sp.denominator)*100).toFixed(1)+'%':'—';
-      const period=escA(sp.period||'');
-      const cancer=escA(sp.cancer||ca.name||'');
-      const def=escA(sp.definition||'').replace(/\n/g,'<br>');
-      const rmk=escA(sp.remarks||'').replace(/\n/g,'<br>');
-      const threshold=escA(sp.threshold||'>80%');
-
-      // Page 1: Summary table + definition + remarks
-      slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
-        +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
-        +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">完治率</span>'
-        +'<span class="cat">'+cancer+'</span></div>'
-        +(period?'<div style="font-size:clamp(13px,1.3vw,18px);color:rgba(255,255,255,.78)">'+period+'</div>':'')
-        +'</div>'
-        +'<div style="padding:2.5vh 3vw;display:flex;flex-direction:column;gap:2.5vh;flex:1;overflow:auto">'
-        // Stats table
-        +'<table style="width:100%;border-collapse:collapse;border:2px solid var(--dk)">'
-        +'<thead><tr style="background:var(--dk);color:#fff">'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">期間</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分子</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分母</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">治療療程未完成</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">總收案人數 Class 1~2</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px)">完治率（閾值'+threshold+'）</th>'
-        +'</tr></thead>'
-        +'<tbody><tr>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(14px,1.4vw,20px);border:1px solid #ddd">'+period+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.numerator||'—'))+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.denominator||'—'))+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.incomplete||'—'))+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.totalClass12||'—'))+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(24px,3vw,44px);font-weight:800;color:'+caColor+';border:1px solid #ddd">'+escA(rate)+'</td>'
-        +'</tr></tbody></table>'
-        // Definition + Remarks
-        +(def||rmk?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2vw;flex:1">'
-          +'<div><div style="font-size:clamp(11px,1vw,14px);font-weight:700;color:var(--lt);margin-bottom:.8vh">指標定義</div>'
-          +'<div style="font-size:clamp(12px,1.15vw,16px);color:#2a3540;line-height:1.8">'+def+'</div></div>'
-          +'<div><div style="font-size:clamp(11px,1vw,14px);font-weight:700;color:var(--lt);margin-bottom:.8vh">備註/會議決議</div>'
-          +'<div style="font-size:clamp(12px,1.15vw,16px);color:#2a3540;line-height:1.8">'+rmk+'</div></div>'
-          +'</div>':'')
-        +'</div>'
-        +'</section>');
-
-      // Page 2+: Patient list, 3 per page
-      const patients=sp.patients||[];
-      if(patients.length){
-        const perPage=3;
-        for(var ppi=0;ppi<patients.length;ppi+=perPage){
-          var pagePatients=patients.slice(ppi,ppi+perPage);
-          var pageNum=Math.floor(ppi/perPage)+1;
-          var totalPages=Math.ceil(patients.length/perPage);
-          var rows=pagePatients.map(function(p,ri){
-            return '<tr>'
-              +'<td style="width:9%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top;font-weight:700">'+escA(p.chartNo||'—')+'</td>'
-              +'<td style="width:8%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.name?maskName(p.name):'—')+'</td>'
-              +'<td style="width:10%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.doctor||'—')+'</td>'
-              +'<td style="padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top;line-height:1.6">'+escA(p.note||'').replace(/\n/g,'<br>')+'</td>'
-              +'</tr>';
-          }).join('');
-          slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
-            +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
-            +'<span style="font-size:clamp(16px,1.8vw,26px);font-weight:800">未完治病人清單</span>'
-            +'<span class="cat">'+cancer+'</span>'
-            +'<span style="margin-left:auto;font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7)">第'+pageNum+'頁 / 共'+totalPages+'頁</span>'
-            +'</div></div>'
-            +'<div style="padding:2vh 2.5vw;flex:1;overflow:hidden">'
-            +'<table style="width:100%;border-collapse:collapse">'
-            +'<thead><tr style="background:var(--dk);color:#fff">'
-            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">病歷號</th>'
-            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">姓名</th>'
-            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">主治醫師</th>'
-            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px)">未完治備註</th>'
-            +'</tr></thead>'
-            +'<tbody>'+rows+'</tbody></table>'
-            +'</div></section>');
-
-          // Image slides for this batch
-          pagePatients.forEach(function(p){
-            if(!p.images||!p.images.length)return;
-            var imgH=p.images.map(function(img){
-              var src=img.dataUrl||_pathImgCache[img.name]||'';
-              if(!src)return '';
-              return '<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
-                +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
-                +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')
-                +'</div>';
-            }).filter(Boolean);
-            if(!imgH.length)return;
-            var cols=imgH.length===1?1:imgH.length<=4?2:3;
-            var rows2=Math.ceil(imgH.length/cols);
-            var gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows2+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
-            slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
-              +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
-              +'<span style="font-size:clamp(13px,1.3vw,18px);font-weight:700">'+escA(p.chartNo||'')+'</span>'
-              +(p.name?' <span style="font-size:clamp(12px,1.2vw,17px)">'+escA(maskName(p.name))+'</span>':'')
-              +'<span class="cat">佐証圖片</span></div></div>'
-              +'<div style="'+gSt+'">'+imgH.join('')+'</div>'
-              +'</section>');
-          });
-        }
-      }
-    });
-
   });
 
   const N=slides.length;
@@ -5164,15 +5080,15 @@ function hlClear(){document.querySelectorAll('mark').forEach(function(m){var p=m
 var _magMode=false,_magCv=null;
 function _initMag(){if(_magCv)return;_magCv=document.createElement('canvas');_magCv.style.cssText='position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;';document.body.appendChild(_magCv);}
 function _toggleMag(){_initMag();_magMode=!_magMode;var btn=document.getElementById('nb-mag');if(btn)btn.style.color=_magMode?'#7FE87F':'';if(!_magMode)_magCv.style.display='none';}
-document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=(function(){var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;return(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');}());if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);var sx=(mx/rect.width)*img.naturalWidth,sy=(my/rect.height)*img.naturalHeight;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
+document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=slide.querySelector('img');if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);var sx=(mx/rect.width)*img.naturalWidth,sy=(my/rect.height)*img.naturalHeight;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
 document.addEventListener('mouseleave',function(){if(_magCv)_magCv.style.display='none';});
 document.addEventListener('keydown',function(e){if(e.key==='l'||e.key==='L')_toggleMag();});
-var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0,_zoomTarget=null;
-function _zoomImg(){if(!_zoomTarget)return;_zoomTarget.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';_zoomTarget.style.cursor=_zoom>1?'grab':'default';_zoomTarget.style.transition=_dragging?'':'transform .15s';}
-function _resetZoom(){if(_zoomTarget){_zoomTarget.style.transform='';_zoomTarget.style.cursor='';}_zoom=1;_panX=0;_panY=0;_zoomTarget=null;}
-document.addEventListener('wheel',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;e.preventDefault();var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;var tgt=(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');if(!tgt)return;if(_zoomTarget&&_zoomTarget!==tgt){_zoomTarget.style.transform='';_zoomTarget.style.cursor='';_zoom=1;_panX=0;_panY=0;}_zoomTarget=tgt;_zoom=Math.max(1,Math.min(8,_zoom*(e.deltaY<0?1.12:0.89)));if(_zoom===1){_panX=0;_panY=0;}_zoomImg();},{passive:false});
-document.addEventListener('dblclick',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;if(el&&el.tagName==='IMG'&&slide.contains(el)){_zoomTarget=el;}_resetZoom();});
-document.addEventListener('mousedown',function(e){if(!_zoomTarget||_zoom<=1)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;_dragging=true;_dragSx=e.clientX;_dragSy=e.clientY;_dragPx=_panX;_dragPy=_panY;e.preventDefault();});
+var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0;
+function _zoomImg(){var slide=document.querySelectorAll('.slide')[c];var img=slide&&slide.classList.contains('img-slide')?slide.querySelector('img'):null;if(!img)return;img.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';img.style.cursor=_zoom>1?'grab':'default';img.style.transition=_dragging?'':'transform .15s';}
+function _resetZoom(){_zoom=1;_panX=0;_panY=0;_zoomImg();}
+document.addEventListener('wheel',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;e.preventDefault();_zoom=Math.max(1,Math.min(8,_zoom*(e.deltaY<0?1.12:0.89)));if(_zoom===1){_panX=0;_panY=0;}_zoomImg();},{passive:false});
+document.addEventListener('dblclick',function(e){var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide'))_resetZoom();});
+document.addEventListener('mousedown',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')||_zoom<=1)return;_dragging=true;_dragSx=e.clientX;_dragSy=e.clientY;_dragPx=_panX;_dragPy=_panY;e.preventDefault();});
 document.addEventListener('mousemove',function(e){if(!_dragging)return;_panX=_dragPx+(e.clientX-_dragSx)/_zoom;_panY=_dragPy+(e.clientY-_dragSy)/_zoom;_zoomImg();});
 document.addEventListener('mouseup',function(e){if(_dragging){_dragging=false;_zoomImg();}});
 var _origGo=go;go=function(i){_resetZoom();if(_magCv)_magCv.style.display='none';_origGo(i);};
@@ -6774,6 +6690,23 @@ document.addEventListener('click',function(e){
     }
     return;
   }
+  const updcrpatient=e.target.closest('[data-action="updcrpatient"]');
+  if(updcrpatient){
+    var _cid=updcrpatient.dataset.cid,_si=parseInt(updcrpatient.dataset.si),_pi=parseInt(updcrpatient.dataset.pi),_key=updcrpatient.dataset.key;
+    crUpdPatient(_cid,_si,_pi,_key,updcrpatient.value);return;
+  }
+  const crpickimg=e.target.closest('[data-action="crpickimg"]');
+  if(crpickimg){crPickImages(crpickimg.dataset.cid,parseInt(crpickimg.dataset.si),parseInt(crpickimg.dataset.pi));return;}
+  const craddpt=e.target.closest('[data-action="craddpatient"]');
+  if(craddpt){crAddPatient(craddpt.dataset.cid,parseInt(craddpt.dataset.si));return;}
+  const savecrtpl=e.target.closest('[data-action="savecrdeftpl"]');
+  if(savecrtpl){var defEl=document.getElementById(savecrtpl.dataset.defid);if(defEl)crSaveDef(defEl.value);return;}
+  const crdelpatient=e.target.closest('[data-action="crdelpatient"]');
+  if(crdelpatient){crDelPatient(crdelpatient.dataset.cid,parseInt(crdelpatient.dataset.si),parseInt(crdelpatient.dataset.pi));return;}
+  const delspecialitem=e.target.closest('[data-action="delspecialitem"]');
+  if(delspecialitem){delItem(delspecialitem.dataset.cid,delspecialitem.dataset.type,parseInt(delspecialitem.dataset.idx));return;}
+  const updspecial=e.target.closest('[data-action="updspecial"]');
+  if(updspecial){var _cid=updspecial.dataset.cid,_idx=parseInt(updspecial.dataset.idx),_key=updspecial.dataset.key;ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_idx];if(_d){_d[_key]=updspecial.type==='number'?parseInt(updspecial.value)||0:updspecial.value;markDirty();}return;}
   const view=e.target.closest('[data-action="viewimg"]');
   if(view){viewImg(view.dataset.src);return;}
   const chip=e.target.closest('[data-action="phchip"]');
@@ -6785,19 +6718,14 @@ document.addEventListener('click',function(e){
     if(!item)return;
     item.topicType=item.topicType===st.dataset.type?'':st.dataset.type;
     markDirty();
-    // If switching to/from completion_rate, full re-render needed
-    if(item.topicType==='完治率'||st.dataset.type==='完治率'){
-      const card=st.closest('.casecard');
-      if(card){
-        const cid=st.dataset.cid,idx2=parseInt(st.dataset.idx);
-        const tmp=document.createElement('div');
-        tmp.innerHTML=specialHTML(cid,idx2,item);
-        card.replaceWith(tmp.firstElementChild);
-      }
+    var _RATE_TYPES=['完治率','失聯率','留治率','訪視率'];
+    if(_RATE_TYPES.includes(item.topicType)||_RATE_TYPES.includes(st.dataset.type)){
+      var card=st.closest('.casecard');
+      if(card){var cid2=st.dataset.cid,idx2=parseInt(st.dataset.idx);var tmp2=document.createElement('div');tmp2.innerHTML=specialHTML(cid2,idx2,item);card.replaceWith(tmp2.firstElementChild);}
       return;
     }
     st.closest('.fg').querySelectorAll('.tchip').forEach(el=>el.classList.toggle('on',el.dataset.type===item.topicType));
-    const cnm=st.closest('.casecard')?.querySelector('.cnm');
+    var cnm=st.closest('.casecard')?.querySelector('.cnm');
     if(cnm)cnm.textContent=item.topicType||item.title||'特殊議程';
     return;
   }
@@ -6848,6 +6776,8 @@ document.addEventListener('click',function(e){
 
 // Input/change delegation for struct fields
 document.addEventListener('change',function(e){
+  const updcrp=e.target.closest('[data-action="updcrpatient"]');
+  if(updcrp){var _cid=updcrp.dataset.cid,_si=parseInt(updcrp.dataset.si),_pi=parseInt(updcrp.dataset.pi),_key=updcrp.dataset.key;crUpdPatient(_cid,_si,_pi,_key,updcrp.value);return;}
   const cap=e.target.closest('[data-action="updimgcaption"]');
   if(cap){
     const cid=cap.dataset.cid,idx=parseInt(cap.dataset.idx),j=parseInt(cap.dataset.imgidx);
