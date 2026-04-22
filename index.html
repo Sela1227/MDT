@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.13';
+const VERSION='V4.3.14';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3122,6 +3122,7 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>類別</label><div class="trow" style="margin-bottom:6px">${typeChips}</div></div>
 <div class="fg full"><label>標題</label><input value="${escA(d.title||'')}" oninput="upd('${cid}','special',${i},'title',this.value)" placeholder="例：114年1-12月品質指標審查" style="font-size:13px;padding:6px 8px;width:100%"></div>
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
+<div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>投影片影像</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','special',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div><div id="special-img-area-${cid}-${i}">${buildSpecialImgArea(cid,i,d)}</div></div>
 </div></div>`;
 }
 
@@ -3298,7 +3299,66 @@ function specialCRHTML(cid,i,d){
     +'</div></div></div>';
 }
 
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+function buildSpecialImgArea(cid,si,d){
+  if(!d.images)d.images=[];
+  var h2='';
+  (d.images||[]).forEach(function(img,j){
+    var safe=img.dataUrl?img.dataUrl:'';
+    var cap=escA(img.caption||img.name||'');
+    h2+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">';
+    if(safe){
+      h2+='<div data-action="viewimg" data-src="'+safe+'" style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);overflow:hidden;cursor:zoom-in">'
+        +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>';
+    }else{
+      h2+='<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center">'
+        +'<span style="font-size:20px">🖼</span></div>';
+    }
+    h2+='<input value="'+cap+'" placeholder="說明" data-action="updspecialimgcap" data-cid="'+cid+'" data-si="'+si+'" data-imgidx="'+j+'" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;padding:1px 3px">'
+      +'<button class="delbtn" data-action="delspecialimg" data-cid="'+cid+'" data-si="'+si+'" data-imgidx="'+j+'">×</button>'
+      +'</div>';
+  });
+  return'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;margin-bottom:6px">'+h2+'</div>'
+    +'<button class="btn btn-b btn-sm" data-action="pickspecialimgs" data-cid="'+cid+'" data-si="'+si+'" style="font-size:11px">📂 '+escA(CFG[cid]&&CFG[cid].name||'')+' 選取</button>';
+}
+
+function pickSpecialImgs(cid,si){
+  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;
+  if(!d.images)d.images=[];
+  (async function(){
+    try{
+      if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+      var entries=await _folderEntries(imgFolderHandle);
+      var files=entries.filter(function(e){return e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name);});
+      files.sort(function(a,b){return a.name.localeCompare(b.name);});
+      if(!files.length){alert('資料夾內沒有圖檔');return;}
+      var existing=new Set(d.images.map(function(x){return x.name;}));
+      var list=files.map(function(f){return'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0">'
+        +'<input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
+        +'<span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'
+        +'</label>';}).join('');
+      var overlay=document.createElement('div');
+      overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+      overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px">'
+        +'<div style="font-weight:700;font-size:15px">選取投影片影像</div>'
+        +'<div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div>'
+        +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+        +'<button id="spi-cancel" class="btn btn-b btn-sm">取消</button>'
+        +'<button id="spi-ok" class="btn btn-a btn-sm">確認</button>'
+        +'</div></div>';
+      document.body.appendChild(overlay);
+      overlay.querySelector('#spi-cancel').onclick=function(){document.body.removeChild(overlay);};
+      overlay.querySelector('#spi-ok').onclick=function(){
+        var checked=[...overlay.querySelectorAll('input:checked')].map(function(x){return x.value;});
+        d.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,dataUrl:''};});
+        markDirty();document.body.removeChild(overlay);
+        var cont=document.getElementById('special-img-area-'+cid+'-'+si);
+        if(cont)cont.innerHTML=buildSpecialImgArea(cid,si,d);
+      };
+    }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+  })();
+}
+
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;
@@ -5167,6 +5227,29 @@ async function genHTMLSlides(){
             });
           }
         }
+      } else {
+        // Other special types: generate image slide if images exist
+        var spImgs=sp.images||[];
+        if(spImgs.length){
+          var _ips=sp.imgsPerSlide||4;
+          for(var _sii=0;_sii<spImgs.length;_sii+=_ips){
+            var _sgrp=spImgs.slice(_sii,_sii+_ips);
+            var _scols=_ips===1?1:2,_srows=_ips===4?2:1;
+            var _sgSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_scols+',1fr);grid-template-rows:repeat('+_srows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+            var _sImgH=_sgrp.map(function(img){
+              var src=img.dataUrl||_pathImgCache[img.name]||'';if(!src)return'';
+              return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
+                +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
+                +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';
+            }).filter(Boolean);
+            if(!_sImgH.length)continue;
+            slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
+              +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+              +'<span style="font-size:clamp(15px,1.7vw,24px);font-weight:700">'+escA(sp.title||sp.topicType||'特殊議程')+'</span>'
+              +'<span class="cat">'+escA(CFG[cid]&&CFG[cid].name||cid)+'</span></div></div>'
+              +'<div style="'+_sgSt+'">'+_sImgH.join('')+'</div></section>');
+          }
+        }
       }
     });
   });
@@ -6904,6 +6987,17 @@ document.addEventListener('click',function(e){
   }
   const crpickimg=e.target.closest('[data-action="crpickimg"]');
   if(crpickimg){crPickImages(crpickimg.dataset.cid,parseInt(crpickimg.dataset.si),parseInt(crpickimg.dataset.pi));return;}
+  const pickspecialimgs=e.target.closest('[data-action="pickspecialimgs"]');
+  if(pickspecialimgs){pickSpecialImgs(pickspecialimgs.dataset.cid,parseInt(pickspecialimgs.dataset.si));return;}
+  const delspecialimg=e.target.closest('[data-action="delspecialimg"]');
+  if(delspecialimg){
+    var _cid=delspecialimg.dataset.cid,_si=parseInt(delspecialimg.dataset.si),_ji=parseInt(delspecialimg.dataset.imgidx);
+    ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_si];
+    if(_d&&_d.images){_d.images.splice(_ji,1);markDirty();}
+    var cont=document.getElementById('special-img-area-'+_cid+'-'+_si);
+    if(cont)cont.innerHTML=buildSpecialImgArea(_cid,_si,_d);
+    return;
+  }
   const craddpt=e.target.closest('[data-action="craddpatient"]');
   if(craddpt){crAddPatient(craddpt.dataset.cid,parseInt(craddpt.dataset.si));return;}
   const savecrtpl=e.target.closest('[data-action="savecrdeftpl"]');
@@ -6982,6 +7076,10 @@ document.addEventListener('click',function(e){
 });
 
 // Input/change delegation for struct fields
+document.addEventListener('input',function(e){
+  var sic=e.target.closest('[data-action="updspecialimgcap"]');
+  if(sic){var _cid=sic.dataset.cid,_si=parseInt(sic.dataset.si),_ji=parseInt(sic.dataset.imgidx);ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_si];if(_d&&_d.images&&_d.images[_ji])_d.images[_ji].caption=sic.value;markDirty();return;}
+},true);
 document.addEventListener('change',function(e){
   const updcrp=e.target.closest('[data-action="updcrpatient"]');
   if(updcrp){var _cid=updcrp.dataset.cid,_si=parseInt(updcrp.dataset.si),_pi=parseInt(updcrp.dataset.pi),_key=updcrp.dataset.key;crUpdPatient(_cid,_si,_pi,_key,updcrp.value);return;}
