@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.7';
+const VERSION='V4.3.8';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -5167,12 +5167,12 @@ function _toggleMag(){_initMag();_magMode=!_magMode;var btn=document.getElementB
 document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=(function(){var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;return(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');}());if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);var sx=(mx/rect.width)*img.naturalWidth,sy=(my/rect.height)*img.naturalHeight;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
 document.addEventListener('mouseleave',function(){if(_magCv)_magCv.style.display='none';});
 document.addEventListener('keydown',function(e){if(e.key==='l'||e.key==='L')_toggleMag();});
-var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0;
-function _zoomImg(){var slide=document.querySelectorAll('.slide')[c];var img=slide&&slide.classList.contains('img-slide')?slide.querySelector('img'):null;if(!img)return;img.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';img.style.cursor=_zoom>1?'grab':'default';img.style.transition=_dragging?'':'transform .15s';}
-function _resetZoom(){_zoom=1;_panX=0;_panY=0;_zoomImg();}
-document.addEventListener('wheel',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;e.preventDefault();_zoom=Math.max(1,Math.min(8,_zoom*(e.deltaY<0?1.12:0.89)));if(_zoom===1){_panX=0;_panY=0;}_zoomImg();},{passive:false});
-document.addEventListener('dblclick',function(e){var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide'))_resetZoom();});
-document.addEventListener('mousedown',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')||_zoom<=1)return;_dragging=true;_dragSx=e.clientX;_dragSy=e.clientY;_dragPx=_panX;_dragPy=_panY;e.preventDefault();});
+var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0,_zoomTarget=null;
+function _zoomImg(){if(!_zoomTarget)return;_zoomTarget.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';_zoomTarget.style.cursor=_zoom>1?'grab':'default';_zoomTarget.style.transition=_dragging?'':'transform .15s';}
+function _resetZoom(){if(_zoomTarget){_zoomTarget.style.transform='';_zoomTarget.style.cursor='';}_zoom=1;_panX=0;_panY=0;_zoomTarget=null;}
+document.addEventListener('wheel',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;e.preventDefault();var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;var tgt=(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');if(!tgt)return;if(_zoomTarget&&_zoomTarget!==tgt){_zoomTarget.style.transform='';_zoomTarget.style.cursor='';_zoom=1;_panX=0;_panY=0;}_zoomTarget=tgt;_zoom=Math.max(1,Math.min(8,_zoom*(e.deltaY<0?1.12:0.89)));if(_zoom===1){_panX=0;_panY=0;}_zoomImg();},{passive:false});
+document.addEventListener('dblclick',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;if(el&&el.tagName==='IMG'&&slide.contains(el)){_zoomTarget=el;}_resetZoom();});
+document.addEventListener('mousedown',function(e){if(!_zoomTarget||_zoom<=1)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;_dragging=true;_dragSx=e.clientX;_dragSy=e.clientY;_dragPx=_panX;_dragPy=_panY;e.preventDefault();});
 document.addEventListener('mousemove',function(e){if(!_dragging)return;_panX=_dragPx+(e.clientX-_dragSx)/_zoom;_panY=_dragPy+(e.clientY-_dragSy)/_zoom;_zoomImg();});
 document.addEventListener('mouseup',function(e){if(_dragging){_dragging=false;_zoomImg();}});
 var _origGo=go;go=function(i){_resetZoom();if(_magCv)_magCv.style.display='none';_origGo(i);};
