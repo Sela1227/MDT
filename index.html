@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.12';
+const VERSION='V4.3.13';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3193,7 +3193,7 @@ function specialRateHTML(cid,i,d){
   var patId='cr-patients-'+cid+'-'+i;
   return '<div class="casecard" id="cc-'+cid+'-special-'+i+'">'
     +'<div class="casetop"><span class="cnm">'+escA(d.topicType)+'</span><button class="delbtn" onclick="delItem(\''+cid+'\',\'special\','+i+')">×</button></div>'
-    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+(d.topicType==='核心指標'?'on':'')+' data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+(d.topicType==='品質指標'?'on':'')+' data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+(d.topicType==='修改指引'?'on':'')+' data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+(d.topicType==='其他'?'on':'')+' data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'<span class="tchip '+(d.topicType==='完治率'?'on':'')+' data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+(d.topicType==='失聯率'?'on':'')+' data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+(d.topicType==='留治率'?'on':'')+' data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+(d.topicType==='訪視率'?'on':'')+' data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'</div></div>'
+    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+(d.topicType==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+(d.topicType==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+(d.topicType==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+(d.topicType==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'<span class="tchip '+(d.topicType==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+(d.topicType==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+(d.topicType==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+(d.topicType==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'</div></div>'
     +'<div class="cg2">'
     +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
     +'<div class="fg full"><div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">'
@@ -3269,7 +3269,7 @@ function specialCRHTML(cid,i,d){
     +'<span class="cnm">\u5b8c\u6cbb\u7387</span>'
     +'<button class="delbtn" data-action="delspecialitem" data-cid="'+cid+'" data-type="special" data-idx="'+i+'">\u00d7</button>'
     +'</div>'
-    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+['核心指標','品質指標','修改指引','其他','完治率','失聯率','留治率','訪視率'].map(function(t){return'<span class="tchip '+('完治率'===t?'on':'')+'" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="'+t+'">'+t+'</span>';}).join('')+'</div></div>'
+    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+('完治率'==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+('完治率'==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+('完治率'==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+('完治率'==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'<span class="tchip '+('完治率'==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+('完治率'==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+('完治率'==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+('完治率'==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'</div></div>'
     +'<div class="cg2">'
     +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
     +'<div class="fg full"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
