@@ -957,6 +957,10 @@ textarea{resize:vertical}
     </div>
   </div>
     <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px;margin-top:4px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--fog-dk)">儲存空間使用量</div>
+      <div id="ls-usage-display" style="font-size:12px;color:var(--textlt);margin-bottom:14px">計算中…</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px;margin-top:4px">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">批次刪除會議記錄</div>
       <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">勾選後刪除，其他記錄完全不受影響。</div>
       <button class="btn btn-b" onclick="openBatchDeleteModal()">選擇要刪除的會議…</button>
@@ -1170,7 +1174,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.18';
+const VERSION='V4.3.19';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1319,7 +1323,22 @@ function getPartnerUser(pid){return USERS.find(u=>u.cancers.includes(pid))}
 function download(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 
 /* ════ Storage ════ */
-function saveLocal(m){try{localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));const idx=getIdx(),ei=idx.findIndex(i=>i.id===m.id);const e={id:m.id,title:m.title,date:m.date,cids:m.cids};if(ei>=0)idx[ei]=e;else idx.unshift(e);localStorage.setItem('mdt_idx',JSON.stringify(idx.slice(0,30)));return true}catch{return false}}
+function saveLocal(m){try{
+  localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));
+  const idx=getIdx(),ei=idx.findIndex(i=>i.id===m.id);
+  const e={id:m.id,title:m.title,date:m.date,cids:m.cids};
+  if(ei>=0)idx[ei]=e;else idx.unshift(e);
+  const newIdx=idx.slice(0,100);
+  localStorage.setItem('mdt_idx',JSON.stringify(newIdx));
+  // Clean orphan mdt_m_ keys not in index
+  const validIds=new Set(newIdx.map(function(x){return x.id;}));
+  Object.keys(localStorage).forEach(function(k){
+    if(k.startsWith('mdt_m_')&&!validIds.has(k.slice(6))){
+      localStorage.removeItem(k);
+    }
+  });
+  return true;
+}catch{return false;}}
 function loadLocal(id){try{const r=localStorage.getItem('mdt_m_'+id);return r?JSON.parse(r):null}catch{return null}}
 function getIdx(){try{return JSON.parse(localStorage.getItem('mdt_idx')||'[]')}catch{return[]}}
 
@@ -1749,7 +1768,7 @@ function calCreateMtg(cid,date){
 
 
 
-function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on')}
+function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);;setTimeout(renderLsUsage,100);;setTimeout(renderLsUsage,100);}
 function openHistory(){
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -3373,6 +3392,40 @@ function pickSpecialImgs(cid,si){
       };
     }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
   })();
+}
+
+function renderLsUsage(){
+  var el=document.getElementById('ls-usage-display');if(!el)return;
+  try{
+    var total=0,mtgTotal=0,mtgCount=0,imgSize=0;
+    var keys=Object.keys(localStorage);
+    keys.forEach(function(k){
+      var val=localStorage.getItem(k)||'';
+      var size=val.length*2; // UTF-16 approx bytes
+      total+=size;
+      if(k.startsWith('mdt_m_')){
+        mtgTotal+=size;mtgCount++;
+        // Estimate image portion (base64 starts with 'data:')
+        var imgMatch=(val.match(/"dataUrl":"data:[^"]{100,}"/g)||[]);
+        imgMatch.forEach(function(m){imgSize+=m.length*2;});
+      }
+    });
+    var toMB=function(b){return (b/1024/1024).toFixed(2);};
+    var pct=Math.round(total/5242880*100); // assume 5MB limit
+    var barColor=pct>80?'var(--err)':pct>60?'var(--warn)':'var(--ok)';
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<div style="flex:1;height:6px;background:var(--blt);border-radius:3px;overflow:hidden">'
+      +'<div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+barColor+';transition:width .3s;border-radius:3px"></div>'
+      +'</div>'
+      +'<span style="font-size:11px;font-weight:600;color:'+barColor+'">'+pct+'%</span>'
+      +'</div>'
+      +'<div style="color:var(--textlt)">'
+      +'總計 <b>'+toMB(total)+' MB</b> 已使用'
+      +'・會議記錄 <b>'+mtgCount+'</b> 筆（'+toMB(mtgTotal)+' MB）'
+      +(imgSize>0?'・含圖片 '+toMB(imgSize)+' MB':'')
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:3px">估算上限約 5 MB（依瀏覽器而異），超過後儲存可能失敗</div>';
+  }catch(e){el.textContent='無法取得使用量：'+e.message;}
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
