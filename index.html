@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.6';
+const VERSION='V4.3.7';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4939,6 +4939,113 @@ async function genHTMLSlides(){
            ...events.map(c=>'<tr><td>必要事件</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>')].join('')
         +'</tbody></table></section>');
     }
+    // ── Special items (完治率 etc.) ──
+    const sp2=sec.special||[];
+    sp2.forEach(function(sp){
+      if(sp.topicType!=='完治率')return;
+      const rate=sp.denominator>0?((sp.numerator/sp.denominator)*100).toFixed(1)+'%':'—';
+      const period=escA(sp.period||'');
+      const cancer=escA(sp.cancer||ca.name||'');
+      const def=escA(sp.definition||'').replace(/\n/g,'<br>');
+      const rmk=escA(sp.remarks||'').replace(/\n/g,'<br>');
+      const threshold=escA(sp.threshold||'>80%');
+
+      // Page 1: Summary table + definition + remarks
+      slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+        +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+        +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">完治率</span>'
+        +'<span class="cat">'+cancer+'</span></div>'
+        +(period?'<div style="font-size:clamp(13px,1.3vw,18px);color:rgba(255,255,255,.78)">'+period+'</div>':'')
+        +'</div>'
+        +'<div style="padding:2.5vh 3vw;display:flex;flex-direction:column;gap:2.5vh;flex:1;overflow:auto">'
+        // Stats table
+        +'<table style="width:100%;border-collapse:collapse;border:2px solid var(--dk)">'
+        +'<thead><tr style="background:var(--dk);color:#fff">'
+        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">期間</th>'
+        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分子</th>'
+        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分母</th>'
+        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">治療療程未完成</th>'
+        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">總收案人數 Class 1~2</th>'
+        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px)">完治率（閾值'+threshold+'）</th>'
+        +'</tr></thead>'
+        +'<tbody><tr>'
+        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(14px,1.4vw,20px);border:1px solid #ddd">'+period+'</td>'
+        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.numerator||'—'))+'</td>'
+        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.denominator||'—'))+'</td>'
+        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.incomplete||'—'))+'</td>'
+        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.totalClass12||'—'))+'</td>'
+        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(24px,3vw,44px);font-weight:800;color:'+caColor+';border:1px solid #ddd">'+escA(rate)+'</td>'
+        +'</tr></tbody></table>'
+        // Definition + Remarks
+        +(def||rmk?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2vw;flex:1">'
+          +'<div><div style="font-size:clamp(11px,1vw,14px);font-weight:700;color:var(--lt);margin-bottom:.8vh">指標定義</div>'
+          +'<div style="font-size:clamp(12px,1.15vw,16px);color:#2a3540;line-height:1.8">'+def+'</div></div>'
+          +'<div><div style="font-size:clamp(11px,1vw,14px);font-weight:700;color:var(--lt);margin-bottom:.8vh">備註/會議決議</div>'
+          +'<div style="font-size:clamp(12px,1.15vw,16px);color:#2a3540;line-height:1.8">'+rmk+'</div></div>'
+          +'</div>':'')
+        +'</div>'
+        +'</section>');
+
+      // Page 2+: Patient list, 3 per page
+      const patients=sp.patients||[];
+      if(patients.length){
+        const perPage=3;
+        for(var ppi=0;ppi<patients.length;ppi+=perPage){
+          var pagePatients=patients.slice(ppi,ppi+perPage);
+          var pageNum=Math.floor(ppi/perPage)+1;
+          var totalPages=Math.ceil(patients.length/perPage);
+          var rows=pagePatients.map(function(p,ri){
+            return '<tr>'
+              +'<td style="width:9%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top;font-weight:700">'+escA(p.chartNo||'—')+'</td>'
+              +'<td style="width:8%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.name?maskName(p.name):'—')+'</td>'
+              +'<td style="width:10%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.doctor||'—')+'</td>'
+              +'<td style="padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top;line-height:1.6">'+escA(p.note||'').replace(/\n/g,'<br>')+'</td>'
+              +'</tr>';
+          }).join('');
+          slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+            +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+            +'<span style="font-size:clamp(16px,1.8vw,26px);font-weight:800">未完治病人清單</span>'
+            +'<span class="cat">'+cancer+'</span>'
+            +'<span style="margin-left:auto;font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7)">第'+pageNum+'頁 / 共'+totalPages+'頁</span>'
+            +'</div></div>'
+            +'<div style="padding:2vh 2.5vw;flex:1;overflow:hidden">'
+            +'<table style="width:100%;border-collapse:collapse">'
+            +'<thead><tr style="background:var(--dk);color:#fff">'
+            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">病歷號</th>'
+            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">姓名</th>'
+            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">主治醫師</th>'
+            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px)">未完治備註</th>'
+            +'</tr></thead>'
+            +'<tbody>'+rows+'</tbody></table>'
+            +'</div></section>');
+
+          // Image slides for this batch
+          pagePatients.forEach(function(p){
+            if(!p.images||!p.images.length)return;
+            var imgH=p.images.map(function(img){
+              var src=img.dataUrl||_pathImgCache[img.name]||'';
+              if(!src)return '';
+              return '<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
+                +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
+                +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')
+                +'</div>';
+            }).filter(Boolean);
+            if(!imgH.length)return;
+            var cols=imgH.length===1?1:imgH.length<=4?2:3;
+            var rows2=Math.ceil(imgH.length/cols);
+            var gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows2+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+            slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
+              +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+              +'<span style="font-size:clamp(13px,1.3vw,18px);font-weight:700">'+escA(p.chartNo||'')+'</span>'
+              +(p.name?' <span style="font-size:clamp(12px,1.2vw,17px)">'+escA(maskName(p.name))+'</span>':'')
+              +'<span class="cat">佐証圖片</span></div></div>'
+              +'<div style="'+gSt+'">'+imgH.join('')+'</div>'
+              +'</section>');
+          });
+        }
+      }
+    });
+
   });
 
   const N=slides.length;
