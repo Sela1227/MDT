@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.15';
+const VERSION='V4.3.16';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3104,7 +3104,7 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
@@ -3334,7 +3334,7 @@ function pickSpecialImgs(cid,si){
       var existing=new Set(d.images.map(function(x){return x.name;}));
       var list=files.map(function(f){return'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0">'
         +'<input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
-        +'<span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'
+        +'<span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name)+'</span>'
         +'</label>';}).join('');
       var overlay=document.createElement('div');
       overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
@@ -3359,7 +3359,7 @@ function pickSpecialImgs(cid,si){
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
-    type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
+    type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;
   // For new cases: remove cc-collapsed so new card starts expanded
