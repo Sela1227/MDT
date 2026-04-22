@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.3.14 → V4.3.14）
-#    新功能 / 新欄位       → +0.1   （如 V4.3.14 → V4.3.14）
-#    大改版 / 架構重構     → +1.0   （如 V4.3.14 → V4.3.14）
+#    bug fix / hotfix      → +0.01  （如 V4.3.15 → V4.3.15）
+#    新功能 / 新欄位       → +0.1   （如 V4.3.15 → V4.3.15）
+#    大改版 / 架構重構     → +1.0   （如 V4.3.15 → V4.3.15）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.3.14）
+## 十二、版本（當前 V4.3.15）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.15 | 「其他」移到最後；自動儲存 silent（不跳閱覽模式）|
 | V4.3.14 | 特殊議程影像：📂選取、每頁張數、img-slide 產出（放大/放大鏡）|
 | V4.3.13 | 修正四率 chips data-action 誤植於 class 屬性，點選無效 |
 | V4.3.12 | 四率 HTML 投影片產出；達標顏色 |

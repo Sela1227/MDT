@@ -1170,7 +1170,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.14';
+const VERSION='V4.3.15';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3112,7 +3112,7 @@ function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='c
 function specialHTML(cid,i,d){
   if(d.topicType==='完治率') return specialCRHTML(cid,i,d);
   if(['失聯率','留治率','訪視率'].includes(d.topicType)) return specialRateHTML(cid,i,d);
-  const STYPES=['核心指標','品質指標','修改指引','其他','完治率','失聯率','留治率','訪視率'];
+  const STYPES=['核心指標','品質指標','修改指引','完治率','失聯率','留治率','訪視率','其他'];
   const typeChips=STYPES.map(t=>{
     const on=(d.topicType||'')===t;
     return`<span class="tchip ${on?'on':''}" data-action="specialtype" data-cid="${cid}" data-idx="${i}" data-type="${t}">${t}</span>`;
@@ -3194,7 +3194,7 @@ function specialRateHTML(cid,i,d){
   var patId='cr-patients-'+cid+'-'+i;
   return '<div class="casecard" id="cc-'+cid+'-special-'+i+'">'
     +'<div class="casetop"><span class="cnm">'+escA(d.topicType)+'</span><button class="delbtn" onclick="delItem(\''+cid+'\',\'special\','+i+')">×</button></div>'
-    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+(d.topicType==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+(d.topicType==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+(d.topicType==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+(d.topicType==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'<span class="tchip '+(d.topicType==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+(d.topicType==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+(d.topicType==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+(d.topicType==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'</div></div>'
+    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+(d.topicType==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+(d.topicType==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+(d.topicType==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+(d.topicType==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+(d.topicType==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+(d.topicType==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+(d.topicType==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'<span class="tchip '+(d.topicType==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'</div></div>'
     +'<div class="cg2">'
     +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
     +'<div class="fg full"><div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">'
@@ -3270,7 +3270,7 @@ function specialCRHTML(cid,i,d){
     +'<span class="cnm">\u5b8c\u6cbb\u7387</span>'
     +'<button class="delbtn" data-action="delspecialitem" data-cid="'+cid+'" data-type="special" data-idx="'+i+'">\u00d7</button>'
     +'</div>'
-    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+('完治率'==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+('完治率'==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+('完治率'==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+('完治率'==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'<span class="tchip '+('完治率'==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+('完治率'==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+('完治率'==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+('完治率'==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'</div></div>'
+    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+('完治率'==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+('完治率'==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+('完治率'==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+('完治率'==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+('完治率'==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+('完治率'==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+('完治率'==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'<span class="tchip '+('完治率'==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'</div></div>'
     +'<div class="cg2">'
     +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
     +'<div class="fg full"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
@@ -3639,7 +3639,7 @@ function onExamTypeChange(sel,caseIdx,examIdx,cid){
 // ── Auto-save every 2 minutes when dirty ──
 setInterval(async function(){
   if(_dirty&&S.meeting&&S.meeting.version){
-    await saveMeeting();
+    await saveMeeting({silent:true});
   }
 },2*60*1000);
 
@@ -4164,7 +4164,7 @@ async function restoreRootHandle(){
 /* ════ Save ════ */
 let _dirty=false;
 function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}}
-async function saveMeeting(){
+async function saveMeeting(opts){
   document.querySelectorAll('.sec-foot .btn-a, #btn-save-all').forEach(b=>{b.disabled=true;b.textContent='儲存中...'})
   readForm();
   // Auto-fill Nil for cases with no past history
@@ -4203,12 +4203,14 @@ async function saveMeeting(){
   document.querySelectorAll('.sec-foot .btn-a, #btn-save-all').forEach(b=>{b.disabled=false;b.textContent='儲存'})
   renderSbRecent();
   // Switch to view mode after save
-  setTimeout(()=>{
-    S._snapshot=null;_dirty=false;
-    const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
-    S.viewMode=true;S.meetingMode='record';
-    renderEditor();
-  },1200);
+  if(!opts||!opts.silent){
+    setTimeout(()=>{
+      S._snapshot=null;_dirty=false;
+      const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
+      S.viewMode=true;S.meetingMode='record';
+      renderEditor();
+    },1200);
+  }
 }
 
 /* ════ PPTX ════ */
