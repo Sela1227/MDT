@@ -111,6 +111,58 @@
 
 ## 版本歷程
 
+### V4.3.7
+刪除有資料的個案需二次確認；事件軸改為逐筆追加（不重渲染所有列）
+
+### V4.3.1
+修正治療事件軸無法手動新增（addStruct/delStruct/updStruct 加入 timeline 處理）；每頁張數選單移至標籤旁緊鄰排版
+
+### V4.3.0
+新功能：治療事件軸（蛇形 SVG Timeline）
+- 編輯模式：類型/日期/說明輸入 + 「從治療記錄帶入」快速鍵
+- 閱覽模式：SVG 水平蛇形時間軸（≤5事件一排，6-10兩排，自動計算）
+- HTML 投影片：每個個案最後一頁，深色背景，癌別主色節點
+- 10種事件類型：診斷/切片/化療/手術/放療/影像/追蹤/復發/轉移/其他
+
+### V4.2.24
+HTML 投影片影像區塊改為自動填滿：依每頁張數（1/2/4）以 CSS Grid 均分滿版，保留 2vh 2.5vw 邊距；病理影像同步加入邊距
+
+### V4.2.23
+乳攝 HTML 分頁比例改 2:4:4（說明20%，影像各40%）；相關影像/手術照片編輯欄新增每頁張數選擇（1/2/4）
+
+### V4.2.22
+修正乳攝清除後無法新增：addmammoimg / delmammoimg 改用 replaceWith（避免 innerHTML 嵌套 mammo-imgs 容器）；caption 欄位樣式加框線加深色，明顯度提升
+
+### V4.2.21
+修正 buildImgArea / buildMammoImgArea 缺少 const cap= 定義，導致編輯模式 cap is not defined 錯誤
+
+### V4.2.20
+修正 HTML 投影片 _pathImgCache 只讀病理影像：擴充為同時讀入手術/相關/乳攝三種 fromFolder 影像
+
+### V4.2.19
+HTML 投影片檔名改為「日期_癌別多專科會議.html」（如 2026-04-20_乳癌多專科會議.html）
+
+### V4.2.18
+四種影像（病理/手術/相關/乳攝）加入可編輯說明欄：預設顯示檔名，點擊可輸入自訂描述，存檔後保留
+
+### V4.2.17
+閱覽模式加入手術照片區塊（previewsurgimg），補齊與病理影像、乳攝、相關影像相同的預覽功能
+
+### V4.2.16
+修正相關影像預覽失效：改用 data-action="previewrelatedimg" + event delegation（同乳攝修正模式）
+
+### V4.2.15
+修正乳攝預覽失效：閱覽模式乳攝按鈕改用 data-action="previewmammoimg" + event delegation，不再用 onclick 內嵌 base64
+
+### V4.2.14
+修正儲存後未返回閱覽模式：saveMeeting setTimeout 改為儲存後切換 S.viewMode=true 並呼叫 renderEditor
+
+### V4.2.13
+修正乳攝照片跑到相關影像：elOk/elR 改依 type 選擇正確 DOM 元素；addmammoimg 加入壓縮（最長邊 1200px，JPEG 0.75）解決卡頓
+
+### V4.2.12
+HTML 投影片下載/分享檔名改為「日期_癌別.html」（如 2026-04-20_乳癌.html）
+
 ### V4.2.11
 還原至 V4.2.5 基礎，只移除 extraJs 中誤植的 Ctrl+S handler（S.meeting 引用），暫不刪除重覆碼
 

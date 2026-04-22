@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.2.11 → V4.2.11）
-#    新功能 / 新欄位       → +0.1   （如 V4.2.11 → V4.2.11）
-#    大改版 / 架構重構     → +1.0   （如 V4.2.11 → V4.2.11）
+#    bug fix / hotfix      → +0.01  （如 V4.3.7 → V4.3.7）
+#    新功能 / 新欄位       → +0.1   （如 V4.3.7 → V4.3.7）
+#    大改版 / 架構重構     → +1.0   （如 V4.3.7 → V4.3.7）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,23 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.2.11）
+## 十二、版本（當前 V4.3.7）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.7 | 影像投影片 CSS Grid 自動填滿（1/2/4張）+ 邊距 2vh 2.5vw |
+| V4.2.23 | 乳攝 HTML 比例 2:4:4；相關影像/手術照片每頁張數控制（imgsPerSlide/surgImgsPerSlide）|
+| V4.2.22 | addmammoimg/delmammoimg 改 replaceWith；caption input 樣式加框|
+| V4.2.21 | 修正 buildImgArea/buildMammoImgArea 缺 const cap=（打包遺漏）|
+| V4.2.20 | _pathImgCache 擴充讀入所有 fromFolder 影像（病理/手術/相關/乳攝）|
+| V4.2.19 | HTML 投影片檔名加「多專科會議」後綴 |
+| V4.2.18 | 四種影像加入可編輯 caption input；data-action=updimgcaption change delegation |
+| V4.2.17 | caseViewHTML 加入手術照片區塊；data-action=previewsurgimg delegation |
+| V4.2.16 | 修正相關影像預覽失效：改 data-action=previewrelatedimg，確認手術影像在閱覽模式不顯示（無此問題）|
+| V4.2.15 | 修正乳攝預覽失效：改 data-action=previewmammoimg，與 previewpathimg 相同模式 |
+| V4.2.14 | 修正儲存後未返回閱覽模式（saveMeeting 改 S.viewMode=true + renderEditor）|
+| V4.2.13 | 修正乳攝照片跑到相關影像（elOk 先查 imgs- 的 bug）；加入圖片壓縮防卡頓 |
+| V4.2.12 | HTML 投影片檔名改為「日期_癌別.html」（日期在前，不加投影片後綴）|
 | V4.2.11 | 還原至 V4.2.5，僅修正 extraJs 中誤植的 Ctrl+S handler（S.meeting 引用白屏 bug）|
 | V4.2.5 | 影像資料夾雙層：根目錄+自動子目錄（日期+癌別）；自訂覆蓋；設定頁選根目錄 |
 | V4.2.4 | 影像資料夾改每場會議各自設定（key=imgFolder_{meetingId}）；自動恢復授權；清除/更換各自獨立 |
