@@ -111,6 +111,12 @@
 
 ## 版本歷程
 
+### V4.3.23
+HTML 投影片新增「病理切片影像集中於各癌別結尾」checkbox：勾選後各癌別所有個案主頁先產出，病理切片影像統一移至該癌別最後；手術/相關/乳攝影像不受影響
+
+### V4.3.22
+特殊議程影像補加「清除全部」按鈕（buildSpecialImgArea 補 clearAction + delegation）；選圖對話框補檔名顯示（同 pickimgfolder 格式：baseName + ext badge + hover）
+
 ### V4.3.21
 整併 buildImgArea / buildPathImgArea / buildSurgicalImgArea / buildSpecialImgArea 四個函數為一個通用 buildGenericImgArea，各原函數保留為薄包裝層，省約 40KB
 
