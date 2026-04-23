@@ -835,43 +835,24 @@ textarea{resize:vertical}
 
     <!-- Settings -->
     <div id="view-settings" style="display:none">
-      <div class="c-hdr"><div><div class="c-title">設定</div><div class="c-sub">地點・醫師・癌別・共享資料夾・AI</div></div></div>
+      <div class="c-hdr"><div><div class="c-title">設定</div><div class="c-sub">地點・醫師・癌別・影像資料夾・備份・系統</div></div></div>
       <div class="wrap">
         <div class="section">
           <div style="padding:0 20px;border-bottom:1px solid var(--blt)">
             <div class="tabs" id="st-tabs" style="margin-bottom:0;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none">
-              <div class="tab active" onclick="showStab('folder',this)">共享資料夾</div>
-              <div class="tab" onclick="showStab('locs',this)">地點</div>
-              <div class="tab" onclick="showStab('examtypes',this)">檢查項目</div>
+              <div class="tab active" onclick="showStab('locs',this)">地點</div>
               <div class="tab" onclick="showStab('drs',this)">醫師</div>
               <div class="tab" onclick="showStab('cancers',this)">癌別</div>
-              <div class="tab" onclick="showStab('ai',this)">AI</div>
-              <div class="tab" onclick="showStab('testdata',this)">測試</div>
+              <div class="tab" onclick="showStab('examtypes',this)">檢查項目</div>
               <div class="tab" onclick="showStab('imgfolder',this)">影像資料夾</div>
-              <div class="tab" onclick="showStab('github',this)">GitHub 分享</div>
-              <div class="tab" onclick="showStab('backup',this)">備份還原</div>
-              <div class="tab" onclick="showStab('nas',this)">NAS 備份</div>
+              <div class="tab" onclick="showStab('backup',this)">備份</div>
+              <div class="tab" onclick="showStab('system',this)">系統</div>
             </div>
           </div>
           <div style="padding:22px">
 
-            <div class="stab on" id="stab-folder">
-              <div class="st-title">共享資料夾</div>
-              <div class="st-desc">連線後儲存時自動同步至共用位置。Chrome 或 Edge。</div>
-              <div class="path-box empty" id="folder-path">尚未連線</div>
-              <div class="brow"><button class="btn btn-a btn-sm" onclick="connectFolder()">連線</button><button class="btn btn-b btn-sm" onclick="disconnectFolder()">中斷</button></div>
-            </div>
 
-            <div class="stab" id="stab-examtypes">
-  <div class="st-title">檢查項目管理</div>
-  <div class="st-desc">EXAM 條列的下拉選項（如 CT、MRI、SONO、PET-CT）。</div>
-  <div id="exam-types-list" style="margin:12px 0"></div>
-  <div style="display:flex;gap:8px;margin-top:8px">
-    <input id="new-exam-type" placeholder="新增項目（如：ECG）" style="flex:1;font-size:13px;padding:7px 10px">
-    <button class="btn btn-a btn-sm" onclick="addExamType()">新增</button>
-  </div>
-</div>
-<div class="stab" id="stab-locs">
+            <div class="stab on" id="stab-locs">
               <div class="st-title">地點管理</div>
               <div class="st-desc">所有開會地點，癌別設定從此選取。</div>
               <div id="locs-list"></div>
@@ -915,6 +896,16 @@ textarea{resize:vertical}
               </div>
             </div>
 
+            <div class="stab" id="stab-examtypes">
+  <div class="st-title">檢查項目管理</div>
+  <div class="st-desc">EXAM 條列的下拉選項（如 CT、MRI、SONO、PET-CT）。</div>
+  <div id="exam-types-list" style="margin:12px 0"></div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <input id="new-exam-type" placeholder="新增項目（如：ECG）" style="flex:1;font-size:13px;padding:7px 10px">
+    <button class="btn btn-a btn-sm" onclick="addExamType()">新增</button>
+  </div>
+</div>
+
             <div class="stab" id="stab-imgfolder">
   <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定根目錄後，進入每場會議時自動在根目錄下建立以日期+癌別命名的子目錄（如 <b>20260416 乳癌</b>），圖片放進去即可。亦可在產出區手動為每場會議指定不同資料夾。</div>
   <div id="imgfolder-status" style="margin-bottom:12px;font-size:13px;color:var(--textmd)">載入中...</div>
@@ -923,45 +914,37 @@ textarea{resize:vertical}
     <button class="btn btn-b btn-sm" onclick="clearRootFolder()">清除根目錄</button>
   </div>
 </div>
-<div class="stab" id="stab-github">
-  <div class="st-title">GitHub 投影片分享</div>
-  <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結<br>需先至 GitHub 申請 Personal Access Token（Contents: Read and write）</div>
 
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-    <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxx（Personal Access Token）" style="flex:1;font-size:12px;font-family:monospace">
-    <button class="btn btn-a btn-sm" onclick="saveGhToken()">儲存</button>
-    <button class="btn btn-b btn-sm" onclick="clearGhToken()">清除</button>
-  </div>
-  <div id="gh-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
-  <div style="font-weight:600;font-size:12px;margin-bottom:6px">已分享的投影片</div>
-  <div id="shared-slides-list"></div>
+            <div class="stab" id="stab-backup">
+  <div class="st-title">備份</div>
+  <div class="st-desc">共享資料夾同步、NAS 自動備份、資料匯出還原與儲存空間管理。</div>
+  <div style="display:flex;flex-direction:column;gap:0">
 
-  <hr style="border:none;border-top:1px solid var(--blt);margin:0 0 16px">
-  </div>
+    <div style="padding:16px 0">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">共享資料夾</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:8px">連線後儲存時自動同步至共用位置。Chrome 或 Edge。</div>
+      <div class="path-box empty" id="folder-path">尚未連線</div>
+      <div class="brow"><button class="btn btn-a btn-sm" onclick="connectFolder()">連線</button><button class="btn btn-b btn-sm" onclick="disconnectFolder()">中斷</button></div>
+    </div>
 
-<div class="stab" id="stab-nas">
-  <div class="st-title">NAS 自動備份</div>
-  <div class="st-desc">選取 NAS 掛載的資料夾後，每次儲存會議自動備份完整資料（含影像）至 NAS，最多保留 10 份。</div>
-  <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
-    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
-      <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--fog-dk)">NAS 備份資料夾</div>
-      <div id="nas-folder-status" style="font-size:12px;color:var(--textlt);margin-bottom:10px">尚未設定</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-a" onclick="pickNasFolder()">📂 選取 NAS 資料夾</button>
-        <button class="btn btn-b" onclick="clearNasFolder()" id="btn-clear-nas" style="display:none">清除</button>
-        <button class="btn btn-b" onclick="testNasBackup()" id="btn-test-nas" style="display:none">測試備份</button>
+    <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
+
+    <div style="padding:16px 0">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">NAS 自動備份</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:8px">每次儲存後自動備份完整資料（含影像）至 NAS，最多保留 10 份。</div>
+      <div id="nas-folder-status" style="font-size:12px;color:var(--textlt);margin-bottom:8px">尚未設定</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-a btn-sm" onclick="pickNasFolder()">選取 NAS 資料夾</button>
+        <button class="btn btn-b btn-sm" onclick="clearNasFolder()" id="btn-clear-nas" style="display:none">清除</button>
+        <button class="btn btn-b btn-sm" onclick="testNasBackup()" id="btn-test-nas" style="display:none">測試備份</button>
       </div>
+      <div id="nas-last-backup" style="font-size:11px;color:var(--textlt)">尚無備份記錄</div>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
-      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">備份狀態</div>
-      <div id="nas-last-backup" style="font-size:12px;color:var(--textlt)">尚無備份記錄</div>
-    </div>
-  </div>
-</div>
-<div class="stab" id="stab-backup">
-<div class="st-title">備份與還原</div>
-  <div class="st-desc">將所有會議記錄（含影像）打包成 JSON 備份檔，或從備份檔匯入還原。適合換電腦、跨裝置同步，或定期備份。</div>
-  <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
+
+    <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
+
+    <div style="padding:16px 0">
+      <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
     <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">匯出備份</div>
       <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">包含所有會議、個案資料、影像、設定。完整姓名，無遮蔽。</div>
@@ -986,22 +969,19 @@ textarea{resize:vertical}
       <button class="btn btn-b" onclick="openBatchDeleteModal()">選擇要刪除的會議…</button>
     </div>
   <div id="backup-msg" style="font-size:12px;color:var(--ok);padding:2px"></div>
-</div>
-<div class="stab" id="stab-testdata">
-              <div class="st-title">測試資料</div>
-              <div class="st-desc">生成三位個管師各癌別的測試會議記錄（各3場，共18場），方便測試系統功能。</div>
-              <div style="padding:12px 16px;background:var(--warnbg);color:var(--warn);border-radius:2px;font-size:12px;margin-bottom:14px">
-                注意：正式上線後請勿使用，測試資料會混入真實記錄中。
-              </div>
-              <div class="brow">
-  <button class="btn btn-a" onclick="generateTestData()">生成測試資料</button>
-  <button class="btn btn-b" onclick="clearTestData()">清除所有測試資料</button>
-</div>
-            </div>
+    </div>
 
-            <div class="stab" id="stab-ai">
-              <div class="st-title">AI 摘要設定</div>
-              <div class="st-desc">填入 API Key 後，會議頁可直接點「AI 生成摘要」產出討論記錄，不需切換到 claude.ai。</div>
+  </div>
+</div>
+
+            <div class="stab" id="stab-system">
+  <div class="st-title">系統</div>
+  <div class="st-desc">AI 摘要設定、GitHub 投影片分享、測試資料管理。</div>
+  <div style="display:flex;flex-direction:column;gap:0">
+
+    <div style="padding:16px 0">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">AI 摘要設定</div>
+      <div class="st-desc">填入 API Key 後，會議頁可直接點「AI 生成摘要」產出討論記錄，不需切換到 claude.ai。</div>
               <div id="ai-file-warn" style="display:none;padding:8px 12px;background:var(--warnbg);color:var(--warn);border-radius:2px;font-size:12px;line-height:1.7;margin-bottom:14px">
                 目前從本機檔案開啟，API 呼叫會被瀏覽器擋住。請部署至 GitHub Pages 後再使用。
               </div>
@@ -1037,7 +1017,42 @@ textarea{resize:vertical}
                 <div id="ai-save-msg" class="ai-status" style="margin-top:8px"></div>
                 <div id="ai-test-msg" class="ai-status" style="margin-top:6px"></div>
               </div>
-            </div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
+
+    <div style="padding:16px 0">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">GitHub 投影片分享</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結<br>需先至 GitHub 申請 Personal Access Token（Contents: Read and write）</div>
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+    <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxx（Personal Access Token）" style="flex:1;font-size:12px;font-family:monospace">
+    <button class="btn btn-a btn-sm" onclick="saveGhToken()">儲存</button>
+    <button class="btn btn-b btn-sm" onclick="clearGhToken()">清除</button>
+  </div>
+  <div id="gh-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
+  <div style="font-weight:600;font-size:12px;margin-bottom:6px">已分享的投影片</div>
+  <div id="shared-slides-list"></div>
+
+  <hr style="border:none;border-top:1px solid var(--blt);margin:0 0 16px">
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
+
+    <div style="padding:16px 0">
+      <div class="st-title">測試資料</div>
+              <div class="st-desc">生成三位個管師各癌別的測試會議記錄（各3場，共18場），方便測試系統功能。</div>
+              <div style="padding:12px 16px;background:var(--warnbg);color:var(--warn);border-radius:2px;font-size:12px;margin-bottom:14px">
+                注意：正式上線後請勿使用，測試資料會混入真實記錄中。
+              </div>
+              <div class="brow">
+  <button class="btn btn-a" onclick="generateTestData()">生成測試資料</button>
+  <button class="btn btn-b" onclick="clearTestData()">清除所有測試資料</button>
+</div>
+    </div>
+
+  </div>
+</div>
 
           </div>
         </div>
@@ -1194,7 +1209,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.27';
+const VERSION='V4.3.28';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];

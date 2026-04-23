@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.3.27 → V4.3.27）
-#    新功能 / 新欄位       → +0.1   （如 V4.3.27 → V4.3.27）
-#    大改版 / 架構重構     → +1.0   （如 V4.3.27 → V4.3.27）
+#    bug fix / hotfix      → +0.01  （如 V4.3.28 → V4.3.28）
+#    新功能 / 新欄位       → +0.1   （如 V4.3.28 → V4.3.28）
+#    大改版 / 架構重構     → +1.0   （如 V4.3.28 → V4.3.28）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.3.27）
+## 十二、版本（當前 V4.3.28）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.28 | 設定頁重整 11→7 tabs，相關功能整合 |
 | V4.3.27 | NAS 自動備份：設定頁 tab、backupToNAS()、10份輪替 |
 | V4.3.26 | checkbox 移至資料夾列右側 |
 | V4.3.25 | checkbox 移入 HTML 投影片同格，grid 整齊 |
