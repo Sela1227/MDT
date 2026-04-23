@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.3.30 → V4.3.30）
-#    新功能 / 新欄位       → +0.1   （如 V4.3.30 → V4.3.30）
-#    大改版 / 架構重構     → +1.0   （如 V4.3.30 → V4.3.30）
+#    bug fix / hotfix      → +0.01  （如 V4.3.31 → V4.3.31）
+#    新功能 / 新欄位       → +0.1   （如 V4.3.31 → V4.3.31）
+#    大改版 / 架構重構     → +1.0   （如 V4.3.31 → V4.3.31）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.3.30）
+## 十二、版本（當前 V4.3.31）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.31 | DOCX 改版：決議確認單格式，深藍 header，12pt，移除簽署欄 |
 | V4.3.30 | createdBy 欄位 + canEditMeeting + 唯讀 UI 控制 |
 | V4.3.29 | NAS 備份改為每天首次啟動觸發，移除每存檔觸發 |
 | V4.3.28 | 設定頁重整 11→7 tabs，相關功能整合 |

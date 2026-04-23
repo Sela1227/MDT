@@ -1210,7 +1210,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.30';
+const VERSION='V4.3.31';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4638,153 +4638,241 @@ async function genDOCX(){
   try{
     const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const{Document,Paragraph,TextRun,HeadingLevel,Packer,
-          Table,TableRow,TableCell,WidthType,ShadingType}=docx;
+          Table,TableRow,TableCell,WidthType,ShadingType,
+          AlignmentType,BorderStyle,PageNumber,Footer,Header,
+          convertInchesToTwip}=docx;
 
-    const hdColor='3A4550',ltColor='637281';
-    const mkP=(text,opts={})=>new Paragraph({children:[new TextRun({text:text||'',...opts})],spacing:{after:120}});
-    const mkH1=t=>new Paragraph({text:t,heading:HeadingLevel.HEADING_1,spacing:{after:240}});
-    const mkH2=t=>new Paragraph({text:t,heading:HeadingLevel.HEADING_2,spacing:{before:400,after:160}});
-    const mkH3=t=>new Paragraph({text:t,heading:HeadingLevel.HEADING_3,spacing:{before:200,after:100}});
-    const mkRow=(label,value)=>new TableRow({children:[
-      new TableCell({children:[new Paragraph({children:[new TextRun({text:label,bold:true,size:20,color:ltColor})]})],width:{size:18,type:WidthType.PERCENTAGE},shading:{type:ShadingType.CLEAR,color:'auto',fill:'EFF1F4'}}),
-      new TableCell({children:[new Paragraph({children:[new TextRun({text:value||'',size:20})]})],width:{size:82,type:WidthType.PERCENTAGE}})
-    ]});
-    const mkEmptyRow=(label,height=2)=>new TableRow({children:[
-      new TableCell({children:[new Paragraph({children:[new TextRun({text:label,bold:true,size:20,color:ltColor})]})],shading:{type:ShadingType.CLEAR,color:'auto',fill:'EFF1F4'}}),
-      new TableCell({children:Array(height).fill(null).map(()=>new Paragraph({text:'',spacing:{after:200}}))})
-    ]});
-    const mkTable=rows=>new Table({rows,width:{size:100,type:WidthType.PERCENTAGE},margins:{top:80,bottom:80,left:80,right:80}});
+    // ── Colors ──
+    const C={title:'1E2D3D',dark:'2C3E50',mid:'546E7A',light:'78909C',
+              xlt:'B0BEC5',bg:'F5F7F8',white:'FFFFFF',accent:'2E5F8A',
+              divider:'CFD8DC'};
+
+    // ── Helpers ──
+    const pt=n=>n*20; // half-points to twip
+    const mkRun=(text,opts={})=>new TextRun({text:text||'',...opts});
+
+    // Horizontal rule paragraph
+    const mkHR=()=>new Paragraph({
+      border:{bottom:{style:BorderStyle.SINGLE,size:6,color:C.divider}},
+      spacing:{before:pt(6),after:pt(6)}
+    });
+
+    // Section header (e.g. ▌前期追蹤)
+    const mkSecHdr=(text)=>new Paragraph({
+      children:[mkRun(text,{bold:true,size:pt(13),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      spacing:{before:pt(14),after:pt(6)},
+      border:{left:{style:BorderStyle.THICK,size:12,color:C.accent}}
+    });
+
+    // Case header paragraph (deep blue bg via shading in table)
+    const mkCaseHdr=(no,c,drs)=>new Table({
+      width:{size:100,type:WidthType.PERCENTAGE},
+      borders:{top:{style:BorderStyle.NONE},bottom:{style:BorderStyle.NONE},
+               left:{style:BorderStyle.NONE},right:{style:BorderStyle.NONE},
+               insideH:{style:BorderStyle.NONE},insideV:{style:BorderStyle.NONE}},
+      rows:[new TableRow({children:[
+        new TableCell({
+          width:{size:100,type:WidthType.PERCENTAGE},
+          shading:{type:ShadingType.CLEAR,fill:C.accent},
+          margins:{top:pt(4),bottom:pt(4),left:pt(6),right:pt(6)},
+          children:[new Paragraph({
+            children:[
+              mkRun(no+'.  ',{bold:true,size:pt(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun((c.chartNo||'')+'\u3000'+(c.name?maskName(c.name):''),
+                {bold:true,size:pt(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun('\u3000'+(c.gender||'M')+'/'+(c.age||'\u2014'),
+                {size:pt(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun('\u3000VS '+drs,
+                {size:pt(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+            ]
+          })]
+        })
+      ]})]
+    });
+
+    // Label + content block
+    const mkBlock=(label,content,isEmpty)=>new Table({
+      width:{size:100,type:WidthType.PERCENTAGE},
+      borders:{top:{style:BorderStyle.NONE},bottom:{style:BorderStyle.NONE},
+               left:{style:BorderStyle.NONE},right:{style:BorderStyle.NONE},
+               insideH:{style:BorderStyle.NONE},insideV:{style:BorderStyle.NONE}},
+      rows:[new TableRow({children:[
+        new TableCell({
+          width:{size:16,type:WidthType.PERCENTAGE},
+          shading:{type:ShadingType.CLEAR,fill:C.bg},
+          margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
+          children:[new Paragraph({children:[
+            mkRun(label,{bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})
+          ]})]
+        }),
+        new TableCell({
+          width:{size:84,type:WidthType.PERCENTAGE},
+          margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
+          children:isEmpty
+            ?[new Paragraph({children:[mkRun('',{size:pt(12)})],spacing:{after:pt(16)}})]
+            :(content||'').split('\n').map(line=>new Paragraph({
+                children:[mkRun(line,{size:pt(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
+                spacing:{after:pt(2)}
+              }))
+        })
+      ]})]
+    });
+
+    // Followup status badge
+    const mkFupStatus=(status)=>new Paragraph({
+      children:[
+        mkRun('\u72c0\u614b\uff1a',{bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun(status==='ongoing'?'\u7e7c\u7e8c\u8ffd\u8e64':'\u7d50\u6848',
+          {bold:true,size:pt(11),
+           color:status==='ongoing'?'1565C0':'B71C1C',
+           font:'\u65b0\u7d30\u660e\u9ad4'})
+      ],
+      spacing:{before:pt(2),after:pt(4)}
+    });
 
     const children=[];
-    // 標題
-    children.push(new Paragraph({children:[new TextRun({text:mtgTitle(cids),bold:true,size:36,color:hdColor})],spacing:{after:200}}));
-    children.push(mkTable([mkRow('日期',rocDate(m.date)),mkRow('時間',m.time),mkRow('地點',m.loc),mkRow('聯絡人',m.contact)]));
-    children.push(new Paragraph({text:'',spacing:{after:300}}));
 
-    cids.forEach(cid=>{
+    // ── Header: hospital + meeting info ──
+    children.push(new Paragraph({
+      children:[mkRun('\u5f70\u6ff1\u79c0\u50b3\u7652\u764c\u75c7\u4e2d\u5fc3',
+        {bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      spacing:{after:pt(2)}
+    }));
+    children.push(new Paragraph({
+      children:[mkRun(mtgTitle(cids),
+        {bold:true,size:pt(16),color:C.title,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      spacing:{after:pt(4)}
+    }));
+    // Date + time + location on one line
+    const dateStr=rocDate(m.date).replace(/\(\u661f\u671f.\)$/,'');
+    const infoLine=[dateStr,m.time,m.loc].filter(Boolean).join('\u3000\u3000');
+    children.push(new Paragraph({
+      children:[mkRun(infoLine,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      spacing:{after:pt(2)}
+    }));
+    children.push(mkHR());
+
+    cids.forEach(function(cid){
       const ca=CFG[cid],sec=m.sections[cid]||{followups:[],cases:[],special:[]};
-      if(cids.length>1)children.push(mkH1(ca.name));
+      if(cids.length>1){
+        children.push(new Paragraph({
+          children:[mkRun(ca.name,{bold:true,size:pt(14),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+          spacing:{before:pt(10),after:pt(6)},
+          border:{bottom:{style:BorderStyle.SINGLE,size:4,color:C.accent}}
+        }));
+      }
 
-      // 前期追蹤事項
-      children.push(mkH2('前期追蹤事項'));
+      // ── 前期追蹤 ──
       const fups=sec.followups||[];
       if(fups.length){
-        fups.forEach((c,i)=>{
-          children.push(mkH3(`追蹤 ${i+1}：${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
-          children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('追蹤說明',c.note||'')]));
-          children.push(new Paragraph({text:'',spacing:{after:120}}));
-        });
-      }else{
-        children.push(mkP('（無前期追蹤個案）',{italics:true,color:ltColor}));
-      }
-
-      // 個案討論
-      children.push(mkH2('個案討論'));
-      const cases=sec.cases||[];
-      if(cases.length){
-        cases.forEach((c,i)=>{
-          const drs=getDoctors(c).join('、')||'—';
-          // Case header: chart no, name, doctors, diagnosis
+        children.push(mkSecHdr('\u524d\u671f\u8ffd\u8e64'));
+        fups.forEach(function(f,i){
+          const drs=getDoctorStr(f);
           children.push(new Paragraph({
             children:[
-              new TextRun({text:(i+1)+'. '+(c.chartNo||'')+'  '+(c.name?maskName(c.name):''),bold:true,size:22,color:hdColor}),
-              new TextRun({text:'  '+c.gender+'/'+(c.age||'—')+'  VS '+drs,size:20,color:ltColor}),
-            ],spacing:{before:200,after:60}
+              mkRun((i+1)+'.  ',{bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun((f.chartNo||'')+'\u3000'+(f.name?maskName(f.name):''),
+                {bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun(drs&&drs!=='\u2014'?'\u3000VS '+drs:'',
+                {size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+            ],
+            spacing:{before:pt(6),after:pt(2)}
           }));
-          if(c.diagnosis)children.push(mkP(c.diagnosis,{size:20,color:ltColor}));
-          // Info table: all fields
-          const infoRows=[];
-          if(c.cc)infoRows.push(mkRow('現病史',c.cc));
-          const phAll2=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
-          if(phAll2)infoRows.push(mkRow('過去病史',phAll2));
-          if((c.pathologies||[]).length){const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('\n');infoRows.push(mkRow('病理',pStr));}
-          else if(c.pathology){infoRows.push(mkRow('病理',(c.pathologyDate?c.pathologyDate+' ':'')+c.pathology));}
-          // Exams (structured list)
-          const exStr2=(c.exams||[]).length
-            ?(c.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(ex=>(ex.name||'')+(ex.date?'('+ex.date+')':'')+(ex.content?' : '+ex.content:'')).join('\n')
-            :c.exam||'';
-          if(exStr2)infoRows.push(mkRow('檢查',exStr2));
-          // Treatments (structured list)
-          const trStr2=(c.treatments||[]).length
-            ?(c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(tr=>(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'')).join('\n')
-            :(c.treatment&&c.treatment!=='尚未治療'?c.treatment:'');
-          if(trStr2)infoRows.push(mkRow('治療',trStr2));
-          if((c.markers||[]).length){const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+'： ':' ')+(mk.content||'')).join('\n');infoRows.push(mkRow('癌指數',mkStr));}
-          if(c.discussion)infoRows.push(mkRow('討論要點',c.discussion));
-          if(infoRows.length)children.push(mkTable(infoRows));
-          // Discussion focus: topics + summary + decision (expanded)
-          const topics=(c.topics||[]).join('、');
-          if(topics)children.push(new Paragraph({
-            children:[new TextRun({text:'討論主題：'+topics,size:20,color:ltColor,italics:true})],
-            spacing:{before:120,after:80}
+          if(f.note)children.push(new Paragraph({
+            children:[mkRun(f.note,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{after:pt(2)},
+            indent:{left:pt(16)}
           }));
-          // Summary - large empty area for filling in
-          children.push(mkTable([
-            mkEmptyRow('討論摘要',3),
-            mkEmptyRow('決策結論',2)
-          ]));
-          // If already filled
-          if(c.summary||c.decision){
-            children.push(mkTable([
-              c.summary?mkRow('摘要',c.summary):null,
-              c.decision?mkRow('結論',c.decision):null
-            ].filter(Boolean)));
+          children.push(mkFupStatus(f.status||'closed'));
+        });
+        children.push(mkHR());
+      }
+
+      // ── 個案討論 ──
+      const cases=sec.cases||[];
+      if(cases.length){
+        children.push(mkSecHdr('\u500b\u6848\u8a0e\u8ad6'));
+        cases.forEach(function(c,i){
+          const drs=getDoctorStr(c);
+          // Case header (blue bg)
+          children.push(mkCaseHdr(i+1,c,drs));
+          // Diagnosis
+          if(c.diagnosis){
+            children.push(new Paragraph({
+              children:[mkRun(c.diagnosis,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+              spacing:{before:pt(3),after:pt(4)},
+              indent:{left:pt(4)}
+            }));
           }
-          children.push(new Paragraph({text:'',spacing:{after:200}}));
-        });
-      }else{
-        children.push(mkP('（無個案討論）',{italics:true,color:ltColor}));
-      }
-      // 醫療小組
-      const team2=sec.team||[];
-      if(team2.length){
-        children.push(mkH2('醫療小組'));
-        team2.forEach((c,i)=>{
-          children.push(mkH3(`${i+1}. ${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
-          children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('說明',c.note||'')]));
-          children.push(new Paragraph({text:'',spacing:{after:100}}));
-        });
-      }
-      // 必要事件
-      const events2=sec.events||[];
-      if(events2.length){
-        children.push(mkH2('必要事件'));
-        events2.forEach((c,i)=>{
-          children.push(mkH3(`${i+1}. ${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
-          children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('說明',c.note||'')]));
-          children.push(new Paragraph({text:'',spacing:{after:100}}));
+          // Treatment
+          const trStr=(c.treatments||[]).length
+            ?(c.treatments||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
+              .map(function(tr){return(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'');}).join('\n')
+            :(c.treatment&&c.treatment!=='\u5c1a\u672a\u6cbb\u7642'?c.treatment:'');
+          if(trStr)children.push(mkBlock('\u6cbb\u7642',trStr,false));
+          // Discussion topics
+          const topics=(c.topics||[]).join('\u3001');
+          if(topics)children.push(new Paragraph({
+            children:[mkRun('\u8a0e\u8ad6\u4e3b\u984c\uff1a'+topics,
+              {size:pt(10),color:C.xlt,italics:true,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{before:pt(2),after:pt(2)},indent:{left:pt(4)}
+          }));
+          // Summary - show content if filled, else empty lines
+          children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',c.summary||'',!c.summary));
+          // Decision
+          children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',c.decision||'',!c.decision));
+          children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
-      // 特殊議程
+
+      // ── 特殊議程 ──
       const sp=sec.special||[];
       if(sp.length){
-        children.push(mkH2('特殊議程'));
-        sp.forEach(s=>{
+        children.push(mkSecHdr('\u7279\u6b8a\u8b70\u7a0b'));
+        sp.forEach(function(s){
           const label=(s.topicType?'['+s.topicType+'] ':'')+( s.title||'');
-          children.push(mkH3(label));
-          if(s.note)children.push(mkP(s.note));
-          children.push(new Paragraph({text:'',spacing:{after:200}}));
+          children.push(new Paragraph({
+            children:[mkRun(label,{bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{before:pt(6),after:pt(2)}
+          }));
+          if(s.note)children.push(new Paragraph({
+            children:[mkRun(s.note,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{after:pt(4)},indent:{left:pt(8)}
+          }));
         });
+        children.push(mkHR());
       }
     });
 
-    // 簽署欄
-    children.push(new Paragraph({text:'',spacing:{before:600,after:0}}));
-    children.push(mkTable([
-      new TableRow({children:[
-        new TableCell({children:[new Paragraph({children:[new TextRun({text:'個管師簽署',bold:true,size:20,color:ltColor})]})],shading:{type:ShadingType.CLEAR,color:'auto',fill:'EFF1F4'}}),
-        new TableCell({children:[new Paragraph({text:'',spacing:{after:400}})]}),
-        new TableCell({children:[new Paragraph({children:[new TextRun({text:'紀錄日期',bold:true,size:20,color:ltColor})]})],shading:{type:ShadingType.CLEAR,color:'auto',fill:'EFF1F4'}}),
-        new TableCell({children:[new Paragraph({text:'',spacing:{after:400}})]})
-      ]})
-    ]));
+    // ── Footer: recorder + date ──
+    const recorder=S.user?S.user.name:'';
+    const recDate=rocDate(m.date).replace(/\(\u661f\u671f.\)$/,'');
+    children.push(new Paragraph({text:'',spacing:{before:pt(12),after:0}}));
+    children.push(new Paragraph({
+      children:[
+        mkRun('\u8a18\u9304\uff1a'+recorder,{size:pt(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u3000\u3000'+recDate,{size:pt(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+      ],
+      alignment:AlignmentType.RIGHT
+    }));
 
-    const doc=new Document({sections:[{children}]});
+    const doc=new Document({
+      styles:{default:{document:{run:{font:'\u65b0\u7d30\u660e\u9ad4',size:pt(12)}}}},
+      sections:[{
+        properties:{page:{margin:{
+          top:convertInchesToTwip(0.8),
+          bottom:convertInchesToTwip(0.8),
+          left:convertInchesToTwip(0.9),
+          right:convertInchesToTwip(0.9)
+        }}},
+        children
+      }]
+    });
     const blob=await Packer.toBlob(doc);
-    download(blob,`${S.cids.map(id=>CFG[id]?.name).join('_')}_${S.meeting.date}_MDT會議記錄.docx`);
-    setLibStatus('DOCX 已下載','var(--ok)');setTimeout(()=>setLibStatus(''),3000);
-  }catch(e){setLibStatus('DOCX 產生錯誤：'+e.message,'var(--err)');console.error(e)}
-  btn.disabled=false;btn.textContent='DOCX 會議記錄';
+    download(blob,S.cids.map(function(id){return CFG[id]?.name;}).join('_')+'_'+m.date+'_MDT\u6703\u8b70\u8a18\u9304.docx');
+    setLibStatus('DOCX \u5df2\u4e0b\u8f09','var(--ok)');setTimeout(function(){setLibStatus('');},3000);
+  }catch(e){setLibStatus('DOCX \u7522\u751f\u932f\u8aa4\uff1a'+e.message,'var(--err)');console.error(e);}
+  btn.disabled=false;btn.textContent='DOCX \u6703\u8b70\u8a18\u9304';
 }
 
 /* ════ Generators ════ */
