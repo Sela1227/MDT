@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.3.27
+NAS 自動備份：設定頁新增 NAS tab（選取資料夾/測試/狀態）；每次 saveMeeting 後背景執行 backupToNAS()（含全部圖片 base64）；最多保留 10 份，靜默失敗不中斷操作
+
 ### V4.3.26
 「病理切片影像集中」checkbox 移至資料夾狀態列同排右側（margin-left:auto），grid 5欄全為按鈕
 

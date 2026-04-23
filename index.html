@@ -850,6 +850,7 @@ textarea{resize:vertical}
               <div class="tab" onclick="showStab('imgfolder',this)">影像資料夾</div>
               <div class="tab" onclick="showStab('github',this)">GitHub 分享</div>
               <div class="tab" onclick="showStab('backup',this)">備份還原</div>
+              <div class="tab" onclick="showStab('nas',this)">NAS 備份</div>
             </div>
           </div>
           <div style="padding:22px">
@@ -938,6 +939,25 @@ textarea{resize:vertical}
   <hr style="border:none;border-top:1px solid var(--blt);margin:0 0 16px">
   </div>
 
+<div class="stab" id="stab-nas">
+  <div class="st-title">NAS 自動備份</div>
+  <div class="st-desc">選取 NAS 掛載的資料夾後，每次儲存會議自動備份完整資料（含影像）至 NAS，最多保留 10 份。</div>
+  <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
+    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--fog-dk)">NAS 備份資料夾</div>
+      <div id="nas-folder-status" style="font-size:12px;color:var(--textlt);margin-bottom:10px">尚未設定</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-a" onclick="pickNasFolder()">📂 選取 NAS 資料夾</button>
+        <button class="btn btn-b" onclick="clearNasFolder()" id="btn-clear-nas" style="display:none">清除</button>
+        <button class="btn btn-b" onclick="testNasBackup()" id="btn-test-nas" style="display:none">測試備份</button>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">備份狀態</div>
+      <div id="nas-last-backup" style="font-size:12px;color:var(--textlt)">尚無備份記錄</div>
+    </div>
+  </div>
+</div>
 <div class="stab" id="stab-backup">
 <div class="st-title">備份與還原</div>
   <div class="st-desc">將所有會議記錄（含影像）打包成 JSON 備份檔，或從備份檔匯入還原。適合換電腦、跨裝置同步，或定期備份。</div>
@@ -1174,7 +1194,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.26';
+const VERSION='V4.3.27';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1357,7 +1377,7 @@ function showView(id){['home','meeting','settings','history','cancer'].forEach(v
 
 /* ════ Login ════ */
 function renderLogin(){document.getElementById('login-users').innerHTML=USERS.map(u=>`<button class="ubtn" onclick="pickUser('${u.id}')"><div class="u-init">${u.name[0]}</div><div><div class="u-name">${u.name}</div><div class="u-ext">${u.ext?'分機 '+u.ext:'兼任個管師'}</div><div class="u-tags">${u.cancers.map(c=>CFG[c]?.name||c).join('・')}</div></div><span class="u-arr">›</span></button>`).join('')}
-function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){
@@ -1768,7 +1788,7 @@ function calCreateMtg(cid,date){
 
 
 
-function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);;setTimeout(renderLsUsage,100);;setTimeout(renderLsUsage,100);}
+function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
 function openHistory(){
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -3341,6 +3361,160 @@ function renderLsUsage(){
   }catch(e){el.textContent='無法取得使用量：'+e.message;}
 }
 
+// ── NAS Backup ──
+var nasHandle=null;
+var _nasIdbKey='mdt_nas_handle';
+
+async function _nasIdbGet(){try{return await _idbGet(_nasIdbKey);}catch{return null;}}
+async function _nasIdbPut(h){try{await _idbPut(_nasIdbKey,h);}catch{}}
+async function _nasIdbDel(){try{await _idbDel(_nasIdbKey);}catch{}}
+
+async function restoreNasHandle(){
+  try{
+    var stored=await _nasIdbGet();
+    if(!stored)return false;
+    var perm=await stored.queryPermission({mode:'readwrite'});
+    if(perm==='granted'){nasHandle=stored;return true;}
+    perm=await stored.requestPermission({mode:'readwrite'});
+    if(perm==='granted'){nasHandle=stored;return true;}
+  }catch(e){}
+  return false;
+}
+
+async function pickNasFolder(){
+  try{
+    var h=await window.showDirectoryPicker({mode:'readwrite'});
+    nasHandle=h;
+    await _nasIdbPut(h);
+    updateNasStatus();
+    showSaveToast('NAS 備份資料夾已設定：'+h.name);
+  }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+}
+
+async function clearNasFolder(){
+  if(!confirm('確定清除 NAS 備份資料夾設定？'))return;
+  nasHandle=null;
+  await _nasIdbDel();
+  localStorage.removeItem('mdt_nas_last');
+  updateNasStatus();
+}
+
+function updateNasStatus(){
+  var el=document.getElementById('nas-folder-status');if(!el)return;
+  var btnClear=document.getElementById('btn-clear-nas');
+  var btnTest=document.getElementById('btn-test-nas');
+  var elLast=document.getElementById('nas-last-backup');
+  if(nasHandle){
+    el.innerHTML='<span style="color:var(--ok)">&#10003; 已設定：<b>'+escA(nasHandle.name)+'</b></span>';
+    if(btnClear)btnClear.style.display='';
+    if(btnTest)btnTest.style.display='';
+  }else{
+    el.textContent='尚未設定';
+    if(btnClear)btnClear.style.display='none';
+    if(btnTest)btnTest.style.display='none';
+  }
+  if(elLast){
+    var last=localStorage.getItem('mdt_nas_last');
+    elLast.textContent=last?'最後備份：'+last:'尚無備份記錄';
+  }
+}
+
+async function testNasBackup(){
+  if(!nasHandle){alert('請先設定 NAS 資料夾');return;}
+  try{
+    var fh=await nasHandle.getFileHandle('mdt_test.tmp',{create:true});
+    var w=await fh.createWritable();
+    await w.write('ok');
+    await w.close();
+    await nasHandle.removeEntry('mdt_test.tmp');
+    alert('✅ NAS 連線测試成功！資料夾可正常寫入。');
+  }catch(e){alert('❌ 測試失敗：'+e.message);}
+}
+
+async function backupToNAS(){
+  if(!nasHandle)return;
+  try{
+    // Show status
+    var smEl=document.getElementById('save-msg');
+    if(smEl)smEl.innerHTML+=' <span style="font-size:11px;color:var(--textlt)">NAS 備份中...</span>';
+
+    // 1. Collect all localStorage mdt_* data
+    var data={};
+    Object.keys(localStorage).forEach(function(k){if(k.startsWith('mdt_'))data[k]=localStorage.getItem(k);});
+
+    // 2. Collect all images (base64 from dataUrl or read from imgFolderHandle)
+    var images={};
+    var idx=getIdx();
+    for(var mi=0;mi<idx.length;mi++){
+      var m=loadLocal(idx[mi].id);if(!m)continue;
+      var mImgs={};
+      var cids=m.cids||Object.keys(m.sections||{});
+      for(var ci=0;ci<cids.length;ci++){
+        var sec=(m.sections||{})[cids[ci]];
+        if(!sec)continue;
+        var cases=sec.cases||[];
+        for(var ki=0;ki<cases.length;ki++){
+          var c=cases[ki];
+          var allImgs=[
+            ...(c.pathologyImages||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].pathologyImages['+j+']'};}),
+            ...(c.surgicalImages||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].surgicalImages['+j+']'};}),
+            ...(c.images||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].images['+j+']'};}),
+            ...((c.mammo&&c.mammo.images)||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].mammo.images['+j+']'};})
+          ];
+          for(var ii=0;ii<allImgs.length;ii++){
+            var entry=allImgs[ii];
+            var src=entry.img.dataUrl||'';
+            if(!src&&entry.img.fromFolder&&entry.img.name&&imgFolderHandle){
+              try{
+                var fh=await imgFolderHandle.getFileHandle(entry.img.name);
+                var file=await fh.getFile();
+                src=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
+              }catch(e){src='';}
+            }
+            if(src)mImgs[entry.key]=src;
+          }
+        }
+      }
+      if(Object.keys(mImgs).length)images[idx[mi].id]=mImgs;
+    }
+
+    // 3. Build backup object
+    var now=new Date();
+    var ts=now.getFullYear()+''+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+    var backup={version:VERSION,backupAt:now.toISOString(),data:data,images:images};
+    var json=JSON.stringify(backup);
+    var fname='MDT_backup_'+ts+'.json';
+
+    // 4. Write to NAS
+    var fh=await nasHandle.getFileHandle(fname,{create:true});
+    var w=await fh.createWritable();
+    await w.write(json);
+    await w.close();
+
+    // 5. Rotate: keep only latest 10
+    var entries=await _folderEntries(nasHandle);
+    var backups=entries
+      .filter(function(e){return e.kind==='file'&&e.name.startsWith('MDT_backup_')&&e.name.endsWith('.json');})
+      .map(function(e){return e.name;})
+      .sort();
+    while(backups.length>10){
+      try{await nasHandle.removeEntry(backups.shift());}catch(e){}
+    }
+
+    // 6. Update status
+    var lastStr=now.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
+    localStorage.setItem('mdt_nas_last',lastStr);
+    var elLast=document.getElementById('nas-last-backup');
+    if(elLast)elLast.textContent='最後備份：'+lastStr;
+    if(smEl)smEl.innerHTML+=' <span style="font-size:11px;color:var(--ok)">✓ NAS 完成</span>';
+
+  }catch(e){
+    console.warn('NAS backup failed:',e);
+    var smEl2=document.getElementById('save-msg');
+    if(smEl2)smEl2.innerHTML+=' <span style="font-size:11px;color:var(--err)">NAS 失敗</span>';
+  }
+}
+
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
@@ -4187,7 +4361,9 @@ async function saveMeeting(opts){
   renderSbRecent();
   // Switch to view mode after save
   if(!opts||!opts.silent){
-    setTimeout(()=>{
+    // NAS backup (background, non-blocking)
+  if(nasHandle)backupToNAS().catch(function(e){console.warn('NAS backup:',e);});
+  setTimeout(()=>{
       S._snapshot=null;_dirty=false;
       const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
       S.viewMode=true;S.meetingMode='record';
