@@ -111,6 +111,12 @@
 
 ## 版本歷程
 
+### V4.3.30
+【第一批】跨機同步前置：新增 createdBy 欄位至 newMeetingObj；canEditMeeting() 判斷是否為建立者；非建立者的會議顯示「建立者：XXX」badge，編輯按鈕 disabled；enterEditMode() 加權限檢查
+
+### V4.3.29
+NAS 備份改為每天首次啟動時觸發（登入後 3 秒背景執行），移除每次存檔觸發；新增 _shouldNasBackupToday / _markNasBackupToday 輔助函數
+
 ### V4.3.28
 設定頁重整：11個tab → 7個tab（地點/醫師/癌別/檢查項目/影像資料夾/備份/系統）；備份tab整合共享資料夾+NAS+備份還原+空間使用；系統tab整合AI+GitHub+測試資料
 

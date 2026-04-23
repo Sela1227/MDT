@@ -767,7 +767,8 @@ textarea{resize:vertical}
             <!-- Edit button only in record view mode -->
             <div id="rec-edit-ctrl" style="display:none;align-items:center;gap:8px">
               <span style="font-size:11px;padding:2px 9px;border-radius:2px;background:#EBF2F8;color:#3A5070;font-weight:500">閱覽模式</span>
-              <button class="btn btn-a btn-sm" onclick="enterEditMode()">編輯</button>
+              <span id="rec-owner-badge" style="font-size:11px;color:var(--textlt)"></span>
+              <button class="btn btn-a btn-sm" id="btn-rec-edit" onclick="enterEditMode()">編輯</button>
             </div>
             <div id="rec-save-ctrl" style="display:none;align-items:center;gap:8px">
               <span id="rec-save-msg" style="font-size:12px"></span>
@@ -1209,7 +1210,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.28';
+const VERSION='V4.3.30';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1392,7 +1393,7 @@ function showView(id){['home','meeting','settings','history','cancer'].forEach(v
 
 /* ════ Login ════ */
 function renderLogin(){document.getElementById('login-users').innerHTML=USERS.map(u=>`<button class="ubtn" onclick="pickUser('${u.id}')"><div class="u-init">${u.name[0]}</div><div><div class="u-name">${u.name}</div><div class="u-ext">${u.ext?'分機 '+u.ext:'兼任個管師'}</div><div class="u-tags">${u.cancers.map(c=>CFG[c]?.name||c).join('・')}</div></div><span class="u-arr">›</span></button>`).join('')}
-function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(){_markNasBackupToday();}).catch(function(e){console.warn('NAS daily backup:',e);});},3000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){
@@ -1825,6 +1826,7 @@ function migrateCaseFields(){
   });
 }
 function enterEditMode(){
+  if(!canEditMeeting(S.meeting)){alert('只能編輯自己建立的會議記錄，請聯絡原建立者');return;}
   migrateCaseFields();
   S._snapshot=JSON.stringify(S.meeting);
   S.viewMode=false;
@@ -2395,7 +2397,8 @@ function newMeetingObj(userId,cids){
     :'暫無專職個管師';
   return{id:cids.join('_')+'_'+uid(),title:mtgTitle(cids),cids,date:today,
     time:p.defaultSlot||(p.slot?.startsWith('07')?'07:30-08:30':'12:30-13:30'),
-    loc:p.loc,zoom:{id:'',pwd:'',url:''},contact,sections,version:0,savedBy:user.name,savedAt:''}
+    loc:p.loc,zoom:{id:'',pwd:'',url:''},contact,sections,version:0,savedBy:user.name,savedAt:'',
+    createdBy:userId}
 }
 function ensureSec(cid){if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],special:[],team:[]};const s=S.meeting.sections[cid];if(!s.followups)s.followups=[];if(!s.cases)s.cases=[];if(!s.special)s.special=[];if(!s.team)s.team=[];if(!s.events)s.events=[]}
 
@@ -2468,6 +2471,19 @@ function renderEditor(){
     if(S.meetingMode==='record'){
       recEdit.style.display=S.viewMode?'flex':'none';
       recSave.style.display=S.viewMode?'none':'flex';
+      // Owner badge + edit button state
+      var ownerBadge=document.getElementById('rec-owner-badge');
+      var btnRecEdit=document.getElementById('btn-rec-edit');
+      if(ownerBadge&&S.meeting){
+        var owner=S.meeting.createdBy?USERS.find(function(u){return u.id===S.meeting.createdBy;}):null;
+        var isOwner=canEditMeeting(S.meeting);
+        ownerBadge.textContent=owner&&!isOwner?'建立者：'+owner.name:'';
+        if(btnRecEdit){
+          btnRecEdit.disabled=!isOwner;
+          btnRecEdit.title=isOwner?'':'只能編輯自己建立的會議';
+          btnRecEdit.style.opacity=isOwner?'1':'0.4';
+        }
+      }
     } else {
       recEdit.style.display='none';
       recSave.style.display='none';
@@ -3519,6 +3535,7 @@ async function backupToNAS(){
     // 6. Update status
     var lastStr=now.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
     localStorage.setItem('mdt_nas_last',lastStr);
+    localStorage.setItem('mdt_nas_last_date',now.toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'}));
     var elLast=document.getElementById('nas-last-backup');
     if(elLast)elLast.textContent='最後備份：'+lastStr;
     if(smEl)smEl.innerHTML+=' <span style="font-size:11px;color:var(--ok)">✓ NAS 完成</span>';
@@ -3528,6 +3545,25 @@ async function backupToNAS(){
     var smEl2=document.getElementById('save-msg');
     if(smEl2)smEl2.innerHTML+=' <span style="font-size:11px;color:var(--err)">NAS 失敗</span>';
   }
+}
+
+function _shouldNasBackupToday(){
+  if(!nasHandle)return false;
+  var last=localStorage.getItem('mdt_nas_last_date')||'';
+  var today=new Date().toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'});
+  return last!==today;
+}
+
+function _markNasBackupToday(){
+  var today=new Date().toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'});
+  localStorage.setItem('mdt_nas_last_date',today);
+}
+
+function canEditMeeting(m){
+  if(!m)return false;
+  // No createdBy = legacy meeting, allow edit by anyone
+  if(!m.createdBy)return true;
+  return m.createdBy===S.user.id;
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
@@ -4376,9 +4412,7 @@ async function saveMeeting(opts){
   renderSbRecent();
   // Switch to view mode after save
   if(!opts||!opts.silent){
-    // NAS backup (background, non-blocking)
-  if(nasHandle)backupToNAS().catch(function(e){console.warn('NAS backup:',e);});
-  setTimeout(()=>{
+    setTimeout(()=>{
       S._snapshot=null;_dirty=false;
       const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
       S.viewMode=true;S.meetingMode='record';
