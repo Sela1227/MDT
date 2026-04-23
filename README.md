@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.3.25
+「病理切片影像集中」checkbox 移入 HTML 投影片格內（flex column），grid 維持 5 欄整齊
+
 ### V4.3.24
 修正放大鏡座標偏移：病理切片投影片使用 object-fit:contain 置中圖片，letterbox 留白導致座標偏移；改為先計算實際渲染區域（offX/offY）再換算像素座標，所有使用 contain 的圖片均修正
 
