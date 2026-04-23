@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.3.26
+「病理切片影像集中」checkbox 移至資料夾狀態列同排右側（margin-left:auto），grid 5欄全為按鈕
+
 ### V4.3.25
 「病理切片影像集中」checkbox 移入 HTML 投影片格內（flex column），grid 維持 5 欄整齊
 
