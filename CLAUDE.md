@@ -210,9 +210,9 @@ AI API：api.anthropic.com（院內 CORS 已確認）
 # 4. 確認 braces 平衡、backtick 偶數
 # 5. zip 檔名 = 版本號
 # 6. 版本號命名規則（嚴格遵守）：
-#    bug fix / hotfix      → +0.01  （如 V4.3.23 → V4.3.23）
-#    新功能 / 新欄位       → +0.1   （如 V4.3.23 → V4.3.23）
-#    大改版 / 架構重構     → +1.0   （如 V4.3.23 → V4.3.23）
+#    bug fix / hotfix      → +0.01  （如 V4.3.24 → V4.3.24）
+#    新功能 / 新欄位       → +0.1   （如 V4.3.24 → V4.3.24）
+#    大改版 / 架構重構     → +1.0   （如 V4.3.24 → V4.3.24）
 
 import zipfile
 os.chdir('/mnt/user-data/outputs')
@@ -224,10 +224,11 @@ with zipfile.ZipFile('MDT_V2.X.X.zip','w',zipfile.ZIP_DEFLATED) as z:
 
 ---
 
-## 十二、版本（當前 V4.3.23）
+## 十二、版本（當前 V4.3.24）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.24 | 修正放大鏡座標：object-fit:contain letterbox 補偏移計算 |
 | V4.3.23 | HTML 投影片：病理切片影像集中 checkbox（chk-group-path）|
 | V4.3.22 | 特殊議程：清除全部按鈕 + 選圖對話框補檔名 |
 | V4.3.21 | 整併四個 buildXxxImgArea 為 buildGenericImgArea，省 ~40KB |
