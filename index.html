@@ -767,7 +767,8 @@ textarea{resize:vertical}
             <!-- Edit button only in record view mode -->
             <div id="rec-edit-ctrl" style="display:none;align-items:center;gap:8px">
               <span style="font-size:11px;padding:2px 9px;border-radius:2px;background:#EBF2F8;color:#3A5070;font-weight:500">閱覽模式</span>
-              <button class="btn btn-a btn-sm" onclick="enterEditMode()">編輯</button>
+              <span id="rec-owner-badge" style="font-size:11px;color:var(--textlt)"></span>
+              <button class="btn btn-a btn-sm" id="btn-rec-edit" onclick="enterEditMode()">編輯</button>
             </div>
             <div id="rec-save-ctrl" style="display:none;align-items:center;gap:8px">
               <span id="rec-save-msg" style="font-size:12px"></span>
@@ -784,7 +785,10 @@ textarea{resize:vertical}
           <div class="sec-body">
             <!-- 資料夾授權：優先顯示 -->
             <div id="output-cid-label" style="display:none;gap:8px;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:12px;margin-bottom:8px"></div>
-            <div id="folder-status-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"><div id="folder-status-bar" style="display:contents"></div><label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);cursor:pointer;margin-left:auto"><input type="checkbox" id="chk-group-path" style="width:12px;height:12px;flex-shrink:0"> 病理切片影像集中</label></div>
+            <div style="margin-bottom:8px">
+              <button class="btn btn-a" style="padding:8px 16px;font-size:13px;font-weight:600;width:100%" onclick="openPostMtgPanel()">會後填寫</button>
+            </div>
             <!-- 5-per-row grid layout -->
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
               <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
@@ -835,42 +839,24 @@ textarea{resize:vertical}
 
     <!-- Settings -->
     <div id="view-settings" style="display:none">
-      <div class="c-hdr"><div><div class="c-title">設定</div><div class="c-sub">地點・醫師・癌別・共享資料夾・AI</div></div></div>
+      <div class="c-hdr"><div><div class="c-title">設定</div><div class="c-sub">地點・醫師・癌別・影像資料夾・備份・系統</div></div></div>
       <div class="wrap">
         <div class="section">
           <div style="padding:0 20px;border-bottom:1px solid var(--blt)">
             <div class="tabs" id="st-tabs" style="margin-bottom:0;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none">
-              <div class="tab active" onclick="showStab('folder',this)">共享資料夾</div>
-              <div class="tab" onclick="showStab('locs',this)">地點</div>
-              <div class="tab" onclick="showStab('examtypes',this)">檢查項目</div>
+              <div class="tab active" onclick="showStab('locs',this)">地點</div>
               <div class="tab" onclick="showStab('drs',this)">醫師</div>
               <div class="tab" onclick="showStab('cancers',this)">癌別</div>
-              <div class="tab" onclick="showStab('ai',this)">AI</div>
-              <div class="tab" onclick="showStab('testdata',this)">測試</div>
+              <div class="tab" onclick="showStab('examtypes',this)">檢查項目</div>
               <div class="tab" onclick="showStab('imgfolder',this)">影像資料夾</div>
-              <div class="tab" onclick="showStab('github',this)">GitHub 分享</div>
-              <div class="tab" onclick="showStab('backup',this)">備份還原</div>
+              <div class="tab" onclick="showStab('backup',this)">備份</div>
+              <div class="tab" onclick="showStab('system',this)">系統</div>
             </div>
           </div>
           <div style="padding:22px">
 
-            <div class="stab on" id="stab-folder">
-              <div class="st-title">共享資料夾</div>
-              <div class="st-desc">連線後儲存時自動同步至共用位置。Chrome 或 Edge。</div>
-              <div class="path-box empty" id="folder-path">尚未連線</div>
-              <div class="brow"><button class="btn btn-a btn-sm" onclick="connectFolder()">連線</button><button class="btn btn-b btn-sm" onclick="disconnectFolder()">中斷</button></div>
-            </div>
 
-            <div class="stab" id="stab-examtypes">
-  <div class="st-title">檢查項目管理</div>
-  <div class="st-desc">EXAM 條列的下拉選項（如 CT、MRI、SONO、PET-CT）。</div>
-  <div id="exam-types-list" style="margin:12px 0"></div>
-  <div style="display:flex;gap:8px;margin-top:8px">
-    <input id="new-exam-type" placeholder="新增項目（如：ECG）" style="flex:1;font-size:13px;padding:7px 10px">
-    <button class="btn btn-a btn-sm" onclick="addExamType()">新增</button>
-  </div>
-</div>
-<div class="stab" id="stab-locs">
+            <div class="stab on" id="stab-locs">
               <div class="st-title">地點管理</div>
               <div class="st-desc">所有開會地點，癌別設定從此選取。</div>
               <div id="locs-list"></div>
@@ -914,6 +900,16 @@ textarea{resize:vertical}
               </div>
             </div>
 
+            <div class="stab" id="stab-examtypes">
+  <div class="st-title">檢查項目管理</div>
+  <div class="st-desc">EXAM 條列的下拉選項（如 CT、MRI、SONO、PET-CT）。</div>
+  <div id="exam-types-list" style="margin:12px 0"></div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <input id="new-exam-type" placeholder="新增項目（如：ECG）" style="flex:1;font-size:13px;padding:7px 10px">
+    <button class="btn btn-a btn-sm" onclick="addExamType()">新增</button>
+  </div>
+</div>
+
             <div class="stab" id="stab-imgfolder">
   <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定根目錄後，進入每場會議時自動在根目錄下建立以日期+癌別命名的子目錄（如 <b>20260416 乳癌</b>），圖片放進去即可。亦可在產出區手動為每場會議指定不同資料夾。</div>
   <div id="imgfolder-status" style="margin-bottom:12px;font-size:13px;color:var(--textmd)">載入中...</div>
@@ -922,26 +918,37 @@ textarea{resize:vertical}
     <button class="btn btn-b btn-sm" onclick="clearRootFolder()">清除根目錄</button>
   </div>
 </div>
-<div class="stab" id="stab-github">
-  <div class="st-title">GitHub 投影片分享</div>
-  <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結<br>需先至 GitHub 申請 Personal Access Token（Contents: Read and write）</div>
 
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-    <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxx（Personal Access Token）" style="flex:1;font-size:12px;font-family:monospace">
-    <button class="btn btn-a btn-sm" onclick="saveGhToken()">儲存</button>
-    <button class="btn btn-b btn-sm" onclick="clearGhToken()">清除</button>
-  </div>
-  <div id="gh-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
-  <div style="font-weight:600;font-size:12px;margin-bottom:6px">已分享的投影片</div>
-  <div id="shared-slides-list"></div>
+            <div class="stab" id="stab-backup">
+  <div class="st-title">備份</div>
+  <div class="st-desc">共享資料夾同步、NAS 自動備份、資料匯出還原與儲存空間管理。</div>
+  <div style="display:flex;flex-direction:column;gap:0">
 
-  <hr style="border:none;border-top:1px solid var(--blt);margin:0 0 16px">
-  </div>
+    <div style="padding:16px 0">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">共享資料夾</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:8px">連線後儲存時自動同步至共用位置。Chrome 或 Edge。</div>
+      <div class="path-box empty" id="folder-path">尚未連線</div>
+      <div class="brow"><button class="btn btn-a btn-sm" onclick="connectFolder()">連線</button><button class="btn btn-b btn-sm" onclick="disconnectFolder()">中斷</button></div>
+    </div>
 
-<div class="stab" id="stab-backup">
-<div class="st-title">備份與還原</div>
-  <div class="st-desc">將所有會議記錄（含影像）打包成 JSON 備份檔，或從備份檔匯入還原。適合換電腦、跨裝置同步，或定期備份。</div>
-  <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
+    <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
+
+    <div style="padding:16px 0">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">NAS 自動備份</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:8px">每次儲存後自動備份完整資料（含影像）至 NAS，最多保留 10 份。</div>
+      <div id="nas-folder-status" style="font-size:12px;color:var(--textlt);margin-bottom:8px">尚未設定</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-a btn-sm" onclick="pickNasFolder()">選取 NAS 資料夾</button>
+        <button class="btn btn-b btn-sm" onclick="clearNasFolder()" id="btn-clear-nas" style="display:none">清除</button>
+        <button class="btn btn-b btn-sm" onclick="testNasBackup()" id="btn-test-nas" style="display:none">測試備份</button>
+      </div>
+      <div id="nas-last-backup" style="font-size:11px;color:var(--textlt)">尚無備份記錄</div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
+
+    <div style="padding:16px 0">
+      <div style="margin:16px 0;display:flex;flex-direction:column;gap:12px">
     <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">匯出備份</div>
       <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">包含所有會議、個案資料、影像、設定。完整姓名，無遮蔽。</div>
@@ -957,27 +964,28 @@ textarea{resize:vertical}
     </div>
   </div>
     <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px;margin-top:4px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--fog-dk)">儲存空間使用量</div>
+      <div id="ls-usage-display" style="font-size:12px;color:var(--textlt);margin-bottom:14px">計算中…</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px;margin-top:4px">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">批次刪除會議記錄</div>
       <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">勾選後刪除，其他記錄完全不受影響。</div>
       <button class="btn btn-b" onclick="openBatchDeleteModal()">選擇要刪除的會議…</button>
     </div>
   <div id="backup-msg" style="font-size:12px;color:var(--ok);padding:2px"></div>
-</div>
-<div class="stab" id="stab-testdata">
-              <div class="st-title">測試資料</div>
-              <div class="st-desc">生成三位個管師各癌別的測試會議記錄（各3場，共18場），方便測試系統功能。</div>
-              <div style="padding:12px 16px;background:var(--warnbg);color:var(--warn);border-radius:2px;font-size:12px;margin-bottom:14px">
-                注意：正式上線後請勿使用，測試資料會混入真實記錄中。
-              </div>
-              <div class="brow">
-  <button class="btn btn-a" onclick="generateTestData()">生成測試資料</button>
-  <button class="btn btn-b" onclick="clearTestData()">清除所有測試資料</button>
-</div>
-            </div>
+    </div>
 
-            <div class="stab" id="stab-ai">
-              <div class="st-title">AI 摘要設定</div>
-              <div class="st-desc">填入 API Key 後，會議頁可直接點「AI 生成摘要」產出討論記錄，不需切換到 claude.ai。</div>
+  </div>
+</div>
+
+            <div class="stab" id="stab-system">
+  <div class="st-title">系統</div>
+  <div class="st-desc">AI 摘要設定、GitHub 投影片分享、測試資料管理。</div>
+  <div style="display:flex;flex-direction:column;gap:0">
+
+    <div style="padding:16px 0">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">AI 摘要設定</div>
+      <div class="st-desc">填入 API Key 後，會議頁可直接點「AI 生成摘要」產出討論記錄，不需切換到 claude.ai。</div>
               <div id="ai-file-warn" style="display:none;padding:8px 12px;background:var(--warnbg);color:var(--warn);border-radius:2px;font-size:12px;line-height:1.7;margin-bottom:14px">
                 目前從本機檔案開啟，API 呼叫會被瀏覽器擋住。請部署至 GitHub Pages 後再使用。
               </div>
@@ -1013,7 +1021,42 @@ textarea{resize:vertical}
                 <div id="ai-save-msg" class="ai-status" style="margin-top:8px"></div>
                 <div id="ai-test-msg" class="ai-status" style="margin-top:6px"></div>
               </div>
-            </div>
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
+
+    <div style="padding:16px 0">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">GitHub 投影片分享</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結<br>需先至 GitHub 申請 Personal Access Token（Contents: Read and write）</div>
+
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+    <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxx（Personal Access Token）" style="flex:1;font-size:12px;font-family:monospace">
+    <button class="btn btn-a btn-sm" onclick="saveGhToken()">儲存</button>
+    <button class="btn btn-b btn-sm" onclick="clearGhToken()">清除</button>
+  </div>
+  <div id="gh-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
+  <div style="font-weight:600;font-size:12px;margin-bottom:6px">已分享的投影片</div>
+  <div id="shared-slides-list"></div>
+
+  <hr style="border:none;border-top:1px solid var(--blt);margin:0 0 16px">
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
+
+    <div style="padding:16px 0">
+      <div class="st-title">測試資料</div>
+              <div class="st-desc">生成三位個管師各癌別的測試會議記錄（各3場，共18場），方便測試系統功能。</div>
+              <div style="padding:12px 16px;background:var(--warnbg);color:var(--warn);border-radius:2px;font-size:12px;margin-bottom:14px">
+                注意：正式上線後請勿使用，測試資料會混入真實記錄中。
+              </div>
+              <div class="brow">
+  <button class="btn btn-a" onclick="generateTestData()">生成測試資料</button>
+  <button class="btn btn-b" onclick="clearTestData()">清除所有測試資料</button>
+</div>
+    </div>
+
+  </div>
+</div>
 
           </div>
         </div>
@@ -1170,7 +1213,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.7';
+const VERSION='V4.3.32';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1319,7 +1362,22 @@ function getPartnerUser(pid){return USERS.find(u=>u.cancers.includes(pid))}
 function download(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 
 /* ════ Storage ════ */
-function saveLocal(m){try{localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));const idx=getIdx(),ei=idx.findIndex(i=>i.id===m.id);const e={id:m.id,title:m.title,date:m.date,cids:m.cids};if(ei>=0)idx[ei]=e;else idx.unshift(e);localStorage.setItem('mdt_idx',JSON.stringify(idx.slice(0,30)));return true}catch{return false}}
+function saveLocal(m){try{
+  localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));
+  const idx=getIdx(),ei=idx.findIndex(i=>i.id===m.id);
+  const e={id:m.id,title:m.title,date:m.date,cids:m.cids};
+  if(ei>=0)idx[ei]=e;else idx.unshift(e);
+  const newIdx=idx.slice(0,100);
+  localStorage.setItem('mdt_idx',JSON.stringify(newIdx));
+  // Clean orphan mdt_m_ keys not in index
+  const validIds=new Set(newIdx.map(function(x){return x.id;}));
+  Object.keys(localStorage).forEach(function(k){
+    if(k.startsWith('mdt_m_')&&!validIds.has(k.slice(6))){
+      localStorage.removeItem(k);
+    }
+  });
+  return true;
+}catch{return false;}}
 function loadLocal(id){try{const r=localStorage.getItem('mdt_m_'+id);return r?JSON.parse(r):null}catch{return null}}
 function getIdx(){try{return JSON.parse(localStorage.getItem('mdt_idx')||'[]')}catch{return[]}}
 
@@ -1338,7 +1396,7 @@ function showView(id){['home','meeting','settings','history','cancer'].forEach(v
 
 /* ════ Login ════ */
 function renderLogin(){document.getElementById('login-users').innerHTML=USERS.map(u=>`<button class="ubtn" onclick="pickUser('${u.id}')"><div class="u-init">${u.name[0]}</div><div><div class="u-name">${u.name}</div><div class="u-ext">${u.ext?'分機 '+u.ext:'兼任個管師'}</div><div class="u-tags">${u.cancers.map(c=>CFG[c]?.name||c).join('・')}</div></div><span class="u-arr">›</span></button>`).join('')}
-function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(){_markNasBackupToday();}).catch(function(e){console.warn('NAS daily backup:',e);});},3000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){
@@ -1749,7 +1807,7 @@ function calCreateMtg(cid,date){
 
 
 
-function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on')}
+function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
 function openHistory(){
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -1771,6 +1829,7 @@ function migrateCaseFields(){
   });
 }
 function enterEditMode(){
+  if(!canEditMeeting(S.meeting)){alert('只能編輯自己建立的會議記錄，請聯絡原建立者');return;}
   migrateCaseFields();
   S._snapshot=JSON.stringify(S.meeting);
   S.viewMode=false;
@@ -1927,7 +1986,9 @@ function openFromSb(cid){
   const infoEl=document.getElementById('cv-info');
   if(infoEl){
     let info='';
-    cids.forEach(cid=>{
+    const _groupPath=document.getElementById('chk-group-path')&&document.getElementById('chk-group-path').checked;
+  const _deferredPath=[];
+  cids.forEach(cid=>{
       const ca=CFG[cid];
       info+='<div style="margin-bottom:6px">';
       if(cids.length>1)info+='<span style="font-size:11px;font-weight:600;color:var(--fog);margin-right:6px">'+ca.name+'</span>';
@@ -2339,7 +2400,8 @@ function newMeetingObj(userId,cids){
     :'暫無專職個管師';
   return{id:cids.join('_')+'_'+uid(),title:mtgTitle(cids),cids,date:today,
     time:p.defaultSlot||(p.slot?.startsWith('07')?'07:30-08:30':'12:30-13:30'),
-    loc:p.loc,zoom:{id:'',pwd:'',url:''},contact,sections,version:0,savedBy:user.name,savedAt:''}
+    loc:p.loc,zoom:{id:'',pwd:'',url:''},contact,sections,version:0,savedBy:user.name,savedAt:'',
+    createdBy:userId}
 }
 function ensureSec(cid){if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],special:[],team:[]};const s=S.meeting.sections[cid];if(!s.followups)s.followups=[];if(!s.cases)s.cases=[];if(!s.special)s.special=[];if(!s.team)s.team=[];if(!s.events)s.events=[]}
 
@@ -2412,6 +2474,19 @@ function renderEditor(){
     if(S.meetingMode==='record'){
       recEdit.style.display=S.viewMode?'flex':'none';
       recSave.style.display=S.viewMode?'none':'flex';
+      // Owner badge + edit button state
+      var ownerBadge=document.getElementById('rec-owner-badge');
+      var btnRecEdit=document.getElementById('btn-rec-edit');
+      if(ownerBadge&&S.meeting){
+        var owner=S.meeting.createdBy?USERS.find(function(u){return u.id===S.meeting.createdBy;}):null;
+        var isOwner=canEditMeeting(S.meeting);
+        ownerBadge.textContent=owner&&!isOwner?'建立者：'+owner.name:'';
+        if(btnRecEdit){
+          btnRecEdit.disabled=!isOwner;
+          btnRecEdit.title=isOwner?'':'只能編輯自己建立的會議';
+          btnRecEdit.style.opacity=isOwner?'1':'0.4';
+        }
+      }
     } else {
       recEdit.style.display='none';
       recSave.style.display='none';
@@ -2540,36 +2615,6 @@ function getDoctors(d){
 }
 function getDoctorStr(d){return getDoctors(d).join('、')||'—'}
 /* ── Image handling ── */
-function addImg(cid,i){
-  // Use a hidden file input via label trick for better mobile support
-  const uid_='addimg_'+cid+'_'+i+'_'+Date.now();
-  const input=document.createElement('input');
-  input.type='file';input.accept='image/*;capture=camera';input.id=uid_;
-  input.style.cssText='position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;top:0;left:0;z-index:-1';
-  document.body.appendChild(input);
-  input.addEventListener('change',function(){
-    const file=this.files[0];
-    document.body.removeChild(input);
-    if(!file)return;
-    if(file.size>3*1024*1024){alert('圖片請小於 3MB');return}
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      ensureSec(cid);
-      const item=S.meeting?.sections?.[cid]?.cases?.[i];if(!item)return;
-      if(!item.images)item.images=[];
-      if(item.images.length>=5){alert('每個個案最多5張');return}
-      const caption=prompt('影像說明（選填）：','') || '';
-      item.images.push({dataUrl:ev.target.result,name:file.name,caption});
-      markDirty();
-      const el=document.getElementById('imgs-'+cid+'-'+i);
-      if(el){const tmp=document.createElement('div');tmp.innerHTML=buildImgArea(cid,i,item);el.replaceWith(tmp.firstElementChild);}
-    };
-    reader.readAsDataURL(file);
-  });
-  input.addEventListener('cancel',()=>{try{document.body.removeChild(input)}catch{}});
-  // Trigger via programmatic click
-  setTimeout(()=>input.click(), 50);
-}
 
 function delImg(cid,i,j){
   ensureSec(cid);
@@ -2636,116 +2681,66 @@ function compressImage(dataUrl,maxW,maxH,quality,cb){
 }
 
 function buildSurgicalImgArea(cid,i,d){
-  const imgs=(d.surgicalImages||[]);
-  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
-  let h='<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0" id="surgimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
-  if(imgs.length){
-    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;">';
-    imgs.forEach(function(img,j){
-      const cap=escA(img.caption||img.name||'').replace(/\.[^.]+$/,'');
-      const shortCap=cap;
-      if(img.dataUrl){
-        const safe=escA(img.dataUrl);
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
-          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
-          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
-          +'<div style="font-size:9px;color:var(--textlt);text-align:center;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+shortCap+'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="surgicalImages" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delsurgimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      } else {
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
-          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
-          +'<span style="font-size:20px">🔬</span>'
-          +'<div style="font-size:8px;color:var(--textlt);text-align:center;padding:0 4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+shortCap+'</div>'
-          +'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="surgicalImages" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delsurgimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      }
-    });
-    h+='</div>';
-  }
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  h+='<button class="btn btn-b btn-sm" data-action="picksurgfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
-  if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearsurgimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
-  h+='</div>';
-  h+='</div>';
-  return h;
+  return buildGenericImgArea({cid:cid,idx:i,imgs:d.surgicalImages||[],
+    containerId:'surgimgs-'+cid+'-'+i,
+    pickAction:'picksurgfolder',delAction:'delsurgimg',capAction:'updimgcaption',clearAction:'clearsurgimgs',
+    imgtype:'surgicalImages',maxImgs:99,placeholderIcon:'🔬'});
 }
 function buildPathImgArea(cid,i,d){
-  const imgs=(d.pathologyImages||[]);
-  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
-  let h='<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0" id="pathimgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'">';
-  // Image tiles row
-  if(imgs.length){
-    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;">';
-    imgs.forEach(function(img,j){
-      const cap=escA(img.caption||img.name||'');
-      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
-      if(img.dataUrl){
-        const safe=escA(img.dataUrl);
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
-          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
-          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover;"></div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="pathologyImages" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      } else {
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;">'
-          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
-          +'<span style="font-size:20px">🔬</span>'
-          +'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="pathologyImages" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delpathimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      }
-    });
-    h+='</div>';
-  }
-  // Action buttons row
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  h+='<button class="btn btn-b btn-sm" data-action="pickpathfolder" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
-  if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearpathimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
-  h+='</div>';
-  h+='</div>';
-  return h;
+  return buildGenericImgArea({cid:cid,idx:i,imgs:d.pathologyImages||[],
+    containerId:'pathimgs-'+cid+'-'+i,
+    pickAction:'pickpathfolder',delAction:'delpathimg',capAction:'updimgcaption',clearAction:'clearpathimgs',
+    imgtype:'pathologyImages',maxImgs:99,placeholderIcon:'🔬'});
 }
-function buildImgArea(cid,i,d){
-  const imgs=d.images||[];
-  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
-  let h='<div id="imgs-'+cid+'-'+i+'" data-cid="'+cid+'" data-idx="'+i+'" style="display:flex;flex-direction:column;gap:8px">';
+function buildGenericImgArea(cfg){
+  var cid=cfg.cid,idx=cfg.idx,imgs=cfg.imgs||[];
+  var containerId=cfg.containerId,pickAction=cfg.pickAction;
+  var delAction=cfg.delAction,capAction=cfg.capAction;
+  var clearAction=cfg.clearAction||'';
+  var idxKey=cfg.idxKey||'idx';
+  var maxImgs=cfg.maxImgs||99;
+  var icon=cfg.placeholderIcon||'🖼';
+  var imgtype=cfg.imgtype||'';
+  var folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
+  var secAttr='data-'+idxKey+'="'+idx+'"';
+  var h='<div id="'+containerId+'" data-cid="'+cid+'" '+secAttr+' style="display:flex;flex-direction:column;gap:8px">';
   if(imgs.length){
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
     imgs.forEach(function(img,j){
-      const cap=escA(img.caption||(img.name||'').replace(/\.[^.]+$/,''));
-      const shortCap=cap;
-      if(img.dataUrl){
-        const safe=escA(img.dataUrl);
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
-          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
-          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="images" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      } else {
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
-          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
-          +'<span style="font-size:20px">🖼</span>'
-          +'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="images" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
+      var cap=escA(img.caption||img.name||'');
+      var safe=img.dataUrl?escA(img.dataUrl):'';
+      var imgtypeAttr=imgtype?' data-imgtype="'+imgtype+'"':'';
+      h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">';
+      if(safe){
+        h+='<div data-action="viewimg" data-src="'+safe+'" style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0">'
+          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>';
+      }else{
+        h+='<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center">'
+          +'<span style="font-size:20px">'+icon+'</span></div>';
       }
+      h+='<input value="'+cap+'" placeholder="說明" data-action="'+capAction+'" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'"'+imgtypeAttr+' style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
+        +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="'+delAction+'" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'">×</button>'
+        +'</div>';
     });
     h+='</div>';
   }
+  var pickExtras=imgtype?' data-type="'+imgtype+'" data-max="'+maxImgs+'"':'';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  if(imgs.length<5)h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="images" data-max="5" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
-  if(imgs.length)h+='<button class="btn btn-b btn-sm" data-action="clearimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除全部</button>';
-  h+='</div>';
-  h+='</div>';
+  if(imgs.length<maxImgs){
+    h+='<button class="btn btn-b btn-sm" data-action="'+pickAction+'" data-cid="'+cid+'" '+secAttr+pickExtras+' style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
+  }
+  if(imgs.length&&clearAction){
+    h+='<button class="btn btn-b btn-sm" data-action="'+clearAction+'" data-cid="'+cid+'" '+secAttr+' style="color:var(--err)">✕ 清除全部</button>';
+  }
+  h+='</div></div>';
   return h;
+}
+
+function buildImgArea(cid,i,d){
+  return buildGenericImgArea({cid:cid,idx:i,imgs:d.images||[],
+    containerId:'imgs-'+cid+'-'+i,
+    pickAction:'pickimgfolder',delAction:'delimg',capAction:'updimgcaption',clearAction:'clearimgs',
+    imgtype:'images',maxImgs:5,placeholderIcon:'🖼'});
 }
 
 function viewImg(dataUrl){
@@ -2792,39 +2787,27 @@ function updDr(cid,type,i,idx,val){
 /* ── View mode card renderers ── */
 function renderTimelineSVG(events,caColor,mode){
   if(!events||!events.length)return '';
-  const sorted=events.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
-  const n=sorted.length;
-  const perRow=5;
-  const rowCount=Math.ceil(n/perRow);
-  const W=860,padX=55,labelH=35,rowH=100;
-  const totalH=rowCount*rowH+50;
-  const usableW=W-2*padX;
-  const TL_SIZE={dx:14,surgery:14,recurrence:12,metastasis:11,chemo:9,rt:9,biopsy:9,follow:7,imaging:7,other:7};
-  const pos=[];
+  var sorted=events.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  var n=sorted.length,perRow=5,rowCount=Math.ceil(n/perRow);
+  var W=860,padX=55,labelH=35,rowH=100,totalH=rowCount*rowH+50,usableW=W-2*padX;
+  var TL_SIZE={dx:14,surgery:14,recurrence:12,metastasis:11,chemo:9,rt:9,biopsy:9,follow:7,imaging:7,other:7};
+  var pos=[];
   for(var i=0;i<n;i++){
     var r=Math.floor(i/perRow),posInRow=i%perRow,ltr=r%2===0;
     var rowStart=r*perRow,rowEnd=Math.min(n,(r+1)*perRow),rowItems=rowEnd-rowStart;
     var rowEvs=sorted.slice(rowStart,rowEnd);
     var parsedMs=rowEvs.map(function(ev){var d=new Date(ev.date||'');return isNaN(d.getTime())?null:d.getTime();});
     var validMs=parsedMs.filter(function(d){return d!==null;});
-    var minD=validMs.length?Math.min.apply(null,validMs):0;
-    var maxD=validMs.length?Math.max.apply(null,validMs):0;
-    var span=maxD-minD;
+    var minD=validMs.length?Math.min.apply(null,validMs):0,maxD=validMs.length?Math.max.apply(null,validMs):0,span=maxD-minD;
     var t=parsedMs[posInRow]===null||span===0?(rowItems===1?0.5:posInRow/(rowItems-1)):0.04+((parsedMs[posInRow]-minD)/span)*0.92;
-    var rowTop=r*rowH+10;
-    var lineY=ltr?rowTop+labelH+14:rowTop+14;
-    var x=ltr?padX+t*usableW:W-padX-t*usableW;
+    var rowTop=r*rowH+10,lineY=ltr?rowTop+labelH+14:rowTop+14,x=ltr?padX+t*usableW:W-padX-t*usableW;
     pos.push({x:Math.round(x),y:Math.round(lineY),r:r,ltr:ltr});
   }
   var pathD='';
   for(var i=0;i<n;i++){
     var p=pos[i];
     if(i===0){pathD+='M '+p.x+' '+p.y;}
-    else{
-      var prev=pos[i-1];
-      if(prev.r===p.r){pathD+=' L '+p.x+' '+p.y;}
-      else{var dy=p.y-prev.y,ar=Math.abs(dy)/2,sw=prev.ltr?1:0;pathD+=' A '+ar+' '+ar+' 0 0 '+sw+' '+p.x+' '+p.y;}
-    }
+    else{var prev=pos[i-1];if(prev.r===p.r){pathD+=' L '+p.x+' '+p.y;}else{var dy=p.y-prev.y,ar=Math.abs(dy)/2,sw=prev.ltr?1:0;pathD+=' A '+ar+' '+ar+' 0 0 '+sw+' '+p.x+' '+p.y;}}
   }
   var isDark=mode==='slide';
   var lineClr=isDark?'rgba(255,255,255,.22)':'#c0cad4';
@@ -2834,29 +2817,14 @@ function renderTimelineSVG(events,caColor,mode){
   for(var i=0;i<n;i++){
     var ev=sorted[i],p=pos[i];
     var cfg=TL_TYPES.find(function(t){return t.id===ev.type;})||TL_TYPES[TL_TYPES.length-1];
-    var nr=TL_SIZE[ev.type]||9;
-    var lbl=escA(ev.label||cfg.label),dt=escA(ev.date||'');
+    var nr=TL_SIZE[ev.type]||9,lbl=escA(ev.label||cfg.label),dt=escA(ev.date||'');
     nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(nr+5)+'" fill="'+cfg.color+'" opacity=".18"/>';
     nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+nr+'" fill="'+cfg.color+'" stroke="'+(isDark?'#1a2530':'#fff')+'" stroke-width="2.5"/>';
-    if(p.ltr){
-      labels+='<text x="'+p.x+'" y="'+(p.y-nr-16)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
-      labels+='<text x="'+p.x+'" y="'+(p.y-nr-4)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
-    }else{
-      labels+='<text x="'+p.x+'" y="'+(p.y+nr+15)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';
-      labels+='<text x="'+p.x+'" y="'+(p.y+nr+27)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';
-    }
-    if(i<n-1&&pos[i].r===pos[i+1].r){
-      var d1=new Date(ev.date||''),d2=new Date(sorted[i+1].date||'');
-      if(!isNaN(d1.getTime())&&!isNaN(d2.getTime())){
-        var days=Math.round((d2-d1)/86400000);
-        if(days>0){var mx=(p.x+pos[i+1].x)/2,ddy=p.ltr?p.y+nr+12:p.y-nr-7;diffs+='<text x="'+mx+'" y="'+ddy+'" text-anchor="middle" font-size="9" fill="'+dtClr+'" opacity=".72">+'+days+'d</text>';}
-      }
-    }
+    if(p.ltr){labels+='<text x="'+p.x+'" y="'+(p.y-nr-16)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';labels+='<text x="'+p.x+'" y="'+(p.y-nr-4)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';}
+    else{labels+='<text x="'+p.x+'" y="'+(p.y+nr+15)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';labels+='<text x="'+p.x+'" y="'+(p.y+nr+27)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';}
+    if(i<n-1&&pos[i].r===pos[i+1].r){var d1=new Date(ev.date||''),d2=new Date(sorted[i+1].date||'');if(!isNaN(d1.getTime())&&!isNaN(d2.getTime())){var days=Math.round((d2-d1)/86400000);if(days>0){var mx=(p.x+pos[i+1].x)/2,ddy=p.ltr?p.y+nr+12:p.y-nr-7;diffs+='<text x="'+mx+'" y="'+ddy+'" text-anchor="middle" font-size="9" fill="'+dtClr+'" opacity=".72">+'+days+'d</text>';}}}
   }
-  return '<svg viewBox="0 0 '+W+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'
-    +(isDark?'<rect width="'+W+'" height="'+totalH+'" fill="#1a2530" rx="8"/>':'')
-    +'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-    +nodes+labels+diffs+'</svg>';
+  return '<svg viewBox="0 0 '+W+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'+(isDark?'<rect width="'+W+'" height="'+totalH+'" fill="#1a2530" rx="8"/>':'')+'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+nodes+labels+diffs+'</svg>';
 }
 function caseViewHTML(cid,i,d){
   const drs=getDoctors(d).join('、')||'—';
@@ -2918,7 +2886,24 @@ function editFollowup(cid,i,type){
 }
 
 function specialViewHTML(cid,i,d){
-  return`<div class="vc"><div class="vc-r" style="padding:10px 14px"><span style="font-weight:600;color:var(--fog-dk)">${escA(d.title||'')}</span>${d.note?` <span class="vc-v" style="margin-left:8px;color:var(--textlt)">${escA(d.note)}</span>`:''}</div></div>`;
+  var imgs=d.images||[];
+  var imgRow='';
+  if(imgs.length){
+    imgRow='<div class="vc-r"><span class="vc-l">影像</span><span class="vc-v">'
+      +imgs.map(function(img,j){
+        return'<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;color:var(--textlt);font-size:13px">'
+          +(j+1)+'. '+escA((img.caption||img.name||'').replace(/\.[^.]+$/,''))
+          +' <button class="btn btn-b btn-sm" data-action="previewspecialimg"'
+          +' data-cid="'+escA(cid)+'" data-si="'+i+'" data-imgidx="'+j+'"'
+          +' style="font-size:11px;padding:1px 8px">預覽</button>'
+          +'</span>';
+      }).join('')
+      +'</span></div>';
+  }
+  return'<div class="vc"><div class="vc-r" style="padding:10px 14px">'
+    +'<span style="font-weight:600;color:var(--fog-dk)">'+escA(d.title||d.topicType||'')+'</span>'
+    +(d.note?' <span class="vc-v" style="margin-left:8px;color:var(--textlt)">'+escA(d.note)+'</span>':'')
+    +'</div>'+imgRow+'</div>';
 }
 
 
@@ -3131,14 +3116,15 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
 </div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
 function specialHTML(cid,i,d){
   if(d.topicType==='完治率') return specialCRHTML(cid,i,d);
-  const STYPES=['核心指標','品質指標','修改指引','其他','完治率'];
+  if(['失聯率','留治率','訪視率'].includes(d.topicType)) return specialRateHTML(cid,i,d);
+  const STYPES=['核心指標','品質指標','修改指引','完治率','失聯率','留治率','訪視率','其他'];
   const typeChips=STYPES.map(t=>{
     const on=(d.topicType||'')===t;
     return`<span class="tchip ${on?'on':''}" data-action="specialtype" data-cid="${cid}" data-idx="${i}" data-type="${t}">${t}</span>`;
@@ -3148,133 +3134,548 @@ function specialHTML(cid,i,d){
 <div class="fg full"><label>類別</label><div class="trow" style="margin-bottom:6px">${typeChips}</div></div>
 <div class="fg full"><label>標題</label><input value="${escA(d.title||'')}" oninput="upd('${cid}','special',${i},'title',this.value)" placeholder="例：114年1-12月品質指標審查" style="font-size:13px;padding:6px 8px;width:100%"></div>
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
+<div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>投影片影像</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','special',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div><div id="special-img-area-${cid}-${i}">${buildSpecialImgArea(cid,i,d)}</div></div>
 </div></div>`;
+}
+
+const RATE_CFG={
+  '\u5931\u806f\u7387':{threshold:'<3%',dir:'<',cols:['totalCases','deaths'],colLabels:['\u7e3d\u6536\u6848\u6578','\u6b7b\u4ea1\u500b\u6848'],defText:'\u5206\u5b50\uff1a\u61c9\u8ffd\u8e64\u500b\u6848\u5931\u806f\u81f3\u5c11\u9054 12 \u500b\u6708\u4eba\u6578\n\u5206\u6bcd\uff1a\u5404\u7652\u5225Class 1~2\u61c9\u8ffd\u8e64\u500b\u6848\u6578\uff08\u7e3d\u6536\u6848\u4eba\u6578-\u5df2\u6b7b\u4ea1\u4eba\u6578\uff09'},
+  '\u7559\u6cbb\u7387':{threshold:'>90%',dir:'>',cols:[],colLabels:[],defText:'\u5206\u5b50\uff1a\u5206\u6bcd\u4e2d\u6709\u5728\u672c\u9662\u6cbb\u7642\u4e4b\u500b\u6848\u6578\u3002\n\u5206\u6bcd\uff1a\u7576\u5e74\u5ea6\u9662\u5167\u5e38\u898b\u7652\u5225\u65b0\u8a3a\u65b7\uff08Class 0~2\uff09\u500b\u6848\u6578\u3002\n\u5099\u8a3b\uff1a\u542b\u5b89\u5be7\u7167\u8b77\u3002'},
+  '\u8a2a\u8996\u7387':{threshold:'>70%',dir:'>',cols:[],colLabels:[],defText:'\u5206\u5b50\uff1a\u51e1\u662f\u6709\u806f\u7e6b\u6216\u670d\u52d9\u7d00\u9304\u8005\uff0c\u7686\u8a08\u5165\u8a2a\u8996\u7387\u7684\u5206\u5b50\u3002\n\u5206\u6bcd\uff1a\u7576\u5e74\u5ea6\u5404\u7652\u5225\u65b0\u8a3a\u65b7\uff08Class 0~3\uff09\u500b\u6848\u6578\u3002\n\u5099\u8a3b\uff1a\u8a08\u7b97\u65b9\u5f0f\uff1a\u4ee5\u8a2a\u8996\u4eba\u6578\u70ba\u4e3b\uff0c\u4e0d\u4ee5\u6b21\u6578\u8a08\u7b97\u3002'}
+};
+
+function rateUpdRow(cid,si,ri,key,val){
+  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.rows)return;
+  if(!d.rows[ri])d.rows[ri]={};
+  d.rows[ri][key]=val;markDirty();
+  var rate=rateCalcRow(d.rows[ri],d);
+  var el=document.getElementById('rate-val-'+cid+'-'+si+'-'+ri);
+  if(el){el.textContent=rate.text;el.style.color=rate.color;}
+}
+function rateCalcRow(row,d){
+  var cfg=RATE_CFG[d.topicType]||{threshold:'',dir:'>'};
+  var n=parseInt(row.numerator)||0,m=parseInt(row.denominator)||0;
+  if(!m)return{text:'\u2014',color:'var(--textlt)'};
+  var pct=(n/m*100).toFixed(1)+'%';
+  var thNum=parseFloat((cfg.threshold||'').replace(/[^0-9.]/g,''))||0;
+  var actual=n/m*100;
+  var pass=cfg.dir==='<'?actual<=thNum:actual>=thNum;
+  return{text:pct,color:pass?'#2e7d32':'#c62828'};
+}
+function rateAddRow(cid,si){
+  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;
+  if(!d.rows)d.rows=[];
+  d.rows.push({label:'',numerator:'',denominator:'',totalCases:'',deaths:''});
+  markDirty();
+  var cont=document.getElementById('rate-rows-'+cid+'-'+si);
+  if(!cont)return;
+  var ri=d.rows.length-1;
+  var div=document.createElement('div');
+  div.innerHTML=rateRowHTML(cid,si,ri,d.rows[ri],d);
+  cont.appendChild(div.firstElementChild);
+}
+function rateDelRow(cid,si,ri){
+  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.rows)return;
+  d.rows.splice(ri,1);markDirty();
+  var cont=document.getElementById('rate-rows-'+cid+'-'+si);
+  if(!cont)return;
+  cont.innerHTML=((d.rows||[]).map(function(r,i2){return rateRowHTML(cid,si,i2,r,d);}).join(''));
+}
+function rateRowHTML(cid,si,ri,row,d){
+  var cfg=RATE_CFG[d.topicType]||{cols:[],colLabels:[],threshold:''};
+  var rate=rateCalcRow(row,d);
+  var extraCols=cfg.cols.map(function(col,ci){return '<input value="'+escA(String(row[col]||''))+'" oninput="rateUpdRow(\''+cid+'\','+si+','+ri+',\''+col+'\',this.value)" placeholder="'+escA(cfg.colLabels[ci]||'')+'" style="width:70px;font-size:12px;padding:3px 5px">';}).join('');
+  return '<div style="display:flex;gap:6px;align-items:center;padding:5px 8px;border-bottom:1px solid var(--blt)">'
+    +'<input value="'+escA(row.label||'')+'" oninput="rateUpdRow(\''+cid+'\','+si+','+ri+',\'label\',this.value)" placeholder="\u7652\u5225" style="width:90px;font-size:12px;padding:3px 5px">'
+    +'<input value="'+escA(String(row.numerator||''))+'" oninput="rateUpdRow(\''+cid+'\','+si+','+ri+',\'numerator\',this.value)" placeholder="\u5206\u5b50" style="width:55px;font-size:12px;padding:3px 5px">'
+    +'<input value="'+escA(String(row.denominator||''))+'" oninput="rateUpdRow(\''+cid+'\','+si+','+ri+',\'denominator\',this.value)" placeholder="\u5206\u6bcd" style="width:55px;font-size:12px;padding:3px 5px">'
+    +extraCols
+    +'<span id="rate-val-'+cid+'-'+si+'-'+ri+'" style="font-size:13px;font-weight:700;width:60px;text-align:right;color:'+rate.color+'">'+rate.text+'</span>'
+    +'<button class="delbtn" onclick="rateDelRow(\''+cid+'\','+si+','+ri+')">×</button>'
+    +'</div>';
+}
+function specialRateHTML(cid,i,d){
+  var cfg=RATE_CFG[d.topicType]||{threshold:'',dir:'>',cols:[],colLabels:[],defText:''};
+  if(!d.definition)d.definition=cfg.defText;
+  if(!d.rows)d.rows=[];
+  if(!d.threshold)d.threshold=cfg.threshold;
+  var rows=(d.rows||[]).map(function(r,ri){return rateRowHTML(cid,i,ri,r,d);}).join('');
+  var colHdrs=cfg.colLabels.map(function(l){return '<span style="width:70px">'+escA(l)+'</span>';}).join('');
+  var defId='rate-def-'+cid+'-'+i;
+  var contId='rate-rows-'+cid+'-'+i;
+  var patId='cr-patients-'+cid+'-'+i;
+  return '<div class="casecard" id="cc-'+cid+'-special-'+i+'">'
+    +'<div class="casetop"><span class="cnm">'+escA(d.topicType)+'</span><button class="delbtn" onclick="delItem(\''+cid+'\',\'special\','+i+')">×</button></div>'
+    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+(d.topicType==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+(d.topicType==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+(d.topicType==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+(d.topicType==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+(d.topicType==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+(d.topicType==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+(d.topicType==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'<span class="tchip '+(d.topicType==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'</div></div>'
+    +'<div class="cg2">'
+    +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
+    +'<div class="fg full"><div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:2px">\u671f\u9593</div><input value="'+escA(d.period||'')+'" oninput="upd(\''+cid+'\',\'special\','+i+',\'period\',this.value)" placeholder="114\u5e7401-12\u6708" style="width:130px;font-size:12px;padding:4px 6px"></div>'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:2px">\u95be\u5024</div><input value="'+escA(d.threshold||cfg.threshold)+'" oninput="upd(\''+cid+'\',\'special\','+i+',\'threshold\',this.value)" style="width:80px;font-size:12px;padding:4px 6px"></div>'
+    +'</div>'
+    +'<div style="border:1px solid var(--blt);border-radius:4px;overflow:hidden">'
+    +'<div style="display:flex;align-items:center;gap:6px;background:var(--fog-dk);color:#fff;padding:5px 8px;font-size:11px;font-weight:700">'
+    +'<span style="width:90px">\u7652\u5225</span><span style="width:55px">\u5206\u5b50</span><span style="width:55px">\u5206\u6bcd</span>'+colHdrs+'<span style="width:60px;text-align:right">\u7d50\u679c</span>'
+    +'</div>'
+    +'<div id="'+contId+'">'+rows+'</div>'
+    +'</div>'
+    +'<button class="btnadd" onclick="rateAddRow(\''+cid+'\','+i+')" style="margin-top:4px">＋ \u65b0\u589e\u7652\u5225\u884c</button>'
+    +'</div>'
+    +'<div class="fsec">\u6307\u6a19\u5b9a\u7fa9 &amp; \u5099\u8a3b</div>'
+    +'<div class="fg full"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px;display:flex;align-items:center;justify-content:space-between"><span>\u6307\u6a19\u5b9a\u7fa9</span>'
+    +'<button class="btn btn-b btn-sm" onclick="crSaveDef(document.getElementById(\''+defId+'\').value)" style="font-size:10px;padding:1px 8px">\u5132\u5b58\u70ba\u9810\u8a2d</button></div>'
+    +'<textarea id="'+defId+'" rows="5" oninput="upd(\''+cid+'\',\'special\','+i+',\'definition\',this.value)" style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(d.definition||cfg.defText)+'</textarea></div>'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">\u5099\u8a3b/\u6703\u8b70\u6c7a\u8b70</div>'
+    +'<textarea rows="5" oninput="upd(\''+cid+'\',\'special\','+i+',\'remarks\',this.value)" placeholder="\u5099\u8a3b\uff1a..." style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(d.remarks||'')+'</textarea></div>'
+    +'</div></div>'
+    +'<div class="fsec">\u75c5\u4eba\u6e05\u55ae\uff08\u9078\u586b\uff09</div>'
+    +'<div class="fg full"><div id="'+patId+'">'+((d.patients||[]).map(function(p,pi){return crPatientRow(cid,i,pi,p);}).join(''))+'</div>'
+    +'<button class="btnadd" onclick="crAddPatient(\''+cid+'\','+i+')" style="margin-top:4px">＋ \u65b0\u589e\u75c5\u4eba</button>'
+    +'</div>'
+    +'</div></div>';
 }
 
 const CR_DEF_DEFAULT='分子：分母中，已完成治療計畫書所預定治療之個案數\n分母：新診斷（Class 1~2）在本院進行治療性治療（手術/化療/放療/賀爾蒙服用半年）之個案數，（總收案人數－治療療程未完成）';
 function crGetDef(){try{return localStorage.getItem('mdt_cr_template')||CR_DEF_DEFAULT;}catch{return CR_DEF_DEFAULT;}}
 function crSaveDef(txt){try{localStorage.setItem('mdt_cr_template',txt);showSaveToast('指標定義已儲存為預設');}catch(e){}}
-
-function crUpdPatient(cid,si,pi,key,val){
-  ensureSec(cid);const d=S.meeting.sections[cid].special[si];if(!d)return;
-  if(!d.patients)d.patients=[];if(!d.patients[pi])d.patients[pi]={};
-  d.patients[pi][key]=val;markDirty();
-}
-function crAddPatient(cid,si){
-  ensureSec(cid);const d=S.meeting.sections[cid].special[si];if(!d)return;
-  if(!d.patients)d.patients=[];
-  d.patients.push({chartNo:'',name:'',doctor:'',note:'',images:[]});
-  markDirty();
-  const cont=document.getElementById('cr-patients-'+cid+'-'+si);
-  if(!cont)return;
-  const pi=d.patients.length-1;
-  const div=document.createElement('div');
-  div.innerHTML=crPatientRow(cid,si,pi,d.patients[pi]);
-  cont.appendChild(div.firstElementChild);
-}
-function crDelPatient(cid,si,pi){
-  ensureSec(cid);const d=S.meeting.sections[cid].special[si];if(!d||!d.patients)return;
-  if(!confirm('確定刪除此病人？'))return;
-  d.patients.splice(pi,1);markDirty();
-  const cont=document.getElementById('cr-patients-'+cid+'-'+si);
-  if(!cont)return;
-  cont.innerHTML=((d.patients||[]).map((p,i2)=>crPatientRow(cid,si,i2,p)).join(''));
-}
-function crPickImages(cid,si,pi){
-  ensureSec(cid);const d=S.meeting.sections[cid].special[si];
-  if(!d||!d.patients||!d.patients[pi])return;
-  const p=d.patients[pi];
-  if(!p.images)p.images=[];
-  (async function(){
-    try{
-      if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
-      const entries=await _folderEntries(imgFolderHandle);
-      const files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));
-      files.sort((a,b)=>a.name.localeCompare(b.name));
-      if(!files.length){alert('資料夾內沒有圖檔');return;}
-      const existing=new Set(p.images.map(x=>x.name));
-      const list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0">'
-        +'<input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
-        +'<span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span>'
-        +'</label>').join('');
-      const overlay=document.createElement('div');
-      overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
-      overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px">'
-        +'<div style="font-weight:700;font-size:15px">選取佐証圖片</div>'
-        +'<div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div>'
-        +'<div style="display:flex;gap:8px;justify-content:flex-end">'
-        +'<button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button>'
-        +'<button id="cr-img-ok" class="btn btn-a btn-sm">確認</button>'
-        +'</div></div>';
-      document.body.appendChild(overlay);
-      overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);
-      overlay.querySelector('#cr-img-ok').onclick=()=>{
-        const checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);
-        p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true}));
-        markDirty();document.body.removeChild(overlay);
-        const el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);
-        if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';
-      };
-    }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
-  })();
-}
+function crUpdPatient(cid,si,pi,key,val){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;if(!d.patients)d.patients=[];if(!d.patients[pi])d.patients[pi]={};d.patients[pi][key]=val;markDirty();}
+function crAddPatient(cid,si){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;if(!d.patients)d.patients=[];d.patients.push({chartNo:'',name:'',doctor:'',note:'',images:[]});markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;var pi=d.patients.length-1;var div=document.createElement('div');div.innerHTML=crPatientRow(cid,si,pi,d.patients[pi]);cont.appendChild(div.firstElementChild);}
+function crDelPatient(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients)return;if(!confirm('確定刪除此病人？'))return;d.patients.splice(pi,1);markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;cont.innerHTML=((d.patients||[]).map(function(p,i2){return crPatientRow(cid,si,i2,p);}).join(''));}
+function crPickImages(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients||!d.patients[pi])return;var p=d.patients[pi];if(!p.images)p.images=[];(async function(){try{if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});var entries=await _folderEntries(imgFolderHandle);var files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));files.sort((a,b)=>a.name.localeCompare(b.name));if(!files.length){alert('資料夾內沒有圖檔');return;}var existing=new Set(p.images.map(x=>x.name));var list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0"><input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span></label>').join('');var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px"><div style="font-weight:700;font-size:15px">選取佐証圖片</div><div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button><button id="cr-img-ok" class="btn btn-a btn-sm">確認</button></div></div>';document.body.appendChild(overlay);overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);overlay.querySelector('#cr-img-ok').onclick=()=>{var checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true}));markDirty();document.body.removeChild(overlay);var el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';};}catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}})();}
 function crPatientRow(cid,si,pi,p){
-  const imgLabel=(p.images&&p.images.length)?p.images.length+'張已選':'未選圖片';
-  return`<div class="struct-row" style="background:var(--surface);border-radius:4px;padding:10px;margin-bottom:8px;position:relative">
-  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start">
-    <input value="${escA(p.chartNo||'')}" oninput="crUpdPatient('${cid}',${si},${pi},'chartNo',this.value)" placeholder="病歷號" style="width:100px;font-size:12px;padding:4px 6px">
-    <input value="${escA(p.name||'')}" oninput="crUpdPatient('${cid}',${si},${pi},'name',this.value)" placeholder="姓名" style="width:80px;font-size:12px;padding:4px 6px">
-    <input value="${escA(p.doctor||'')}" oninput="crUpdPatient('${cid}',${si},${pi},'doctor',this.value)" placeholder="主治醫師" style="width:90px;font-size:12px;padding:4px 6px">
-    <button class="btn btn-b btn-sm" onclick="crPickImages('${cid}',${si},${pi})" style="font-size:11px">📂 圖片</button>
-    <span id="cr-img-list-${cid}-${si}-${pi}" style="font-size:11px;color:var(--textlt);align-self:center">${escA(imgLabel)}</span>
-    <button class="delbtn" onclick="crDelPatient('${cid}',${si},${pi})" style="margin-left:auto">×</button>
-  </div>
-  <textarea rows="3" oninput="crUpdPatient('${cid}',${si},${pi},'note',this.value)" placeholder="未完治備註（原因、追蹤記錄等）" style="width:100%;margin-top:6px;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">${escA(p.note||'')}</textarea>
-</div>`;
+  var imgLabel=(p.images&&p.images.length)?p.images.length+'張已選':'未選圖片';
+  var cidE=escA(cid);
+  return'<div class="struct-row" style="background:var(--surface);border-radius:4px;padding:10px;margin-bottom:8px;position:relative">'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start">'
+    +'<input value="'+escA(p.chartNo||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="chartNo" placeholder="病歷號" style="width:100px;font-size:12px;padding:4px 6px">'
+    +'<input value="'+escA(p.name||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="name" placeholder="姓名" style="width:80px;font-size:12px;padding:4px 6px">'
+    +'<input value="'+escA(p.doctor||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="doctor" placeholder="主治醫師" style="width:90px;font-size:12px;padding:4px 6px">'
+    +'<button class="btn btn-b btn-sm" data-action="crpickimg" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" style="font-size:11px">📂 圖片</button>'
+    +'<span id="cr-img-list-'+cidE+'-'+si+'-'+pi+'" style="font-size:11px;color:var(--textlt);align-self:center">'+escA(imgLabel)+'</span>'
+    +'<button class="delbtn" data-action="crdelpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" style="margin-left:auto">×</button>'
+    +'</div>'
+    +'<textarea rows="3" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="note" placeholder="備註（原因、追蹤記錄等）" style="width:100%;margin-top:6px;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(p.note||'')+'</textarea>'
+    +'</div>';
 }
 function specialCRHTML(cid,i,d){
   if(!d.definition)d.definition=crGetDef();
   if(!d.patients)d.patients=[];
-  const rate=d.denominator>0?((d.numerator/d.denominator)*100).toFixed(1)+'%':'—';
-  const patients=(d.patients||[]).map((p,pi)=>crPatientRow(cid,i,pi,p)).join('');
-  return`<div class="casecard" id="cc-${cid}-special-${i}">
-<div class="casetop"><span class="cnm">完治率</span><button class="delbtn" onclick="delItem('${cid}','special',${i})">×</button></div>
-<div class="cg2">
-<div class="fsec">統計數字</div>
-<div class="fg full"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">期間</div><input value="${escA(d.period||'')}" oninput="upd('${cid}','special',${i},'period',this.value)" placeholder="114年01-12月" style="width:130px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">癌別</div><input value="${escA(d.cancer||CFG[cid]?.name||'')}" oninput="upd('${cid}','special',${i},'cancer',this.value)" placeholder="乳癌" style="width:80px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">分子</div><input type="number" value="${d.numerator||''}" oninput="upd('${cid}','special',${i},'numerator',parseInt(this.value)||0)" style="width:60px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">分母</div><input type="number" value="${d.denominator||''}" oninput="upd('${cid}','special',${i},'denominator',parseInt(this.value)||0)" style="width:60px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">未完成</div><input type="number" value="${d.incomplete||''}" oninput="upd('${cid}','special',${i},'incomplete',parseInt(this.value)||0)" style="width:60px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">Class 1~2</div><input type="number" value="${d.totalClass12||''}" oninput="upd('${cid}','special',${i},'totalClass12',parseInt(this.value)||0)" style="width:70px;font-size:12px;padding:4px 6px"></div>
-  <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">閾值</div><input value="${escA(d.threshold||'>80%')}" oninput="upd('${cid}','special',${i},'threshold',this.value)" style="width:70px;font-size:12px;padding:4px 6px"></div>
-  <div style="padding:4px 12px;background:var(--ok-bg,#e8f5e9);border-radius:4px;font-size:13px;font-weight:700;color:var(--ok,#2e7d32)">完治率 ${escA(rate)}</div>
-</div></div>
-<div class="fsec">指標定義 & 備註</div>
-<div class="fg full"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-  <div>
-    <div style="font-size:10px;color:var(--textlt);margin-bottom:3px;display:flex;align-items:center;justify-content:space-between">
-      <span>指標定義</span>
-      <button class="btn btn-b btn-sm" onclick="crSaveDef(document.getElementById('cr-def-${cid}-${i}').value)" style="font-size:10px;padding:1px 8px">儲存為預設</button>
-    </div>
-    <textarea id="cr-def-${cid}-${i}" rows="5" oninput="upd('${cid}','special',${i},'definition',this.value)" style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">${escA(d.definition||crGetDef())}</textarea>
-  </div>
-  <div>
-    <div style="font-size:10px;color:var(--textlt);margin-bottom:3px">備註/會議決議</div>
-    <textarea rows="5" oninput="upd('${cid}','special',${i},'remarks',this.value)" placeholder="備註：..." style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">${escA(d.remarks||'')}</textarea>
-  </div>
-</div></div>
-<div class="fsec">未完治病人清單</div>
-<div class="fg full">
-  <div id="cr-patients-${cid}-${i}">${patients}</div>
-  <button class="btnadd" onclick="crAddPatient('${cid}',${i})" style="margin-top:4px">＋ 新增病人</button>
-</div>
-</div></div>`;
+  var n=d.numerator||0,m=d.denominator||0;
+  var rate=m>0?((n/m)*100).toFixed(1)+'%':'\u2014';
+  var thNum=parseFloat((d.threshold||'>80%').replace(/[^0-9.]/g,''))||80;
+  var actual=m>0?(n/m)*100:null;
+  var pass2=actual!==null?actual>=thNum:null;
+  var rateColor=pass2===null?'var(--textlt)':pass2?'#2e7d32':'#c62828';
+  var patients=(d.patients||[]).map(function(p,pi){return crPatientRow(cid,i,pi,p);}).join('');
+  var defId='cr-def-'+cid+'-'+i;
+  var patId='cr-patients-'+cid+'-'+i;
+  function inp(key,label,val,w,tp){
+    var t=tp||'text';
+    return '<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">'+label+'</div>'
+      +'<input type="'+t+'" value="'+escA(String(val||''))+'"'
+      +' data-action="updspecial" data-cid="'+cid+'" data-idx="'+i+'" data-key="'+key+'"'
+      +' style="width:'+w+';font-size:12px;padding:4px 6px"></div>';
+  }
+  return '<div class="casecard" id="cc-'+cid+'-special-'+i+'">'
+    +'<div class="casetop">'
+    +'<span class="cnm">\u5b8c\u6cbb\u7387</span>'
+    +'<button class="delbtn" data-action="delspecialitem" data-cid="'+cid+'" data-type="special" data-idx="'+i+'">\u00d7</button>'
+    +'</div>'
+    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+('完治率'==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+('完治率'==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+('完治率'==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+('完治率'==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+('完治率'==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+('完治率'==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+('完治率'==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'<span class="tchip '+('完治率'==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'</div></div>'
+    +'<div class="cg2">'
+    +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
+    +'<div class="fg full"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
+    +inp('period','\u671f\u9593',d.period,'130px')
+    +inp('cancer','\u7652\u5225',d.cancer||CFG[cid]&&CFG[cid].name||'乳癌','80px')
+    +inp('numerator','\u5206\u5b50',d.numerator,'60px','number')
+    +inp('denominator','\u5206\u6bcd',d.denominator,'60px','number')
+    +inp('incomplete','\u672a\u5b8c\u6210',d.incomplete,'60px','number')
+    +inp('totalClass12','Class 1~2',d.totalClass12,'70px','number')
+    +inp('threshold','\u95be\u5024',d.threshold||'>80%','70px')
+    +'<div style="padding:4px 12px;background:#e8f5e9;border-radius:4px;font-size:13px;font-weight:700;color:'+rateColor+'">\u5b8c\u6cbb\u7387 '+escA(rate)+'</div>'
+    +'</div></div>'
+    +'<div class="fsec">\u6307\u6a19\u5b9a\u7fa9 &amp; \u5099\u8a3b</div>'
+    +'<div class="fg full"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px;display:flex;align-items:center;justify-content:space-between">'
+    +'<span>\u6307\u6a19\u5b9a\u7fa9</span>'
+    +'<button class="btn btn-b btn-sm" data-action="savecrdeftpl" data-defid="'+defId+'" style="font-size:10px;padding:1px 8px">\u5132\u5b58\u70ba\u9810\u8a2d</button>'
+    +'</div>'
+    +'<textarea id="'+defId+'" rows="5" data-action="updspecial" data-cid="'+cid+'" data-idx="'+i+'" data-key="definition" style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(d.definition||crGetDef())+'</textarea></div>'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">\u5099\u8a3b/\u6703\u8b70\u6c7a\u8b70</div>'
+    +'<textarea rows="5" data-action="updspecial" data-cid="'+cid+'" data-idx="'+i+'" data-key="remarks" placeholder="\u5099\u8a3b\uff1a..." style="width:100%;font-size:12px;padding:5px 8px;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.5">'+escA(d.remarks||'')+'</textarea></div>'
+    +'</div></div>'
+    +'<div class="fsec">\u672a\u5b8c\u6cbb\u75c5\u4eba\u6e05\u55ae</div>'
+    +'<div class="fg full"><div id="'+patId+'">'+patients+'</div>'
+    +'<button class="btnadd" data-action="craddpatient" data-cid="'+cid+'" data-si="'+i+'" style="margin-top:4px">\uff0b \u65b0\u589e\u75c5\u4eba</button>'
+    +'</div></div></div>';
 }
 
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:''};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
-    type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type):
+function buildSpecialImgArea(cid,si,d){
+  return buildGenericImgArea({cid:cid,idx:si,imgs:d.images||[],
+    containerId:'special-img-area-'+cid+'-'+si,
+    pickAction:'pickspecialimgs',delAction:'delspecialimg',capAction:'updspecialimgcap',
+    clearAction:'clearspecialimgs',
+    idxKey:'si',maxImgs:99,placeholderIcon:'🖼'});
+}
+
+function pickSpecialImgs(cid,si){
+  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;
+  if(!d.images)d.images=[];
+  (async function(){
+    try{
+      if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+      var entries=await _folderEntries(imgFolderHandle);
+      var files=entries.filter(function(e){return e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name);});
+      files.sort(function(a,b){return a.name.localeCompare(b.name);});
+      if(!files.length){alert('資料夾內沒有圖檔');return;}
+      var existing=new Set(d.images.map(function(x){return x.name;}));
+      var list=files.map(function(f){
+        var baseName=f.name.replace(/\.[^.]+$/,'');
+        var ext=f.name.split('.').pop().toUpperCase();
+        return '<label style="display:flex;align-items:center;gap:10px;padding:7px 10px;cursor:pointer;border-radius:4px;border-bottom:1px solid #f0f0f0" onmouseover="this.style.background=\'rgba(0,0,0,.04)\'" onmouseout="this.style.background=\'\'">'
+          +'<input type="checkbox" style="flex-shrink:0;width:15px;height:15px" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'>'
+          +'<span style="font-size:12px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(baseName)+'</span>'
+          +'<span style="font-size:10px;color:#aaa;flex-shrink:0">'+escA(ext)+'</span>'
+          +'</label>';
+      }).join('');
+      var overlay=document.createElement('div');
+      overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+      overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px">'
+        +'<div style="font-weight:700;font-size:15px">選取投影片影像</div>'
+        +'<div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div>'
+        +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+        +'<button id="spi-cancel" class="btn btn-b btn-sm">取消</button>'
+        +'<button id="spi-ok" class="btn btn-a btn-sm">確認</button>'
+        +'</div></div>';
+      document.body.appendChild(overlay);
+      overlay.querySelector('#spi-cancel').onclick=function(){document.body.removeChild(overlay);};
+      overlay.querySelector('#spi-ok').onclick=function(){
+        var checked=[...overlay.querySelectorAll('input:checked')].map(function(x){return x.value;});
+        d.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,dataUrl:''};});
+        markDirty();document.body.removeChild(overlay);
+        var cont=document.getElementById('special-img-area-'+cid+'-'+si);
+        if(cont)cont.innerHTML=buildSpecialImgArea(cid,si,d);
+      };
+    }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+  })();
+}
+
+function renderLsUsage(){
+  var el=document.getElementById('ls-usage-display');if(!el)return;
+  try{
+    var total=0,mtgTotal=0,mtgCount=0,imgSize=0;
+    var keys=Object.keys(localStorage);
+    keys.forEach(function(k){
+      var val=localStorage.getItem(k)||'';
+      var size=val.length*2; // UTF-16 approx bytes
+      total+=size;
+      if(k.startsWith('mdt_m_')){
+        mtgTotal+=size;mtgCount++;
+        // Estimate image portion (base64 starts with 'data:')
+        var imgMatch=(val.match(/"dataUrl":"data:[^"]{100,}"/g)||[]);
+        imgMatch.forEach(function(m){imgSize+=m.length*2;});
+      }
+    });
+    var toMB=function(b){return (b/1024/1024).toFixed(2);};
+    var pct=Math.round(total/5242880*100); // assume 5MB limit
+    var barColor=pct>80?'var(--err)':pct>60?'var(--warn)':'var(--ok)';
+    el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      +'<div style="flex:1;height:6px;background:var(--blt);border-radius:3px;overflow:hidden">'
+      +'<div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+barColor+';transition:width .3s;border-radius:3px"></div>'
+      +'</div>'
+      +'<span style="font-size:11px;font-weight:600;color:'+barColor+'">'+pct+'%</span>'
+      +'</div>'
+      +'<div style="color:var(--textlt)">'
+      +'總計 <b>'+toMB(total)+' MB</b> 已使用'
+      +'・會議記錄 <b>'+mtgCount+'</b> 筆（'+toMB(mtgTotal)+' MB）'
+      +(imgSize>0?'・含圖片 '+toMB(imgSize)+' MB':'')
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--textlt);margin-top:3px">估算上限約 5 MB（依瀏覽器而異），超過後儲存可能失敗</div>';
+  }catch(e){el.textContent='無法取得使用量：'+e.message;}
+}
+
+// ── NAS Backup ──
+var nasHandle=null;
+var _nasIdbKey='mdt_nas_handle';
+
+async function _nasIdbGet(){try{return await _idbGet(_nasIdbKey);}catch{return null;}}
+async function _nasIdbPut(h){try{await _idbPut(_nasIdbKey,h);}catch{}}
+async function _nasIdbDel(){try{await _idbDel(_nasIdbKey);}catch{}}
+
+async function restoreNasHandle(){
+  try{
+    var stored=await _nasIdbGet();
+    if(!stored)return false;
+    var perm=await stored.queryPermission({mode:'readwrite'});
+    if(perm==='granted'){nasHandle=stored;return true;}
+    perm=await stored.requestPermission({mode:'readwrite'});
+    if(perm==='granted'){nasHandle=stored;return true;}
+  }catch(e){}
+  return false;
+}
+
+async function pickNasFolder(){
+  try{
+    var h=await window.showDirectoryPicker({mode:'readwrite'});
+    nasHandle=h;
+    await _nasIdbPut(h);
+    updateNasStatus();
+    showSaveToast('NAS 備份資料夾已設定：'+h.name);
+  }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+}
+
+async function clearNasFolder(){
+  if(!confirm('確定清除 NAS 備份資料夾設定？'))return;
+  nasHandle=null;
+  await _nasIdbDel();
+  localStorage.removeItem('mdt_nas_last');
+  updateNasStatus();
+}
+
+function updateNasStatus(){
+  var el=document.getElementById('nas-folder-status');if(!el)return;
+  var btnClear=document.getElementById('btn-clear-nas');
+  var btnTest=document.getElementById('btn-test-nas');
+  var elLast=document.getElementById('nas-last-backup');
+  if(nasHandle){
+    el.innerHTML='<span style="color:var(--ok)">&#10003; 已設定：<b>'+escA(nasHandle.name)+'</b></span>';
+    if(btnClear)btnClear.style.display='';
+    if(btnTest)btnTest.style.display='';
+  }else{
+    el.textContent='尚未設定';
+    if(btnClear)btnClear.style.display='none';
+    if(btnTest)btnTest.style.display='none';
+  }
+  if(elLast){
+    var last=localStorage.getItem('mdt_nas_last');
+    elLast.textContent=last?'最後備份：'+last:'尚無備份記錄';
+  }
+}
+
+async function testNasBackup(){
+  if(!nasHandle){alert('請先設定 NAS 資料夾');return;}
+  try{
+    var fh=await nasHandle.getFileHandle('mdt_test.tmp',{create:true});
+    var w=await fh.createWritable();
+    await w.write('ok');
+    await w.close();
+    await nasHandle.removeEntry('mdt_test.tmp');
+    alert('✅ NAS 連線测試成功！資料夾可正常寫入。');
+  }catch(e){alert('❌ 測試失敗：'+e.message);}
+}
+
+async function backupToNAS(){
+  if(!nasHandle)return;
+  try{
+    // Show status
+    var smEl=document.getElementById('save-msg');
+    if(smEl)smEl.innerHTML+=' <span style="font-size:11px;color:var(--textlt)">NAS 備份中...</span>';
+
+    // 1. Collect all localStorage mdt_* data
+    var data={};
+    Object.keys(localStorage).forEach(function(k){if(k.startsWith('mdt_'))data[k]=localStorage.getItem(k);});
+
+    // 2. Collect all images (base64 from dataUrl or read from imgFolderHandle)
+    var images={};
+    var idx=getIdx();
+    for(var mi=0;mi<idx.length;mi++){
+      var m=loadLocal(idx[mi].id);if(!m)continue;
+      var mImgs={};
+      var cids=m.cids||Object.keys(m.sections||{});
+      for(var ci=0;ci<cids.length;ci++){
+        var sec=(m.sections||{})[cids[ci]];
+        if(!sec)continue;
+        var cases=sec.cases||[];
+        for(var ki=0;ki<cases.length;ki++){
+          var c=cases[ki];
+          var allImgs=[
+            ...(c.pathologyImages||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].pathologyImages['+j+']'};}),
+            ...(c.surgicalImages||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].surgicalImages['+j+']'};}),
+            ...(c.images||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].images['+j+']'};}),
+            ...((c.mammo&&c.mammo.images)||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].mammo.images['+j+']'};})
+          ];
+          for(var ii=0;ii<allImgs.length;ii++){
+            var entry=allImgs[ii];
+            var src=entry.img.dataUrl||'';
+            if(!src&&entry.img.fromFolder&&entry.img.name&&imgFolderHandle){
+              try{
+                var fh=await imgFolderHandle.getFileHandle(entry.img.name);
+                var file=await fh.getFile();
+                src=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
+              }catch(e){src='';}
+            }
+            if(src)mImgs[entry.key]=src;
+          }
+        }
+      }
+      if(Object.keys(mImgs).length)images[idx[mi].id]=mImgs;
+    }
+
+    // 3. Build backup object
+    var now=new Date();
+    var ts=now.getFullYear()+''+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+    var backup={version:VERSION,backupAt:now.toISOString(),data:data,images:images};
+    var json=JSON.stringify(backup);
+    var fname='MDT_backup_'+ts+'.json';
+
+    // 4. Write to NAS
+    var fh=await nasHandle.getFileHandle(fname,{create:true});
+    var w=await fh.createWritable();
+    await w.write(json);
+    await w.close();
+
+    // 5. Rotate: keep only latest 10
+    var entries=await _folderEntries(nasHandle);
+    var backups=entries
+      .filter(function(e){return e.kind==='file'&&e.name.startsWith('MDT_backup_')&&e.name.endsWith('.json');})
+      .map(function(e){return e.name;})
+      .sort();
+    while(backups.length>10){
+      try{await nasHandle.removeEntry(backups.shift());}catch(e){}
+    }
+
+    // 6. Update status
+    var lastStr=now.toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
+    localStorage.setItem('mdt_nas_last',lastStr);
+    localStorage.setItem('mdt_nas_last_date',now.toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'}));
+    var elLast=document.getElementById('nas-last-backup');
+    if(elLast)elLast.textContent='最後備份：'+lastStr;
+    if(smEl)smEl.innerHTML+=' <span style="font-size:11px;color:var(--ok)">✓ NAS 完成</span>';
+
+  }catch(e){
+    console.warn('NAS backup failed:',e);
+    var smEl2=document.getElementById('save-msg');
+    if(smEl2)smEl2.innerHTML+=' <span style="font-size:11px;color:var(--err)">NAS 失敗</span>';
+  }
+}
+
+function _shouldNasBackupToday(){
+  if(!nasHandle)return false;
+  var last=localStorage.getItem('mdt_nas_last_date')||'';
+  var today=new Date().toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'});
+  return last!==today;
+}
+
+function _markNasBackupToday(){
+  var today=new Date().toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'});
+  localStorage.setItem('mdt_nas_last_date',today);
+}
+
+function canEditMeeting(m){
+  if(!m)return false;
+  // No createdBy = legacy meeting, allow edit by anyone
+  if(!m.createdBy)return true;
+  return m.createdBy===S.user.id;
+}
+
+function openPostMtgPanel(){
+  if(!S.meeting)return;
+  readForm();
+  var body=document.getElementById('postmtg-body');if(!body)return;
+  body.innerHTML='';
+  S.cids.forEach(function(cid){
+    var sec=S.meeting.sections[cid]||{};
+    var ca=CFG[cid];
+    var fups=sec.followups||[];
+    var cases=sec.cases||[];
+    if(!fups.length&&!cases.length)return;
+    if(S.cids.length>1){
+      var hdr=document.createElement('div');
+      hdr.style.cssText='font-weight:700;font-size:14px;color:var(--acc);padding:12px 4px 6px;border-bottom:2px solid var(--acc);margin-bottom:12px';
+      hdr.textContent=ca.name;
+      body.appendChild(hdr);
+    }
+    if(fups.length){
+      var fhdr=document.createElement('div');
+      fhdr.style.cssText='font-weight:600;font-size:12px;color:var(--fog);padding:6px 0 8px;letter-spacing:.5px';
+      fhdr.textContent='前期追蹤';
+      body.appendChild(fhdr);
+      fups.forEach(function(f,fi){
+        var isOngoing=f.status==='ongoing';
+        var card=document.createElement('div');
+        card.style.cssText='background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:12px 14px;margin-bottom:8px';
+        card.innerHTML=
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+          +'<span style="font-weight:600;font-size:13px;color:var(--fog-dk)">'
+          +escA(f.chartNo||'')+(f.name?' &nbsp;'+escA(maskName(f.name)):'')
+          +'</span>'
+          +(getDoctorStr(f)&&getDoctorStr(f)!=='—'?'<span style="font-size:11px;color:var(--textlt)">VS '+escA(getDoctorStr(f))+'</span>':'')
+          +'</div>'
+          +'<div style="display:flex;gap:6px">'
+          +'<button class="btn btn-sm '+(isOngoing?'btn-a':'btn-b')+'" data-action="postfup-ongoing" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(isOngoing?'':'opacity:.5')+'">繼續追蹤</button>'
+          +'<button class="btn btn-sm '+(!isOngoing?'btn-a':'btn-b')+'" data-action="postfup-closed" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(!isOngoing?'':'opacity:.5')+'">結案</button>'
+          +'</div>';
+        body.appendChild(card);
+      });
+    }
+    if(cases.length){
+      var chdr=document.createElement('div');
+      chdr.style.cssText='font-weight:600;font-size:12px;color:var(--fog);padding:10px 0 8px;letter-spacing:.5px';
+      chdr.textContent='個案討論';
+      body.appendChild(chdr);
+      cases.forEach(function(c,ci){
+        var noFollow=c.followNext===false;
+        var card=document.createElement('div');
+        card.style.cssText='background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:12px 14px;margin-bottom:10px';
+        card.innerHTML=
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+          +'<span style="font-weight:600;font-size:13px;color:var(--fog-dk)">'+(ci+1)+'.&nbsp;'
+          +escA(c.chartNo||'')+(c.name?' &nbsp;'+escA(maskName(c.name)):'')
+          +'</span>'
+          +(getDoctorStr(c)&&getDoctorStr(c)!=='—'?'<span style="font-size:11px;color:var(--textlt)">VS '+escA(getDoctorStr(c))+'</span>':'')
+          +(c.diagnosis?'<span style="font-size:11px;color:var(--textlt);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(c.diagnosis)+'</span>':'')
+          +'</div>'
+          +'<div style="margin-bottom:8px">'
+          +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
+          +'<textarea data-action="postcase-summary" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="3" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.summary||'')+'</textarea>'
+          +'</div>'
+          +'<div style="margin-bottom:10px">'
+          +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
+          +'<textarea data-action="postcase-decision" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.decision||'')+'</textarea>'
+          +'</div>'
+          +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--textlt);cursor:pointer">'
+          +'<input type="checkbox" data-action="postcase-nofollow" data-cid="'+escA(cid)+'" data-ci="'+ci+'"'+(noFollow?' checked':'')+' style="width:14px;height:14px">'
+          +'不列入下次追蹤</label>';
+        body.appendChild(card);
+      });
+    }
+  });
+  document.getElementById('postmtg-panel').style.display='flex';
+}
+
+function closePostMtgPanel(){
+  document.getElementById('postmtg-panel').style.display='none';
+}
+
+function savePostMtg(){
+  var panel=document.getElementById('postmtg-panel');
+  panel.querySelectorAll('[data-action="postcase-summary"]').forEach(function(el){
+    var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
+    ensureSec(cid);var c=S.meeting.sections[cid].cases[ci];
+    if(c)c.summary=el.value.trim();
+  });
+  panel.querySelectorAll('[data-action="postcase-decision"]').forEach(function(el){
+    var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
+    var c=(S.meeting.sections[cid]||{}).cases[ci];
+    if(c)c.decision=el.value.trim();
+  });
+  S.cids.forEach(function(cid){
+    ((S.meeting.sections[cid]||{}).cases||[]).forEach(function(c){c.followNext=true;});
+  });
+  panel.querySelectorAll('[data-action="postcase-nofollow"]').forEach(function(el){
+    if(!el.checked)return;
+    var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
+    var c=(S.meeting.sections[cid]||{}).cases[ci];
+    if(c)c.followNext=false;
+  });
+  markDirty();
+  saveMeeting();
+  closePostMtgPanel();
+}
+
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+    type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;
   // For new cases: remove cc-collapsed so new card starts expanded
@@ -3554,7 +3955,7 @@ function onExamTypeChange(sel,caseIdx,examIdx,cid){
 // ── Auto-save every 2 minutes when dirty ──
 setInterval(async function(){
   if(_dirty&&S.meeting&&S.meeting.version){
-    await saveMeeting();
+    await saveMeeting({silent:true});
   }
 },2*60*1000);
 
@@ -3891,8 +4292,8 @@ function autoImportPrevFollowups(cids){
     if(!prev)return;
     const m=loadLocal(prev.id);if(!m)return;
     const sec=(m.sections||{})[cid]||{};
-    // 個案討論 + 醫療小組 都帶入
-    const sources=[...(sec.cases||[]),...(sec.team||[])];
+    // 個案討論 + 醫療小組 都帶入（過濾 followNext===false）
+    const sources=[...(sec.cases||[]).filter(function(c){return c.followNext!==false;}),...(sec.team||[])];
     if(!sources.length)return;
     const fups=S.meeting.sections[cid].followups;
     const existing=new Set(fups.map(function(f){return f.chartNo;}));
@@ -3910,6 +4311,15 @@ function autoImportPrevFollowups(cids){
         _autoImported:true
       });
       if(c.chartNo)existing.add(c.chartNo);
+    });
+    // ongoing 前期追蹤也帶入
+    (sec.followups||[]).filter(function(f){return f.status==='ongoing';}).forEach(function(f){
+      if(!f.chartNo&&!f.name)return;
+      if(f.chartNo&&existing.has(f.chartNo))return;
+      fups.push({id:uid(),chartNo:f.chartNo||'',name:f.name||'',
+        doctors:Array.isArray(f.doctors)?f.doctors.slice(0,2):[(f.doctor||''),''],
+        doctor:f.doctor||'',prevDate:prev.date||'',note:f.note||'',_autoImported:true});
+      if(f.chartNo)existing.add(f.chartNo);
     });
   });
   }catch(e){console.warn('autoImportPrevFollowups error:',e);}
@@ -4079,7 +4489,7 @@ async function restoreRootHandle(){
 /* ════ Save ════ */
 let _dirty=false;
 function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}}
-async function saveMeeting(){
+async function saveMeeting(opts){
   document.querySelectorAll('.sec-foot .btn-a, #btn-save-all').forEach(b=>{b.disabled=true;b.textContent='儲存中...'})
   readForm();
   // Auto-fill Nil for cases with no past history
@@ -4118,12 +4528,14 @@ async function saveMeeting(){
   document.querySelectorAll('.sec-foot .btn-a, #btn-save-all').forEach(b=>{b.disabled=false;b.textContent='儲存'})
   renderSbRecent();
   // Switch to view mode after save
-  setTimeout(()=>{
-    S._snapshot=null;_dirty=false;
-    const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
-    S.viewMode=true;S.meetingMode='record';
-    renderEditor();
-  },1200);
+  if(!opts||!opts.silent){
+    setTimeout(()=>{
+      S._snapshot=null;_dirty=false;
+      const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
+      S.viewMode=true;S.meetingMode='record';
+      renderEditor();
+    },1200);
+  }
 }
 
 /* ════ PPTX ════ */
@@ -4343,153 +4755,241 @@ async function genDOCX(){
   try{
     const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const{Document,Paragraph,TextRun,HeadingLevel,Packer,
-          Table,TableRow,TableCell,WidthType,ShadingType}=docx;
+          Table,TableRow,TableCell,WidthType,ShadingType,
+          AlignmentType,BorderStyle,PageNumber,Footer,Header,
+          convertInchesToTwip}=docx;
 
-    const hdColor='3A4550',ltColor='637281';
-    const mkP=(text,opts={})=>new Paragraph({children:[new TextRun({text:text||'',...opts})],spacing:{after:120}});
-    const mkH1=t=>new Paragraph({text:t,heading:HeadingLevel.HEADING_1,spacing:{after:240}});
-    const mkH2=t=>new Paragraph({text:t,heading:HeadingLevel.HEADING_2,spacing:{before:400,after:160}});
-    const mkH3=t=>new Paragraph({text:t,heading:HeadingLevel.HEADING_3,spacing:{before:200,after:100}});
-    const mkRow=(label,value)=>new TableRow({children:[
-      new TableCell({children:[new Paragraph({children:[new TextRun({text:label,bold:true,size:20,color:ltColor})]})],width:{size:18,type:WidthType.PERCENTAGE},shading:{type:ShadingType.CLEAR,color:'auto',fill:'EFF1F4'}}),
-      new TableCell({children:[new Paragraph({children:[new TextRun({text:value||'',size:20})]})],width:{size:82,type:WidthType.PERCENTAGE}})
-    ]});
-    const mkEmptyRow=(label,height=2)=>new TableRow({children:[
-      new TableCell({children:[new Paragraph({children:[new TextRun({text:label,bold:true,size:20,color:ltColor})]})],shading:{type:ShadingType.CLEAR,color:'auto',fill:'EFF1F4'}}),
-      new TableCell({children:Array(height).fill(null).map(()=>new Paragraph({text:'',spacing:{after:200}}))})
-    ]});
-    const mkTable=rows=>new Table({rows,width:{size:100,type:WidthType.PERCENTAGE},margins:{top:80,bottom:80,left:80,right:80}});
+    // ── Colors ──
+    const C={title:'1E2D3D',dark:'2C3E50',mid:'546E7A',light:'78909C',
+              xlt:'B0BEC5',bg:'F5F7F8',white:'FFFFFF',accent:'2E5F8A',
+              divider:'CFD8DC'};
+
+    // ── Helpers ──
+    const pt=n=>n*20; // half-points to twip
+    const mkRun=(text,opts={})=>new TextRun({text:text||'',...opts});
+
+    // Horizontal rule paragraph
+    const mkHR=()=>new Paragraph({
+      border:{bottom:{style:BorderStyle.SINGLE,size:6,color:C.divider}},
+      spacing:{before:pt(6),after:pt(6)}
+    });
+
+    // Section header (e.g. ▌前期追蹤)
+    const mkSecHdr=(text)=>new Paragraph({
+      children:[mkRun(text,{bold:true,size:pt(13),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      spacing:{before:pt(14),after:pt(6)},
+      border:{left:{style:BorderStyle.THICK,size:12,color:C.accent}}
+    });
+
+    // Case header paragraph (deep blue bg via shading in table)
+    const mkCaseHdr=(no,c,drs)=>new Table({
+      width:{size:100,type:WidthType.PERCENTAGE},
+      borders:{top:{style:BorderStyle.NONE},bottom:{style:BorderStyle.NONE},
+               left:{style:BorderStyle.NONE},right:{style:BorderStyle.NONE},
+               insideH:{style:BorderStyle.NONE},insideV:{style:BorderStyle.NONE}},
+      rows:[new TableRow({children:[
+        new TableCell({
+          width:{size:100,type:WidthType.PERCENTAGE},
+          shading:{type:ShadingType.CLEAR,fill:C.accent},
+          margins:{top:pt(4),bottom:pt(4),left:pt(6),right:pt(6)},
+          children:[new Paragraph({
+            children:[
+              mkRun(no+'.  ',{bold:true,size:pt(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun((c.chartNo||'')+'\u3000'+(c.name?maskName(c.name):''),
+                {bold:true,size:pt(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun('\u3000'+(c.gender||'M')+'/'+(c.age||'\u2014'),
+                {size:pt(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun('\u3000VS '+drs,
+                {size:pt(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+            ]
+          })]
+        })
+      ]})]
+    });
+
+    // Label + content block
+    const mkBlock=(label,content,isEmpty)=>new Table({
+      width:{size:100,type:WidthType.PERCENTAGE},
+      borders:{top:{style:BorderStyle.NONE},bottom:{style:BorderStyle.NONE},
+               left:{style:BorderStyle.NONE},right:{style:BorderStyle.NONE},
+               insideH:{style:BorderStyle.NONE},insideV:{style:BorderStyle.NONE}},
+      rows:[new TableRow({children:[
+        new TableCell({
+          width:{size:16,type:WidthType.PERCENTAGE},
+          shading:{type:ShadingType.CLEAR,fill:C.bg},
+          margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
+          children:[new Paragraph({children:[
+            mkRun(label,{bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})
+          ]})]
+        }),
+        new TableCell({
+          width:{size:84,type:WidthType.PERCENTAGE},
+          margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
+          children:isEmpty
+            ?[new Paragraph({children:[mkRun('',{size:pt(12)})],spacing:{after:pt(16)}})]
+            :(content||'').split('\n').map(line=>new Paragraph({
+                children:[mkRun(line,{size:pt(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
+                spacing:{after:pt(2)}
+              }))
+        })
+      ]})]
+    });
+
+    // Followup status badge
+    const mkFupStatus=(status)=>new Paragraph({
+      children:[
+        mkRun('\u72c0\u614b\uff1a',{bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun(status==='ongoing'?'\u7e7c\u7e8c\u8ffd\u8e64':'\u7d50\u6848',
+          {bold:true,size:pt(11),
+           color:status==='ongoing'?'1565C0':'B71C1C',
+           font:'\u65b0\u7d30\u660e\u9ad4'})
+      ],
+      spacing:{before:pt(2),after:pt(4)}
+    });
 
     const children=[];
-    // 標題
-    children.push(new Paragraph({children:[new TextRun({text:mtgTitle(cids),bold:true,size:36,color:hdColor})],spacing:{after:200}}));
-    children.push(mkTable([mkRow('日期',rocDate(m.date)),mkRow('時間',m.time),mkRow('地點',m.loc),mkRow('聯絡人',m.contact)]));
-    children.push(new Paragraph({text:'',spacing:{after:300}}));
 
-    cids.forEach(cid=>{
+    // ── Header: hospital + meeting info ──
+    children.push(new Paragraph({
+      children:[mkRun('\u5f70\u6ff1\u79c0\u50b3\u7652\u764c\u75c7\u4e2d\u5fc3',
+        {bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      spacing:{after:pt(2)}
+    }));
+    children.push(new Paragraph({
+      children:[mkRun(mtgTitle(cids),
+        {bold:true,size:pt(16),color:C.title,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      spacing:{after:pt(4)}
+    }));
+    // Date + time + location on one line
+    const dateStr=rocDate(m.date).replace(/\(\u661f\u671f.\)$/,'');
+    const infoLine=[dateStr,m.time,m.loc].filter(Boolean).join('\u3000\u3000');
+    children.push(new Paragraph({
+      children:[mkRun(infoLine,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      spacing:{after:pt(2)}
+    }));
+    children.push(mkHR());
+
+    cids.forEach(function(cid){
       const ca=CFG[cid],sec=m.sections[cid]||{followups:[],cases:[],special:[]};
-      if(cids.length>1)children.push(mkH1(ca.name));
+      if(cids.length>1){
+        children.push(new Paragraph({
+          children:[mkRun(ca.name,{bold:true,size:pt(14),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+          spacing:{before:pt(10),after:pt(6)},
+          border:{bottom:{style:BorderStyle.SINGLE,size:4,color:C.accent}}
+        }));
+      }
 
-      // 前期追蹤事項
-      children.push(mkH2('前期追蹤事項'));
+      // ── 前期追蹤 ──
       const fups=sec.followups||[];
       if(fups.length){
-        fups.forEach((c,i)=>{
-          children.push(mkH3(`追蹤 ${i+1}：${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
-          children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('追蹤說明',c.note||'')]));
-          children.push(new Paragraph({text:'',spacing:{after:120}}));
-        });
-      }else{
-        children.push(mkP('（無前期追蹤個案）',{italics:true,color:ltColor}));
-      }
-
-      // 個案討論
-      children.push(mkH2('個案討論'));
-      const cases=sec.cases||[];
-      if(cases.length){
-        cases.forEach((c,i)=>{
-          const drs=getDoctors(c).join('、')||'—';
-          // Case header: chart no, name, doctors, diagnosis
+        children.push(mkSecHdr('\u524d\u671f\u8ffd\u8e64'));
+        fups.forEach(function(f,i){
+          const drs=getDoctorStr(f);
           children.push(new Paragraph({
             children:[
-              new TextRun({text:(i+1)+'. '+(c.chartNo||'')+'  '+(c.name?maskName(c.name):''),bold:true,size:22,color:hdColor}),
-              new TextRun({text:'  '+c.gender+'/'+(c.age||'—')+'  VS '+drs,size:20,color:ltColor}),
-            ],spacing:{before:200,after:60}
+              mkRun((i+1)+'.  ',{bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun((f.chartNo||'')+'\u3000'+(f.name?maskName(f.name):''),
+                {bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun(drs&&drs!=='\u2014'?'\u3000VS '+drs:'',
+                {size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+            ],
+            spacing:{before:pt(6),after:pt(2)}
           }));
-          if(c.diagnosis)children.push(mkP(c.diagnosis,{size:20,color:ltColor}));
-          // Info table: all fields
-          const infoRows=[];
-          if(c.cc)infoRows.push(mkRow('現病史',c.cc));
-          const phAll2=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
-          if(phAll2)infoRows.push(mkRow('過去病史',phAll2));
-          if((c.pathologies||[]).length){const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('\n');infoRows.push(mkRow('病理',pStr));}
-          else if(c.pathology){infoRows.push(mkRow('病理',(c.pathologyDate?c.pathologyDate+' ':'')+c.pathology));}
-          // Exams (structured list)
-          const exStr2=(c.exams||[]).length
-            ?(c.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(ex=>(ex.name||'')+(ex.date?'('+ex.date+')':'')+(ex.content?' : '+ex.content:'')).join('\n')
-            :c.exam||'';
-          if(exStr2)infoRows.push(mkRow('檢查',exStr2));
-          // Treatments (structured list)
-          const trStr2=(c.treatments||[]).length
-            ?(c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(tr=>(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'')).join('\n')
-            :(c.treatment&&c.treatment!=='尚未治療'?c.treatment:'');
-          if(trStr2)infoRows.push(mkRow('治療',trStr2));
-          if((c.markers||[]).length){const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+'： ':' ')+(mk.content||'')).join('\n');infoRows.push(mkRow('癌指數',mkStr));}
-          if(c.discussion)infoRows.push(mkRow('討論要點',c.discussion));
-          if(infoRows.length)children.push(mkTable(infoRows));
-          // Discussion focus: topics + summary + decision (expanded)
-          const topics=(c.topics||[]).join('、');
-          if(topics)children.push(new Paragraph({
-            children:[new TextRun({text:'討論主題：'+topics,size:20,color:ltColor,italics:true})],
-            spacing:{before:120,after:80}
+          if(f.note)children.push(new Paragraph({
+            children:[mkRun(f.note,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{after:pt(2)},
+            indent:{left:pt(16)}
           }));
-          // Summary - large empty area for filling in
-          children.push(mkTable([
-            mkEmptyRow('討論摘要',3),
-            mkEmptyRow('決策結論',2)
-          ]));
-          // If already filled
-          if(c.summary||c.decision){
-            children.push(mkTable([
-              c.summary?mkRow('摘要',c.summary):null,
-              c.decision?mkRow('結論',c.decision):null
-            ].filter(Boolean)));
+          children.push(mkFupStatus(f.status||'closed'));
+        });
+        children.push(mkHR());
+      }
+
+      // ── 個案討論 ──
+      const cases=sec.cases||[];
+      if(cases.length){
+        children.push(mkSecHdr('\u500b\u6848\u8a0e\u8ad6'));
+        cases.forEach(function(c,i){
+          const drs=getDoctorStr(c);
+          // Case header (blue bg)
+          children.push(mkCaseHdr(i+1,c,drs));
+          // Diagnosis
+          if(c.diagnosis){
+            children.push(new Paragraph({
+              children:[mkRun(c.diagnosis,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+              spacing:{before:pt(3),after:pt(4)},
+              indent:{left:pt(4)}
+            }));
           }
-          children.push(new Paragraph({text:'',spacing:{after:200}}));
-        });
-      }else{
-        children.push(mkP('（無個案討論）',{italics:true,color:ltColor}));
-      }
-      // 醫療小組
-      const team2=sec.team||[];
-      if(team2.length){
-        children.push(mkH2('醫療小組'));
-        team2.forEach((c,i)=>{
-          children.push(mkH3(`${i+1}. ${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
-          children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('說明',c.note||'')]));
-          children.push(new Paragraph({text:'',spacing:{after:100}}));
-        });
-      }
-      // 必要事件
-      const events2=sec.events||[];
-      if(events2.length){
-        children.push(mkH2('必要事件'));
-        events2.forEach((c,i)=>{
-          children.push(mkH3(`${i+1}. ${c.chartNo||''} ${c.name?maskName(c.name):''} ${getDoctorStr(c)?'VS '+getDoctorStr(c):''}`));
-          children.push(mkTable([mkRow('前次日期',c.prevDate||''),mkRow('說明',c.note||'')]));
-          children.push(new Paragraph({text:'',spacing:{after:100}}));
+          // Treatment
+          const trStr=(c.treatments||[]).length
+            ?(c.treatments||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
+              .map(function(tr){return(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'');}).join('\n')
+            :(c.treatment&&c.treatment!=='\u5c1a\u672a\u6cbb\u7642'?c.treatment:'');
+          if(trStr)children.push(mkBlock('\u6cbb\u7642',trStr,false));
+          // Discussion topics
+          const topics=(c.topics||[]).join('\u3001');
+          if(topics)children.push(new Paragraph({
+            children:[mkRun('\u8a0e\u8ad6\u4e3b\u984c\uff1a'+topics,
+              {size:pt(10),color:C.xlt,italics:true,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{before:pt(2),after:pt(2)},indent:{left:pt(4)}
+          }));
+          // Summary - show content if filled, else empty lines
+          children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',c.summary||'',!c.summary));
+          // Decision
+          children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',c.decision||'',!c.decision));
+          children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
-      // 特殊議程
+
+      // ── 特殊議程 ──
       const sp=sec.special||[];
       if(sp.length){
-        children.push(mkH2('特殊議程'));
-        sp.forEach(s=>{
+        children.push(mkSecHdr('\u7279\u6b8a\u8b70\u7a0b'));
+        sp.forEach(function(s){
           const label=(s.topicType?'['+s.topicType+'] ':'')+( s.title||'');
-          children.push(mkH3(label));
-          if(s.note)children.push(mkP(s.note));
-          children.push(new Paragraph({text:'',spacing:{after:200}}));
+          children.push(new Paragraph({
+            children:[mkRun(label,{bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{before:pt(6),after:pt(2)}
+          }));
+          if(s.note)children.push(new Paragraph({
+            children:[mkRun(s.note,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{after:pt(4)},indent:{left:pt(8)}
+          }));
         });
+        children.push(mkHR());
       }
     });
 
-    // 簽署欄
-    children.push(new Paragraph({text:'',spacing:{before:600,after:0}}));
-    children.push(mkTable([
-      new TableRow({children:[
-        new TableCell({children:[new Paragraph({children:[new TextRun({text:'個管師簽署',bold:true,size:20,color:ltColor})]})],shading:{type:ShadingType.CLEAR,color:'auto',fill:'EFF1F4'}}),
-        new TableCell({children:[new Paragraph({text:'',spacing:{after:400}})]}),
-        new TableCell({children:[new Paragraph({children:[new TextRun({text:'紀錄日期',bold:true,size:20,color:ltColor})]})],shading:{type:ShadingType.CLEAR,color:'auto',fill:'EFF1F4'}}),
-        new TableCell({children:[new Paragraph({text:'',spacing:{after:400}})]})
-      ]})
-    ]));
+    // ── Footer: recorder + date ──
+    const recorder=S.user?S.user.name:'';
+    const recDate=rocDate(m.date).replace(/\(\u661f\u671f.\)$/,'');
+    children.push(new Paragraph({text:'',spacing:{before:pt(12),after:0}}));
+    children.push(new Paragraph({
+      children:[
+        mkRun('\u8a18\u9304\uff1a'+recorder,{size:pt(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u3000\u3000'+recDate,{size:pt(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+      ],
+      alignment:AlignmentType.RIGHT
+    }));
 
-    const doc=new Document({sections:[{children}]});
+    const doc=new Document({
+      styles:{default:{document:{run:{font:'\u65b0\u7d30\u660e\u9ad4',size:pt(12)}}}},
+      sections:[{
+        properties:{page:{margin:{
+          top:convertInchesToTwip(0.8),
+          bottom:convertInchesToTwip(0.8),
+          left:convertInchesToTwip(0.9),
+          right:convertInchesToTwip(0.9)
+        }}},
+        children
+      }]
+    });
     const blob=await Packer.toBlob(doc);
-    download(blob,`${S.cids.map(id=>CFG[id]?.name).join('_')}_${S.meeting.date}_MDT會議記錄.docx`);
-    setLibStatus('DOCX 已下載','var(--ok)');setTimeout(()=>setLibStatus(''),3000);
-  }catch(e){setLibStatus('DOCX 產生錯誤：'+e.message,'var(--err)');console.error(e)}
-  btn.disabled=false;btn.textContent='DOCX 會議記錄';
+    download(blob,S.cids.map(function(id){return CFG[id]?.name;}).join('_')+'_'+m.date+'_MDT\u6703\u8b70\u8a18\u9304.docx');
+    setLibStatus('DOCX \u5df2\u4e0b\u8f09','var(--ok)');setTimeout(function(){setLibStatus('');},3000);
+  }catch(e){setLibStatus('DOCX \u7522\u751f\u932f\u8aa4\uff1a'+e.message,'var(--err)');console.error(e);}
+  btn.disabled=false;btn.textContent='DOCX \u6703\u8b70\u8a18\u9304';
 }
 
 /* ════ Generators ════ */
@@ -4888,10 +5388,11 @@ async function genHTMLSlides(){
           +'</section>');
       }
 
-      // Pathology staining images - one slide per image
+      // Pathology staining images - one slide per image (grouped or inline)
+      var _pathDest=_groupPath?_deferredPath:slides;
       (c.pathologyImages||[]).forEach(function(img){
         const stainName=escA(img.caption||img.name||'病理影像');
-        slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:2vh 2.5vw;box-sizing:border-box;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;">'+'</div>'          +'</section>');
+        _pathDest.push('<section class="slide img-slide" style="--ca:'+caColor+';">'          +'<div class="ch"><div class="cht">'          +'<span class="ci" onclick="navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\')" title="點擊複製病歷號" style="cursor:pointer">'+escA(c.chartNo||'')+'</span> '          +'<span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'          +'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+stainName+'</span>'+'<span class="cat">病理染色</span></div></div>'          +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:2vh 2.5vw;box-sizing:border-box;">'+'<img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+stainName+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;">'+'</div>'          +'</section>');
       });
 
       // Surgical photo slides: auto-fill grid by surgImgsPerSlide
@@ -4939,113 +5440,236 @@ async function genHTMLSlides(){
            ...events.map(c=>'<tr><td>必要事件</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>')].join('')
         +'</tbody></table></section>');
     }
-    // ── Special items (完治率 etc.) ──
-    const sp2=sec.special||[];
-    sp2.forEach(function(sp){
-      if(sp.topicType!=='完治率')return;
-      const rate=sp.denominator>0?((sp.numerator/sp.denominator)*100).toFixed(1)+'%':'—';
-      const period=escA(sp.period||'');
-      const cancer=escA(sp.cancer||ca.name||'');
-      const def=escA(sp.definition||'').replace(/\n/g,'<br>');
-      const rmk=escA(sp.remarks||'').replace(/\n/g,'<br>');
-      const threshold=escA(sp.threshold||'>80%');
+  });
+  // Flush deferred pathology slides (when grouping enabled)
+  _deferredPath.forEach(function(sl){slides.push(sl);});
 
-      // Page 1: Summary table + definition + remarks
-      slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
-        +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
-        +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">完治率</span>'
-        +'<span class="cat">'+cancer+'</span></div>'
-        +(period?'<div style="font-size:clamp(13px,1.3vw,18px);color:rgba(255,255,255,.78)">'+period+'</div>':'')
-        +'</div>'
-        +'<div style="padding:2.5vh 3vw;display:flex;flex-direction:column;gap:2.5vh;flex:1;overflow:auto">'
-        // Stats table
-        +'<table style="width:100%;border-collapse:collapse;border:2px solid var(--dk)">'
-        +'<thead><tr style="background:var(--dk);color:#fff">'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">期間</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分子</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分母</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">治療療程未完成</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">總收案人數 Class 1~2</th>'
-        +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px)">完治率（閾值'+threshold+'）</th>'
-        +'</tr></thead>'
-        +'<tbody><tr>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(14px,1.4vw,20px);border:1px solid #ddd">'+period+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.numerator||'—'))+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.denominator||'—'))+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.incomplete||'—'))+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(20px,2.2vw,32px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.totalClass12||'—'))+'</td>'
-        +'<td style="text-align:center;padding:1.8vh 1.5vw;font-size:clamp(24px,3vw,44px);font-weight:800;color:'+caColor+';border:1px solid #ddd">'+escA(rate)+'</td>'
-        +'</tr></tbody></table>'
-        // Definition + Remarks
-        +(def||rmk?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2vw;flex:1">'
-          +'<div><div style="font-size:clamp(11px,1vw,14px);font-weight:700;color:var(--lt);margin-bottom:.8vh">指標定義</div>'
-          +'<div style="font-size:clamp(12px,1.15vw,16px);color:#2a3540;line-height:1.8">'+def+'</div></div>'
-          +'<div><div style="font-size:clamp(11px,1vw,14px);font-weight:700;color:var(--lt);margin-bottom:.8vh">備註/會議決議</div>'
-          +'<div style="font-size:clamp(12px,1.15vw,16px);color:#2a3540;line-height:1.8">'+rmk+'</div></div>'
-          +'</div>':'')
-        +'</div>'
-        +'</section>');
-
-      // Page 2+: Patient list, 3 per page
-      const patients=sp.patients||[];
-      if(patients.length){
-        const perPage=3;
-        for(var ppi=0;ppi<patients.length;ppi+=perPage){
-          var pagePatients=patients.slice(ppi,ppi+perPage);
-          var pageNum=Math.floor(ppi/perPage)+1;
-          var totalPages=Math.ceil(patients.length/perPage);
-          var rows=pagePatients.map(function(p,ri){
-            return '<tr>'
-              +'<td style="width:9%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top;font-weight:700">'+escA(p.chartNo||'—')+'</td>'
-              +'<td style="width:8%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.name?maskName(p.name):'—')+'</td>'
-              +'<td style="width:10%;padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.doctor||'—')+'</td>'
-              +'<td style="padding:1.2vh 1vw;font-size:clamp(11px,1.1vw,15px);border:1px solid #ddd;vertical-align:top;line-height:1.6">'+escA(p.note||'').replace(/\n/g,'<br>')+'</td>'
-              +'</tr>';
-          }).join('');
-          slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
-            +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
-            +'<span style="font-size:clamp(16px,1.8vw,26px);font-weight:800">未完治病人清單</span>'
-            +'<span class="cat">'+cancer+'</span>'
-            +'<span style="margin-left:auto;font-size:clamp(11px,1vw,14px);color:rgba(255,255,255,.7)">第'+pageNum+'頁 / 共'+totalPages+'頁</span>'
-            +'</div></div>'
-            +'<div style="padding:2vh 2.5vw;flex:1;overflow:hidden">'
-            +'<table style="width:100%;border-collapse:collapse">'
-            +'<thead><tr style="background:var(--dk);color:#fff">'
-            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">病歷號</th>'
-            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">姓名</th>'
-            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px);border-right:1px solid rgba(255,255,255,.2)">主治醫師</th>'
-            +'<th style="padding:1vh 1vw;font-size:clamp(11px,1.1vw,15px)">未完治備註</th>'
-            +'</tr></thead>'
-            +'<tbody>'+rows+'</tbody></table>'
-            +'</div></section>');
-
-          // Image slides for this batch
-          pagePatients.forEach(function(p){
-            if(!p.images||!p.images.length)return;
-            var imgH=p.images.map(function(img){
-              var src=img.dataUrl||_pathImgCache[img.name]||'';
-              if(!src)return '';
-              return '<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
+  // ── Special items: 完治率 / 失聯率 / 留治率 / 訪視率 ──
+  cids.forEach(function(cid){
+    var sec=m.sections[cid];if(!sec)return;
+    var caColor=CFG[cid]&&CFG[cid].color||'#4A7C8E';
+    (sec.special||[]).forEach(function(sp){
+      var t=sp.topicType;
+      if(t==='完治率'){
+        var rate=sp.denominator>0?((sp.numerator/sp.denominator)*100).toFixed(1)+'%':'—';
+        var period=escA(sp.period||'');
+        var cancer=escA(sp.cancer||CFG[cid]&&CFG[cid].name||'');
+        var def=escA(sp.definition||'').replace(/\n/g,'<br>');
+        var rmk=escA(sp.remarks||'').replace(/\n/g,'<br>');
+        var threshold=escA(sp.threshold||'>80%');
+        var thNum=parseFloat((sp.threshold||'>80%').replace(/[^0-9.]/g,''))||80;
+        var actual=sp.denominator>0?(sp.numerator/sp.denominator)*100:null;
+        var pass=actual!==null?actual>=thNum:null;
+        var rateColor=pass===null?'#fff':pass?'#7FE87F':'#FF9980';
+        // Summary slide
+        slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+          +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+          +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">完治率</span>'
+          +'<span class="cat">特殊議程</span></div>'
+          +(period?'<div style="font-size:clamp(12px,1.2vw,17px);color:rgba(255,255,255,.78)">'+period+'</div>':'')
+          +'</div>'
+          +'<div style="padding:2.5vh 3vw;display:flex;flex-direction:column;gap:2.5vh;flex:1;overflow:auto">'
+          +'<table style="width:100%;border-collapse:collapse;border:2px solid var(--dk)">'
+          +'<thead><tr style="background:var(--dk);color:#fff">'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">期間</th>'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分子</th>'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分母</th>'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">未完成</th>'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">Class 1~2</th>'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px)">完治率（閾值'+threshold+'）</th>'
+          +'</tr></thead>'
+          +'<tbody><tr>'
+          +'<td style="text-align:center;padding:1.5vh 1.5vw;font-size:clamp(13px,1.3vw,19px);border:1px solid #ddd">'+period+'</td>'
+          +'<td style="text-align:center;padding:1.5vh 1.5vw;font-size:clamp(20px,2.5vw,36px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.numerator||'—'))+'</td>'
+          +'<td style="text-align:center;padding:1.5vh 1.5vw;font-size:clamp(20px,2.5vw,36px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.denominator||'—'))+'</td>'
+          +'<td style="text-align:center;padding:1.5vh 1.5vw;font-size:clamp(20px,2.5vw,36px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.incomplete||'—'))+'</td>'
+          +'<td style="text-align:center;padding:1.5vh 1.5vw;font-size:clamp(20px,2.5vw,36px);font-weight:700;border:1px solid #ddd">'+escA(String(sp.totalClass12||'—'))+'</td>'
+          +'<td style="text-align:center;padding:1.5vh 1.5vw;font-size:clamp(26px,3.2vw,48px);font-weight:800;color:'+caColor+';border:1px solid #ddd">'+escA(rate)+'</td>'
+          +'</tr></tbody></table>'
+          +((def||rmk)?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2vw;flex:1">'
+            +'<div><div style="font-size:clamp(11px,.9vw,13px);font-weight:700;color:var(--lt);margin-bottom:.6vh">指標定義</div>'
+            +'<div style="font-size:clamp(12px,1.1vw,15px);color:#2a3540;line-height:1.8">'+def+'</div></div>'
+            +'<div><div style="font-size:clamp(11px,.9vw,13px);font-weight:700;color:var(--lt);margin-bottom:.6vh">備註/會議決議</div>'
+            +'<div style="font-size:clamp(12px,1.1vw,15px);color:#2a3540;line-height:1.8">'+rmk+'</div></div>'
+            +'</div>':'')
+          +'</div></section>');
+        // Patient pages (3 per page)
+        var pats=sp.patients||[];
+        if(pats.length){
+          var perPage=3,totalPages=Math.ceil(pats.length/perPage);
+          for(var ppi=0;ppi<pats.length;ppi+=perPage){
+            var pagePats=pats.slice(ppi,ppi+perPage);
+            var pageNum=Math.floor(ppi/perPage)+1;
+            var rows=pagePats.map(function(p){
+              return'<tr>'
+                +'<td style="width:9%;padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top;font-weight:700">'+escA(p.chartNo||'—')+'</td>'
+                +'<td style="width:8%;padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.name?maskName(p.name):'—')+'</td>'
+                +'<td style="width:10%;padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.doctor||'—')+'</td>'
+                +'<td style="padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top;line-height:1.6">'+escA(p.note||'').replace(/\n/g,'<br>')+'</td>'
+                +'</tr>';
+            }).join('');
+            slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+              +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+              +'<span style="font-size:clamp(15px,1.7vw,24px);font-weight:800">未完治病人清單</span>'
+              +'<span class="cat">特殊議程</span>'
+              +'<span style="margin-left:auto;font-size:clamp(11px,.9vw,13px);color:rgba(255,255,255,.7)">第'+pageNum+'頁／共'+totalPages+'頁</span>'
+              +'</div></div>'
+              +'<div style="padding:2vh 2.5vw;flex:1;overflow:hidden">'
+              +'<table style="width:100%;border-collapse:collapse">'
+              +'<thead><tr style="background:var(--dk);color:#fff">'
+              +'<th style="padding:.9vh 1vw;font-size:clamp(11px,1.05vw,15px)">病歷號</th>'
+              +'<th style="padding:.9vh 1vw;font-size:clamp(11px,1.05vw,15px)">姓名</th>'
+              +'<th style="padding:.9vh 1vw;font-size:clamp(11px,1.05vw,15px)">主治醫師</th>'
+              +'<th style="padding:.9vh 1vw;font-size:clamp(11px,1.05vw,15px)">未完治備註</th>'
+              +'</tr></thead>'
+              +'<tbody>'+rows+'</tbody></table>'
+              +'</div></section>');
+            // Image slides per patient
+            pagePats.forEach(function(p){
+              if(!p.images||!p.images.length)return;
+              var imgH=p.images.map(function(img){
+                var src=img.dataUrl||_pathImgCache[img.name]||'';if(!src)return'';
+                return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
+                  +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
+                  +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';
+              }).filter(Boolean);
+              if(!imgH.length)return;
+              var cols=imgH.length===1?1:2,rows2=Math.ceil(imgH.length/cols);
+              var gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows2+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+              slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
+                +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+                +'<span style="font-size:clamp(13px,1.3vw,18px);font-weight:700">'+escA(p.chartNo||'')+'</span>'
+                +(p.name?' <span style="font-size:clamp(12px,1.2vw,17px)">'+escA(maskName(p.name))+'</span>':'')
+                +'<span class="cat">佐証圖片</span></div></div>'
+                +'<div style="'+gSt+'">'+imgH.join('')+'</div></section>');
+            });
+          }
+        }
+      } else if(t==='失聯率'||t==='留治率'||t==='訪視率'){
+        var cfg=RATE_CFG&&RATE_CFG[t]||{threshold:'',dir:'>',cols:[],colLabels:[]};
+        var period2=escA(sp.period||'');
+        var def2=escA(sp.definition||'').replace(/\n/g,'<br>');
+        var rmk2=escA(sp.remarks||'').replace(/\n/g,'<br>');
+        var threshold2=escA(sp.threshold||cfg.threshold||'');
+        var rows2=(sp.rows||[]);
+        // Build table header extra cols
+        var extraThCols=cfg.colLabels.map(function(l){return'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">'+escA(l)+'</th>';}).join('');
+        // Build table rows
+        var tblRows=rows2.map(function(row){
+          var n2=parseInt(row.numerator)||0,m2=parseInt(row.denominator)||0;
+          var pct=m2>0?((n2/m2)*100).toFixed(1)+'%':'—';
+          var thNum2=parseFloat((sp.threshold||cfg.threshold||'').replace(/[^0-9.]/g,''))||0;
+          var actual2=m2>0?(n2/m2)*100:null;
+          var pass2=actual2!==null?(cfg.dir==='<'?actual2<=thNum2:actual2>=thNum2):null;
+          var rc=pass2===null?'#2a3540':pass2?'#1b5e20':'#b71c1c';
+          var extraTdCols=cfg.cols.map(function(col){return'<td style="text-align:center;padding:1.2vh 1.5vw;font-size:clamp(16px,1.8vw,26px);font-weight:700;border:1px solid #ddd">'+escA(String(row[col]||'—'))+'</td>';}).join('');
+          return'<tr>'
+            +'<td style="text-align:center;padding:1.2vh 1.5vw;font-size:clamp(13px,1.3vw,19px);border:1px solid #ddd;font-weight:600">'+escA(row.label||'')+'</td>'
+            +'<td style="text-align:center;padding:1.2vh 1.5vw;font-size:clamp(18px,2vw,28px);font-weight:700;border:1px solid #ddd">'+escA(String(row.numerator||'—'))+'</td>'
+            +'<td style="text-align:center;padding:1.2vh 1.5vw;font-size:clamp(18px,2vw,28px);font-weight:700;border:1px solid #ddd">'+escA(String(row.denominator||'—'))+'</td>'
+            +extraTdCols
+            +'<td style="text-align:center;padding:1.2vh 1.5vw;font-size:clamp(20px,2.4vw,34px);font-weight:800;color:'+rc+';border:1px solid #ddd">'+escA(pct)+'</td>'
+            +'</tr>';
+        }).join('');
+        slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+          +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+          +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">'+escA(t)+'</span>'
+          +'<span class="cat">特殊議程</span></div>'
+          +(period2?'<div style="font-size:clamp(12px,1.2vw,17px);color:rgba(255,255,255,.78)">'+period2+'（閾值 '+threshold2+'）</div>':'')
+          +'</div>'
+          +'<div style="padding:2.5vh 3vw;display:flex;flex-direction:column;gap:2.5vh;flex:1;overflow:auto">'
+          +'<table style="width:100%;border-collapse:collapse;border:2px solid var(--dk)">'
+          +'<thead><tr style="background:var(--dk);color:#fff">'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">癌別</th>'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分子</th>'
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px);border-right:1px solid rgba(255,255,255,.3)">分母</th>'
+          +extraThCols
+          +'<th style="padding:1.2vh 1.5vw;font-size:clamp(12px,1.2vw,17px)">'+escA(t)+'（閾值'+threshold2+'）</th>'
+          +'</tr></thead>'
+          +'<tbody>'+tblRows+'</tbody></table>'
+          +((def2||rmk2)?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2vw;flex:1">'
+            +'<div><div style="font-size:clamp(11px,.9vw,13px);font-weight:700;color:var(--lt);margin-bottom:.6vh">指標定義</div>'
+            +'<div style="font-size:clamp(12px,1.1vw,15px);color:#2a3540;line-height:1.8">'+def2+'</div></div>'
+            +'<div><div style="font-size:clamp(11px,.9vw,13px);font-weight:700;color:var(--lt);margin-bottom:.6vh">備註/會議決議</div>'
+            +'<div style="font-size:clamp(12px,1.1vw,15px);color:#2a3540;line-height:1.8">'+rmk2+'</div></div>'
+            +'</div>':'')
+          +'</div></section>');
+        // Patient pages if any
+        var pats2=sp.patients||[];
+        if(pats2.length){
+          var perPage2=3,totalPages2=Math.ceil(pats2.length/perPage2);
+          for(var ppi2=0;ppi2<pats2.length;ppi2+=perPage2){
+            var pagePats2=pats2.slice(ppi2,ppi2+perPage2);
+            var pageNum2=Math.floor(ppi2/perPage2)+1;
+            var patRows=pagePats2.map(function(p){
+              return'<tr>'
+                +'<td style="width:9%;padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top;font-weight:700">'+escA(p.chartNo||'—')+'</td>'
+                +'<td style="width:8%;padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.name?maskName(p.name):'—')+'</td>'
+                +'<td style="width:10%;padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top">'+escA(p.doctor||'—')+'</td>'
+                +'<td style="padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top;line-height:1.6">'+escA(p.note||'').replace(/\n/g,'<br>')+'</td>'
+                +'</tr>';
+            }).join('');
+            slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+              +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+              +'<span style="font-size:clamp(15px,1.7vw,24px);font-weight:800">病人清單</span>'
+              +'<span class="cat">'+escA(t)+'</span>'
+              +'<span style="margin-left:auto;font-size:clamp(11px,.9vw,13px);color:rgba(255,255,255,.7)">第'+pageNum2+'頁／共'+totalPages2+'頁</span>'
+              +'</div></div>'
+              +'<div style="padding:2vh 2.5vw;flex:1;overflow:hidden">'
+              +'<table style="width:100%;border-collapse:collapse">'
+              +'<thead><tr style="background:var(--dk);color:#fff">'
+              +'<th style="padding:.9vh 1vw;font-size:clamp(11px,1.05vw,15px)">病歷號</th>'
+              +'<th style="padding:.9vh 1vw;font-size:clamp(11px,1.05vw,15px)">姓名</th>'
+              +'<th style="padding:.9vh 1vw;font-size:clamp(11px,1.05vw,15px)">主治醫師</th>'
+              +'<th style="padding:.9vh 1vw;font-size:clamp(11px,1.05vw,15px)">備註</th>'
+              +'</tr></thead>'
+              +'<tbody>'+patRows+'</tbody></table>'
+              +'</div></section>');
+            pagePats2.forEach(function(p){
+              if(!p.images||!p.images.length)return;
+              var imgH2=p.images.map(function(img){
+                var src=img.dataUrl||_pathImgCache[img.name]||'';if(!src)return'';
+                return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
+                  +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
+                  +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';
+              }).filter(Boolean);
+              if(!imgH2.length)return;
+              var cols2=imgH2.length===1?1:2,rowsN=Math.ceil(imgH2.length/cols2);
+              var gSt2='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+cols2+',1fr);grid-template-rows:repeat('+rowsN+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+              slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
+                +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+                +'<span style="font-size:clamp(13px,1.3vw,18px);font-weight:700">'+escA(p.chartNo||'')+'</span>'
+                +(p.name?' <span>'+escA(maskName(p.name))+'</span>':'')
+                +'<span class="cat">佐証圖片</span></div></div>'
+                +'<div style="'+gSt2+'">'+imgH2.join('')+'</div></section>');
+            });
+          }
+        }
+      } else {
+        // Other special types: generate image slide if images exist
+        var spImgs=sp.images||[];
+        if(spImgs.length){
+          var _ips=sp.imgsPerSlide||4;
+          for(var _sii=0;_sii<spImgs.length;_sii+=_ips){
+            var _sgrp=spImgs.slice(_sii,_sii+_ips);
+            var _scols=_ips===1?1:2,_srows=_ips===4?2:1;
+            var _sgSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_scols+',1fr);grid-template-rows:repeat('+_srows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+            var _sImgH=_sgrp.map(function(img){
+              var src=img.dataUrl||_pathImgCache[img.name]||'';if(!src)return'';
+              return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
                 +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
-                +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')
-                +'</div>';
+                +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';
             }).filter(Boolean);
-            if(!imgH.length)return;
-            var cols=imgH.length===1?1:imgH.length<=4?2:3;
-            var rows2=Math.ceil(imgH.length/cols);
-            var gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows2+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+            if(!_sImgH.length)continue;
             slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
               +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
-              +'<span style="font-size:clamp(13px,1.3vw,18px);font-weight:700">'+escA(p.chartNo||'')+'</span>'
-              +(p.name?' <span style="font-size:clamp(12px,1.2vw,17px)">'+escA(maskName(p.name))+'</span>':'')
-              +'<span class="cat">佐証圖片</span></div></div>'
-              +'<div style="'+gSt+'">'+imgH.join('')+'</div>'
-              +'</section>');
-          });
+              +'<span style="font-size:clamp(15px,1.7vw,24px);font-weight:700">'+escA(sp.title||sp.topicType||'特殊議程')+'</span>'
+              +'<span class="cat">特殊議程</span></div></div>'
+              +'<div style="'+_sgSt+'">'+_sImgH.join('')+'</div></section>');
+          }
         }
       }
     });
-
   });
 
   const N=slides.length;
@@ -5164,15 +5788,15 @@ function hlClear(){document.querySelectorAll('mark').forEach(function(m){var p=m
 var _magMode=false,_magCv=null;
 function _initMag(){if(_magCv)return;_magCv=document.createElement('canvas');_magCv.style.cssText='position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;';document.body.appendChild(_magCv);}
 function _toggleMag(){_initMag();_magMode=!_magMode;var btn=document.getElementById('nb-mag');if(btn)btn.style.color=_magMode?'#7FE87F':'';if(!_magMode)_magCv.style.display='none';}
-document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=(function(){var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;return(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');}());if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);var sx=(mx/rect.width)*img.naturalWidth,sy=(my/rect.height)*img.naturalHeight;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
+document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=(function(){var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;return(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');}());if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rendW=natW*scale,rendH=natH*scale;var offX=(rect.width-rendW)/2,offY=(rect.height-rendH)/2;var cx=mx-offX,cy=my-offY;if(cx<0||cy<0||cx>rendW||cy>rendH){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);var sx=(cx/rendW)*natW,sy=(cy/rendH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
 document.addEventListener('mouseleave',function(){if(_magCv)_magCv.style.display='none';});
 document.addEventListener('keydown',function(e){if(e.key==='l'||e.key==='L')_toggleMag();});
-var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0;
-function _zoomImg(){var slide=document.querySelectorAll('.slide')[c];var img=slide&&slide.classList.contains('img-slide')?slide.querySelector('img'):null;if(!img)return;img.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';img.style.cursor=_zoom>1?'grab':'default';img.style.transition=_dragging?'':'transform .15s';}
-function _resetZoom(){_zoom=1;_panX=0;_panY=0;_zoomImg();}
-document.addEventListener('wheel',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;e.preventDefault();_zoom=Math.max(1,Math.min(8,_zoom*(e.deltaY<0?1.12:0.89)));if(_zoom===1){_panX=0;_panY=0;}_zoomImg();},{passive:false});
-document.addEventListener('dblclick',function(e){var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide'))_resetZoom();});
-document.addEventListener('mousedown',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')||_zoom<=1)return;_dragging=true;_dragSx=e.clientX;_dragSy=e.clientY;_dragPx=_panX;_dragPy=_panY;e.preventDefault();});
+var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0,_zoomTarget=null;
+function _zoomImg(){if(!_zoomTarget)return;_zoomTarget.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';_zoomTarget.style.cursor=_zoom>1?'grab':'default';_zoomTarget.style.transition=_dragging?'':'transform .15s';}
+function _resetZoom(){if(_zoomTarget){_zoomTarget.style.transform='';_zoomTarget.style.cursor='';}_zoom=1;_panX=0;_panY=0;_zoomTarget=null;}
+document.addEventListener('wheel',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;e.preventDefault();var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;var tgt=(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');if(!tgt)return;if(_zoomTarget&&_zoomTarget!==tgt){_zoomTarget.style.transform='';_zoomTarget.style.cursor='';_zoom=1;_panX=0;_panY=0;}_zoomTarget=tgt;_zoom=Math.max(1,Math.min(8,_zoom*(e.deltaY<0?1.12:0.89)));if(_zoom===1){_panX=0;_panY=0;}_zoomImg();},{passive:false});
+document.addEventListener('dblclick',function(e){var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;if(el&&el.tagName==='IMG'&&slide.contains(el)){_zoomTarget=el;}_resetZoom();});
+document.addEventListener('mousedown',function(e){if(!_zoomTarget||_zoom<=1)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;_dragging=true;_dragSx=e.clientX;_dragSy=e.clientY;_dragPx=_panX;_dragPy=_panY;e.preventDefault();});
 document.addEventListener('mousemove',function(e){if(!_dragging)return;_panX=_dragPx+(e.clientX-_dragSx)/_zoom;_panY=_dragPy+(e.clientY-_dragSy)/_zoom;_zoomImg();});
 document.addEventListener('mouseup',function(e){if(_dragging){_dragging=false;_zoomImg();}});
 var _origGo=go;go=function(i){_resetZoom();if(_magCv)_magCv.style.display='none';_origGo(i);};
@@ -6774,6 +7398,73 @@ document.addEventListener('click',function(e){
     }
     return;
   }
+  const updcrpatient=e.target.closest('[data-action="updcrpatient"]');
+  if(updcrpatient){
+    var _cid=updcrpatient.dataset.cid,_si=parseInt(updcrpatient.dataset.si),_pi=parseInt(updcrpatient.dataset.pi),_key=updcrpatient.dataset.key;
+    crUpdPatient(_cid,_si,_pi,_key,updcrpatient.value);return;
+  }
+  const crpickimg=e.target.closest('[data-action="crpickimg"]');
+  if(crpickimg){crPickImages(crpickimg.dataset.cid,parseInt(crpickimg.dataset.si),parseInt(crpickimg.dataset.pi));return;}
+  const pickspecialimgs=e.target.closest('[data-action="pickspecialimgs"]');
+  if(pickspecialimgs){pickSpecialImgs(pickspecialimgs.dataset.cid,parseInt(pickspecialimgs.dataset.si));return;}
+  const postfupToggle=e.target.closest('[data-action="postfup-ongoing"],[data-action="postfup-closed"]');
+  if(postfupToggle){
+    var _cid=postfupToggle.dataset.cid,_fi=parseInt(postfupToggle.dataset.fi);
+    ensureSec(_cid);var _f=(S.meeting.sections[_cid]||{}).followups[_fi];
+    if(!_f)return;
+    _f.status=postfupToggle.dataset.action==='postfup-ongoing'?'ongoing':'closed';
+    var _card=postfupToggle.closest('div[style*="border:1px solid"]');
+    if(_card){
+      _card.querySelectorAll('[data-action^="postfup-"]').forEach(function(b){
+        var isActive=b.dataset.action==='postfup-'+_f.status;
+        b.className='btn btn-sm '+(isActive?'btn-a':'btn-b');
+        b.style.opacity=isActive?'1':'0.5';
+      });
+    }
+    return;
+  }
+  const clearspecialimgs=e.target.closest('[data-action="clearspecialimgs"]');
+  if(clearspecialimgs){
+    var _cid=clearspecialimgs.dataset.cid,_si=parseInt(clearspecialimgs.dataset.si);
+    ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_si];
+    if(_d){_d.images=[];markDirty();}
+    var cont=document.getElementById('special-img-area-'+_cid+'-'+_si);
+    if(cont)cont.innerHTML=buildSpecialImgArea(_cid,_si,_d||{});
+    return;
+  }
+  const delspecialimg=e.target.closest('[data-action="delspecialimg"]');
+  if(delspecialimg){
+    var _cid=delspecialimg.dataset.cid,_si=parseInt(delspecialimg.dataset.si),_ji=parseInt(delspecialimg.dataset.imgidx);
+    ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_si];
+    if(_d&&_d.images){_d.images.splice(_ji,1);markDirty();}
+    var cont=document.getElementById('special-img-area-'+_cid+'-'+_si);
+    if(cont)cont.innerHTML=buildSpecialImgArea(_cid,_si,_d);
+    return;
+  }
+  const craddpt=e.target.closest('[data-action="craddpatient"]');
+  if(craddpt){crAddPatient(craddpt.dataset.cid,parseInt(craddpt.dataset.si));return;}
+  const savecrtpl=e.target.closest('[data-action="savecrdeftpl"]');
+  if(savecrtpl){var defEl=document.getElementById(savecrtpl.dataset.defid);if(defEl)crSaveDef(defEl.value);return;}
+  const crdelpatient=e.target.closest('[data-action="crdelpatient"]');
+  if(crdelpatient){crDelPatient(crdelpatient.dataset.cid,parseInt(crdelpatient.dataset.si),parseInt(crdelpatient.dataset.pi));return;}
+  const delspecialitem=e.target.closest('[data-action="delspecialitem"]');
+  if(delspecialitem){delItem(delspecialitem.dataset.cid,delspecialitem.dataset.type,parseInt(delspecialitem.dataset.idx));return;}
+  const updspecial=e.target.closest('[data-action="updspecial"]');
+  if(updspecial){var _cid=updspecial.dataset.cid,_idx=parseInt(updspecial.dataset.idx),_key=updspecial.dataset.key;ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_idx];if(_d){_d[_key]=updspecial.type==='number'?parseInt(updspecial.value)||0:updspecial.value;markDirty();}return;}
+  const previewspecialimg=e.target.closest('[data-action="previewspecialimg"]');
+  if(previewspecialimg){
+    var _cid=previewspecialimg.dataset.cid,_si=parseInt(previewspecialimg.dataset.si),_ji=parseInt(previewspecialimg.dataset.imgidx);
+    ensureSec(_cid);var _sp=S.meeting.sections[_cid].special[_si];
+    if(!_sp||!_sp.images||!_sp.images[_ji])return;
+    var _img=_sp.images[_ji];
+    if(_img.dataUrl){viewImg(_img.dataUrl);return;}
+    if(_img.name&&imgFolderHandle){
+      imgFolderHandle.getFileHandle(_img.name).then(function(fh){return fh.getFile();}).then(function(file){
+        var r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
+      }).catch(function(e){alert('無法載入影像：'+e.message);});
+    }
+    return;
+  }
   const view=e.target.closest('[data-action="viewimg"]');
   if(view){viewImg(view.dataset.src);return;}
   const chip=e.target.closest('[data-action="phchip"]');
@@ -6785,19 +7476,14 @@ document.addEventListener('click',function(e){
     if(!item)return;
     item.topicType=item.topicType===st.dataset.type?'':st.dataset.type;
     markDirty();
-    // If switching to/from completion_rate, full re-render needed
-    if(item.topicType==='完治率'||st.dataset.type==='完治率'){
-      const card=st.closest('.casecard');
-      if(card){
-        const cid=st.dataset.cid,idx2=parseInt(st.dataset.idx);
-        const tmp=document.createElement('div');
-        tmp.innerHTML=specialHTML(cid,idx2,item);
-        card.replaceWith(tmp.firstElementChild);
-      }
+    var _RATE_TYPES=['完治率','失聯率','留治率','訪視率'];
+    if(_RATE_TYPES.includes(item.topicType)||_RATE_TYPES.includes(st.dataset.type)){
+      var card=st.closest('.casecard');
+      if(card){var cid2=st.dataset.cid,idx2=parseInt(st.dataset.idx);var tmp2=document.createElement('div');tmp2.innerHTML=specialHTML(cid2,idx2,item);card.replaceWith(tmp2.firstElementChild);}
       return;
     }
     st.closest('.fg').querySelectorAll('.tchip').forEach(el=>el.classList.toggle('on',el.dataset.type===item.topicType));
-    const cnm=st.closest('.casecard')?.querySelector('.cnm');
+    var cnm=st.closest('.casecard')?.querySelector('.cnm');
     if(cnm)cnm.textContent=item.topicType||item.title||'特殊議程';
     return;
   }
@@ -6847,7 +7533,13 @@ document.addEventListener('click',function(e){
 });
 
 // Input/change delegation for struct fields
+document.addEventListener('input',function(e){
+  var sic=e.target.closest('[data-action="updspecialimgcap"]');
+  if(sic){var _cid=sic.dataset.cid,_si=parseInt(sic.dataset.si),_ji=parseInt(sic.dataset.imgidx);ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_si];if(_d&&_d.images&&_d.images[_ji])_d.images[_ji].caption=sic.value;markDirty();return;}
+},true);
 document.addEventListener('change',function(e){
+  const updcrp=e.target.closest('[data-action="updcrpatient"]');
+  if(updcrp){var _cid=updcrp.dataset.cid,_si=parseInt(updcrp.dataset.si),_pi=parseInt(updcrp.dataset.pi),_key=updcrp.dataset.key;crUpdPatient(_cid,_si,_pi,_key,updcrp.value);return;}
   const cap=e.target.closest('[data-action="updimgcaption"]');
   if(cap){
     const cid=cap.dataset.cid,idx=parseInt(cap.dataset.idx),j=parseInt(cap.dataset.imgidx);
@@ -7093,5 +7785,16 @@ function getMemberStr(ca){return mkStr(ca.memberKeys)||ca.members||''}
     </div>
   </div>
 </div>
+<!-- Post-meeting fill panel -->
+<div id="postmtg-panel" style="display:none;position:fixed;inset:0;z-index:2000;background:#fff;overflow-y:auto;flex-direction:column">
+  <div style="position:sticky;top:0;background:#fff;border-bottom:1px solid var(--blt);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:1">
+    <span style="font-weight:700;font-size:15px;color:var(--fog-dk)">會後填寫</span>
+    <span style="font-size:12px;color:var(--textlt);flex:1">填完存檔後可產出 DOCX</span>
+    <button class="btn btn-a btn-sm" onclick="savePostMtg()">存檔關閉</button>
+    <button class="btn btn-b btn-sm" onclick="closePostMtgPanel()">取消</button>
+  </div>
+  <div id="postmtg-body" style="padding:16px;display:flex;flex-direction:column;gap:0"></div>
+</div>
+
 </body>
 </html>

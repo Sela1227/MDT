@@ -111,19 +111,86 @@
 
 ## 版本歷程
 
-### V4.3.7
-刪除有資料的個案需二次確認；事件軸改為逐筆追加（不重渲染所有列）
+### V4.3.32
+會後填寫功能：產出區新增「會後填寫」按鈕；全螢幕 panel 依癌別分組顯示前期追蹤（結案/繼續追蹤）和個案討論（摘要/結論/不列入下次追蹤）；存檔後寫回 meeting；autoImportPrevFollowups 加 followNext 和 ongoing 過濾
+
+### V4.3.31
+DOCX 會議記錄全面改版：定位改為「會議決議確認單」；深藍色個案標題色塊；只保留診斷/治療/討論摘要/決策結論；前期追蹤加結案狀態；移除簽署欄，改為頁尾記錄者+日期；字型統一新細明體 12pt；頁邊距縮小優化手機閱讀
+
+### V4.3.30
+【第一批】跨機同步前置：新增 createdBy 欄位至 newMeetingObj；canEditMeeting() 判斷是否為建立者；非建立者的會議顯示「建立者：XXX」badge，編輯按鈕 disabled；enterEditMode() 加權限檢查
+
+### V4.3.29
+NAS 備份改為每天首次啟動時觸發（登入後 3 秒背景執行），移除每次存檔觸發；新增 _shouldNasBackupToday / _markNasBackupToday 輔助函數
+
+### V4.3.28
+設定頁重整：11個tab → 7個tab（地點/醫師/癌別/檢查項目/影像資料夾/備份/系統）；備份tab整合共享資料夾+NAS+備份還原+空間使用；系統tab整合AI+GitHub+測試資料
+
+### V4.3.27
+NAS 自動備份：設定頁新增 NAS tab（選取資料夾/測試/狀態）；每次 saveMeeting 後背景執行 backupToNAS()（含全部圖片 base64）；最多保留 10 份，靜默失敗不中斷操作
+
+### V4.3.26
+「病理切片影像集中」checkbox 移至資料夾狀態列同排右側（margin-left:auto），grid 5欄全為按鈕
+
+### V4.3.25
+「病理切片影像集中」checkbox 移入 HTML 投影片格內（flex column），grid 維持 5 欄整齊
+
+### V4.3.24
+修正放大鏡座標偏移：病理切片投影片使用 object-fit:contain 置中圖片，letterbox 留白導致座標偏移；改為先計算實際渲染區域（offX/offY）再換算像素座標，所有使用 contain 的圖片均修正
+
+### V4.3.23
+HTML 投影片新增「病理切片影像集中於各癌別結尾」checkbox：勾選後各癌別所有個案主頁先產出，病理切片影像統一移至該癌別最後；手術/相關/乳攝影像不受影響
+
+### V4.3.22
+特殊議程影像補加「清除全部」按鈕（buildSpecialImgArea 補 clearAction + delegation）；選圖對話框補檔名顯示（同 pickimgfolder 格式：baseName + ext badge + hover）
+
+### V4.3.21
+整併 buildImgArea / buildPathImgArea / buildSurgicalImgArea / buildSpecialImgArea 四個函數為一個通用 buildGenericImgArea，各原函數保留為薄包裝層，省約 40KB
+
+### V4.3.20
+移除死碼 addImg()（直接上傳相關影像，已無任何呼叫點），僅此一函數，其餘不動
+
+### V4.3.19
+localStorage 管理三改：①索引上限從 30 提升至 100 筆 ②saveLocal 自動清除孤兒 mdt_m_ key ③設定頁新增儲存空間使用量儀表板（進度條 + 會議筆數 + 圖片佔用）
+
+### V4.3.18
+特殊議程 HTML 投影片右上角標籤改為「特殊議程」，不顯示癌別名稱
+
+### V4.3.17
+特殊議程閱覽模式加入影像預覽按鈕（fromFolder 走 imgFolderHandle 讀取）
+
+### V4.3.16
+前期追蹤帶入後預設收合（_autoImported 標記）；新增前期追蹤時也預設收合；刪除前期追蹤需二次確認；特殊議程圖片選擇器顯示完整檔名
+
+### V4.3.15
+類別順序：「其他」移至最後；自動儲存改為 silent 模式（不切回閱覽），只有手動按儲存才切換
+
+### V4.3.14
+特殊議程（非四率）新增影像上傳：📂 從共用資料夾選取、每頁張數（1/2/4）、img-slide 頁產出（支援放大縮小、放大鏡）
+
+### V4.3.13
+修正四率 chips 無法點選：data-action 誤植在 class attribute 內，造成 delegation 找不到目標
+
+### V4.3.12
+四率 HTML 投影片產出：完治率（統計摘要 + 未完治病人分頁 + 佐証圖片）；失聯率/留治率/訪視率（多癌別統計表 + 病人清單 + 佐証圖片）；達標綠色/未達標紅色
+
+### V4.3.11
+乳攝投影片加 img-slide class；滾輪縮放改追蹤 _zoomTarget（多圖頁每張獨立縮放）；放大鏡改 elementFromPoint；四率 chips 加入所有類別供切換
+
+### V4.3.10
+事件軸視覺優化：節點按日期比例分佈（A）+ 節點大小依類型分級（dx/surgery=14, chemo/rt=9, follow/imaging=7）+ 線條 2px
+
+### V4.3.9
+三率編輯模式（失聯率/留治率/訪視率）：多癌別行輸入、失聯率額外欄（總收案數/死亡個案）、即時達標顏色、指標定義預設文字可儲存；完治率重建並加達標顏色；全面改 data-action delegation
+
+### V4.3.2（穩定基準）
+刪除有資料的個案需二次確認；事件軸新增時改為逐筆 append（不重渲染所有列）
 
 ### V4.3.1
-修正治療事件軸無法手動新增（addStruct/delStruct/updStruct 加入 timeline 處理）；每頁張數選單移至標籤旁緊鄰排版
+修正治療事件軸無法手動新增（addStruct/delStruct/updStruct 加入 timeline 處理）；每頁張數選單移至標籤旁
 
 ### V4.3.0
-新功能：治療事件軸（蛇形 SVG Timeline）
-- 編輯模式：類型/日期/說明輸入 + 「從治療記錄帶入」快速鍵
-- 閱覽模式：SVG 水平蛇形時間軸（≤5事件一排，6-10兩排，自動計算）
-- HTML 投影片：每個個案最後一頁，深色背景，癌別主色節點
-- 10種事件類型：診斷/切片/化療/手術/放療/影像/追蹤/復發/轉移/其他
-
+新功能：治療事件軸（蛇形 SVG Timeline）—編輯模式含「從治療記錄帶入」；閱覽模式 SVG；HTML 投影片最後頁深色背景
 ### V4.2.24
 HTML 投影片影像區塊改為自動填滿：依每頁張數（1/2/4）以 CSS Grid 均分滿版，保留 2vh 2.5vw 邊距；病理影像同步加入邊距
 
