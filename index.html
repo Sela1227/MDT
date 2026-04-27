@@ -769,6 +769,7 @@ textarea{resize:vertical}
               <span style="font-size:11px;padding:2px 9px;border-radius:2px;background:#EBF2F8;color:#3A5070;font-weight:500">閱覽模式</span>
               <span id="rec-owner-badge" style="font-size:11px;color:var(--textlt)"></span>
               <button class="btn btn-a btn-sm" id="btn-rec-edit" onclick="enterEditMode()">編輯</button>
+              <button class="btn btn-b btn-sm" onclick="openCopyMtgDialog()" title="複製到其他日期">複製會議</button>
             </div>
             <div id="rec-save-ctrl" style="display:none;align-items:center;gap:8px">
               <span id="rec-save-msg" style="font-size:12px"></span>
@@ -787,7 +788,7 @@ textarea{resize:vertical}
             <div id="output-cid-label" style="display:none;gap:8px;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:12px;margin-bottom:8px"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"><div id="folder-status-bar" style="display:contents"></div><label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);cursor:pointer;margin-left:auto"><input type="checkbox" id="chk-group-path" style="width:12px;height:12px;flex-shrink:0"> 病理切片影像集中</label></div>
             <div style="margin-bottom:8px">
-              <button class="btn btn-a" style="padding:8px 16px;font-size:13px;font-weight:600;width:100%" onclick="openPostMtgPanel()">會後填寫</button>
+              <button onclick="openPostMtgPanel()" style="width:100%;padding:10px 16px;background:linear-gradient(135deg,#2E5F8A,#1a3f5c);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(46,95,138,.35);transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'"><span style="font-size:16px">&#9998;</span>會後填寫（摘要、結論、追蹤狀態）<span style="font-size:11px;opacity:.8;margin-left:4px">▶</span></button>
             </div>
             <!-- 5-per-row grid layout -->
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
@@ -1213,7 +1214,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.32';
+const VERSION='V4.3.34';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3672,6 +3673,46 @@ function savePostMtg(){
   markDirty();
   saveMeeting();
   closePostMtgPanel();
+}
+
+function openCopyMtgDialog(){
+  if(!S.meeting)return;
+  var inp=document.getElementById('copy-mtg-date');
+  if(inp)inp.value=S.meeting.date||'';
+  document.getElementById('copy-mtg-modal').style.display='flex';
+}
+
+function closeCopyMtgDialog(){
+  document.getElementById('copy-mtg-modal').style.display='none';
+}
+
+function confirmCopyMtg(){
+  var inp=document.getElementById('copy-mtg-date');
+  var newDate=inp?inp.value:'';
+  if(!newDate){alert('請選擇目標日期');return;}
+  if(newDate===S.meeting.date){
+    if(!confirm('目標日期與原會議相同，確定要複製嗎？'))return;
+  }
+  // Deep clone the meeting
+  var src=S.meeting;
+  var newId=src.cids.join('_')+'_'+uid();
+  var copy=JSON.parse(JSON.stringify(src));
+  copy.id=newId;
+  copy.date=newDate;
+  copy.version=0;
+  copy.savedAt='';
+  copy.savedBy=S.user?S.user.name:'';
+  copy.createdBy=S.user?S.user.id:'';
+  // Save the copy
+  saveLocal(copy);
+  closeCopyMtgDialog();
+  // Jump to the new meeting
+  S.meeting=copy;
+  S.viewMode=true;
+  S.meetingMode='record';
+  showShell('app');
+  renderEditor();
+  showSaveToast('會議已複製到 '+newDate);
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
@@ -7794,6 +7835,20 @@ function getMemberStr(ca){return mkStr(ca.memberKeys)||ca.members||''}
     <button class="btn btn-b btn-sm" onclick="closePostMtgPanel()">取消</button>
   </div>
   <div id="postmtg-body" style="padding:16px;display:flex;flex-direction:column;gap:0"></div>
+</div>
+
+<!-- Copy meeting dialog -->
+<div id="copy-mtg-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:6px;padding:24px;width:min(360px,92vw);box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div style="font-weight:700;font-size:15px;color:var(--fog-dk);margin-bottom:6px">複製會議到其他日期</div>
+    <div style="font-size:12px;color:var(--textlt);margin-bottom:16px">完整複製內容，包含個案、摘要、結論。</div>
+    <label style="display:block;font-size:12px;font-weight:600;color:var(--fog);margin-bottom:6px">目標日期</label>
+    <input type="date" id="copy-mtg-date" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--blt);border-radius:4px;font-size:14px;margin-bottom:16px">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-b" onclick="closeCopyMtgDialog()">取消</button>
+      <button class="btn btn-a" onclick="confirmCopyMtg()">複製</button>
+    </div>
+  </div>
 </div>
 
 </body>

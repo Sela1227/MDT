@@ -111,7 +111,7 @@
 
 ## 版本歷程
 
-### V4.3.32
+### V4.3.34
 會後填寫功能：產出區新增「會後填寫」按鈕；全螢幕 panel 依癌別分組顯示前期追蹤（結案/繼續追蹤）和個案討論（摘要/結論/不列入下次追蹤）；存檔後寫回 meeting；autoImportPrevFollowups 加 followNext 和 ongoing 過濾
 
 ### V4.3.31
