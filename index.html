@@ -1214,7 +1214,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.34';
+const VERSION='V4.3.37';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4806,7 +4806,8 @@ async function genDOCX(){
               divider:'CFD8DC'};
 
     // ── Helpers ──
-    const pt=n=>n*20; // half-points to twip
+    const pt=n=>n*20; // twips (for spacing/margin)
+    const sz=n=>n*2;  // half-points (for font size)
     const mkRun=(text,opts={})=>new TextRun({text:text||'',...opts});
 
     // Horizontal rule paragraph
@@ -4817,7 +4818,7 @@ async function genDOCX(){
 
     // Section header (e.g. ▌前期追蹤)
     const mkSecHdr=(text)=>new Paragraph({
-      children:[mkRun(text,{bold:true,size:pt(13),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun(text,{bold:true,size:sz(13),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
       spacing:{before:pt(14),after:pt(6)},
       border:{left:{style:BorderStyle.THICK,size:12,color:C.accent}}
     });
@@ -4835,13 +4836,13 @@ async function genDOCX(){
           margins:{top:pt(4),bottom:pt(4),left:pt(6),right:pt(6)},
           children:[new Paragraph({
             children:[
-              mkRun(no+'.  ',{bold:true,size:pt(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun(no+'.  ',{bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun((c.chartNo||'')+'\u3000'+(c.name?maskName(c.name):''),
-                {bold:true,size:pt(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun('\u3000'+(c.gender||'M')+'/'+(c.age||'\u2014'),
-                {size:pt(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun('\u3000VS '+drs,
-                {size:pt(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
             ]
           })]
         })
@@ -4860,16 +4861,16 @@ async function genDOCX(){
           shading:{type:ShadingType.CLEAR,fill:C.bg},
           margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
           children:[new Paragraph({children:[
-            mkRun(label,{bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})
+            mkRun(label,{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})
           ]})]
         }),
         new TableCell({
           width:{size:84,type:WidthType.PERCENTAGE},
           margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
           children:isEmpty
-            ?[new Paragraph({children:[mkRun('',{size:pt(12)})],spacing:{after:pt(16)}})]
+            ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:pt(2),after:pt(2)}})]
             :(content||'').split('\n').map(line=>new Paragraph({
-                children:[mkRun(line,{size:pt(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
+                children:[mkRun(line,{size:sz(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
                 spacing:{after:pt(2)}
               }))
         })
@@ -4879,9 +4880,9 @@ async function genDOCX(){
     // Followup status badge
     const mkFupStatus=(status)=>new Paragraph({
       children:[
-        mkRun('\u72c0\u614b\uff1a',{bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u72c0\u614b\uff1a',{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
         mkRun(status==='ongoing'?'\u7e7c\u7e8c\u8ffd\u8e64':'\u7d50\u6848',
-          {bold:true,size:pt(11),
+          {bold:true,size:sz(11),
            color:status==='ongoing'?'1565C0':'B71C1C',
            font:'\u65b0\u7d30\u660e\u9ad4'})
       ],
@@ -4892,20 +4893,20 @@ async function genDOCX(){
 
     // ── Header: hospital + meeting info ──
     children.push(new Paragraph({
-      children:[mkRun('\u5f70\u6ff1\u79c0\u50b3\u7652\u764c\u75c7\u4e2d\u5fc3',
-        {bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun('\u5f70\u6ff1\u79c0\u50b3\u764c\u75c7\u4e2d\u5fc3',
+        {bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
       spacing:{after:pt(2)}
     }));
     children.push(new Paragraph({
       children:[mkRun(mtgTitle(cids),
-        {bold:true,size:pt(16),color:C.title,font:'\u65b0\u7d30\u660e\u9ad4'})],
+        {bold:true,size:sz(16),color:C.title,font:'\u65b0\u7d30\u660e\u9ad4'})],
       spacing:{after:pt(4)}
     }));
     // Date + time + location on one line
     const dateStr=rocDate(m.date).replace(/\(\u661f\u671f.\)$/,'');
     const infoLine=[dateStr,m.time,m.loc].filter(Boolean).join('\u3000\u3000');
     children.push(new Paragraph({
-      children:[mkRun(infoLine,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun(infoLine,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
       spacing:{after:pt(2)}
     }));
     children.push(mkHR());
@@ -4914,7 +4915,7 @@ async function genDOCX(){
       const ca=CFG[cid],sec=m.sections[cid]||{followups:[],cases:[],special:[]};
       if(cids.length>1){
         children.push(new Paragraph({
-          children:[mkRun(ca.name,{bold:true,size:pt(14),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+          children:[mkRun(ca.name,{bold:true,size:sz(14),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
           spacing:{before:pt(10),after:pt(6)},
           border:{bottom:{style:BorderStyle.SINGLE,size:4,color:C.accent}}
         }));
@@ -4928,16 +4929,16 @@ async function genDOCX(){
           const drs=getDoctorStr(f);
           children.push(new Paragraph({
             children:[
-              mkRun((i+1)+'.  ',{bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun((i+1)+'.  ',{bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun((f.chartNo||'')+'\u3000'+(f.name?maskName(f.name):''),
-                {bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun(drs&&drs!=='\u2014'?'\u3000VS '+drs:'',
-                {size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
             ],
             spacing:{before:pt(6),after:pt(2)}
           }));
           if(f.note)children.push(new Paragraph({
-            children:[mkRun(f.note,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(f.note,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
             spacing:{after:pt(2)},
             indent:{left:pt(16)}
           }));
@@ -4950,16 +4951,21 @@ async function genDOCX(){
       const cases=sec.cases||[];
       if(cases.length){
         children.push(mkSecHdr('\u500b\u6848\u8a0e\u8ad6'));
-        cases.forEach(function(c,i){
+        cases.filter(function(c){return c.chartNo||c.name;}).forEach(function(c,i){
           const drs=getDoctorStr(c);
           // Case header (blue bg)
           children.push(mkCaseHdr(i+1,c,drs));
           // Diagnosis
           if(c.diagnosis){
             children.push(new Paragraph({
-              children:[mkRun(c.diagnosis,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
-              spacing:{before:pt(3),after:pt(4)},
+              children:[mkRun(c.diagnosis,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+              spacing:{before:pt(3),after:pt(3)},
               indent:{left:pt(4)}
+            }));
+            // Thin line between diagnosis and treatment
+            children.push(new Paragraph({
+              border:{bottom:{style:BorderStyle.SINGLE,size:2,color:C.divider}},
+              spacing:{before:0,after:pt(3)}
             }));
           }
           // Treatment
@@ -4968,17 +4974,12 @@ async function genDOCX(){
               .map(function(tr){return(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'');}).join('\n')
             :(c.treatment&&c.treatment!=='\u5c1a\u672a\u6cbb\u7642'?c.treatment:'');
           if(trStr)children.push(mkBlock('\u6cbb\u7642',trStr,false));
-          // Discussion topics
-          const topics=(c.topics||[]).join('\u3001');
-          if(topics)children.push(new Paragraph({
-            children:[mkRun('\u8a0e\u8ad6\u4e3b\u984c\uff1a'+topics,
-              {size:pt(10),color:C.xlt,italics:true,font:'\u65b0\u7d30\u660e\u9ad4'})],
-            spacing:{before:pt(2),after:pt(2)},indent:{left:pt(4)}
-          }));
-          // Summary - show content if filled, else empty lines
-          children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',c.summary||'',!c.summary));
-          // Decision
-          children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',c.decision||'',!c.decision));
+
+          // Summary & Decision - hide label if completely empty
+          if(c.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',c.summary,false));}
+          else{children.push(new Paragraph({children:[mkRun('\u8a0e\u8ad6\u6458\u8981\uff1a',{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
+          if(c.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',c.decision,false));}
+          else{children.push(new Paragraph({children:[mkRun('\u6c7a\u7b56\u7d50\u8ad6\uff1a',{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
           children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
@@ -4990,11 +4991,11 @@ async function genDOCX(){
         sp.forEach(function(s){
           const label=(s.topicType?'['+s.topicType+'] ':'')+( s.title||'');
           children.push(new Paragraph({
-            children:[mkRun(label,{bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(label,{bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'})],
             spacing:{before:pt(6),after:pt(2)}
           }));
           if(s.note)children.push(new Paragraph({
-            children:[mkRun(s.note,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(s.note,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
             spacing:{after:pt(4)},indent:{left:pt(8)}
           }));
         });
@@ -5008,14 +5009,14 @@ async function genDOCX(){
     children.push(new Paragraph({text:'',spacing:{before:pt(12),after:0}}));
     children.push(new Paragraph({
       children:[
-        mkRun('\u8a18\u9304\uff1a'+recorder,{size:pt(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
-        mkRun('\u3000\u3000'+recDate,{size:pt(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u8a18\u9304\uff1a'+recorder,{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u3000\u3000'+recDate,{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
       ],
       alignment:AlignmentType.RIGHT
     }));
 
     const doc=new Document({
-      styles:{default:{document:{run:{font:'\u65b0\u7d30\u660e\u9ad4',size:pt(12)}}}},
+      styles:{default:{document:{run:{font:'\u65b0\u7d30\u660e\u9ad4',size:sz(12)}}}},
       sections:[{
         properties:{page:{margin:{
           top:convertInchesToTwip(0.8),
@@ -5268,6 +5269,8 @@ async function genHTMLSlides(){
 
   // ── Cover ──
   const owners2=[];
+  const _groupPath=!!(document.getElementById('chk-group-path')&&document.getElementById('chk-group-path').checked);
+  const _deferredPath=[];
   cids.forEach(cid=>{const o=USERS.find(u=>u.cancers?.includes(cid));if(o&&!owners2.find(x=>x.id===o.id))owners2.push(o);});
   const contact2=owners2.filter(o=>o.ext).map(o=>o.name+'('+o.ext+')').join('・')||'暫無專職個管師';
   slides.push('<section class="slide cover">'
