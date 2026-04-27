@@ -1214,7 +1214,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.40';
+const VERSION='V4.3.41';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1397,7 +1397,7 @@ function showView(id){['home','meeting','settings','history','cancer'].forEach(v
 
 /* ════ Login ════ */
 function renderLogin(){document.getElementById('login-users').innerHTML=USERS.map(u=>`<button class="ubtn" onclick="pickUser('${u.id}')"><div class="u-init">${u.name[0]}</div><div><div class="u-name">${u.name}</div><div class="u-ext">${u.ext?'分機 '+u.ext:'兼任個管師'}</div><div class="u-tags">${u.cancers.map(c=>CFG[c]?.name||c).join('・')}</div></div><span class="u-arr">›</span></button>`).join('')}
-function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(){_markNasBackupToday();}).catch(function(e){console.warn('NAS daily backup:',e);});},3000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步：新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(){_markNasBackupToday();}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){
@@ -3720,6 +3720,72 @@ function confirmCopyMtg(){
   showSaveToast('會議已複製到 '+newDate);
 }
 
+// ── NAS Sync ──
+async function _getNasSyncDir(){
+  if(!nasHandle)return null;
+  try{return await nasHandle.getDirectoryHandle('sync',{create:true});}
+  catch(e){console.warn('_getNasSyncDir:',e);return null;}
+}
+
+async function writeMtgToNAS(m){
+  const dir=await _getNasSyncDir();if(!dir)return;
+  try{
+    var fh=await dir.getFileHandle('mdt_m_'+m.id+'.json',{create:true});
+    var w=await fh.createWritable();
+    await w.write(JSON.stringify(m));
+    await w.close();
+  }catch(e){console.warn('writeMtgToNAS:',e);}
+}
+
+async function syncWithNAS(){
+  var dir=await _getNasSyncDir();if(!dir)return {added:0,updated:0,pushed:0,deleted:0};
+  var results={added:0,updated:0,pushed:0,deleted:0};
+  // Read all files from NAS sync/
+  var entries=await _folderEntries(dir);
+  var nasMtgs={};
+  for(var ei=0;ei<entries.length;ei++){
+    var entry=entries[ei];
+    if(entry.kind!=='file'||!entry.name.startsWith('mdt_m_')||!entry.name.endsWith('.json'))continue;
+    try{
+      var file=await entry.getFile();
+      var text=await file.text();
+      var m=JSON.parse(text);
+      if(m&&m.id)nasMtgs[m.id]=m;
+    }catch(e){}
+  }
+  // NAS → Local: add or update
+  var nasIds=Object.keys(nasMtgs);
+  for(var ni=0;ni<nasIds.length;ni++){
+    var nasMtg=nasMtgs[nasIds[ni]];
+    if(nasMtg.deleted){
+      var loc=loadLocal(nasMtg.id);
+      if(loc&&(nasMtg.version||0)>=(loc.version||0)){
+        localStorage.removeItem('mdt_m_'+nasMtg.id);
+        localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(function(x){return x.id!==nasMtg.id;})));
+        results.deleted++;
+      }
+      continue;
+    }
+    var local=loadLocal(nasMtg.id);
+    if(!local){
+      saveLocal(nasMtg);results.added++;
+    }else if((nasMtg.version||0)>(local.version||0)){
+      saveLocal(nasMtg);results.updated++;
+    }
+  }
+  // Local → NAS: push newer or missing
+  var localIdx=getIdx();
+  for(var li=0;li<localIdx.length;li++){
+    var item=localIdx[li];
+    var localMtg=loadLocal(item.id);if(!localMtg)continue;
+    var nasMtg2=nasMtgs[item.id];
+    if(!nasMtg2||(localMtg.version||0)>(nasMtg2.version||0)){
+      await writeMtgToNAS(localMtg);results.pushed++;
+    }
+  }
+  return results;
+}
+
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
@@ -4559,6 +4625,8 @@ async function saveMeeting(opts){
     });
   }
   const lok=saveLocal(S.meeting),sok=await saveShared(S.meeting);
+  // NAS sync: push this meeting (non-blocking)
+  if(nasHandle)writeMtgToNAS(S.meeting).catch(function(e){console.warn('NAS sync write:',e);});
   _dirty=false;
   const t=new Date(time).toLocaleTimeString('zh-TW',{hour12:false,timeZone:'Asia/Taipei',hour:'2-digit',minute:'2-digit'});
   const msg=lok&&sok?`v${S.meeting.version} 已儲存（本機＋共享）${t}`:lok?`v${S.meeting.version} 已儲存本機${folderHandle?'（共享失敗）':''}`:sok?`v${S.meeting.version} 已儲存共享`:'儲存失敗';
