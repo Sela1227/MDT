@@ -769,6 +769,7 @@ textarea{resize:vertical}
               <span style="font-size:11px;padding:2px 9px;border-radius:2px;background:#EBF2F8;color:#3A5070;font-weight:500">閱覽模式</span>
               <span id="rec-owner-badge" style="font-size:11px;color:var(--textlt)"></span>
               <button class="btn btn-a btn-sm" id="btn-rec-edit" onclick="enterEditMode()">編輯</button>
+              <button class="btn btn-b btn-sm" onclick="openCopyMtgDialog()" title="複製到其他日期">複製會議</button>
             </div>
             <div id="rec-save-ctrl" style="display:none;align-items:center;gap:8px">
               <span id="rec-save-msg" style="font-size:12px"></span>
@@ -786,6 +787,9 @@ textarea{resize:vertical}
             <!-- 資料夾授權：優先顯示 -->
             <div id="output-cid-label" style="display:none;gap:8px;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:12px;margin-bottom:8px"></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"><div id="folder-status-bar" style="display:contents"></div><label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);cursor:pointer;margin-left:auto"><input type="checkbox" id="chk-group-path" style="width:12px;height:12px;flex-shrink:0"> 病理切片影像集中</label></div>
+            <div style="margin-bottom:8px">
+              <button onclick="openPostMtgPanel()" style="width:100%;padding:10px 16px;background:linear-gradient(135deg,#2E5F8A,#1a3f5c);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(46,95,138,.35);transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'"><span style="font-size:16px">&#9998;</span>會後填寫（摘要、結論、追蹤狀態）<span style="font-size:11px;opacity:.8;margin-left:4px">▶</span></button>
+            </div>
             <!-- 5-per-row grid layout -->
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
               <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
@@ -1210,7 +1214,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.31';
+const VERSION='V4.3.35';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -3566,6 +3570,151 @@ function canEditMeeting(m){
   return m.createdBy===S.user.id;
 }
 
+function openPostMtgPanel(){
+  if(!S.meeting)return;
+  readForm();
+  var body=document.getElementById('postmtg-body');if(!body)return;
+  body.innerHTML='';
+  S.cids.forEach(function(cid){
+    var sec=S.meeting.sections[cid]||{};
+    var ca=CFG[cid];
+    var fups=sec.followups||[];
+    var cases=sec.cases||[];
+    if(!fups.length&&!cases.length)return;
+    if(S.cids.length>1){
+      var hdr=document.createElement('div');
+      hdr.style.cssText='font-weight:700;font-size:14px;color:var(--acc);padding:12px 4px 6px;border-bottom:2px solid var(--acc);margin-bottom:12px';
+      hdr.textContent=ca.name;
+      body.appendChild(hdr);
+    }
+    if(fups.length){
+      var fhdr=document.createElement('div');
+      fhdr.style.cssText='font-weight:600;font-size:12px;color:var(--fog);padding:6px 0 8px;letter-spacing:.5px';
+      fhdr.textContent='前期追蹤';
+      body.appendChild(fhdr);
+      fups.forEach(function(f,fi){
+        var isOngoing=f.status==='ongoing';
+        var card=document.createElement('div');
+        card.style.cssText='background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:12px 14px;margin-bottom:8px';
+        card.innerHTML=
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+          +'<span style="font-weight:600;font-size:13px;color:var(--fog-dk)">'
+          +escA(f.chartNo||'')+(f.name?' &nbsp;'+escA(maskName(f.name)):'')
+          +'</span>'
+          +(getDoctorStr(f)&&getDoctorStr(f)!=='—'?'<span style="font-size:11px;color:var(--textlt)">VS '+escA(getDoctorStr(f))+'</span>':'')
+          +'</div>'
+          +'<div style="display:flex;gap:6px">'
+          +'<button class="btn btn-sm '+(isOngoing?'btn-a':'btn-b')+'" data-action="postfup-ongoing" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(isOngoing?'':'opacity:.5')+'">繼續追蹤</button>'
+          +'<button class="btn btn-sm '+(!isOngoing?'btn-a':'btn-b')+'" data-action="postfup-closed" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(!isOngoing?'':'opacity:.5')+'">結案</button>'
+          +'</div>';
+        body.appendChild(card);
+      });
+    }
+    if(cases.length){
+      var chdr=document.createElement('div');
+      chdr.style.cssText='font-weight:600;font-size:12px;color:var(--fog);padding:10px 0 8px;letter-spacing:.5px';
+      chdr.textContent='個案討論';
+      body.appendChild(chdr);
+      cases.forEach(function(c,ci){
+        var noFollow=c.followNext===false;
+        var card=document.createElement('div');
+        card.style.cssText='background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:12px 14px;margin-bottom:10px';
+        card.innerHTML=
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+          +'<span style="font-weight:600;font-size:13px;color:var(--fog-dk)">'+(ci+1)+'.&nbsp;'
+          +escA(c.chartNo||'')+(c.name?' &nbsp;'+escA(maskName(c.name)):'')
+          +'</span>'
+          +(getDoctorStr(c)&&getDoctorStr(c)!=='—'?'<span style="font-size:11px;color:var(--textlt)">VS '+escA(getDoctorStr(c))+'</span>':'')
+          +(c.diagnosis?'<span style="font-size:11px;color:var(--textlt);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(c.diagnosis)+'</span>':'')
+          +'</div>'
+          +'<div style="margin-bottom:8px">'
+          +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
+          +'<textarea data-action="postcase-summary" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="3" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.summary||'')+'</textarea>'
+          +'</div>'
+          +'<div style="margin-bottom:10px">'
+          +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
+          +'<textarea data-action="postcase-decision" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.decision||'')+'</textarea>'
+          +'</div>'
+          +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--textlt);cursor:pointer">'
+          +'<input type="checkbox" data-action="postcase-nofollow" data-cid="'+escA(cid)+'" data-ci="'+ci+'"'+(noFollow?' checked':'')+' style="width:14px;height:14px">'
+          +'不列入下次追蹤</label>';
+        body.appendChild(card);
+      });
+    }
+  });
+  document.getElementById('postmtg-panel').style.display='flex';
+}
+
+function closePostMtgPanel(){
+  document.getElementById('postmtg-panel').style.display='none';
+}
+
+function savePostMtg(){
+  var panel=document.getElementById('postmtg-panel');
+  panel.querySelectorAll('[data-action="postcase-summary"]').forEach(function(el){
+    var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
+    ensureSec(cid);var c=S.meeting.sections[cid].cases[ci];
+    if(c)c.summary=el.value.trim();
+  });
+  panel.querySelectorAll('[data-action="postcase-decision"]').forEach(function(el){
+    var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
+    var c=(S.meeting.sections[cid]||{}).cases[ci];
+    if(c)c.decision=el.value.trim();
+  });
+  S.cids.forEach(function(cid){
+    ((S.meeting.sections[cid]||{}).cases||[]).forEach(function(c){c.followNext=true;});
+  });
+  panel.querySelectorAll('[data-action="postcase-nofollow"]').forEach(function(el){
+    if(!el.checked)return;
+    var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
+    var c=(S.meeting.sections[cid]||{}).cases[ci];
+    if(c)c.followNext=false;
+  });
+  markDirty();
+  saveMeeting();
+  closePostMtgPanel();
+}
+
+function openCopyMtgDialog(){
+  if(!S.meeting)return;
+  var inp=document.getElementById('copy-mtg-date');
+  if(inp)inp.value=S.meeting.date||'';
+  document.getElementById('copy-mtg-modal').style.display='flex';
+}
+
+function closeCopyMtgDialog(){
+  document.getElementById('copy-mtg-modal').style.display='none';
+}
+
+function confirmCopyMtg(){
+  var inp=document.getElementById('copy-mtg-date');
+  var newDate=inp?inp.value:'';
+  if(!newDate){alert('請選擇目標日期');return;}
+  if(newDate===S.meeting.date){
+    if(!confirm('目標日期與原會議相同，確定要複製嗎？'))return;
+  }
+  // Deep clone the meeting
+  var src=S.meeting;
+  var newId=src.cids.join('_')+'_'+uid();
+  var copy=JSON.parse(JSON.stringify(src));
+  copy.id=newId;
+  copy.date=newDate;
+  copy.version=0;
+  copy.savedAt='';
+  copy.savedBy=S.user?S.user.name:'';
+  copy.createdBy=S.user?S.user.id:'';
+  // Save the copy
+  saveLocal(copy);
+  closeCopyMtgDialog();
+  // Jump to the new meeting
+  S.meeting=copy;
+  S.viewMode=true;
+  S.meetingMode='record';
+  showShell('app');
+  renderEditor();
+  showSaveToast('會議已複製到 '+newDate);
+}
+
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
@@ -4184,8 +4333,8 @@ function autoImportPrevFollowups(cids){
     if(!prev)return;
     const m=loadLocal(prev.id);if(!m)return;
     const sec=(m.sections||{})[cid]||{};
-    // 個案討論 + 醫療小組 都帶入
-    const sources=[...(sec.cases||[]),...(sec.team||[])];
+    // 個案討論 + 醫療小組 都帶入（過濾 followNext===false）
+    const sources=[...(sec.cases||[]).filter(function(c){return c.followNext!==false;}),...(sec.team||[])];
     if(!sources.length)return;
     const fups=S.meeting.sections[cid].followups;
     const existing=new Set(fups.map(function(f){return f.chartNo;}));
@@ -4203,6 +4352,15 @@ function autoImportPrevFollowups(cids){
         _autoImported:true
       });
       if(c.chartNo)existing.add(c.chartNo);
+    });
+    // ongoing 前期追蹤也帶入
+    (sec.followups||[]).filter(function(f){return f.status==='ongoing';}).forEach(function(f){
+      if(!f.chartNo&&!f.name)return;
+      if(f.chartNo&&existing.has(f.chartNo))return;
+      fups.push({id:uid(),chartNo:f.chartNo||'',name:f.name||'',
+        doctors:Array.isArray(f.doctors)?f.doctors.slice(0,2):[(f.doctor||''),''],
+        doctor:f.doctor||'',prevDate:prev.date||'',note:f.note||'',_autoImported:true});
+      if(f.chartNo)existing.add(f.chartNo);
     });
   });
   }catch(e){console.warn('autoImportPrevFollowups error:',e);}
@@ -4648,7 +4806,8 @@ async function genDOCX(){
               divider:'CFD8DC'};
 
     // ── Helpers ──
-    const pt=n=>n*20; // half-points to twip
+    const pt=n=>n*20; // twips (for spacing/margin)
+    const sz=n=>n*2;  // half-points (for font size)
     const mkRun=(text,opts={})=>new TextRun({text:text||'',...opts});
 
     // Horizontal rule paragraph
@@ -4659,7 +4818,7 @@ async function genDOCX(){
 
     // Section header (e.g. ▌前期追蹤)
     const mkSecHdr=(text)=>new Paragraph({
-      children:[mkRun(text,{bold:true,size:pt(13),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun(text,{bold:true,size:sz(13),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
       spacing:{before:pt(14),after:pt(6)},
       border:{left:{style:BorderStyle.THICK,size:12,color:C.accent}}
     });
@@ -4677,13 +4836,13 @@ async function genDOCX(){
           margins:{top:pt(4),bottom:pt(4),left:pt(6),right:pt(6)},
           children:[new Paragraph({
             children:[
-              mkRun(no+'.  ',{bold:true,size:pt(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun(no+'.  ',{bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun((c.chartNo||'')+'\u3000'+(c.name?maskName(c.name):''),
-                {bold:true,size:pt(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun('\u3000'+(c.gender||'M')+'/'+(c.age||'\u2014'),
-                {size:pt(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun('\u3000VS '+drs,
-                {size:pt(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
             ]
           })]
         })
@@ -4702,16 +4861,16 @@ async function genDOCX(){
           shading:{type:ShadingType.CLEAR,fill:C.bg},
           margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
           children:[new Paragraph({children:[
-            mkRun(label,{bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})
+            mkRun(label,{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})
           ]})]
         }),
         new TableCell({
           width:{size:84,type:WidthType.PERCENTAGE},
           margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
           children:isEmpty
-            ?[new Paragraph({children:[mkRun('',{size:pt(12)})],spacing:{after:pt(16)}})]
+            ?[new Paragraph({children:[mkRun('',{size:sz(12)})],spacing:{after:pt(16)}})]
             :(content||'').split('\n').map(line=>new Paragraph({
-                children:[mkRun(line,{size:pt(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
+                children:[mkRun(line,{size:sz(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
                 spacing:{after:pt(2)}
               }))
         })
@@ -4721,9 +4880,9 @@ async function genDOCX(){
     // Followup status badge
     const mkFupStatus=(status)=>new Paragraph({
       children:[
-        mkRun('\u72c0\u614b\uff1a',{bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u72c0\u614b\uff1a',{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
         mkRun(status==='ongoing'?'\u7e7c\u7e8c\u8ffd\u8e64':'\u7d50\u6848',
-          {bold:true,size:pt(11),
+          {bold:true,size:sz(11),
            color:status==='ongoing'?'1565C0':'B71C1C',
            font:'\u65b0\u7d30\u660e\u9ad4'})
       ],
@@ -4735,19 +4894,19 @@ async function genDOCX(){
     // ── Header: hospital + meeting info ──
     children.push(new Paragraph({
       children:[mkRun('\u5f70\u6ff1\u79c0\u50b3\u7652\u764c\u75c7\u4e2d\u5fc3',
-        {bold:true,size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+        {bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
       spacing:{after:pt(2)}
     }));
     children.push(new Paragraph({
       children:[mkRun(mtgTitle(cids),
-        {bold:true,size:pt(16),color:C.title,font:'\u65b0\u7d30\u660e\u9ad4'})],
+        {bold:true,size:sz(16),color:C.title,font:'\u65b0\u7d30\u660e\u9ad4'})],
       spacing:{after:pt(4)}
     }));
     // Date + time + location on one line
     const dateStr=rocDate(m.date).replace(/\(\u661f\u671f.\)$/,'');
     const infoLine=[dateStr,m.time,m.loc].filter(Boolean).join('\u3000\u3000');
     children.push(new Paragraph({
-      children:[mkRun(infoLine,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun(infoLine,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
       spacing:{after:pt(2)}
     }));
     children.push(mkHR());
@@ -4756,7 +4915,7 @@ async function genDOCX(){
       const ca=CFG[cid],sec=m.sections[cid]||{followups:[],cases:[],special:[]};
       if(cids.length>1){
         children.push(new Paragraph({
-          children:[mkRun(ca.name,{bold:true,size:pt(14),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+          children:[mkRun(ca.name,{bold:true,size:sz(14),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
           spacing:{before:pt(10),after:pt(6)},
           border:{bottom:{style:BorderStyle.SINGLE,size:4,color:C.accent}}
         }));
@@ -4770,16 +4929,16 @@ async function genDOCX(){
           const drs=getDoctorStr(f);
           children.push(new Paragraph({
             children:[
-              mkRun((i+1)+'.  ',{bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun((i+1)+'.  ',{bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun((f.chartNo||'')+'\u3000'+(f.name?maskName(f.name):''),
-                {bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun(drs&&drs!=='\u2014'?'\u3000VS '+drs:'',
-                {size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
             ],
             spacing:{before:pt(6),after:pt(2)}
           }));
           if(f.note)children.push(new Paragraph({
-            children:[mkRun(f.note,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(f.note,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
             spacing:{after:pt(2)},
             indent:{left:pt(16)}
           }));
@@ -4799,7 +4958,7 @@ async function genDOCX(){
           // Diagnosis
           if(c.diagnosis){
             children.push(new Paragraph({
-              children:[mkRun(c.diagnosis,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+              children:[mkRun(c.diagnosis,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
               spacing:{before:pt(3),after:pt(4)},
               indent:{left:pt(4)}
             }));
@@ -4814,7 +4973,7 @@ async function genDOCX(){
           const topics=(c.topics||[]).join('\u3001');
           if(topics)children.push(new Paragraph({
             children:[mkRun('\u8a0e\u8ad6\u4e3b\u984c\uff1a'+topics,
-              {size:pt(10),color:C.xlt,italics:true,font:'\u65b0\u7d30\u660e\u9ad4'})],
+              {size:sz(10),color:C.xlt,italics:true,font:'\u65b0\u7d30\u660e\u9ad4'})],
             spacing:{before:pt(2),after:pt(2)},indent:{left:pt(4)}
           }));
           // Summary - show content if filled, else empty lines
@@ -4832,11 +4991,11 @@ async function genDOCX(){
         sp.forEach(function(s){
           const label=(s.topicType?'['+s.topicType+'] ':'')+( s.title||'');
           children.push(new Paragraph({
-            children:[mkRun(label,{bold:true,size:pt(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(label,{bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'})],
             spacing:{before:pt(6),after:pt(2)}
           }));
           if(s.note)children.push(new Paragraph({
-            children:[mkRun(s.note,{size:pt(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(s.note,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
             spacing:{after:pt(4)},indent:{left:pt(8)}
           }));
         });
@@ -4850,14 +5009,14 @@ async function genDOCX(){
     children.push(new Paragraph({text:'',spacing:{before:pt(12),after:0}}));
     children.push(new Paragraph({
       children:[
-        mkRun('\u8a18\u9304\uff1a'+recorder,{size:pt(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
-        mkRun('\u3000\u3000'+recDate,{size:pt(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u8a18\u9304\uff1a'+recorder,{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u3000\u3000'+recDate,{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
       ],
       alignment:AlignmentType.RIGHT
     }));
 
     const doc=new Document({
-      styles:{default:{document:{run:{font:'\u65b0\u7d30\u660e\u9ad4',size:pt(12)}}}},
+      styles:{default:{document:{run:{font:'\u65b0\u7d30\u660e\u9ad4',size:sz(12)}}}},
       sections:[{
         properties:{page:{margin:{
           top:convertInchesToTwip(0.8),
@@ -7290,6 +7449,22 @@ document.addEventListener('click',function(e){
   if(crpickimg){crPickImages(crpickimg.dataset.cid,parseInt(crpickimg.dataset.si),parseInt(crpickimg.dataset.pi));return;}
   const pickspecialimgs=e.target.closest('[data-action="pickspecialimgs"]');
   if(pickspecialimgs){pickSpecialImgs(pickspecialimgs.dataset.cid,parseInt(pickspecialimgs.dataset.si));return;}
+  const postfupToggle=e.target.closest('[data-action="postfup-ongoing"],[data-action="postfup-closed"]');
+  if(postfupToggle){
+    var _cid=postfupToggle.dataset.cid,_fi=parseInt(postfupToggle.dataset.fi);
+    ensureSec(_cid);var _f=(S.meeting.sections[_cid]||{}).followups[_fi];
+    if(!_f)return;
+    _f.status=postfupToggle.dataset.action==='postfup-ongoing'?'ongoing':'closed';
+    var _card=postfupToggle.closest('div[style*="border:1px solid"]');
+    if(_card){
+      _card.querySelectorAll('[data-action^="postfup-"]').forEach(function(b){
+        var isActive=b.dataset.action==='postfup-'+_f.status;
+        b.className='btn btn-sm '+(isActive?'btn-a':'btn-b');
+        b.style.opacity=isActive?'1':'0.5';
+      });
+    }
+    return;
+  }
   const clearspecialimgs=e.target.closest('[data-action="clearspecialimgs"]');
   if(clearspecialimgs){
     var _cid=clearspecialimgs.dataset.cid,_si=parseInt(clearspecialimgs.dataset.si);
@@ -7652,5 +7827,30 @@ function getMemberStr(ca){return mkStr(ca.memberKeys)||ca.members||''}
     </div>
   </div>
 </div>
+<!-- Post-meeting fill panel -->
+<div id="postmtg-panel" style="display:none;position:fixed;inset:0;z-index:2000;background:#fff;overflow-y:auto;flex-direction:column">
+  <div style="position:sticky;top:0;background:#fff;border-bottom:1px solid var(--blt);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:1">
+    <span style="font-weight:700;font-size:15px;color:var(--fog-dk)">會後填寫</span>
+    <span style="font-size:12px;color:var(--textlt);flex:1">填完存檔後可產出 DOCX</span>
+    <button class="btn btn-a btn-sm" onclick="savePostMtg()">存檔關閉</button>
+    <button class="btn btn-b btn-sm" onclick="closePostMtgPanel()">取消</button>
+  </div>
+  <div id="postmtg-body" style="padding:16px;display:flex;flex-direction:column;gap:0"></div>
+</div>
+
+<!-- Copy meeting dialog -->
+<div id="copy-mtg-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:6px;padding:24px;width:min(360px,92vw);box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div style="font-weight:700;font-size:15px;color:var(--fog-dk);margin-bottom:6px">複製會議到其他日期</div>
+    <div style="font-size:12px;color:var(--textlt);margin-bottom:16px">完整複製內容，包含個案、摘要、結論。</div>
+    <label style="display:block;font-size:12px;font-weight:600;color:var(--fog);margin-bottom:6px">目標日期</label>
+    <input type="date" id="copy-mtg-date" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--blt);border-radius:4px;font-size:14px;margin-bottom:16px">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-b" onclick="closeCopyMtgDialog()">取消</button>
+      <button class="btn btn-a" onclick="confirmCopyMtg()">複製</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
