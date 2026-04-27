@@ -1214,7 +1214,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.37';
+const VERSION='V4.3.38';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -4802,7 +4802,7 @@ async function genDOCX(){
 
     // ── Colors ──
     const C={title:'1E2D3D',dark:'2C3E50',mid:'546E7A',light:'78909C',
-              xlt:'B0BEC5',bg:'F5F7F8',white:'FFFFFF',accent:'2E5F8A',
+              xlt:'B0BEC5',bg:'F5F7F8',white:'FFFFFF',accent:'3A4550',
               divider:'CFD8DC'};
 
     // ── Helpers ──
@@ -4840,7 +4840,7 @@ async function genDOCX(){
               mkRun((c.chartNo||'')+'\u3000'+(c.name?maskName(c.name):''),
                 {bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun('\u3000'+(c.gender||'M')+'/'+(c.age||'\u2014'),
-                {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'A8B5BE',font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun('\u3000VS '+drs,
                 {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
             ]
