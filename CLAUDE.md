@@ -120,10 +120,11 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.42 | 整合主檔：15科、35醫師、頭頸外科拆分、消化/婦科更名 |
 | V4.3.41 | NAS 跨機同步：syncWithNAS + writeMtgToNAS，登入同步 + 存檔推送 |
 | V4.3.40 | 刪除保護：createdBy 檢查 + 批次刪除 disabled |
 | V4.3.39 | 依 CLAUDE.md playbook 重寫 CLAUDE.md；砍舊版本歷程；加下版優先清單 |
-| V4.3.41 | DOCX 個案抬頭配色改為 #3A4550（同程式 UI）|
+| V4.3.42 | DOCX 個案抬頭配色改為 #3A4550（同程式 UI）|
 | V4.3.37 | hotfix：_groupPath 未在 genHTMLSlides 宣告導致 HTML 產出失敗 |
 | V4.3.36 | DOCX 六修：院名癒→癌、空案過濾、移討論主題行、空欄簡化、診斷治療分隔線 |
 | V4.3.35 | DOCX 字型大小修正：pt()=twip 用於間距，sz()=半點 用於字型 |
@@ -231,4 +232,4 @@ print("functions:", len(set(re.findall(r'function\s+(\w+)\s*\(', h))))
 
 ## 十一、一句話總結
 
-V4.3.41 這版主要做了三件大事：DOCX 完整改版成「會議決議確認單」（字型/配色/結構全新）、會後填寫 panel 讓開會後快速填摘要結論並控制下次追蹤、複製會議功能。CLAUDE.md 也按 playbook 重寫，砍掉 80% 版本歷程垃圾。下版第一優先是 NAS 跨機同步第二批（syncWithNAS）。
+V4.3.42 這版主要做了三件大事：DOCX 完整改版成「會議決議確認單」（字型/配色/結構全新）、會後填寫 panel 讓開會後快速填摘要結論並控制下次追蹤、複製會議功能。CLAUDE.md 也按 playbook 重寫，砍掉 80% 版本歷程垃圾。下版第一優先是 NAS 跨機同步第二批（syncWithNAS）。

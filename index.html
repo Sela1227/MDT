@@ -1185,28 +1185,30 @@ const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','Breast SONO','PET-CT','
 let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
 const DEFAULT_DRS=[
+  {dept:'口腔外科',name:'張建明醫師'},{dept:'口腔外科',name:'王威群醫師'},
+  {dept:'耳鼻喉科',name:'李俊毅醫師'},{dept:'耳鼻喉科',name:'蕭信昌醫師'},{dept:'耳鼻喉科',name:'鍾從得醫師'},
   {dept:'一般外科',name:'李岳聰醫師'},{dept:'一般外科',name:'林建華醫師'},{dept:'一般外科',name:'吳鴻昇醫師'},{dept:'一般外科',name:'歐金俊醫師'},
-  {dept:'頭頸外科',name:'張建明醫師'},{dept:'頭頸外科',name:'王威群醫師'},{dept:'頭頸外科',name:'李俊毅醫師'},{dept:'頭頸外科',name:'蕭信昌醫師'},{dept:'頭頸外科',name:'鍾從得醫師'},
-  {dept:'胸腔外科',name:'黃榆涵醫師'},{dept:'胸腔內科',name:'張竣期醫師'},
-  {dept:'消化內科',name:'陳忠宏醫師'},{dept:'消化內科',name:'王俊偉醫師'},
-  {dept:'血液腫瘤科',name:'張正雄醫師'},{dept:'血液腫瘤科',name:'劉大智醫師'},
+  {dept:'胸腔外科',name:'李佳穎醫師'},{dept:'胸腔外科',name:'黃榆涵醫師'},{dept:'胸腔內科',name:'張竣期醫師'},
+  {dept:'血液腫瘤科',name:'張正雄醫師'},{dept:'血液腫瘤科',name:'劉大智醫師'},{dept:'血液腫瘤科',name:'吳敬炫醫師'},{dept:'血液腫瘤科',name:'陳彥谷醫師'},
+  {dept:'肝膽腸胃科',name:'黃懷毅醫師'},{dept:'肝膽腸胃科',name:'陳忠宏醫師'},{dept:'肝膽腸胃科',name:'葉永祥醫師'},{dept:'肝膽腸胃科',name:'顏聖烈醫師'},{dept:'肝膽腸胃科',name:'王俊偉醫師'},
+  {dept:'婦產科',name:'林坤沂醫師'},{dept:'婦產科',name:'陳彥甫醫師'},{dept:'婦產科',name:'吳宏明醫師'},{dept:'婦產科',name:'陳天惠醫師'},
   {dept:'影像診斷科',name:'李唯揚醫師'},{dept:'影像診斷科',name:'張哲維醫師'},{dept:'影像診斷科',name:'葉偉成醫師'},{dept:'影像診斷科',name:'蔡秉樺醫師'},
   {dept:'核醫科',name:'侯柏年醫師'},
   {dept:'病理科',name:'劉奕祥醫師'},{dept:'病理科',name:'賴義雄醫師'},{dept:'病理科',name:'鄧呂壕醫師'},
   {dept:'放射腫瘤科',name:'劉育昌醫師'},{dept:'放射腫瘤科',name:'林伯儒醫師'},{dept:'放射腫瘤科',name:'熊敬業醫師'},
-  {dept:'婦科',name:'林坤沂醫師'},{dept:'婦科',name:'吳宏明醫師'},{dept:'婦科',name:'陳天惠醫師'},
   {dept:'泌尿科',name:'吳其翔醫師'},{dept:'泌尿科',name:'楊哲學醫師'},
+  {dept:'大腸直腸外科',name:'（待補）'},{dept:'乳房外科',name:'（待補）'},
 ];
 const mk=(d,n)=>`${d}::${n}`;
 const DEFAULT_C={
-  head_neck:{id:'head_neck',name:'頭頸癌',partner:'lymphoma',role:'first',weekday:4,weeknum:3,color:'#4A7C8E',defaultSlot:'12:30-13:30',slot:'12:30-13:00',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'頭頸癌召集人',conv:'頭頸外科::張建明醫師',memberKeys:[mk('頭頸外科','王威群醫師'),mk('血液腫瘤科','劉大智醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','劉育昌醫師')]},
+  head_neck:{id:'head_neck',name:'頭頸癌',partner:'lymphoma',role:'first',weekday:4,weeknum:3,color:'#4A7C8E',defaultSlot:'12:30-13:30',slot:'12:30-13:00',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'頭頸癌召集人',conv:'頭頸外科::張建明醫師',memberKeys:[mk('口腔外科','王威群醫師'),mk('耳鼻喉科','李俊毅醫師'),mk('血液腫瘤科','劉大智醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','劉育昌醫師')]},
   lymphoma:{id:'lymphoma',name:'血液淋巴癌',partner:'head_neck',role:'second',weekday:4,weeknum:3,defaultSlot:'12:30-13:30',color:'#5B8FA8',slot:'13:00-13:30',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'血液淋巴癌召集人',conv:'血液腫瘤科::劉大智醫師',memberKeys:[mk('血液腫瘤科','張正雄醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','林伯儒醫師')]},
   thoracic:{id:'thoracic',name:'胸腔癌',partner:null,weekday:4,weeknum:3,color:'#6B7FA0',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6007',pwd:'7813888',url:'https://zoom.us/j/7256166007?pwd=oHlSANba92wzDrbbYs6NFVRFBT8O2x.1'},convTitle:'肺癌召集人',conv:'胸腔內科::張竣期醫師',memberKeys:[mk('胸腔外科','黃榆涵醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','劉奕祥醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
   breast:{id:'breast',name:'乳癌',partner:null,defaultDept:'一般外科',weekday:4,weeknum:3,defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6003',pwd:'6222131',url:'https://zoom.us/j/7256166003?pwd=4gN5lhkzdIfh8WylCq7bYPl194bFI6.1'},convTitle:'乳癌召集人',conv:'一般外科::李岳聰醫師',memberKeys:[mk('一般外科','吳鴻昇醫師'),mk('一般外科','林建華醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','熊敬業醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  digestive:{id:'digestive',name:'消化道癌',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('消化內科','陳忠宏醫師'),mk('消化內科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
-  hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('消化內科','陳忠宏醫師'),mk('消化內科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  digestive:{id:'digestive',name:'消化道癌',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
   urology:{id:'urology',name:'泌尿道癌',partner:null,weekday:3,weeknum:2,color:'#7A6E8A',defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-7F  愛書人會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=6Ir1uPjOzDjA25ARbf88rOOq1X80rn.1'},convTitle:'泌尿道癌召集人',conv:'泌尿科::楊哲學醫師',memberKeys:[mk('泌尿科','吳其翔醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  gynecology:{id:'gynecology',name:'婦癌',partner:null,weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'2609926',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦科::吳宏明醫師',memberKeys:[mk('婦科','林坤沂醫師'),mk('婦科','吳宏明醫師'),mk('婦科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
+  gynecology:{id:'gynecology',name:'婦癌',partner:null,weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'2609926',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦科::吳宏明醫師',memberKeys:[mk('婦產科','林坤沂醫師'),mk('婦產科','吳宏明醫師'),mk('婦產科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
 };
 const USERS=[
   {id:'yang',name:'楊靜雯',ext:'17965',cancers:['lymphoma','digestive','gynecology']},
@@ -1214,7 +1216,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.41';
+const VERSION='V4.3.42';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1247,11 +1249,11 @@ function migrateLOCS(){
 
 function migrateDRS(){
   // Rename depts and reassign doctors in localStorage DRS
-  const renames={'腫瘤外科':'一般外科','腫瘤內科':'消化內科'};
+  const renames={'腫瘤外科':'一般外科','腫瘤內科':'肝膽腸胃科'};
   // Doctors that need dept reassignment: {name: newDept}
   const reassign={
     '劉大智醫師':'血液腫瘤科','張正雄醫師':'血液腫瘤科',
-    '王威群醫師':'頭頸外科','歐金俊醫師':'一般外科',
+    '王威群醫師':'口腔外科','歐金俊醫師':'一般外科',
     '李岳聰醫師':'一般外科','林建華醫師':'一般外科','吳鴻昇醫師':'一般外科',
   };
   // Doctors to remove from specific depts (侯柏年 from 影像診斷科)
@@ -7727,11 +7729,11 @@ function migrateLOCS(){
 
 function migrateDRS(){
   // Rename depts and reassign doctors in localStorage DRS
-  const renames={'腫瘤外科':'一般外科','腫瘤內科':'消化內科'};
+  const renames={'腫瘤外科':'一般外科','腫瘤內科':'肝膽腸胃科'};
   // Doctors that need dept reassignment: {name: newDept}
   const reassign={
     '劉大智醫師':'血液腫瘤科','張正雄醫師':'血液腫瘤科',
-    '王威群醫師':'頭頸外科','歐金俊醫師':'一般外科',
+    '王威群醫師':'口腔外科','歐金俊醫師':'一般外科',
     '李岳聰醫師':'一般外科','林建華醫師':'一般外科','吳鴻昇醫師':'一般外科',
   };
   // Doctors to remove from specific depts (侯柏年 from 影像診斷科)
