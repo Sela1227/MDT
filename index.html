@@ -1221,7 +1221,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.45';
+const VERSION='V4.5.0';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -2207,7 +2207,7 @@ function renderDrsTab(){
   const depts=[...new Set(DRS.map(d=>d.dept))];
   if(!depts.length){el.innerHTML='<div class="tlt">尚無科別。</div>';
   } else {
-    depts.forEach(dept=>{
+    depts.forEach((dept,deptIdx)=>{
       const rows=DRS.map((dr,i)=>({...dr,idx:i})).filter(dr=>dr.dept===dept&&dr.name);
       const grp=document.createElement('div');grp.className='dept-grp';
       // Header (clickable to collapse)
@@ -2216,9 +2216,12 @@ function renderDrsTab(){
       const toggle=document.createElement('span');toggle.textContent='▼';toggle.style.cssText='font-size:9px;opacity:.5;margin-right:2px;transition:transform .15s';
       const nameSpan=document.createElement('span');nameSpan.textContent=dept;nameSpan.style.flex='1';
       const countBadge=document.createElement('span');countBadge.textContent=rows.length+'人';countBadge.style.cssText='font-size:10px;color:var(--textlt);font-weight:400';
+      /* V4.5.0: 科別整組上下移動 — 邊界灰化跟醫師一致 */
+      const upBtn=document.createElement('button');upBtn.className='mbtn';upBtn.style.cssText='font-size:9px;padding:1px 5px';upBtn.textContent='▲';upBtn.disabled=deptIdx===0;upBtn.onclick=e=>{e.stopPropagation();moveDept(dept,-1)};
+      const dnBtn=document.createElement('button');dnBtn.className='mbtn';dnBtn.style.cssText='font-size:9px;padding:1px 5px';dnBtn.textContent='▼';dnBtn.disabled=deptIdx===depts.length-1;dnBtn.onclick=e=>{e.stopPropagation();moveDept(dept,1)};
       const rnBtn=document.createElement('button');rnBtn.className='mbtn';rnBtn.style.cssText='font-size:9px;padding:1px 5px';rnBtn.textContent='重命名';rnBtn.onclick=e=>{e.stopPropagation();renameDept(dept)};
       const dlBtn=document.createElement('button');dlBtn.className='mbtn mbtn-del';dlBtn.style.cssText='font-size:9px;padding:1px 5px';dlBtn.textContent='刪除科別';dlBtn.onclick=e=>{e.stopPropagation();delDept(dept)};
-      hdr.appendChild(toggle);hdr.appendChild(nameSpan);hdr.appendChild(countBadge);hdr.appendChild(rnBtn);hdr.appendChild(dlBtn);
+      hdr.appendChild(toggle);hdr.appendChild(nameSpan);hdr.appendChild(countBadge);hdr.appendChild(upBtn);hdr.appendChild(dnBtn);hdr.appendChild(rnBtn);hdr.appendChild(dlBtn);
       // Body
       const body=document.createElement('div');body.style.cssText='overflow:hidden';body.style.display='none';toggle.style.transform='rotate(-90deg)';
       rows.forEach(dr=>{
@@ -2270,6 +2273,32 @@ function editDr(i){
   saveAll();renderDrsTab();renderCancerCfgList();showSaveToast('醫師已更新');
 }
 function moveDr(i,dir){const j=i+dir;if(j<0||j>=DRS.length)return;[DRS[i],DRS[j]]=[DRS[j],DRS[i]];saveAll();renderDrsTab()}
+/* V4.5.0: 科別整組上下排序 — 把該科別所有醫師搬到上/下個科別的位置 */
+function moveDept(dept,dir){
+  var depts=[...new Set(DRS.map(function(d){return d.dept;}))];
+  var di=depts.indexOf(dept);
+  var dj=di+dir;
+  if(di<0||dj<0||dj>=depts.length)return;
+  // 取該科別所有醫師(保持原內部順序)
+  var moving=DRS.filter(function(d){return d.dept===dept;});
+  // 從 DRS 移除該科別
+  var rest=DRS.filter(function(d){return d.dept!==dept;});
+  // 找目標科別在 rest 中第一個出現的位置(向上 = 在目標前;向下 = 在目標後最後一筆 +1)
+  var targetDept=depts[dj];
+  if(dir<0){
+    // 向上:插到 targetDept 第一個出現位置之前
+    var insertAt=rest.findIndex(function(d){return d.dept===targetDept;});
+    if(insertAt<0)insertAt=rest.length;
+    DRS=rest.slice(0,insertAt).concat(moving,rest.slice(insertAt));
+  } else {
+    // 向下:插到 targetDept 最後一個出現位置之後
+    var lastAt=-1;
+    for(var i=0;i<rest.length;i++)if(rest[i].dept===targetDept)lastAt=i;
+    var insertAfter=lastAt+1;
+    DRS=rest.slice(0,insertAfter).concat(moving,rest.slice(insertAfter));
+  }
+  saveAll();renderDrsTab();
+}
 function renameDept(dept){
   const name=prompt('重命名科別:',dept);
   if(name===null||!name.trim()||name===dept)return;
@@ -3853,7 +3882,7 @@ async function syncWithNAS(){
 }
 
 function _migrateDrsDepts(){
-  // V4.3.45: 回傳 {renamed, added} 供手動觸發按鈕顯示統計
+  // V4.4.0: 回傳 {renamed, added} 供手動觸發按鈕顯示統計
   // V4.3.43: One-time migration: update old dept names in mdt_drs localStorage
   var DEPT_MAP={
     '頭頸外科': null,  // special: split by doctor name
@@ -3880,7 +3909,7 @@ function _migrateDrsDepts(){
   return {renamed:renamed,added:0};
 }
 
-/* V4.3.45: 手動觸發主檔遷移 — 回報實際差異供 UI 顯示 */
+/* V4.4.0: 手動觸發主檔遷移 — 回報實際差異供 UI 顯示 */
 function applyMasterMigrations(){
   if(!confirm('將執行主檔遷移：\n• 修正舊版科別命名（頭頸外科拆分、消化內科→肝膽腸胃科 等）\n• 補入新版主檔的醫師、地點、癌別預設\n\n手動新增的醫師不會被刪除。要繼續嗎？'))return;
   // Snapshot 比對前狀態

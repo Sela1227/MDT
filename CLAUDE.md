@@ -108,8 +108,9 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 | HTML 投影片 | `genHTMLSlides()` + `extraJs`（放大鏡/鍵盤） |
 | DOCX | `genDOCX()` |
 | 設定頁 | `openSettings()` → `renderLocsTab/DrsTab/CancerCfgList` |
+| 醫師/科別管理 | `addDr/editDr/delDr/moveDr`（單醫師）、`addDept/renameDept/delDept/moveDept`（科別整組）；手動遷移 `applyMasterMigrations` |
 | NAS 備份 | `backupToNAS()`, `pickNasFolder()`, `restoreNasHandle()` |
-| 同步（未完成） | 預計 `syncWithNAS()`, `writeMtgToNAS()` |
+| NAS 同步 | `syncWithNAS()`, `writeMtgToNAS()`, `writeTombstoneToNAS()`, `_canDelete()` |
 | 儲存 | `saveMeeting(opts)` — `opts.silent=true` 不跳閱覽模式 |
 | 會後填寫 | `openPostMtgPanel()`, `savePostMtg()` |
 | 複製會議 | `openCopyMtgDialog()`, `confirmCopyMtg()` |
@@ -120,7 +121,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
-| V4.3.45 | 修主檔遷移根因:刪舊版 9 個重複函數(後者覆蓋前者導致 _migrateDrsDepts 從未執行);修咙→喉 typo;醫師分頁加手動「重新套用主檔遷移」按鈕 |
+| V4.5.0 | 科別整組上下排序:moveDept(dept,dir) 重排 DRS 陣列;科別標頭列加 ▲▼ 按鈕,邊界灰化 |
+| V4.4.0 | (原 V4.3.45,因版本號規則修正——第三碼最大 9 超過要進位——重新編號)修主檔遷移根因:刪舊版 9 個重複函數;修咙→喉 typo;醫師分頁加「重新套用主檔遷移」按鈕 |
 | V4.3.44 | NAS 同步刪除傳播:_canDelete + writeTombstoneToNAS;補 deleteCurMtg/confirmBatchDelete 權限檢查;tombstone 90 天 TTL |
 | V4.3.43 | 移除乳房外科、歐金俊移至大腸直腸外科、DRS 遷移函數 |
 | V4.3.42 | 整合主檔：15科、35醫師、頭頸外科拆分、消化/婦科更名 |
@@ -201,13 +203,20 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 做法:Local→NAS 推送前先檢查 `nasMtg2.deleted`;只有「本地 version 確實比 tombstone version 還大」才推(視為合法復活,例如 B 在不知情下持續編輯到比刪除還新)
 - 教訓:多機同步任何「比 version 推送」邏輯,deleted/active 兩種狀態要分開判斷
 
-**#13 同名 function 重複定義導致新版被覆蓋(V4.3.45,代表性大坑)**
+**#13 同名 function 重複定義導致新版被覆蓋(V4.4.0,代表性大坑)**
 - 症狀:V4.3.43 寫了新版 loadAll + _migrateDrsDepts,使用者部署後完全沒生效;科別還是舊的『頭頸外科』『消化內科』『婦科』
 - 原因:檔案 L1223 寫了新版 loadAll(含 _migrateDrsDepts() 呼叫),L7812 還留著舊版 loadAll(沒呼叫)。JS function declaration 重複時後者覆蓋前者 — `_migrateDrsDepts` 被宣告了但**從來沒被執行過**
 - 一同被覆蓋的還有:migrateLOCS、migrateDRS、migrateCFG、migrateCFGConv、saveAll、mkStr、getMemberStr 共 9 個函數(這次新版內容碰巧跟舊版相同所以沒造成更大災難)
 - 做法:修改既有函數時,**全檔搜尋確認只有一份**;Python 一行檢查 `grep -c "^function loadAll" index.html`
 - 教訓:大檔案編輯特別容易踩。每次 `node --check` 通過不等於正確 — 重複定義不是語法錯,是邏輯死亡。打包前加例行檢查:`grep -c '^function FNAME' index.html` 對任何重要函數應為 1
 - 預防:加在打包驗證腳本裡 — 對所有 `^function (\w+)` 抓出來,>1 的全列警告
+
+**#14 版本號第三碼超過 9 沒進位(V4.4.0 之前長期錯誤)**
+- 症狀:版本號跑出 V4.3.45 這種數字,第三碼累積到 45 才被注意到。版本號失去語意 —「45 次 bug fix」聽起來不合理,實際上很多應該是新功能(該進到第二碼)
+- 原因:DEV-GUIDELINES 寫了「bug fix +0.01」這種小數寫法,沒寫到「第三碼最大 9,超過要進位」。Claude 每次接手就照數字直接 +1
+- 做法:從 V4.4.0 重新開始;CLAUDE.md 第九節版本號規則表寫清楚進位邏輯
+- 教訓:版本號規則用「+0.01」這種小數寫法很容易誤導 — 41+1=42 看起來合理,但 V x.y.z 不是小數。要寫成「第幾碼最大 9」才不會被當小數累加
+- 預防:打包前看版本號,第三碼 ≥ 10 立即警告
 
 ---
 
@@ -224,16 +233,29 @@ with open('/tmp/check.js','w') as f: f.write(js)
 r = subprocess.run(['node','--check','/tmp/check.js'],capture_output=True,text=True)
 print("Node:", "OK" if r.returncode==0 else r.stderr[:200])
 print("ends </html>:", h.rstrip().endswith('</html>'))
-# V4.3.45 加:重複函數檢查(坑 #13)
+# V4.4.0 加:重複函數檢查(坑 #13)
 fns={}
 for m in re.finditer(r'function (\w+)\s*\(', h):
     fns[m.group(1)]=fns.get(m.group(1),0)+1
 dups=[k for k,v in fns.items() if v>1]
 print("重複函數:", dups if dups else "無")
 print("函數總數:", len(fns))
+# V4.4.0 加:當前版本號進位規則(坑 #14;只檢查 const VERSION,不掃歷史記錄)
+m=re.search(r"const VERSION='V(\d+)\.(\d+)\.(\d+)'", h)
+if m:
+    x,y,z=int(m.group(1)),int(m.group(2)),int(m.group(3))
+    print("VERSION:", f"V{x}.{y}.{z}", "✓" if (y<=9 and z<=9) else "⚠️ 進位錯!")
 ```
 
-版本號命名:bug fix `+0.01`,新功能 `+0.1`,大改版 `+1.0`
+版本號命名 V**x.y.z**(嚴格進位,**第二/三碼最大就是 9**):
+
+| 類型 | 規則 | 範例 |
+|------|------|------|
+| Bug fix | `z+1`,**z 超過 9 → y+1, z=0** | V4.3.5 → V4.3.6;V4.3.9 → V4.4.0 |
+| 新功能 | `y+1, z=0`,**y 超過 9 → x+1, y=0, z=0** | V4.3.5 → V4.4.0;V4.9.5 → V5.0.0 |
+| 大改版 | `x+1, y=0, z=0` | V4.3.5 → V5.0.0 |
+
+**坑 #14 教訓**:之前長期容許 V4.3.45 這種第三碼超過 9 的寫法,版本號失去語意。從 V4.4.0 開始嚴格進位。看到第三碼 ≥ 10 就是規則錯。
 
 ---
 
@@ -251,4 +273,4 @@ print("函數總數:", len(fns))
 
 ## 十一、一句話總結
 
-V4.3.45 修了一個半月前(V4.3.43)就埋下的隱形地雷:檔案裡有兩份 loadAll,後者覆蓋前者導致主檔遷移從沒執行過。順便修咙→喉 typo,加「重新套用主檔遷移」按鈕讓使用者隨時能手動觸發。坑 #13 進入永久教訓:同檔多份 function 重複定義是 node --check 抓不出來的死亡 bug,打包驗證腳本加了重複函數檢查。下版第一優先還是「記住上次登入者」。
+V4.5.0 加科別整組上下排序 — 設定→醫師分頁的科別標頭列從 2 顆按鈕(重命名/刪除)變 4 顆(▲▼/重命名/刪除),邊界灰化跟單醫師排序一致。新函數 `moveDept(dept,dir)` 直接重排 DRS 陣列(不另存科別順序)。下版第一優先還是「記住上次登入者」。
