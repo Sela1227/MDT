@@ -790,6 +790,8 @@ textarea{resize:vertical}
             <div style="margin-bottom:8px">
               <button onclick="openPostMtgPanel()" style="width:100%;padding:10px 16px;background:linear-gradient(135deg,#2E5F8A,#1a3f5c);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(46,95,138,.35);transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'"><span style="font-size:16px">&#9998;</span>會後填寫（摘要、結論、追蹤狀態）<span style="font-size:11px;opacity:.8;margin-left:4px">▶</span></button>
             </div>
+            <!-- V4.6.2: 投影片配色色票條 — 放在 5 主按鈕上方,讓下方的 share link/Excel/JSON 等按鈕區保持連續 -->
+            <div id="theme-strip" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:11px"></div>
             <!-- 5-per-row grid layout -->
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
               <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
@@ -798,8 +800,6 @@ textarea{resize:vertical}
               <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
             </div>
-            <!-- V4.6.1: HTML/PPTX 投影片配色色票條(JS 渲染) -->
-            <div id="theme-strip" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:11px"></div>
             <div id="slide-share-link"></div>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
               <button class="btn btn-b" id="btn-xlsx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genXLSX()">Excel 匯出</button>
@@ -1223,7 +1223,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.6.1';
+const VERSION='V4.6.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
