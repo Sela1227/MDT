@@ -798,6 +798,8 @@ textarea{resize:vertical}
               <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
             </div>
+            <!-- V4.6.1: HTML/PPTX 投影片配色色票條(JS 渲染) -->
+            <div id="theme-strip" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:11px"></div>
             <div id="slide-share-link"></div>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
               <button class="btn btn-b" id="btn-xlsx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genXLSX()">Excel 匯出</button>
@@ -986,14 +988,8 @@ textarea{resize:vertical}
 
             <div class="stab" id="stab-system">
   <div class="st-title">系統</div>
-  <div class="st-desc">外觀偏好、AI 摘要設定、GitHub 投影片分享、測試資料管理。</div>
+  <div class="st-desc">AI 摘要設定、GitHub 投影片分享、測試資料管理。</div>
   <div style="display:flex;flex-direction:column;gap:0">
-
-    <div style="padding:16px 0;border-bottom:1px solid var(--blt)">
-      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">HTML 投影片配色</div>
-      <div class="st-desc">每位個管師獨立記憶。下次按「HTML 投影片」會自動套用您選的配色。</div>
-      <div id="theme-picker" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px"></div>
-    </div>
 
     <div style="padding:16px 0">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">AI 摘要設定</div>
@@ -1227,7 +1223,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.6.0';
+const VERSION='V4.6.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1857,7 +1853,7 @@ function calCreateMtg(cid,date){
 
 
 
-function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();renderThemePicker();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
+function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
 function openHistory(){
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -2489,6 +2485,8 @@ function renderEditor(){
   if(!S.activeCid||!S.cids.includes(S.activeCid)){
     S.activeCid=S.cids.find(function(c){return S.user?.cancers.includes(c);})||S.cids[0];
   }
+  /* V4.6.1: 產出區色票條 — 隨會議畫面渲染 */
+  setTimeout(renderThemeStrip,0);
   const m=S.meeting,cids=S.cids;
   document.getElementById('mtg-title').textContent=mtgTitle(cids);
   document.getElementById('mtg-sub').textContent=rocDate(m.date)+(m.time?' · '+m.time:'');
@@ -3988,46 +3986,45 @@ function applyMasterMigrations(){
   }
 }
 
-/* V4.6.0: 渲染配色模板選擇 — 5 個方塊每個顯示主色 + 名稱,點擊存到當前 user 的 localStorage */
-function renderThemePicker(){
-  var el=document.getElementById('theme-picker');
+/* V4.6.1: 渲染產出區的色票橫條 — 點一下換色,即時回饋 */
+function renderThemeStrip(){
+  var el=document.getElementById('theme-strip');
   if(!el)return;
   el.innerHTML='';
   var curId=getHtmlThemeId();
+  var curName=(HTML_THEMES[curId]||HTML_THEMES.classic).name;
+  /* 標籤 */
+  var lbl=document.createElement('span');
+  lbl.style.cssText='color:var(--textlt);flex-shrink:0';
+  lbl.textContent='投影片配色';
+  el.appendChild(lbl);
+  /* 5 顆色票 */
   Object.keys(HTML_THEMES).forEach(function(id){
     var t=HTML_THEMES[id];
-    var card=document.createElement('div');
     var isOn=id===curId;
-    card.style.cssText='cursor:pointer;border:'+(isOn?'2px solid var(--fog)':'1px solid var(--blt)')+';border-radius:4px;padding:10px;width:140px;background:'+(isOn?'#F4F6F8':'#fff')+';transition:all .15s';
-    /* 預覽:三色 swatch + 名稱 */
-    var swatch=document.createElement('div');
-    swatch.style.cssText='display:flex;height:32px;border-radius:3px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(0,0,0,.08)';
+    var sw=document.createElement('span');
+    sw.title=t.name+' — '+t.desc;
+    sw.style.cssText='display:inline-flex;width:28px;height:18px;border-radius:3px;cursor:pointer;overflow:hidden;border:'+(isOn?'2px solid var(--fog-dk)':'1px solid rgba(0,0,0,.15)')+';flex-shrink:0;transition:transform .1s';
+    sw.onmouseover=function(){if(!isOn)sw.style.transform='scale(1.08)';};
+    sw.onmouseout=function(){sw.style.transform='';};
+    /* 三色 mini swatch */
     ['dk','acc','lt'].forEach(function(k){
-      var seg=document.createElement('div');
+      var seg=document.createElement('span');
       seg.style.cssText='flex:1;background:'+t[k];
-      swatch.appendChild(seg);
+      sw.appendChild(seg);
     });
-    var nm=document.createElement('div');
-    nm.style.cssText='font-size:13px;font-weight:600;color:var(--fog-dk);margin-bottom:2px';
-    nm.textContent=t.name;
-    var ds=document.createElement('div');
-    ds.style.cssText='font-size:10px;color:var(--textlt);line-height:1.4';
-    ds.textContent=t.desc;
-    if(isOn){
-      var chk=document.createElement('div');
-      chk.style.cssText='font-size:10px;color:var(--ok);margin-top:4px;font-weight:600';
-      chk.textContent='✓ 已選用';
-      card.appendChild(swatch);card.appendChild(nm);card.appendChild(ds);card.appendChild(chk);
-    } else {
-      card.appendChild(swatch);card.appendChild(nm);card.appendChild(ds);
-    }
-    card.onclick=function(){
+    sw.onclick=function(){
       setHtmlThemeId(id);
-      renderThemePicker();
+      renderThemeStrip();
       showSaveToast('已套用「'+t.name+'」');
     };
-    el.appendChild(card);
+    el.appendChild(sw);
   });
+  /* 當前名稱 */
+  var cur=document.createElement('span');
+  cur.style.cssText='color:var(--fog-dk);font-weight:600;margin-left:auto;flex-shrink:0';
+  cur.textContent=curName;
+  el.appendChild(cur);
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):

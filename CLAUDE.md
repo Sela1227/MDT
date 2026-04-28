@@ -106,7 +106,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 | 前期追蹤 | `followupHTML()`, `autoImportPrevFollowups()` |
 | 影像區塊 | `buildGenericImgArea(cfg)` → 包裝層：`buildImgArea/PathImgArea/SurgicalImgArea/SpecialImgArea` |
 | 乳攝（特殊版面） | `buildMammoImgArea()` |
-| HTML 投影片 | `genHTMLSlides()` + `extraJs`（放大鏡/鍵盤）；配色模板 `HTML_THEMES` + `getHtmlTheme()`（V4.6.0） |
+| HTML 投影片 | `genHTMLSlides()` + `extraJs`（放大鏡/鍵盤）；配色模板 `HTML_THEMES` + `getHtmlTheme()`，產出區色票條 `renderThemeStrip()`（V4.6.1） |
 | DOCX | `genDOCX()` |
 | 設定頁 | `openSettings()` → `renderLocsTab/DrsTab/CancerCfgList` |
 | 醫師/科別管理 | `addDr/editDr/delDr/moveDr`（單醫師）、`addDept/renameDept/delDept/moveDept`（科別整組）；手動遷移 `applyMasterMigrations` |
@@ -122,6 +122,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.6.1 | HTML 配色選擇從設定頁搬到產出區:renderThemeStrip 色票橫條,即時點選即時回饋;設定頁區塊完全移除 |
 | V4.6.0 | HTML 投影片配色模板:HTML_THEMES 5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比);設定→系統頁新增配色選擇區;每位個管師獨立記憶 |
 | V4.5.0 | 科別整組上下排序:moveDept(dept,dir) 重排 DRS 陣列;科別標頭列加 ▲▼ 按鈕,邊界灰化 |
 | V4.4.0 | (原 V4.3.45,因版本號規則修正——第三碼最大 9 超過要進位——重新編號)修主檔遷移根因:刪舊版 9 個重複函數;修咙→喉 typo;醫師分頁加「重新套用主檔遷移」按鈕 |
@@ -275,4 +276,4 @@ if m:
 
 ## 十一、一句話總結
 
-V4.6.0 加 HTML 投影片配色模板 — 5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比),設定→系統頁挑選,每位個管師獨立記憶。預設 classic 色值跟舊版寫死的色完全一致,沒主動換的人感覺不到差異。實作很簡潔:把 `:root` 三個 CSS 變數抽成 `HTML_THEMES` 常數,`genHTMLSlides` 讀當前 user 的 theme 套上去。下版第一優先還是「記住上次登入者」。
+V4.6.1 把 V4.6.0 加的 HTML 配色選擇從設定頁搬到產出區 — 會議畫面就能直接點 5 顆迷你色票換色,不用切到設定頁再回來。設定頁的舊區塊完全移除。實作上是 picker → strip 的 UI 改寫,localStorage 與套用機制不變。下版第一優先還是「記住上次登入者」。

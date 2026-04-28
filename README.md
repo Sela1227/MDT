@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.6.1
+HTML 配色選擇從「設定→系統」搬到「產出區」:會議畫面產出按鈕 grid 下方一條色票橫條,5 顆迷你色票直接點換色,即時 toast 回饋。設定頁的配色區塊完全移除(不重複)。`renderThemePicker` 改寫為 `renderThemeStrip`,在 `renderEditor` 用 `setTimeout(...,0)` 渲染避免 DOM 競態。使用情境改善:個管師在產出當下能直接調色,不用切到設定頁再回來。
+
 ### V4.6.0
 HTML 投影片配色模板:設定→系統頁新增「HTML 投影片配色」區塊,5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比)。每位個管師獨立記憶(localStorage `mdt_html_theme_{userid}`),三人可以各自選不同偏好。預設「彰濱經典」色值跟舊版寫死的色完全一致 — 沒主動換配色的使用者沒有任何視覺差異。實作上是把 `:root{--dk:...;--acc:...;--lt:...}` 三個 CSS 變數抽成 `HTML_THEMES` 常數,`genHTMLSlides` 讀當前 user 的 theme 套到 `:root`。
 
