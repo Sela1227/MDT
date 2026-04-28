@@ -870,6 +870,11 @@ textarea{resize:vertical}
             <div class="stab" id="stab-drs">
               <div class="st-title">醫師管理</div>
               <div class="st-desc">依科別管理醫師。名稱直接填姓名，系統自動加「醫師」兩字。</div>
+              <div style="background:#F4F6F8;border-left:3px solid #4A7C8E;padding:10px 12px;margin-bottom:12px;border-radius:2px">
+                <div style="font-size:12px;font-weight:600;color:#3A4550;margin-bottom:4px">主檔同步</div>
+                <div style="font-size:11px;color:var(--textlt);margin-bottom:8px;line-height:1.5">將舊版科別命名（頭頸外科、消化內科、婦科等）重新套用至最新主檔，並補入新主檔加入的醫師、地點、癌別預設值。手動新增的醫師不會被刪除。</div>
+                <button class="btn btn-b btn-sm" onclick="applyMasterMigrations()">重新套用主檔遷移</button>
+              </div>
               <div id="drs-list"></div>
               <div style="margin-top:14px;border-top:1px solid var(--blt);padding-top:14px;display:flex;flex-direction:column;gap:10px">
                 <div>
@@ -1216,7 +1221,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.43';
+const VERSION='V4.3.45';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1447,9 +1452,17 @@ function execDelete(){
 function deleteCurMtg(){
   if(!S.meeting)return;
   const local=loadLocal(S.meeting.id);
+  /* V4.3.44: 補權限檢查(原本只有 deleteMtg 有) */
+  if(local&&!_canDelete(local)){
+    var creator=local.savedBy||'原建立者';
+    alert('只能刪除自己建立的會議記錄。請聯絡建立者：'+creator);
+    return;
+  }
   const caseN=local?Object.values(local.sections||{}).reduce((n,s)=>n+(s.cases||[]).length,0):0;
   const title=caseN>0?`刪除此會議（含 ${caseN} 筆個案資料）`:'刪除此會議記錄';
   showDelConfirm(title,()=>{
+    /* V4.3.44: 寫 NAS tombstone */
+    if(nasHandle&&local)writeTombstoneToNAS(S.meeting.id,local).catch(function(e){console.warn('NAS tombstone:',e);});
     localStorage.removeItem('mdt_m_'+S.meeting.id);
     localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(x=>x.id!==S.meeting.id)));
     if(S.cids)S.cids.forEach(cid=>{try{delSec(cid,S.meeting.date)}catch{}});
@@ -1460,7 +1473,7 @@ function deleteMtg(id,e){
   if(e)e.stopPropagation();
   const local=loadLocal(id);
   if(!local)return;
-  if(local.createdBy&&S.user&&local.createdBy!==S.user.id){
+  if(!_canDelete(local)){
     var creator=local.savedBy||'原建立者';
     alert('只能刪除自己建立的會議記錄。請聯絡建立者：'+creator);
     return;
@@ -1468,6 +1481,8 @@ function deleteMtg(id,e){
   const caseN=Object.values(local.sections||{}).reduce(function(n,s){return n+(s.cases||[]).length;},0);
   const title=caseN>0?('刪除此會議記錄（含 '+caseN+' 筆個案資料）'):'刪除此會議記錄';
   showDelConfirm(title,function(){
+    /* V4.3.44: 先寫 NAS tombstone(若有同步)再刪本地 */
+    if(nasHandle)writeTombstoneToNAS(id,local).catch(function(e){console.warn('NAS tombstone:',e);});
     localStorage.removeItem('mdt_m_'+id);
     localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(function(x){return x.id!==id;})));
     renderSbRecent();renderHistory();
@@ -3740,12 +3755,39 @@ async function writeMtgToNAS(m){
   }catch(e){console.warn('writeMtgToNAS:',e);}
 }
 
+/* V4.3.44: 權限檢查 — 沒 createdBy（舊資料）視為可刪；S.user 不存在保守拒絕 */
+function _canDelete(m){
+  if(!m)return false;
+  if(!m.createdBy)return true;
+  if(!S.user)return false;
+  return m.createdBy===S.user.id;
+}
+
+/* V4.3.44: 寫 tombstone 到 NAS — 觸發其他機器同步刪除 */
+async function writeTombstoneToNAS(id,origMtg){
+  if(!nasHandle)return;
+  try{
+    var tomb={
+      id:id,
+      title:origMtg?origMtg.title:'',
+      date:origMtg?origMtg.date:'',
+      cids:origMtg?origMtg.cids:[],
+      version:((origMtg&&origMtg.version)||0)+1,
+      deleted:true,
+      deletedAt:new Date().toISOString(),
+      deletedBy:S.user?S.user.id:''
+    };
+    await writeMtgToNAS(tomb);
+  }catch(e){console.warn('writeTombstoneToNAS:',e);}
+}
+
 async function syncWithNAS(){
   var dir=await _getNasSyncDir();if(!dir)return {added:0,updated:0,pushed:0,deleted:0};
   var results={added:0,updated:0,pushed:0,deleted:0};
   // Read all files from NAS sync/
   var entries=await _folderEntries(dir);
   var nasMtgs={};
+  var nasFileNames={};  // V4.3.44: 記錄檔名供 tombstone 清理用
   for(var ei=0;ei<entries.length;ei++){
     var entry=entries[ei];
     if(entry.kind!=='file'||!entry.name.startsWith('mdt_m_')||!entry.name.endsWith('.json'))continue;
@@ -3753,7 +3795,7 @@ async function syncWithNAS(){
       var file=await entry.getFile();
       var text=await file.text();
       var m=JSON.parse(text);
-      if(m&&m.id)nasMtgs[m.id]=m;
+      if(m&&m.id){nasMtgs[m.id]=m;nasFileNames[m.id]=entry.name;}
     }catch(e){}
   }
   // NAS → Local: add or update
@@ -3782,15 +3824,37 @@ async function syncWithNAS(){
     var item=localIdx[li];
     var localMtg=loadLocal(item.id);if(!localMtg)continue;
     var nasMtg2=nasMtgs[item.id];
+    /* V4.3.44: 不要把 NAS tombstone「升級」回成正常會議 — 唯有 local version 真的較新才推 */
+    if(nasMtg2&&nasMtg2.deleted){
+      if((localMtg.version||0)>(nasMtg2.version||0)){
+        await writeMtgToNAS(localMtg);results.pushed++;
+      }
+      continue;
+    }
     if(!nasMtg2||(localMtg.version||0)>(nasMtg2.version||0)){
       await writeMtgToNAS(localMtg);results.pushed++;
     }
   }
+  /* V4.3.44: 清理超過 90 天的 tombstone — 不阻擋同步主流程 */
+  try{
+    var TOMB_TTL=90*24*60*60*1000;
+    var nowMs=Date.now();
+    for(var ti=0;ti<nasIds.length;ti++){
+      var t=nasMtgs[nasIds[ti]];
+      if(!t.deleted||!t.deletedAt)continue;
+      var delMs=Date.parse(t.deletedAt);
+      if(isNaN(delMs))continue;
+      if(nowMs-delMs<TOMB_TTL)continue;
+      try{await dir.removeEntry(nasFileNames[t.id]);}
+      catch(e){console.warn('tombstone cleanup:',t.id,e);}
+    }
+  }catch(e){console.warn('tombstone TTL:',e);}
   return results;
 }
 
 function _migrateDrsDepts(){
-  // One-time migration: update old dept names in mdt_drs localStorage
+  // V4.3.45: 回傳 {renamed, added} 供手動觸發按鈕顯示統計
+  // V4.3.43: One-time migration: update old dept names in mdt_drs localStorage
   var DEPT_MAP={
     '頭頸外科': null,  // special: split by doctor name
     '消化內科': '肝膽腸胃科',
@@ -3799,21 +3863,74 @@ function _migrateDrsDepts(){
   };
   var ORAL_SURG_DOCS=['張建明醫師','王威群醫師'];
   var saved=JSON.parse(localStorage.getItem('mdt_drs')||'null');
-  if(!saved||!saved.length)return;
-  var changed=false;
+  if(!saved||!saved.length)return {renamed:0,added:0};
+  var renamed=0;
   saved=saved.map(function(d){
     if(!d.dept)return d;
     if(d.dept==='頭頸外科'){
-      // Split: 張建明/王威群 → 口腔外科, others → 耳鼻喉科
-      d.dept=ORAL_SURG_DOCS.indexOf(d.name)>=0?'口腔外科':'耳鼻咙科';
-      changed=true;
+      d.dept=ORAL_SURG_DOCS.indexOf(d.name)>=0?'口腔外科':'耳鼻喉科';
+      renamed++;
     } else if(DEPT_MAP[d.dept]){
       d.dept=DEPT_MAP[d.dept];
-      changed=true;
+      renamed++;
     }
     return d;
   });
-  if(changed)localStorage.setItem('mdt_drs',JSON.stringify(saved));
+  if(renamed)localStorage.setItem('mdt_drs',JSON.stringify(saved));
+  return {renamed:renamed,added:0};
+}
+
+/* V4.3.45: 手動觸發主檔遷移 — 回報實際差異供 UI 顯示 */
+function applyMasterMigrations(){
+  if(!confirm('將執行主檔遷移：\n• 修正舊版科別命名（頭頸外科拆分、消化內科→肝膽腸胃科 等）\n• 補入新版主檔的醫師、地點、癌別預設\n\n手動新增的醫師不會被刪除。要繼續嗎？'))return;
+  // Snapshot 比對前狀態
+  var beforeDrs=JSON.parse(JSON.stringify(DRS||[]));
+  var beforeLocs=JSON.parse(JSON.stringify(LOCS||[]));
+  var beforeCfg=JSON.parse(JSON.stringify(CFG||{}));
+  // 1. 跑 _migrateDrsDepts(直接動 localStorage,需要重新 loadAll)
+  var depRes=_migrateDrsDepts();
+  // 2. 重新 loadAll 把 DEFAULT 主檔的新項目補進來,並再跑一次 migrate*
+  loadAll();
+  // 比對差異
+  var afterDrs=DRS||[];
+  var afterLocs=LOCS||[];
+  var afterCfg=CFG||{};
+  var beforeDrsKeys=new Set(beforeDrs.map(function(d){return d.dept+'::'+d.name;}));
+  var afterDrsKeys=new Set(afterDrs.map(function(d){return d.dept+'::'+d.name;}));
+  var drsAdded=afterDrs.filter(function(d){return !beforeDrsKeys.has(d.dept+'::'+d.name);}).length;
+  var drsRemoved=beforeDrs.filter(function(d){return !afterDrsKeys.has(d.dept+'::'+d.name);}).length;
+  var beforeLocsSet=new Set(beforeLocs);
+  var locsAdded=afterLocs.filter(function(l){return !beforeLocsSet.has(l);}).length;
+  var afterLocsSet=new Set(afterLocs);
+  var locsRemoved=beforeLocs.filter(function(l){return !afterLocsSet.has(l);}).length;
+  // CFG 比對:看 conv/loc/memberKeys 任一變動的癌別數
+  var cfgChangedCount=0;
+  Object.keys(afterCfg).forEach(function(cid){
+    var b=beforeCfg[cid],a=afterCfg[cid];
+    if(!b)return;
+    if(JSON.stringify(b.conv)!==JSON.stringify(a.conv)||
+       JSON.stringify(b.loc)!==JSON.stringify(a.loc)||
+       JSON.stringify(b.memberKeys||[])!==JSON.stringify(a.memberKeys||[])){
+      cfgChangedCount++;
+    }
+  });
+  // 重繪
+  try{renderDrsTab();}catch(e){}
+  try{renderLocsTab();}catch(e){}
+  try{renderCancerCfgList();}catch(e){}
+  // 報告
+  var lines=[];
+  if(depRes.renamed)lines.push('• 重命名 '+depRes.renamed+' 位醫師的科別');
+  if(drsAdded)lines.push('• 新增 '+drsAdded+' 位醫師');
+  if(drsRemoved)lines.push('• 移除 '+drsRemoved+' 位重複醫師');
+  if(locsAdded)lines.push('• 新增 '+locsAdded+' 個地點');
+  if(locsRemoved)lines.push('• 移除 '+locsRemoved+' 個重複地點');
+  if(cfgChangedCount)lines.push('• 更新 '+cfgChangedCount+' 個癌別設定（召集人/地點/成員）');
+  if(!lines.length){
+    alert('主檔已是最新狀態，沒有可遷移的項目。');
+  } else {
+    alert('主檔遷移完成：\n\n'+lines.join('\n')+'\n\n目前共 '+afterDrs.length+' 位醫師、'+afterLocs.length+' 個地點。');
+  }
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
@@ -6784,11 +6901,34 @@ function batchDelSelAll(sel){
 function confirmBatchDelete(){
   const checked=[].slice.call(document.querySelectorAll('#batch-del-list input:checked'));
   if(!checked.length){alert('請先勾選要刪除的會議');return;}
-  if(!confirm('確定刪除選取的 '+checked.length+' 場會議記錄？此操作無法復原。'))return;
   const idx=getIdx();
   const delIdxs={};
   checked.forEach(function(cb){delIdxs[parseInt(cb.dataset.midx)]=true;});
-  Object.keys(delIdxs).forEach(function(i){if(idx[i])localStorage.removeItem('mdt_m_'+idx[i].id);});
+  /* V4.3.44: 全部擋下並提示 — 一筆無權限就整批不能刪 */
+  var blocked=[];
+  Object.keys(delIdxs).forEach(function(i){
+    var entry=idx[i];if(!entry)return;
+    var local=loadLocal(entry.id);
+    if(local&&!_canDelete(local)){
+      blocked.push((entry.title||'(無標題)')+' '+(entry.date||''));
+    }
+  });
+  if(blocked.length){
+    var msg='以下 '+blocked.length+' 筆會議不是您建立的，整批無法刪除：\n\n';
+    msg+=blocked.slice(0,10).map(function(s){return '• '+s;}).join('\n');
+    if(blocked.length>10)msg+='\n…等 '+blocked.length+' 筆';
+    msg+='\n\n請取消勾選後再試。';
+    alert(msg);
+    return;
+  }
+  if(!confirm('確定刪除選取的 '+checked.length+' 場會議記錄？此操作無法復原。'))return;
+  Object.keys(delIdxs).forEach(function(i){
+    var entry=idx[i];if(!entry)return;
+    var local=loadLocal(entry.id);
+    /* V4.3.44: 推 NAS tombstone(失敗不阻擋本地刪除) */
+    if(nasHandle)writeTombstoneToNAS(entry.id,local).catch(function(e){console.warn('NAS tombstone:',e);});
+    localStorage.removeItem('mdt_m_'+entry.id);
+  });
   const newIdx=idx.filter(function(_,i){return!delIdxs[i];});
   localStorage.setItem('mdt_idx',JSON.stringify(newIdx));
   document.getElementById('batch-del-modal').style.display='none';
@@ -7727,117 +7867,6 @@ function updateImgFolderSettingsStatus(){
     el.textContent='尚未設定根目錄';
   }
 }
-
-function loadAll(){
-  try{const c=localStorage.getItem('mdt_cfg');if(c){const stored=JSON.parse(c);CFG={...DEFAULT_C};Object.keys(DEFAULT_C).forEach(cid=>{if(stored[cid])CFG[cid]={...DEFAULT_C[cid],...stored[cid]};});}else{CFG={...DEFAULT_C};}}catch{CFG={...DEFAULT_C}}
-  try{const l=localStorage.getItem('mdt_locs');LOCS=l?JSON.parse(l):[...DEFAULT_LOCS]}catch{LOCS=[...DEFAULT_LOCS]}
-  try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS]}
-  try{const e=localStorage.getItem('mdt_exam_types');if(e){EXAM_TYPES=JSON.parse(e);DEFAULT_EXAM_TYPES.forEach(function(t){if(!EXAM_TYPES.includes(t))EXAM_TYPES.push(t);});}else{EXAM_TYPES=[...DEFAULT_EXAM_TYPES];}}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
-  if(!EXAM_TYPES.includes('Bone scan')){EXAM_TYPES.splice(2,0,'Bone scan');saveAll();}
-  if(!EXAM_TYPES.includes('Breast SONO')){const s=EXAM_TYPES.indexOf('SONO');EXAM_TYPES.splice(s>=0?s+1:4,0,'Breast SONO');saveAll();}
-  migrateLOCS();
-  migrateCFG();
-  migrateLOCS();
-  migrateDRS();
-  migrateCFGConv();
-}
-
-function migrateLOCS(){
-  // Rename old location strings
-  const rename={'彰濱-2樓  185會議室':'彰濱-2樓 185會議室','彰濱-1F  人文會議室':'彰濱-1F 人文藝術館會議室'};
-  let changed=false;
-  LOCS=LOCS.map(l=>{if(rename[l]){changed=true;return rename[l];}return l;});
-  // Remove duplicate 人文 entries
-  const seen=new Set();
-  LOCS=LOCS.filter(l=>{if(seen.has(l))return false;seen.add(l);return true;});
-  // Add new rooms if missing
-  ['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪'].forEach(r=>{if(!LOCS.includes(r)){LOCS.unshift(r);changed=true;}});
-  if(changed)saveAll();
-}
-
-function migrateDRS(){
-  // Rename depts and reassign doctors in localStorage DRS
-  const renames={'腫瘤外科':'一般外科','腫瘤內科':'肝膽腸胃科'};
-  // Doctors that need dept reassignment: {name: newDept}
-  const reassign={
-    '劉大智醫師':'血液腫瘤科','張正雄醫師':'血液腫瘤科',
-    '王威群醫師':'口腔外科','歐金俊醫師':'一般外科',
-    '李岳聰醫師':'一般外科','林建華醫師':'一般外科','吳鴻昇醫師':'一般外科',
-  };
-  // Doctors to remove from specific depts (侯柏年 from 影像診斷科)
-  const removeFrom={'侯柏年醫師':['影像診斷科','腫瘤內科']};
-  let changed=false;
-  // Remove duplicates and apply migrations
-  const seen=new Set();
-  DRS=DRS.map(dr=>{
-    let dept=renames[dr.dept]||dr.dept;
-    if(reassign[dr.name])dept=reassign[dr.name];
-    return{...dr,dept};
-  }).filter(dr=>{
-    // Remove 侯柏年 from non-核醫科 depts
-    if(removeFrom[dr.name]&&removeFrom[dr.name].includes(dr.dept))return false;
-    // Remove exact duplicates
-    const key=dr.dept+'::'+dr.name;
-    if(seen.has(key))return false;
-    seen.add(key);return true;
-  });
-  // Ensure 侯柏年 is in 核醫科
-  if(!DRS.some(d=>d.name==='侯柏年醫師'&&d.dept==='核醫科')){
-    DRS.push({dept:'核醫科',name:'侯柏年醫師'});changed=true;
-  }
-  saveAll();
-}
-
-function migrateCFG(){
-  // Update CFG locations to match DEFAULT_C (for head_neck and lymphoma → 8樓 圓桌)
-  const locFix={'彰濱-2樓  185會議室':'彰濱-2樓 185會議室'};
-  const cidLocs={'head_neck':'彰濱-8樓 圓桌會議室','lymphoma':'彰濱-8樓 圓桌會議室'};
-  let changed=false;
-  Object.entries(cidLocs).forEach(([cid,loc])=>{
-    if(CFG[cid]&&CFG[cid].loc!==loc){CFG[cid].loc=loc;changed=true;}
-  });
-  Object.values(CFG).forEach(ca=>{
-    if(ca.loc&&locFix[ca.loc]){ca.loc=locFix[ca.loc];changed=true;}
-  });
-  if(changed)saveAll();
-}
-
-function migrateCFGConv(){
-  // Update conv fields in CFG to use dept::name format and correct dept names
-  const nameMap={
-    '張建明醫師':'頭頸外科::張建明醫師',
-    '劉大智醫師':'血液腫瘤科::劉大智醫師',
-    '張竣期醫師':'胸腔內科::張竣期醫師',
-    '李岳聰醫師':'一般外科::李岳聰醫師',
-    '歐金俊醫師':'一般外科::歐金俊醫師',
-    '張正雄醫師':'血液腫瘤科::張正雄醫師',
-    '楊哲學醫師':'泌尿科::楊哲學醫師',
-    '吳宏明醫師':'婦科::吳宏明醫師',
-  };
-  let changed=false;
-  Object.values(CFG).forEach(ca=>{
-    if(ca.conv&&nameMap[ca.conv]){ca.conv=nameMap[ca.conv];changed=true;}
-    // Also fix memberKeys dept names
-    if(ca.memberKeys){
-      ca.memberKeys=ca.memberKeys.map(k=>{
-        return k
-          .replace('腫瘤外科::','一般外科::')
-          .replace('腫瘤內科::劉大智醫師','血液腫瘤科::劉大智醫師')
-          .replace('腫瘤內科::張正雄醫師','血液腫瘤科::張正雄醫師')
-          .replace('腫瘤內科::陳忠宏醫師','消化內科::陳忠宏醫師')
-          .replace('腫瘤內科::王俊偉醫師','消化內科::王俊偉醫師')
-          .replace('影像診斷科::侯柏年醫師','核醫科::侯柏年醫師');
-      });
-      // Remove duplicate memberKeys
-      ca.memberKeys=[...new Set(ca.memberKeys)];
-      changed=true;
-    }
-  });
-  if(changed)saveAll();
-}
-function saveAll(){localStorage.setItem('mdt_cfg',JSON.stringify(CFG));localStorage.setItem('mdt_locs',JSON.stringify(LOCS));localStorage.setItem('mdt_exam_types',JSON.stringify(EXAM_TYPES));localStorage.setItem('mdt_drs',JSON.stringify(DRS))}
-function mkStr(keys){const dm={};(keys||[]).forEach(k=>{const s=k.indexOf('::');const d=k.slice(0,s),n=k.slice(s+2);if(!dm[d])dm[d]=[];dm[d].push(n)});return Object.entries(dm).map(([d,ns])=>`${d}${ns.join('、')}`).join('；')}
-function getMemberStr(ca){return mkStr(ca.memberKeys)||ca.members||''}
 
 </script>
 <!-- Add Case Modal (choose method) -->
