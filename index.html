@@ -1185,28 +1185,30 @@ const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','Breast SONO','PET-CT','
 let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
 const DEFAULT_DRS=[
-  {dept:'一般外科',name:'李岳聰醫師'},{dept:'一般外科',name:'林建華醫師'},{dept:'一般外科',name:'吳鴻昇醫師'},{dept:'一般外科',name:'歐金俊醫師'},
-  {dept:'頭頸外科',name:'張建明醫師'},{dept:'頭頸外科',name:'王威群醫師'},{dept:'頭頸外科',name:'李俊毅醫師'},{dept:'頭頸外科',name:'蕭信昌醫師'},{dept:'頭頸外科',name:'鍾從得醫師'},
-  {dept:'胸腔外科',name:'黃榆涵醫師'},{dept:'胸腔內科',name:'張竣期醫師'},
-  {dept:'消化內科',name:'陳忠宏醫師'},{dept:'消化內科',name:'王俊偉醫師'},
-  {dept:'血液腫瘤科',name:'張正雄醫師'},{dept:'血液腫瘤科',name:'劉大智醫師'},
+  {dept:'口腔外科',name:'張建明醫師'},{dept:'口腔外科',name:'王威群醫師'},
+  {dept:'耳鼻喉科',name:'李俊毅醫師'},{dept:'耳鼻喉科',name:'蕭信昌醫師'},{dept:'耳鼻喉科',name:'鍾從得醫師'},
+  {dept:'一般外科',name:'李岳聰醫師'},{dept:'一般外科',name:'林建華醫師'},{dept:'一般外科',name:'吳鴻昇醫師'},
+  {dept:'大腸直腸外科',name:'歐金俊醫師'},
+  {dept:'胸腔外科',name:'李佳穎醫師'},{dept:'胸腔外科',name:'黃榆涵醫師'},{dept:'胸腔內科',name:'張竣期醫師'},
+  {dept:'血液腫瘤科',name:'張正雄醫師'},{dept:'血液腫瘤科',name:'劉大智醫師'},{dept:'血液腫瘤科',name:'吳敬炫醫師'},{dept:'血液腫瘤科',name:'陳彥谷醫師'},
+  {dept:'肝膽腸胃科',name:'黃懷毅醫師'},{dept:'肝膽腸胃科',name:'陳忠宏醫師'},{dept:'肝膽腸胃科',name:'葉永祥醫師'},{dept:'肝膽腸胃科',name:'顏聖烈醫師'},{dept:'肝膽腸胃科',name:'王俊偉醫師'},
+  {dept:'婦產科',name:'林坤沂醫師'},{dept:'婦產科',name:'陳彥甫醫師'},{dept:'婦產科',name:'吳宏明醫師'},{dept:'婦產科',name:'陳天惠醫師'},
   {dept:'影像診斷科',name:'李唯揚醫師'},{dept:'影像診斷科',name:'張哲維醫師'},{dept:'影像診斷科',name:'葉偉成醫師'},{dept:'影像診斷科',name:'蔡秉樺醫師'},
   {dept:'核醫科',name:'侯柏年醫師'},
   {dept:'病理科',name:'劉奕祥醫師'},{dept:'病理科',name:'賴義雄醫師'},{dept:'病理科',name:'鄧呂壕醫師'},
   {dept:'放射腫瘤科',name:'劉育昌醫師'},{dept:'放射腫瘤科',name:'林伯儒醫師'},{dept:'放射腫瘤科',name:'熊敬業醫師'},
-  {dept:'婦科',name:'林坤沂醫師'},{dept:'婦科',name:'吳宏明醫師'},{dept:'婦科',name:'陳天惠醫師'},
   {dept:'泌尿科',name:'吳其翔醫師'},{dept:'泌尿科',name:'楊哲學醫師'},
 ];
 const mk=(d,n)=>`${d}::${n}`;
 const DEFAULT_C={
-  head_neck:{id:'head_neck',name:'頭頸癌',partner:'lymphoma',role:'first',weekday:4,weeknum:3,color:'#4A7C8E',defaultSlot:'12:30-13:30',slot:'12:30-13:00',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'頭頸癌召集人',conv:'頭頸外科::張建明醫師',memberKeys:[mk('頭頸外科','王威群醫師'),mk('血液腫瘤科','劉大智醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','劉育昌醫師')]},
+  head_neck:{id:'head_neck',name:'頭頸癌',partner:'lymphoma',role:'first',weekday:4,weeknum:3,color:'#4A7C8E',defaultSlot:'12:30-13:30',slot:'12:30-13:00',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'頭頸癌召集人',conv:'頭頸外科::張建明醫師',memberKeys:[mk('口腔外科','王威群醫師'),mk('耳鼻喉科','李俊毅醫師'),mk('血液腫瘤科','劉大智醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','劉育昌醫師')]},
   lymphoma:{id:'lymphoma',name:'血液淋巴癌',partner:'head_neck',role:'second',weekday:4,weeknum:3,defaultSlot:'12:30-13:30',color:'#5B8FA8',slot:'13:00-13:30',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'血液淋巴癌召集人',conv:'血液腫瘤科::劉大智醫師',memberKeys:[mk('血液腫瘤科','張正雄醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','林伯儒醫師')]},
   thoracic:{id:'thoracic',name:'胸腔癌',partner:null,weekday:4,weeknum:3,color:'#6B7FA0',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6007',pwd:'7813888',url:'https://zoom.us/j/7256166007?pwd=oHlSANba92wzDrbbYs6NFVRFBT8O2x.1'},convTitle:'肺癌召集人',conv:'胸腔內科::張竣期醫師',memberKeys:[mk('胸腔外科','黃榆涵醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','劉奕祥醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
   breast:{id:'breast',name:'乳癌',partner:null,defaultDept:'一般外科',weekday:4,weeknum:3,defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6003',pwd:'6222131',url:'https://zoom.us/j/7256166003?pwd=4gN5lhkzdIfh8WylCq7bYPl194bFI6.1'},convTitle:'乳癌召集人',conv:'一般外科::李岳聰醫師',memberKeys:[mk('一般外科','吳鴻昇醫師'),mk('一般外科','林建華醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','熊敬業醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  digestive:{id:'digestive',name:'消化道癌',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('消化內科','陳忠宏醫師'),mk('消化內科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
-  hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('消化內科','陳忠宏醫師'),mk('消化內科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  digestive:{id:'digestive',name:'消化道癌',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
   urology:{id:'urology',name:'泌尿道癌',partner:null,weekday:3,weeknum:2,color:'#7A6E8A',defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-7F  愛書人會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=6Ir1uPjOzDjA25ARbf88rOOq1X80rn.1'},convTitle:'泌尿道癌召集人',conv:'泌尿科::楊哲學醫師',memberKeys:[mk('泌尿科','吳其翔醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  gynecology:{id:'gynecology',name:'婦癌',partner:null,weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'2609926',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦科::吳宏明醫師',memberKeys:[mk('婦科','林坤沂醫師'),mk('婦科','吳宏明醫師'),mk('婦科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
+  gynecology:{id:'gynecology',name:'婦癌',partner:null,weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'2609926',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦科::吳宏明醫師',memberKeys:[mk('婦產科','林坤沂醫師'),mk('婦產科','吳宏明醫師'),mk('婦產科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
 };
 const USERS=[
   {id:'yang',name:'楊靜雯',ext:'17965',cancers:['lymphoma','digestive','gynecology']},
@@ -1214,14 +1216,15 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.41';
+const VERSION='V4.3.44';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
 function loadAll(){
   try{const c=localStorage.getItem('mdt_cfg');if(c){const stored=JSON.parse(c);CFG={...DEFAULT_C};Object.keys(DEFAULT_C).forEach(cid=>{if(stored[cid])CFG[cid]={...DEFAULT_C[cid],...stored[cid]};});}else{CFG={...DEFAULT_C};}}catch{CFG={...DEFAULT_C}}
   try{const l=localStorage.getItem('mdt_locs');LOCS=l?JSON.parse(l):[...DEFAULT_LOCS]}catch{LOCS=[...DEFAULT_LOCS]}
-  try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS]}
+  try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS];}
+  _migrateDrsDepts();
   try{const e=localStorage.getItem('mdt_exam_types');if(e){EXAM_TYPES=JSON.parse(e);DEFAULT_EXAM_TYPES.forEach(function(t){if(!EXAM_TYPES.includes(t))EXAM_TYPES.push(t);});}else{EXAM_TYPES=[...DEFAULT_EXAM_TYPES];}}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
   if(!EXAM_TYPES.includes('Bone scan')){EXAM_TYPES.splice(2,0,'Bone scan');saveAll();}
   if(!EXAM_TYPES.includes('Breast SONO')){const s=EXAM_TYPES.indexOf('SONO');EXAM_TYPES.splice(s>=0?s+1:4,0,'Breast SONO');saveAll();}
@@ -1247,11 +1250,11 @@ function migrateLOCS(){
 
 function migrateDRS(){
   // Rename depts and reassign doctors in localStorage DRS
-  const renames={'腫瘤外科':'一般外科','腫瘤內科':'消化內科'};
+  const renames={'腫瘤外科':'一般外科','腫瘤內科':'肝膽腸胃科'};
   // Doctors that need dept reassignment: {name: newDept}
   const reassign={
     '劉大智醫師':'血液腫瘤科','張正雄醫師':'血液腫瘤科',
-    '王威群醫師':'頭頸外科','歐金俊醫師':'一般外科',
+    '王威群醫師':'口腔外科','歐金俊醫師':'一般外科',
     '李岳聰醫師':'一般外科','林建華醫師':'一般外科','吳鴻昇醫師':'一般外科',
   };
   // Doctors to remove from specific depts (侯柏年 from 影像診斷科)
@@ -1444,9 +1447,17 @@ function execDelete(){
 function deleteCurMtg(){
   if(!S.meeting)return;
   const local=loadLocal(S.meeting.id);
+  /* V4.3.44: 補權限檢查(原本只有 deleteMtg 有) */
+  if(local&&!_canDelete(local)){
+    var creator=local.savedBy||'原建立者';
+    alert('只能刪除自己建立的會議記錄。請聯絡建立者：'+creator);
+    return;
+  }
   const caseN=local?Object.values(local.sections||{}).reduce((n,s)=>n+(s.cases||[]).length,0):0;
   const title=caseN>0?`刪除此會議（含 ${caseN} 筆個案資料）`:'刪除此會議記錄';
   showDelConfirm(title,()=>{
+    /* V4.3.44: 寫 NAS tombstone */
+    if(nasHandle&&local)writeTombstoneToNAS(S.meeting.id,local).catch(function(e){console.warn('NAS tombstone:',e);});
     localStorage.removeItem('mdt_m_'+S.meeting.id);
     localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(x=>x.id!==S.meeting.id)));
     if(S.cids)S.cids.forEach(cid=>{try{delSec(cid,S.meeting.date)}catch{}});
@@ -1457,7 +1468,7 @@ function deleteMtg(id,e){
   if(e)e.stopPropagation();
   const local=loadLocal(id);
   if(!local)return;
-  if(local.createdBy&&S.user&&local.createdBy!==S.user.id){
+  if(!_canDelete(local)){
     var creator=local.savedBy||'原建立者';
     alert('只能刪除自己建立的會議記錄。請聯絡建立者：'+creator);
     return;
@@ -1465,6 +1476,8 @@ function deleteMtg(id,e){
   const caseN=Object.values(local.sections||{}).reduce(function(n,s){return n+(s.cases||[]).length;},0);
   const title=caseN>0?('刪除此會議記錄（含 '+caseN+' 筆個案資料）'):'刪除此會議記錄';
   showDelConfirm(title,function(){
+    /* V4.3.44: 先寫 NAS tombstone(若有同步)再刪本地 */
+    if(nasHandle)writeTombstoneToNAS(id,local).catch(function(e){console.warn('NAS tombstone:',e);});
     localStorage.removeItem('mdt_m_'+id);
     localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(function(x){return x.id!==id;})));
     renderSbRecent();renderHistory();
@@ -3737,12 +3750,39 @@ async function writeMtgToNAS(m){
   }catch(e){console.warn('writeMtgToNAS:',e);}
 }
 
+/* V4.3.44: 權限檢查 — 沒 createdBy（舊資料）視為可刪；S.user 不存在保守拒絕 */
+function _canDelete(m){
+  if(!m)return false;
+  if(!m.createdBy)return true;
+  if(!S.user)return false;
+  return m.createdBy===S.user.id;
+}
+
+/* V4.3.44: 寫 tombstone 到 NAS — 觸發其他機器同步刪除 */
+async function writeTombstoneToNAS(id,origMtg){
+  if(!nasHandle)return;
+  try{
+    var tomb={
+      id:id,
+      title:origMtg?origMtg.title:'',
+      date:origMtg?origMtg.date:'',
+      cids:origMtg?origMtg.cids:[],
+      version:((origMtg&&origMtg.version)||0)+1,
+      deleted:true,
+      deletedAt:new Date().toISOString(),
+      deletedBy:S.user?S.user.id:''
+    };
+    await writeMtgToNAS(tomb);
+  }catch(e){console.warn('writeTombstoneToNAS:',e);}
+}
+
 async function syncWithNAS(){
   var dir=await _getNasSyncDir();if(!dir)return {added:0,updated:0,pushed:0,deleted:0};
   var results={added:0,updated:0,pushed:0,deleted:0};
   // Read all files from NAS sync/
   var entries=await _folderEntries(dir);
   var nasMtgs={};
+  var nasFileNames={};  // V4.3.44: 記錄檔名供 tombstone 清理用
   for(var ei=0;ei<entries.length;ei++){
     var entry=entries[ei];
     if(entry.kind!=='file'||!entry.name.startsWith('mdt_m_')||!entry.name.endsWith('.json'))continue;
@@ -3750,7 +3790,7 @@ async function syncWithNAS(){
       var file=await entry.getFile();
       var text=await file.text();
       var m=JSON.parse(text);
-      if(m&&m.id)nasMtgs[m.id]=m;
+      if(m&&m.id){nasMtgs[m.id]=m;nasFileNames[m.id]=entry.name;}
     }catch(e){}
   }
   // NAS → Local: add or update
@@ -3779,11 +3819,59 @@ async function syncWithNAS(){
     var item=localIdx[li];
     var localMtg=loadLocal(item.id);if(!localMtg)continue;
     var nasMtg2=nasMtgs[item.id];
+    /* V4.3.44: 不要把 NAS tombstone「升級」回成正常會議 — 唯有 local version 真的較新才推 */
+    if(nasMtg2&&nasMtg2.deleted){
+      if((localMtg.version||0)>(nasMtg2.version||0)){
+        await writeMtgToNAS(localMtg);results.pushed++;
+      }
+      continue;
+    }
     if(!nasMtg2||(localMtg.version||0)>(nasMtg2.version||0)){
       await writeMtgToNAS(localMtg);results.pushed++;
     }
   }
+  /* V4.3.44: 清理超過 90 天的 tombstone — 不阻擋同步主流程 */
+  try{
+    var TOMB_TTL=90*24*60*60*1000;
+    var nowMs=Date.now();
+    for(var ti=0;ti<nasIds.length;ti++){
+      var t=nasMtgs[nasIds[ti]];
+      if(!t.deleted||!t.deletedAt)continue;
+      var delMs=Date.parse(t.deletedAt);
+      if(isNaN(delMs))continue;
+      if(nowMs-delMs<TOMB_TTL)continue;
+      try{await dir.removeEntry(nasFileNames[t.id]);}
+      catch(e){console.warn('tombstone cleanup:',t.id,e);}
+    }
+  }catch(e){console.warn('tombstone TTL:',e);}
   return results;
+}
+
+function _migrateDrsDepts(){
+  // One-time migration: update old dept names in mdt_drs localStorage
+  var DEPT_MAP={
+    '頭頸外科': null,  // special: split by doctor name
+    '消化內科': '肝膽腸胃科',
+    '婦科': '婦產科',
+    '山脳外科': '婦產科'
+  };
+  var ORAL_SURG_DOCS=['張建明醫師','王威群醫師'];
+  var saved=JSON.parse(localStorage.getItem('mdt_drs')||'null');
+  if(!saved||!saved.length)return;
+  var changed=false;
+  saved=saved.map(function(d){
+    if(!d.dept)return d;
+    if(d.dept==='頭頸外科'){
+      // Split: 張建明/王威群 → 口腔外科, others → 耳鼻喉科
+      d.dept=ORAL_SURG_DOCS.indexOf(d.name)>=0?'口腔外科':'耳鼻咙科';
+      changed=true;
+    } else if(DEPT_MAP[d.dept]){
+      d.dept=DEPT_MAP[d.dept];
+      changed=true;
+    }
+    return d;
+  });
+  if(changed)localStorage.setItem('mdt_drs',JSON.stringify(saved));
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
@@ -6754,11 +6842,34 @@ function batchDelSelAll(sel){
 function confirmBatchDelete(){
   const checked=[].slice.call(document.querySelectorAll('#batch-del-list input:checked'));
   if(!checked.length){alert('請先勾選要刪除的會議');return;}
-  if(!confirm('確定刪除選取的 '+checked.length+' 場會議記錄？此操作無法復原。'))return;
   const idx=getIdx();
   const delIdxs={};
   checked.forEach(function(cb){delIdxs[parseInt(cb.dataset.midx)]=true;});
-  Object.keys(delIdxs).forEach(function(i){if(idx[i])localStorage.removeItem('mdt_m_'+idx[i].id);});
+  /* V4.3.44: 全部擋下並提示 — 一筆無權限就整批不能刪 */
+  var blocked=[];
+  Object.keys(delIdxs).forEach(function(i){
+    var entry=idx[i];if(!entry)return;
+    var local=loadLocal(entry.id);
+    if(local&&!_canDelete(local)){
+      blocked.push((entry.title||'(無標題)')+' '+(entry.date||''));
+    }
+  });
+  if(blocked.length){
+    var msg='以下 '+blocked.length+' 筆會議不是您建立的，整批無法刪除：\n\n';
+    msg+=blocked.slice(0,10).map(function(s){return '• '+s;}).join('\n');
+    if(blocked.length>10)msg+='\n…等 '+blocked.length+' 筆';
+    msg+='\n\n請取消勾選後再試。';
+    alert(msg);
+    return;
+  }
+  if(!confirm('確定刪除選取的 '+checked.length+' 場會議記錄？此操作無法復原。'))return;
+  Object.keys(delIdxs).forEach(function(i){
+    var entry=idx[i];if(!entry)return;
+    var local=loadLocal(entry.id);
+    /* V4.3.44: 推 NAS tombstone(失敗不阻擋本地刪除) */
+    if(nasHandle)writeTombstoneToNAS(entry.id,local).catch(function(e){console.warn('NAS tombstone:',e);});
+    localStorage.removeItem('mdt_m_'+entry.id);
+  });
   const newIdx=idx.filter(function(_,i){return!delIdxs[i];});
   localStorage.setItem('mdt_idx',JSON.stringify(newIdx));
   document.getElementById('batch-del-modal').style.display='none';
@@ -7727,11 +7838,11 @@ function migrateLOCS(){
 
 function migrateDRS(){
   // Rename depts and reassign doctors in localStorage DRS
-  const renames={'腫瘤外科':'一般外科','腫瘤內科':'消化內科'};
+  const renames={'腫瘤外科':'一般外科','腫瘤內科':'肝膽腸胃科'};
   // Doctors that need dept reassignment: {name: newDept}
   const reassign={
     '劉大智醫師':'血液腫瘤科','張正雄醫師':'血液腫瘤科',
-    '王威群醫師':'頭頸外科','歐金俊醫師':'一般外科',
+    '王威群醫師':'口腔外科','歐金俊醫師':'一般外科',
     '李岳聰醫師':'一般外科','林建華醫師':'一般外科','吳鴻昇醫師':'一般外科',
   };
   // Doctors to remove from specific depts (侯柏年 from 影像診斷科)

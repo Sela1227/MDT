@@ -120,10 +120,13 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.3.44 | NAS 同步刪除傳播:_canDelete + writeTombstoneToNAS;補 deleteCurMtg/confirmBatchDelete 權限檢查;tombstone 90 天 TTL |
+| V4.3.43 | 移除乳房外科、歐金俊移至大腸直腸外科、DRS 遷移函數 |
+| V4.3.42 | 整合主檔：15科、35醫師、頭頸外科拆分、消化/婦科更名 |
 | V4.3.41 | NAS 跨機同步：syncWithNAS + writeMtgToNAS，登入同步 + 存檔推送 |
 | V4.3.40 | 刪除保護：createdBy 檢查 + 批次刪除 disabled |
 | V4.3.39 | 依 CLAUDE.md playbook 重寫 CLAUDE.md；砍舊版本歷程；加下版優先清單 |
-| V4.3.41 | DOCX 個案抬頭配色改為 #3A4550（同程式 UI）|
+| V4.3.43 | DOCX 個案抬頭配色改為 #3A4550（同程式 UI）|
 | V4.3.37 | hotfix：_groupPath 未在 genHTMLSlides 宣告導致 HTML 產出失敗 |
 | V4.3.36 | DOCX 六修：院名癒→癌、空案過濾、移討論主題行、空欄簡化、診斷治療分隔線 |
 | V4.3.35 | DOCX 字型大小修正：pt()=twip 用於間距，sz()=半點 用於字型 |
@@ -186,10 +189,16 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 原因：`_groupPath` 宣告在另一個函數（`openFromSb`）內，跨函數取不到
 - 做法：`genHTMLSlides` 內的 `cids.forEach` 前加獨立宣告
 
-**#11 DOCX 字型大小走鍾（V4.3.35）**
-- 症狀：字超大，整份文件版面爆炸
-- 原因：`pt(n)=n*20`（twip，用於邊距）誤用在 `size:`（應為半點 `n*2`）
-- 做法：新增 `sz(n)=n*2` 用於字型大小，`pt(n)` 只用於間距/邊距
+**#11 DOCX 字型大小走鍾(V4.3.35)**
+- 症狀:字超大,整份文件版面爆炸
+- 原因:`pt(n)=n*20`(twip,用於邊距)誤用在 `size:`(應為半點 `n*2`)
+- 做法:新增 `sz(n)=n*2` 用於字型大小,`pt(n)` 只用於間距/邊距
+
+**#12 syncWithNAS 把 tombstone 升級回正常檔(V4.3.44)**
+- 症狀:A 機刪除後,B 機同步把 NAS tombstone 蓋回成正常會議,A 下次同步又看到還活著
+- 原因:Local→NAS 推送邏輯只看 `localMtg.version > nasMtg.version`,沒檢查 `nasMtg.deleted`。本地 version 比 tombstone 新時就推自己的版本,直接覆蓋掉 tombstone
+- 做法:Local→NAS 推送前先檢查 `nasMtg2.deleted`;只有「本地 version 確實比 tombstone version 還大」才推(視為合法復活,例如 B 在不知情下持續編輯到比刪除還新)
+- 教訓:多機同步任何「比 version 推送」邏輯,deleted/active 兩種狀態要分開判斷
 
 ---
 
@@ -217,18 +226,14 @@ print("functions:", len(set(re.findall(r'function\s+(\w+)\s*\(', h))))
 
 **按優先序：**
 
-1. **NAS 跨機同步（第二批）** — createdBy 已完成，現在要加 `syncWithNAS()` + `writeMtgToNAS()`：登入後自動同步，存檔時寫 NAS sync/，以 version 決定誰新誰舊，刪除寫 `deleted:true` 標記。這是使用者最需要的功能。
-
-2. NAS 跨機同步第三批：刪除權限（只能刪自己建的）+ deleted 標記傳播
-
-3. 記住上次登入者（登入頁預選，不用每次點）
-
-4. DOCX 繼續微調（依測試回饋）
-
-5. 開會後模式：產出區顯示「今天有 N 場會議」快速入口
+1. **記住上次登入者** — 上線必備:登入頁預選最近登入的個管師,不用每次都點;localStorage 存 `mdt_last_user`,登入頁渲染時讀出來預選;這個摩擦感最強、改動最小
+2. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
+3. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
+4. DOCX 繼續微調(依測試回饋)
+5. 設定頁新增「同步狀態」面板:NAS 上有幾筆 tombstone、上次同步時間、衝突歷史
 
 ---
 
 ## 十一、一句話總結
 
-V4.3.41 這版主要做了三件大事：DOCX 完整改版成「會議決議確認單」（字型/配色/結構全新）、會後填寫 panel 讓開會後快速填摘要結論並控制下次追蹤、複製會議功能。CLAUDE.md 也按 playbook 重寫，砍掉 80% 版本歷程垃圾。下版第一優先是 NAS 跨機同步第二批（syncWithNAS）。
+V4.3.44 完成 NAS 跨機同步的最後一塊拼圖:刪除標記傳播。`_canDelete()` 統一權限判斷、`writeTombstoneToNAS()` 寫墓碑、`syncWithNAS` 既能讀取墓碑刪除本地也能避免把墓碑升級回活檔(坑 #12)、tombstone 90 天 TTL 自動清理。同時補了 `deleteCurMtg`/`confirmBatchDelete` 漏掉的 createdBy 權限檢查。下版第一優先換成「記住上次登入者」 — 摩擦感最強的小改動。

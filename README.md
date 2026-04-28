@@ -111,7 +111,10 @@
 
 ## 版本歷程
 
-### V4.3.41
+### V4.3.44
+NAS 跨機同步刪除標記傳播：新增 `_canDelete()` 權限工具與 `writeTombstoneToNAS()` — 刪除會議時自動寫 NAS tombstone（{deleted:true, version+1, deletedAt, deletedBy}）；`syncWithNAS` 收到 tombstone 後刪除本地、且不會把已刪會議「升級」回正常檔；tombstone 90 天後自動清理；補修 `deleteCurMtg`（會議內刪除）與 `confirmBatchDelete`（批次刪除）漏掉的 createdBy 權限檢查；批次刪除遇到任一筆無權限即整批擋下並列出哪幾筆
+
+### V4.3.43
 會後填寫功能：產出區新增「會後填寫」按鈕；全螢幕 panel 依癌別分組顯示前期追蹤（結案/繼續追蹤）和個案討論（摘要/結論/不列入下次追蹤）；存檔後寫回 meeting；autoImportPrevFollowups 加 followNext 和 ongoing 過濾
 
 ### V4.3.31
