@@ -986,8 +986,14 @@ textarea{resize:vertical}
 
             <div class="stab" id="stab-system">
   <div class="st-title">系統</div>
-  <div class="st-desc">AI 摘要設定、GitHub 投影片分享、測試資料管理。</div>
+  <div class="st-desc">外觀偏好、AI 摘要設定、GitHub 投影片分享、測試資料管理。</div>
   <div style="display:flex;flex-direction:column;gap:0">
+
+    <div style="padding:16px 0;border-bottom:1px solid var(--blt)">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">HTML 投影片配色</div>
+      <div class="st-desc">每位個管師獨立記憶。下次按「HTML 投影片」會自動套用您選的配色。</div>
+      <div id="theme-picker" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px"></div>
+    </div>
 
     <div style="padding:16px 0">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">AI 摘要設定</div>
@@ -1221,7 +1227,27 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.5.0';
+const VERSION='V4.6.0';
+
+/* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
+const HTML_THEMES={
+  classic:{name:'彰濱經典',desc:'沉穩深灰藍(預設)',dk:'#3A4550',acc:'#4A7C8E',lt:'#9BAAB6'},
+  warm:   {name:'暖陽',    desc:'暖棕橘調',         dk:'#5C3A2E',acc:'#C97B5C',lt:'#E8C5A6'},
+  forest: {name:'森林',    desc:'沉穩綠調',         dk:'#2D4A3E',acc:'#5C8A6E',lt:'#A8C5B5'},
+  lavender:{name:'薰衣草', desc:'柔和紫調',         dk:'#3D3654',acc:'#7B6C9C',lt:'#C5BAD8'},
+  mono:   {name:'高對比',  desc:'純黑灰白(列印友善)',dk:'#1A1A1A',acc:'#666666',lt:'#AAAAAA'}
+};
+function getHtmlThemeId(){
+  if(!S.user)return 'classic';
+  return localStorage.getItem('mdt_html_theme_'+S.user.id)||'classic';
+}
+function setHtmlThemeId(id){
+  if(!S.user||!HTML_THEMES[id])return;
+  localStorage.setItem('mdt_html_theme_'+S.user.id,id);
+}
+function getHtmlTheme(){
+  return HTML_THEMES[getHtmlThemeId()]||HTML_THEMES.classic;
+}
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
@@ -1831,7 +1857,7 @@ function calCreateMtg(cid,date){
 
 
 
-function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
+function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();renderThemePicker();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
 function openHistory(){
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -3962,6 +3988,48 @@ function applyMasterMigrations(){
   }
 }
 
+/* V4.6.0: 渲染配色模板選擇 — 5 個方塊每個顯示主色 + 名稱,點擊存到當前 user 的 localStorage */
+function renderThemePicker(){
+  var el=document.getElementById('theme-picker');
+  if(!el)return;
+  el.innerHTML='';
+  var curId=getHtmlThemeId();
+  Object.keys(HTML_THEMES).forEach(function(id){
+    var t=HTML_THEMES[id];
+    var card=document.createElement('div');
+    var isOn=id===curId;
+    card.style.cssText='cursor:pointer;border:'+(isOn?'2px solid var(--fog)':'1px solid var(--blt)')+';border-radius:4px;padding:10px;width:140px;background:'+(isOn?'#F4F6F8':'#fff')+';transition:all .15s';
+    /* 預覽:三色 swatch + 名稱 */
+    var swatch=document.createElement('div');
+    swatch.style.cssText='display:flex;height:32px;border-radius:3px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(0,0,0,.08)';
+    ['dk','acc','lt'].forEach(function(k){
+      var seg=document.createElement('div');
+      seg.style.cssText='flex:1;background:'+t[k];
+      swatch.appendChild(seg);
+    });
+    var nm=document.createElement('div');
+    nm.style.cssText='font-size:13px;font-weight:600;color:var(--fog-dk);margin-bottom:2px';
+    nm.textContent=t.name;
+    var ds=document.createElement('div');
+    ds.style.cssText='font-size:10px;color:var(--textlt);line-height:1.4';
+    ds.textContent=t.desc;
+    if(isOn){
+      var chk=document.createElement('div');
+      chk.style.cssText='font-size:10px;color:var(--ok);margin-top:4px;font-weight:600';
+      chk.textContent='✓ 已選用';
+      card.appendChild(swatch);card.appendChild(nm);card.appendChild(ds);card.appendChild(chk);
+    } else {
+      card.appendChild(swatch);card.appendChild(nm);card.appendChild(ds);
+    }
+    card.onclick=function(){
+      setHtmlThemeId(id);
+      renderThemePicker();
+      showSaveToast('已套用「'+t.name+'」');
+    };
+    el.appendChild(card);
+  });
+}
+
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
@@ -5966,8 +6034,10 @@ async function genHTMLSlides(){
   });
 
   const N=slides.length;
+  /* V4.6.0: 套用使用者選的配色模板 */
+  const _theme=getHtmlTheme();
   const css=''
-    +':root{--dk:#3A4550;--acc:#4A7C8E;--lt:#9BAAB6;}'
+    +':root{--dk:'+_theme.dk+';--acc:'+_theme.acc+';--lt:'+_theme.lt+';}'
     +'*{margin:0;padding:0;box-sizing:border-box;}'
     +'html,body{width:100%;height:100%;overflow:hidden;font-family:"Noto Sans TC","Microsoft JhengHei",Helvetica,sans-serif;background:#111;}'
     +'.slide{position:absolute;inset:0;display:none;background:#fff;flex-direction:column;}'

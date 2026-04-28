@@ -77,6 +77,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 | `mdt_ai` | AI 設定 |
 | `mdt_nas_last` | NAS 最後備份時間 |
 | `mdt_nas_last_date` | NAS 最後備份日期（防重複） |
+| `mdt_html_theme_{userid}` | 個管師 HTML 投影片配色偏好（V4.6.0） |
 
 **會議物件重要欄位：**
 ```js
@@ -105,7 +106,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 | 前期追蹤 | `followupHTML()`, `autoImportPrevFollowups()` |
 | 影像區塊 | `buildGenericImgArea(cfg)` → 包裝層：`buildImgArea/PathImgArea/SurgicalImgArea/SpecialImgArea` |
 | 乳攝（特殊版面） | `buildMammoImgArea()` |
-| HTML 投影片 | `genHTMLSlides()` + `extraJs`（放大鏡/鍵盤） |
+| HTML 投影片 | `genHTMLSlides()` + `extraJs`（放大鏡/鍵盤）；配色模板 `HTML_THEMES` + `getHtmlTheme()`（V4.6.0） |
 | DOCX | `genDOCX()` |
 | 設定頁 | `openSettings()` → `renderLocsTab/DrsTab/CancerCfgList` |
 | 醫師/科別管理 | `addDr/editDr/delDr/moveDr`（單醫師）、`addDept/renameDept/delDept/moveDept`（科別整組）；手動遷移 `applyMasterMigrations` |
@@ -121,6 +122,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.6.0 | HTML 投影片配色模板:HTML_THEMES 5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比);設定→系統頁新增配色選擇區;每位個管師獨立記憶 |
 | V4.5.0 | 科別整組上下排序:moveDept(dept,dir) 重排 DRS 陣列;科別標頭列加 ▲▼ 按鈕,邊界灰化 |
 | V4.4.0 | (原 V4.3.45,因版本號規則修正——第三碼最大 9 超過要進位——重新編號)修主檔遷移根因:刪舊版 9 個重複函數;修咙→喉 typo;醫師分頁加「重新套用主檔遷移」按鈕 |
 | V4.3.44 | NAS 同步刪除傳播:_canDelete + writeTombstoneToNAS;補 deleteCurMtg/confirmBatchDelete 權限檢查;tombstone 90 天 TTL |
@@ -273,4 +275,4 @@ if m:
 
 ## 十一、一句話總結
 
-V4.5.0 加科別整組上下排序 — 設定→醫師分頁的科別標頭列從 2 顆按鈕(重命名/刪除)變 4 顆(▲▼/重命名/刪除),邊界灰化跟單醫師排序一致。新函數 `moveDept(dept,dir)` 直接重排 DRS 陣列(不另存科別順序)。下版第一優先還是「記住上次登入者」。
+V4.6.0 加 HTML 投影片配色模板 — 5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比),設定→系統頁挑選,每位個管師獨立記憶。預設 classic 色值跟舊版寫死的色完全一致,沒主動換的人感覺不到差異。實作很簡潔:把 `:root` 三個 CSS 變數抽成 `HTML_THEMES` 常數,`genHTMLSlides` 讀當前 user 的 theme 套上去。下版第一優先還是「記住上次登入者」。
