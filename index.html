@@ -1187,7 +1187,8 @@ let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 const DEFAULT_DRS=[
   {dept:'口腔外科',name:'張建明醫師'},{dept:'口腔外科',name:'王威群醫師'},
   {dept:'耳鼻喉科',name:'李俊毅醫師'},{dept:'耳鼻喉科',name:'蕭信昌醫師'},{dept:'耳鼻喉科',name:'鍾從得醫師'},
-  {dept:'一般外科',name:'李岳聰醫師'},{dept:'一般外科',name:'林建華醫師'},{dept:'一般外科',name:'吳鴻昇醫師'},{dept:'一般外科',name:'歐金俊醫師'},
+  {dept:'一般外科',name:'李岳聰醫師'},{dept:'一般外科',name:'林建華醫師'},{dept:'一般外科',name:'吳鴻昇醫師'},
+  {dept:'大腸直腸外科',name:'歐金俊醫師'},
   {dept:'胸腔外科',name:'李佳穎醫師'},{dept:'胸腔外科',name:'黃榆涵醫師'},{dept:'胸腔內科',name:'張竣期醫師'},
   {dept:'血液腫瘤科',name:'張正雄醫師'},{dept:'血液腫瘤科',name:'劉大智醫師'},{dept:'血液腫瘤科',name:'吳敬炫醫師'},{dept:'血液腫瘤科',name:'陳彥谷醫師'},
   {dept:'肝膽腸胃科',name:'黃懷毅醫師'},{dept:'肝膽腸胃科',name:'陳忠宏醫師'},{dept:'肝膽腸胃科',name:'葉永祥醫師'},{dept:'肝膽腸胃科',name:'顏聖烈醫師'},{dept:'肝膽腸胃科',name:'王俊偉醫師'},
@@ -1197,7 +1198,6 @@ const DEFAULT_DRS=[
   {dept:'病理科',name:'劉奕祥醫師'},{dept:'病理科',name:'賴義雄醫師'},{dept:'病理科',name:'鄧呂壕醫師'},
   {dept:'放射腫瘤科',name:'劉育昌醫師'},{dept:'放射腫瘤科',name:'林伯儒醫師'},{dept:'放射腫瘤科',name:'熊敬業醫師'},
   {dept:'泌尿科',name:'吳其翔醫師'},{dept:'泌尿科',name:'楊哲學醫師'},
-  {dept:'大腸直腸外科',name:'（待補）'},{dept:'乳房外科',name:'（待補）'},
 ];
 const mk=(d,n)=>`${d}::${n}`;
 const DEFAULT_C={
@@ -1216,14 +1216,15 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.3.42';
+const VERSION='V4.3.43';
 
 /* ════ Config ════ */
 let CFG={},LOCS=[],DRS=[];
 function loadAll(){
   try{const c=localStorage.getItem('mdt_cfg');if(c){const stored=JSON.parse(c);CFG={...DEFAULT_C};Object.keys(DEFAULT_C).forEach(cid=>{if(stored[cid])CFG[cid]={...DEFAULT_C[cid],...stored[cid]};});}else{CFG={...DEFAULT_C};}}catch{CFG={...DEFAULT_C}}
   try{const l=localStorage.getItem('mdt_locs');LOCS=l?JSON.parse(l):[...DEFAULT_LOCS]}catch{LOCS=[...DEFAULT_LOCS]}
-  try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS]}
+  try{const d=localStorage.getItem('mdt_drs');if(d){DRS=JSON.parse(d);DEFAULT_DRS.forEach(function(dr){if(!DRS.find(function(x){return x.dept===dr.dept&&x.name===dr.name;}))DRS.push(dr);});}else{DRS=[...DEFAULT_DRS];}}catch{DRS=[...DEFAULT_DRS];}
+  _migrateDrsDepts();
   try{const e=localStorage.getItem('mdt_exam_types');if(e){EXAM_TYPES=JSON.parse(e);DEFAULT_EXAM_TYPES.forEach(function(t){if(!EXAM_TYPES.includes(t))EXAM_TYPES.push(t);});}else{EXAM_TYPES=[...DEFAULT_EXAM_TYPES];}}catch{EXAM_TYPES=[...DEFAULT_EXAM_TYPES]}
   if(!EXAM_TYPES.includes('Bone scan')){EXAM_TYPES.splice(2,0,'Bone scan');saveAll();}
   if(!EXAM_TYPES.includes('Breast SONO')){const s=EXAM_TYPES.indexOf('SONO');EXAM_TYPES.splice(s>=0?s+1:4,0,'Breast SONO');saveAll();}
@@ -3786,6 +3787,33 @@ async function syncWithNAS(){
     }
   }
   return results;
+}
+
+function _migrateDrsDepts(){
+  // One-time migration: update old dept names in mdt_drs localStorage
+  var DEPT_MAP={
+    '頭頸外科': null,  // special: split by doctor name
+    '消化內科': '肝膽腸胃科',
+    '婦科': '婦產科',
+    '山脳外科': '婦產科'
+  };
+  var ORAL_SURG_DOCS=['張建明醫師','王威群醫師'];
+  var saved=JSON.parse(localStorage.getItem('mdt_drs')||'null');
+  if(!saved||!saved.length)return;
+  var changed=false;
+  saved=saved.map(function(d){
+    if(!d.dept)return d;
+    if(d.dept==='頭頸外科'){
+      // Split: 張建明/王威群 → 口腔外科, others → 耳鼻喉科
+      d.dept=ORAL_SURG_DOCS.indexOf(d.name)>=0?'口腔外科':'耳鼻咙科';
+      changed=true;
+    } else if(DEPT_MAP[d.dept]){
+      d.dept=DEPT_MAP[d.dept];
+      changed=true;
+    }
+    return d;
+  });
+  if(changed)localStorage.setItem('mdt_drs',JSON.stringify(saved));
 }
 
 function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
