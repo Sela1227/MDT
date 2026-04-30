@@ -4,6 +4,28 @@
 
 ---
 
+## ⚠️ 章法:每版必出三份檔(V4.6.3+ 強制)
+
+每次版本發布,Sela 期待打包內**永遠有三份檔**:
+
+| 檔名 | 給誰看 | 內容 |
+|------|--------|------|
+| `index.html` | 系統本身 | 程式碼 |
+| `README.md` | 開發者 / Sela 自己 | 版本歷程、技術架構、踩坑 |
+| `CLAUDE.md` | 下次接手的 Claude | 本檔(章法、業務對映、優先序) |
+| **`使用說明書.md`** | **三位個管師** | **功能怎麼用、什麼時候用、典型情境** |
+
+**使用說明書的寫作原則**:
+- **對象是個管師**,不是工程師——沒有「localStorage」「version」「函數」這種詞
+- **以工作情境組織**,不是按功能列表(例如「開會前要做什麼」「會後要填什麼」,不是「會議模組/個案模組/產出模組」)
+- **每個功能配截圖位置描述**(「設定 → 醫師 → 科別標頭右側 ▲▼ 按鈕」這種)
+- **新版本只更新「本版新功能」段落**,舊功能說明保留
+- **長度**:5-15 頁可印出。不要寫成 50 頁手冊
+
+**打包檢查**:每次 `zip` 之前確認 4 份檔都在,缺一份就是任務沒完成。
+
+---
+
 ## 一、系統是什麼
 
 **彰濱秀傳癌症中心 MDT 多專科團隊會議管理系統**
@@ -77,6 +99,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 | `mdt_ai` | AI 設定 |
 | `mdt_nas_last` | NAS 最後備份時間 |
 | `mdt_nas_last_date` | NAS 最後備份日期（防重複） |
+| `mdt_html_theme_{userid}` | 個管師 HTML 投影片配色偏好（V4.6.0） |
 
 **會議物件重要欄位：**
 ```js
@@ -105,11 +128,12 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 | 前期追蹤 | `followupHTML()`, `autoImportPrevFollowups()` |
 | 影像區塊 | `buildGenericImgArea(cfg)` → 包裝層：`buildImgArea/PathImgArea/SurgicalImgArea/SpecialImgArea` |
 | 乳攝（特殊版面） | `buildMammoImgArea()` |
-| HTML 投影片 | `genHTMLSlides()` + `extraJs`（放大鏡/鍵盤） |
+| HTML 投影片 | `genHTMLSlides()` + `extraJs`（放大鏡/鍵盤）；配色模板 `HTML_THEMES` + `getHtmlTheme()`，產出區色票條 `renderThemeStrip()`（V4.6.1） |
 | DOCX | `genDOCX()` |
 | 設定頁 | `openSettings()` → `renderLocsTab/DrsTab/CancerCfgList` |
+| 醫師/科別管理 | `addDr/editDr/delDr/moveDr`（單醫師）、`addDept/renameDept/delDept/moveDept`（科別整組）；手動遷移 `applyMasterMigrations` |
 | NAS 備份 | `backupToNAS()`, `pickNasFolder()`, `restoreNasHandle()` |
-| 同步（未完成） | 預計 `syncWithNAS()`, `writeMtgToNAS()` |
+| NAS 同步 | `syncWithNAS()`, `writeMtgToNAS()`, `writeTombstoneToNAS()`, `_canDelete()` |
 | 儲存 | `saveMeeting(opts)` — `opts.silent=true` 不跳閱覽模式 |
 | 會後填寫 | `openPostMtgPanel()`, `savePostMtg()` |
 | 複製會議 | `openCopyMtgDialog()`, `confirmCopyMtg()` |
@@ -120,6 +144,12 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.6.3 | 章法升級:每版必附「使用說明書.md」(個管師導向);打包檢查 4 份檔不可缺 |
+| V4.6.2 | 色票條從 5 主按鈕之下搬到之上,維持下方 share/Excel/JSON 按鈕區的視覺連續性 |
+| V4.6.1 | HTML 配色選擇從設定頁搬到產出區:renderThemeStrip 色票橫條,即時點選即時回饋;設定頁區塊完全移除 |
+| V4.6.0 | HTML 投影片配色模板:HTML_THEMES 5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比);設定→系統頁新增配色選擇區;每位個管師獨立記憶 |
+| V4.5.0 | 科別整組上下排序:moveDept(dept,dir) 重排 DRS 陣列;科別標頭列加 ▲▼ 按鈕,邊界灰化 |
+| V4.4.0 | (原 V4.3.45,因版本號規則修正——第三碼最大 9 超過要進位——重新編號)修主檔遷移根因:刪舊版 9 個重複函數;修咙→喉 typo;醫師分頁加「重新套用主檔遷移」按鈕 |
 | V4.3.44 | NAS 同步刪除傳播:_canDelete + writeTombstoneToNAS;補 deleteCurMtg/confirmBatchDelete 權限檢查;tombstone 90 天 TTL |
 | V4.3.43 | 移除乳房外科、歐金俊移至大腸直腸外科、DRS 遷移函數 |
 | V4.3.42 | 整合主檔：15科、35醫師、頭頸外科拆分、消化/婦科更名 |
@@ -200,25 +230,105 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 做法:Local→NAS 推送前先檢查 `nasMtg2.deleted`;只有「本地 version 確實比 tombstone version 還大」才推(視為合法復活,例如 B 在不知情下持續編輯到比刪除還新)
 - 教訓:多機同步任何「比 version 推送」邏輯,deleted/active 兩種狀態要分開判斷
 
+**#13 同名 function 重複定義導致新版被覆蓋(V4.4.0,代表性大坑)**
+- 症狀:V4.3.43 寫了新版 loadAll + _migrateDrsDepts,使用者部署後完全沒生效;科別還是舊的『頭頸外科』『消化內科』『婦科』
+- 原因:檔案 L1223 寫了新版 loadAll(含 _migrateDrsDepts() 呼叫),L7812 還留著舊版 loadAll(沒呼叫)。JS function declaration 重複時後者覆蓋前者 — `_migrateDrsDepts` 被宣告了但**從來沒被執行過**
+- 一同被覆蓋的還有:migrateLOCS、migrateDRS、migrateCFG、migrateCFGConv、saveAll、mkStr、getMemberStr 共 9 個函數(這次新版內容碰巧跟舊版相同所以沒造成更大災難)
+- 做法:修改既有函數時,**全檔搜尋確認只有一份**;Python 一行檢查 `grep -c "^function loadAll" index.html`
+- 教訓:大檔案編輯特別容易踩。每次 `node --check` 通過不等於正確 — 重複定義不是語法錯,是邏輯死亡。打包前加例行檢查:`grep -c '^function FNAME' index.html` 對任何重要函數應為 1
+- 預防:加在打包驗證腳本裡 — 對所有 `^function (\w+)` 抓出來,>1 的全列警告
+
+**#14 版本號第三碼超過 9 沒進位(V4.4.0 之前長期錯誤)**
+- 症狀:版本號跑出 V4.3.45 這種數字,第三碼累積到 45 才被注意到。版本號失去語意 —「45 次 bug fix」聽起來不合理,實際上很多應該是新功能(該進到第二碼)
+- 原因:DEV-GUIDELINES 寫了「bug fix +0.01」這種小數寫法,沒寫到「第三碼最大 9,超過要進位」。Claude 每次接手就照數字直接 +1
+- 做法:從 V4.4.0 重新開始;CLAUDE.md 第九節版本號規則表寫清楚進位邏輯
+- 教訓:版本號規則用「+0.01」這種小數寫法很容易誤導 — 41+1=42 看起來合理,但 V x.y.z 不是小數。要寫成「第幾碼最大 9」才不會被當小數累加
+- 預防:打包前看版本號,第三碼 ≥ 10 立即警告
+
+**#15 使用說明書版號脫節(V4.6.3)**
+- 症狀:`使用說明書.md` 寫 V4.6.3,但 `index.html` 是 V4.6.2;使用者看說明書不確定是不是對應到當前版本
+- 原因:CLAUDE.md 沒明文要求「使用說明書版號要跟 index.html 同步」;前一個 session 寫了 V4.6.3 規格但 code 還沒做
+- 做法:打包驗證腳本加「4 檔版號一致性檢查」(坑 #14 的延伸);新章節「使用說明書同步規則」明文規定每次發版必更新四檔版號(即使說明書內容沒變也要動標記)
+- 教訓:跨檔案的版號一致性靠「人記得」一定會壞,要靠工具強制。**即使這版只改 bug、說明書內容沒變,版本對應標記也要更新** — 這是給使用者的訊號:「這份說明書真的對應當前部署版本」
+- 預防:打包驗證腳本失敗(`4 檔版號一致: ⚠️`)就不打包
+
 ---
 
-## 九、打包驗證（每次必跑）
+## 九、打包驗證(每次必跑)
 
 ```python
+import os
 h = open('/home/claude/index.html').read()
-s = h.index('<script>\n') + len('<script>\n')
-e = h.index('</script>')
-js = h[s:e]
+import re
+scripts = re.findall(r'<script[^>]*>([\s\S]*?)</script>', h)
+js = max(scripts, key=len)  # 取最大的 script(主程式)
 print("{}:", js.count('{')-js.count('}'))        # 必須為 0
-import subprocess, re
+import subprocess
 with open('/tmp/check.js','w') as f: f.write(js)
 r = subprocess.run(['node','--check','/tmp/check.js'],capture_output=True,text=True)
 print("Node:", "OK" if r.returncode==0 else r.stderr[:200])
 print("ends </html>:", h.rstrip().endswith('</html>'))
-print("functions:", len(set(re.findall(r'function\s+(\w+)\s*\(', h))))
+# V4.4.0 加:重複函數檢查(坑 #13)
+fns={}
+for m in re.finditer(r'function (\w+)\s*\(', h):
+    fns[m.group(1)]=fns.get(m.group(1),0)+1
+dups=[k for k,v in fns.items() if v>1]
+print("重複函數:", dups if dups else "無")
+print("函數總數:", len(fns))
+# V4.4.0 加:當前版本號進位規則(坑 #14;只檢查 const VERSION,不掃歷史記錄)
+m=re.search(r"const VERSION='V(\d+)\.(\d+)\.(\d+)'", h)
+if m:
+    x,y,z=int(m.group(1)),int(m.group(2)),int(m.group(3))
+    print("VERSION:", f"V{x}.{y}.{z}", "✓" if (y<=9 and z<=9) else "⚠️ 進位錯!")
+# V4.6.3 加:打包必有 4 份檔 + 4 檔版號一致(坑 #15)
+import os
+required=['index.html','README.md','CLAUDE.md','使用說明書.md']
+missing=[f for f in required if not os.path.exists('/home/claude/'+f)]
+print("4 份檔:", "齊全" if not missing else f"⚠️ 缺 {missing}")
+if not missing:
+    cur=re.search(r"const VERSION='(V[\d.]+)'", h).group(1)
+    issues=[]
+    # README 最新版本(### V開頭)
+    rm=re.search(r'### (V[\d.]+)', open('/home/claude/README.md').read())
+    if not rm or rm.group(1)!=cur:issues.append(f"README={rm.group(1) if rm else '?'}")
+    # CLAUDE.md 表格首行版號
+    cm=re.search(r'\| (V[\d.]+) \|', open('/home/claude/CLAUDE.md').read())
+    if not cm or cm.group(1)!=cur:issues.append(f"CLAUDE.md={cm.group(1) if cm else '?'}")
+    # 使用說明書 三處標記
+    um=open('/home/claude/使用說明書.md').read()
+    um_versions=set(re.findall(r'V\d+\.\d+\.\d+', um[:300]+um[-300:]))  # 只看頭尾,避免歷史表格
+    if cur not in um_versions:issues.append(f"使用說明書頭尾沒有 {cur}")
+    print("4 檔版號一致:", "✓" if not issues else f"⚠️ {issues} (應為 {cur})")
 ```
 
-版本號命名：bug fix `+0.01`，新功能 `+0.1`，大改版 `+1.0`
+版本號命名 V**x.y.z**(嚴格進位,**第二/三碼最大就是 9**):
+
+| 類型 | 規則 | 範例 |
+|------|------|------|
+| Bug fix | `z+1`,**z 超過 9 → y+1, z=0** | V4.3.5 → V4.3.6;V4.3.9 → V4.4.0 |
+| 新功能 | `y+1, z=0`,**y 超過 9 → x+1, y=0, z=0** | V4.3.5 → V4.4.0;V4.9.5 → V5.0.0 |
+| 大改版 | `x+1, y=0, z=0` | V4.3.5 → V5.0.0 |
+
+**坑 #14 教訓**:之前長期容許 V4.3.45 這種第三碼超過 9 的寫法,版本號失去語意。從 V4.4.0 開始嚴格進位。看到第三碼 ≥ 10 就是規則錯。
+
+---
+
+## 九之二、使用說明書同步規則(V4.6.3 起)
+
+每次打包必含**四檔**:`index.html`、`README.md`、`CLAUDE.md`、`使用說明書.md`
+
+**鐵律 — 即使本版只修 bug、說明書內容沒變,版本標記也要更新**:
+- 使用說明書頭部 `> 版本對應:**Vx.y.z**(YYYY/MM)`
+- 使用說明書第九節標題 `## 九、本版新功能(Vx.y.z)`
+- 使用說明書最後一行 `*文件版本:Vx.y.z · YYYY/MM*`
+- 第九節「過去 6 版回顧」表格加新行
+
+**理由**:使用者看到說明書版號 = 實際部署版號,才知道這份是不是最新。三處同步靠人記會壞,靠打包驗證腳本強制(坑 #15)。
+
+**新功能版本怎麼寫第九節**:
+- 用使用者語言寫,不要寫「`moveDept(dept,dir)` 重排 DRS」這種程式術語
+- 寫「您可以這樣做」「典型情境」「常見問題」
+- bug fix 版只更新版本標記、第九節新增一行說明改了什麼;不必動其他章節
 
 ---
 
@@ -236,4 +346,4 @@ print("functions:", len(set(re.findall(r'function\s+(\w+)\s*\(', h))))
 
 ## 十一、一句話總結
 
-V4.3.44 完成 NAS 跨機同步的最後一塊拼圖:刪除標記傳播。`_canDelete()` 統一權限判斷、`writeTombstoneToNAS()` 寫墓碑、`syncWithNAS` 既能讀取墓碑刪除本地也能避免把墓碑升級回活檔(坑 #12)、tombstone 90 天 TTL 自動清理。同時補了 `deleteCurMtg`/`confirmBatchDelete` 漏掉的 createdBy 權限檢查。下版第一優先換成「記住上次登入者」 — 摩擦感最強的小改動。
+V4.6.3 章法升級:從這版開始,每次發布**必附 4 份檔** — index.html + README.md + CLAUDE.md + **使用說明書.md**(個管師導向的快速上手)。使用說明書以工作情境組織(開會前/會議當下/會後追蹤/設定維護),不寫技術術語。打包前檢查 4 份齊全才算完成任務。下版第一優先還是「記住上次登入者」。

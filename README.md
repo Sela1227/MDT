@@ -111,6 +111,26 @@
 
 ## 版本歷程
 
+### V4.6.3
+**章法升級**:從本版起,每次發布都附三份文件 + 一份「使用說明書.md」(共 4 份)。使用說明書是給三位個管師看的快速上手指南,以工作情境組織(開會前→會議當下→會後追蹤→設定維護),不寫技術術語。打包檢查清單:`index.html` + `README.md` + `CLAUDE.md` + `使用說明書.md` 缺一不可。
+
+### V4.6.2
+色票條位置微調:從 5 主按鈕之下搬到之上,讓下方的 share link / Excel / JSON / AI 等按鈕區保持視覺連續性,不被中間插入的色票條中斷。功能不變。
+
+### V4.6.1
+HTML 配色選擇從「設定→系統」搬到「產出區」:會議畫面產出按鈕 grid 下方一條色票橫條,5 顆迷你色票直接點換色,即時 toast 回饋。設定頁的配色區塊完全移除(不重複)。`renderThemePicker` 改寫為 `renderThemeStrip`,在 `renderEditor` 用 `setTimeout(...,0)` 渲染避免 DOM 競態。使用情境改善:個管師在產出當下能直接調色,不用切到設定頁再回來。
+
+### V4.6.0
+HTML 投影片配色模板:設定→系統頁新增「HTML 投影片配色」區塊,5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比)。每位個管師獨立記憶(localStorage `mdt_html_theme_{userid}`),三人可以各自選不同偏好。預設「彰濱經典」色值跟舊版寫死的色完全一致 — 沒主動換配色的使用者沒有任何視覺差異。實作上是把 `:root{--dk:...;--acc:...;--lt:...}` 三個 CSS 變數抽成 `HTML_THEMES` 常數,`genHTMLSlides` 讀當前 user 的 theme 套到 `:root`。
+
+### V4.5.0
+科別整組上下排序:設定→醫師分頁,每個科別標頭列新增「▲」「▼」按鈕(放在重命名/刪除前),點擊把該科別所有醫師整組搬到上/下個科別位置;最上方的科別「▲」灰、最下方「▼」灰(跟單醫師排序的邊界處理一致);新函數 `moveDept(dept, dir)` 直接重排 `DRS` 陣列(不另存科別順序,因為 `[...new Set(DRS.map(d=>d.dept))]` 自然反映順序);若歷史 DRS 有同科別交錯排列,移動後會自然合併到一起
+
+### V4.4.0
+**版本號規則修正**:從這版開始嚴格進位 — 第三碼最大就是 9,超過 9 直接 y+1, z=0(以前長期容許 V4.3.45 這種第三碼 ≥ 10 是錯誤)。本版原為 V4.3.45,套規則後重新編號為 V4.4.0。
+
+內容(沿用原 V4.3.45):修補 V4.3.43 主檔遷移失效根因——刪除舊版重複定義的 9 個函數(loadAll、migrateLOCS、migrateDRS、migrateCFG、migrateCFGConv、saveAll、mkStr、getMemberStr;舊版 L7812-7921),原本因 JS 後者覆蓋前者導致新版的 `_migrateDrsDepts()` 從未執行;修「耳鼻咙科→耳鼻喉科」typo;設定→醫師分頁新增「重新套用主檔遷移」按鈕,執行完顯示『重命名 N 位、新增 M 位、更新 X 個癌別』統計訊息;按鈕冪等可重複按、保留使用者手動新增的醫師
+
 ### V4.3.44
 NAS 跨機同步刪除標記傳播：新增 `_canDelete()` 權限工具與 `writeTombstoneToNAS()` — 刪除會議時自動寫 NAS tombstone（{deleted:true, version+1, deletedAt, deletedBy}）；`syncWithNAS` 收到 tombstone 後刪除本地、且不會把已刪會議「升級」回正常檔；tombstone 90 天後自動清理；補修 `deleteCurMtg`（會議內刪除）與 `confirmBatchDelete`（批次刪除）漏掉的 createdBy 權限檢查；批次刪除遇到任一筆無權限即整批擋下並列出哪幾筆
 
