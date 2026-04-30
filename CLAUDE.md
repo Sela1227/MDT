@@ -13,7 +13,7 @@
 | `index.html` | 系統本身 | 程式碼 |
 | `README.md` | 開發者 / Sela 自己 | 版本歷程、技術架構、踩坑 |
 | `CLAUDE.md` | 下次接手的 Claude | 本檔(章法、業務對映、優先序) |
-| **`使用說明書.md`** | **三位個管師** | **功能怎麼用、什麼時候用、典型情境** |
+| **`USER_GUIDE.md`** | **三位個管師** | **功能怎麼用、什麼時候用、典型情境** |
 
 **使用說明書的寫作原則**:
 - **對象是個管師**,不是工程師——沒有「localStorage」「version」「函數」這種詞
@@ -144,7 +144,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
-| V4.6.3 | 章法升級:每版必附「使用說明書.md」(個管師導向);打包檢查 4 份檔不可缺 |
+| V4.6.4 | 使用說明書檔名 `使用說明書.md` → `USER_GUIDE.md`(避免中文檔名亂碼) |
+| V4.6.3 | 章法升級:每版必附「USER_GUIDE.md」(個管師導向);打包檢查 4 份檔不可缺 |
 | V4.6.2 | 色票條從 5 主按鈕之下搬到之上,維持下方 share/Excel/JSON 按鈕區的視覺連續性 |
 | V4.6.1 | HTML 配色選擇從設定頁搬到產出區:renderThemeStrip 色票橫條,即時點選即時回饋;設定頁區塊完全移除 |
 | V4.6.0 | HTML 投影片配色模板:HTML_THEMES 5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比);設定→系統頁新增配色選擇區;每位個管師獨立記憶 |
@@ -246,11 +247,18 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:打包前看版本號,第三碼 ≥ 10 立即警告
 
 **#15 使用說明書版號脫節(V4.6.3)**
-- 症狀:`使用說明書.md` 寫 V4.6.3,但 `index.html` 是 V4.6.2;使用者看說明書不確定是不是對應到當前版本
+- 症狀:`USER_GUIDE.md` 寫 V4.6.3,但 `index.html` 是 V4.6.2;使用者看說明書不確定是不是對應到當前版本
 - 原因:CLAUDE.md 沒明文要求「使用說明書版號要跟 index.html 同步」;前一個 session 寫了 V4.6.3 規格但 code 還沒做
 - 做法:打包驗證腳本加「4 檔版號一致性檢查」(坑 #14 的延伸);新章節「使用說明書同步規則」明文規定每次發版必更新四檔版號(即使說明書內容沒變也要動標記)
 - 教訓:跨檔案的版號一致性靠「人記得」一定會壞,要靠工具強制。**即使這版只改 bug、說明書內容沒變,版本對應標記也要更新** — 這是給使用者的訊號:「這份說明書真的對應當前部署版本」
 - 預防:打包驗證腳本失敗(`4 檔版號一致: ⚠️`)就不打包
+
+**#16 中文檔名 zip 解壓亂碼(V4.6.4)**
+- 症狀:`使用說明書.md` 在 zip 裡看似正常,但個管師在 Windows 解壓變成 `��������.md`、無法開啟
+- 原因:zip 規格對非 ASCII 檔名的編碼處理不一致(macOS 用 UTF-8、Windows 預設 CP950/Big5、Linux 用 UTF-8 但工具可能誤判);跨平台時亂碼很常見
+- 做法:重要檔案改用純 ASCII 英文檔名(`USER_GUIDE.md`),中文當作術語在內容裡保留即可
+- 教訓:跨平台部署的東西檔名只用 ASCII。檔名是「實體」,中文是「呈現」 — 把實體的歸檔名(英文)、把呈現的歸文件內容(中文)
+- 預防:打包腳本的 `required` 清單只有 ASCII 檔名;新建檔案前先想「有沒有中文?有就改英文」
 
 ---
 
@@ -282,7 +290,7 @@ if m:
     print("VERSION:", f"V{x}.{y}.{z}", "✓" if (y<=9 and z<=9) else "⚠️ 進位錯!")
 # V4.6.3 加:打包必有 4 份檔 + 4 檔版號一致(坑 #15)
 import os
-required=['index.html','README.md','CLAUDE.md','使用說明書.md']
+required=['index.html','README.md','CLAUDE.md','USER_GUIDE.md']
 missing=[f for f in required if not os.path.exists('/home/claude/'+f)]
 print("4 份檔:", "齊全" if not missing else f"⚠️ 缺 {missing}")
 if not missing:
@@ -295,7 +303,7 @@ if not missing:
     cm=re.search(r'\| (V[\d.]+) \|', open('/home/claude/CLAUDE.md').read())
     if not cm or cm.group(1)!=cur:issues.append(f"CLAUDE.md={cm.group(1) if cm else '?'}")
     # 使用說明書 三處標記
-    um=open('/home/claude/使用說明書.md').read()
+    um=open('/home/claude/USER_GUIDE.md').read()
     um_versions=set(re.findall(r'V\d+\.\d+\.\d+', um[:300]+um[-300:]))  # 只看頭尾,避免歷史表格
     if cur not in um_versions:issues.append(f"使用說明書頭尾沒有 {cur}")
     print("4 檔版號一致:", "✓" if not issues else f"⚠️ {issues} (應為 {cur})")
@@ -315,7 +323,7 @@ if not missing:
 
 ## 九之二、使用說明書同步規則(V4.6.3 起)
 
-每次打包必含**四檔**:`index.html`、`README.md`、`CLAUDE.md`、`使用說明書.md`
+每次打包必含**四檔**:`index.html`、`README.md`、`CLAUDE.md`、`USER_GUIDE.md`
 
 **鐵律 — 即使本版只修 bug、說明書內容沒變,版本標記也要更新**:
 - 使用說明書頭部 `> 版本對應:**Vx.y.z**(YYYY/MM)`
@@ -346,4 +354,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V4.6.3 章法升級:從這版開始,每次發布**必附 4 份檔** — index.html + README.md + CLAUDE.md + **使用說明書.md**(個管師導向的快速上手)。使用說明書以工作情境組織(開會前/會議當下/會後追蹤/設定維護),不寫技術術語。打包前檢查 4 份齊全才算完成任務。下版第一優先還是「記住上次登入者」。
+V4.6.4 把使用說明書檔名從中文改英文(`USER_GUIDE.md`),避免 Windows 解壓 zip 時亂碼。內容沒變,但版號標記照新規則一律從 V4.6.3 → V4.6.4(這是「即使 bug fix 也要更新使用說明書版號」規則的第一個實戰測試,通過)。下版第一優先還是「記住上次登入者」。
