@@ -4,6 +4,28 @@
 
 ---
 
+## ⚠️ 章法:每版必出三份檔(V4.6.3+ 強制)
+
+每次版本發布,Sela 期待打包內**永遠有三份檔**:
+
+| 檔名 | 給誰看 | 內容 |
+|------|--------|------|
+| `index.html` | 系統本身 | 程式碼 |
+| `README.md` | 開發者 / Sela 自己 | 版本歷程、技術架構、踩坑 |
+| `CLAUDE.md` | 下次接手的 Claude | 本檔(章法、業務對映、優先序) |
+| **`USER_GUIDE.md`** | **三位個管師** | **功能怎麼用、什麼時候用、典型情境** |
+
+**使用說明書的寫作原則**:
+- **對象是個管師**,不是工程師——沒有「localStorage」「version」「函數」這種詞
+- **以工作情境組織**,不是按功能列表(例如「開會前要做什麼」「會後要填什麼」,不是「會議模組/個案模組/產出模組」)
+- **每個功能配截圖位置描述**(「設定 → 醫師 → 科別標頭右側 ▲▼ 按鈕」這種)
+- **新版本只更新「本版新功能」段落**,舊功能說明保留
+- **長度**:5-15 頁可印出。不要寫成 50 頁手冊
+
+**打包檢查**:每次 `zip` 之前確認 4 份檔都在,缺一份就是任務沒完成。
+
+---
+
 ## 一、系統是什麼
 
 **彰濱秀傳癌症中心 MDT 多專科團隊會議管理系統**
@@ -122,6 +144,9 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.6.5 | 婦癌召集人「婦科::吳宏明醫師」修成「婦產科::」(主檔本來就只有婦產科);migrateCFGConv 加自動修補已部署的 localStorage |
+| V4.6.4 | 使用說明書檔名 `使用說明書.md` → `USER_GUIDE.md`(避免中文檔名亂碼) |
+| V4.6.3 | 章法升級:每版必附「USER_GUIDE.md」(個管師導向);打包檢查 4 份檔不可缺 |
 | V4.6.2 | 色票條從 5 主按鈕之下搬到之上,維持下方 share/Excel/JSON 按鈕區的視覺連續性 |
 | V4.6.1 | HTML 配色選擇從設定頁搬到產出區:renderThemeStrip 色票橫條,即時點選即時回饋;設定頁區塊完全移除 |
 | V4.6.0 | HTML 投影片配色模板:HTML_THEMES 5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比);設定→系統頁新增配色選擇區;每位個管師獨立記憶 |
@@ -222,11 +247,34 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:版本號規則用「+0.01」這種小數寫法很容易誤導 — 41+1=42 看起來合理,但 V x.y.z 不是小數。要寫成「第幾碼最大 9」才不會被當小數累加
 - 預防:打包前看版本號,第三碼 ≥ 10 立即警告
 
+**#15 使用說明書版號脫節(V4.6.3)**
+- 症狀:`USER_GUIDE.md` 寫 V4.6.3,但 `index.html` 是 V4.6.2;使用者看說明書不確定是不是對應到當前版本
+- 原因:CLAUDE.md 沒明文要求「使用說明書版號要跟 index.html 同步」;前一個 session 寫了 V4.6.3 規格但 code 還沒做
+- 做法:打包驗證腳本加「4 檔版號一致性檢查」(坑 #14 的延伸);新章節「使用說明書同步規則」明文規定每次發版必更新四檔版號(即使說明書內容沒變也要動標記)
+- 教訓:跨檔案的版號一致性靠「人記得」一定會壞,要靠工具強制。**即使這版只改 bug、說明書內容沒變,版本對應標記也要更新** — 這是給使用者的訊號:「這份說明書真的對應當前部署版本」
+- 預防:打包驗證腳本失敗(`4 檔版號一致: ⚠️`)就不打包
+
+**#16 中文檔名 zip 解壓亂碼(V4.6.4)**
+- 症狀:`使用說明書.md` 在 zip 裡看似正常,但個管師在 Windows 解壓變成 `��������.md`、無法開啟
+- 原因:zip 規格對非 ASCII 檔名的編碼處理不一致(macOS 用 UTF-8、Windows 預設 CP950/Big5、Linux 用 UTF-8 但工具可能誤判);跨平台時亂碼很常見
+- 做法:重要檔案改用純 ASCII 英文檔名(`USER_GUIDE.md`),中文當作術語在內容裡保留即可
+- 教訓:跨平台部署的東西檔名只用 ASCII。檔名是「實體」,中文是「呈現」 — 把實體的歸檔名(英文)、把呈現的歸文件內容(中文)
+- 預防:打包腳本的 `required` 清單只有 ASCII 檔名;新建檔案前先想「有沒有中文?有就改英文」
+
+**#17 主檔內部 conv 與 DRS 科別名不一致(V4.6.5)**
+- 症狀:婦癌 `conv:'婦科::吳宏明醫師'` 但 DEFAULT_DRS 內吳宏明醫師是「婦產科」,實際 UI 顯示召集人欄會找不到對應醫師、回退到預設值
+- 原因:DEFAULT_C 裡的 `conv` 欄位手寫字串,跟 DEFAULT_DRS 的 dept 欄位**沒有任何約束**;歷史上有過「婦科」科別,後來改名為「婦產科」但 DEFAULT_C 的 conv 沒同步改;同類錯誤還有頭頸癌 conv 寫「頭頸外科::張建明」但張建明在 DEFAULT_DRS 是「口腔外科」(V4.4.0 拆科別後的殘留)
+- 做法:V4.6.5 修婦癌一處 + 加 `migrateCFGConv` 自動修補已部署 localStorage 的「婦科::」殘留;頭頸癌類似 bug 留待之後處理
+- 教訓:跨主檔欄位的引用一致性(這裡是 `DEFAULT_C[*].conv` → `DEFAULT_DRS[*].dept`)沒有約束就會壞,改科別名稱必須**同時搜尋整個 DEFAULT_C** 看誰引用到舊名
+- 預防:打包前掃 `DEFAULT_C` 內所有 `conv:'X::Y'`,檢查「X 是否存在於 DEFAULT_DRS 任一筆的 dept」;不存在就警告
+- 已知限制:歷史會議 `mdt_m_*` 個案的 `doctors` 欄裡如有「婦科::」殘留**不修**(會議是 immutable 歷史資料)
+
 ---
 
 ## 九、打包驗證(每次必跑)
 
 ```python
+import os
 h = open('/home/claude/index.html').read()
 import re
 scripts = re.findall(r'<script[^>]*>([\s\S]*?)</script>', h)
@@ -249,6 +297,25 @@ m=re.search(r"const VERSION='V(\d+)\.(\d+)\.(\d+)'", h)
 if m:
     x,y,z=int(m.group(1)),int(m.group(2)),int(m.group(3))
     print("VERSION:", f"V{x}.{y}.{z}", "✓" if (y<=9 and z<=9) else "⚠️ 進位錯!")
+# V4.6.3 加:打包必有 4 份檔 + 4 檔版號一致(坑 #15)
+import os
+required=['index.html','README.md','CLAUDE.md','USER_GUIDE.md']
+missing=[f for f in required if not os.path.exists('/home/claude/'+f)]
+print("4 份檔:", "齊全" if not missing else f"⚠️ 缺 {missing}")
+if not missing:
+    cur=re.search(r"const VERSION='(V[\d.]+)'", h).group(1)
+    issues=[]
+    # README 最新版本(### V開頭)
+    rm=re.search(r'### (V[\d.]+)', open('/home/claude/README.md').read())
+    if not rm or rm.group(1)!=cur:issues.append(f"README={rm.group(1) if rm else '?'}")
+    # CLAUDE.md 表格首行版號
+    cm=re.search(r'\| (V[\d.]+) \|', open('/home/claude/CLAUDE.md').read())
+    if not cm or cm.group(1)!=cur:issues.append(f"CLAUDE.md={cm.group(1) if cm else '?'}")
+    # 使用說明書 三處標記
+    um=open('/home/claude/USER_GUIDE.md').read()
+    um_versions=set(re.findall(r'V\d+\.\d+\.\d+', um[:300]+um[-300:]))  # 只看頭尾,避免歷史表格
+    if cur not in um_versions:issues.append(f"使用說明書頭尾沒有 {cur}")
+    print("4 檔版號一致:", "✓" if not issues else f"⚠️ {issues} (應為 {cur})")
 ```
 
 版本號命名 V**x.y.z**(嚴格進位,**第二/三碼最大就是 9**):
@@ -260,6 +327,25 @@ if m:
 | 大改版 | `x+1, y=0, z=0` | V4.3.5 → V5.0.0 |
 
 **坑 #14 教訓**:之前長期容許 V4.3.45 這種第三碼超過 9 的寫法,版本號失去語意。從 V4.4.0 開始嚴格進位。看到第三碼 ≥ 10 就是規則錯。
+
+---
+
+## 九之二、使用說明書同步規則(V4.6.3 起)
+
+每次打包必含**四檔**:`index.html`、`README.md`、`CLAUDE.md`、`USER_GUIDE.md`
+
+**鐵律 — 即使本版只修 bug、說明書內容沒變,版本標記也要更新**:
+- 使用說明書頭部 `> 版本對應:**Vx.y.z**(YYYY/MM)`
+- 使用說明書第九節標題 `## 九、本版新功能(Vx.y.z)`
+- 使用說明書最後一行 `*文件版本:Vx.y.z · YYYY/MM*`
+- 第九節「過去 6 版回顧」表格加新行
+
+**理由**:使用者看到說明書版號 = 實際部署版號,才知道這份是不是最新。三處同步靠人記會壞,靠打包驗證腳本強制(坑 #15)。
+
+**新功能版本怎麼寫第九節**:
+- 用使用者語言寫,不要寫「`moveDept(dept,dir)` 重排 DRS」這種程式術語
+- 寫「您可以這樣做」「典型情境」「常見問題」
+- bug fix 版只更新版本標記、第九節新增一行說明改了什麼;不必動其他章節
 
 ---
 
@@ -277,4 +363,4 @@ if m:
 
 ## 十一、一句話總結
 
-V4.6.2 把色票條再上移一行 — 從 5 主按鈕之下搬到之上,讓下方 share/Excel/JSON/AI 按鈕區保持視覺連續性。V4.6.1 把 V4.6.0 加的 HTML 配色選擇從設定頁搬到產出區 — 會議畫面就能直接點 5 顆迷你色票換色。下版第一優先還是「記住上次登入者」。
+V4.6.5 修婦癌召集人「婦科::吳宏明醫師」→「婦產科::」(主檔本來就沒有「婦科」這個科別,只有「婦產科」);migrateCFGConv 加自動修補,已部署的 localStorage 下次啟動會自動把任何「婦科::」殘留改成「婦產科::」(冪等、不踩使用者編輯)。順便發現的頭頸癌 conv 也有類似 bug(寫「頭頸外科::張建明」但張建明在「口腔外科」)— 留作下版處理。坑 #17 進入永久教訓:DEFAULT_C 跟 DEFAULT_DRS 之間的科別名引用沒約束會出事。下版第一優先還是「記住上次登入者」。
