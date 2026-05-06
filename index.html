@@ -1215,7 +1215,7 @@ const DEFAULT_C={
   digestive:{id:'digestive',name:'消化道癌',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
   hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
   urology:{id:'urology',name:'泌尿道癌',partner:null,weekday:3,weeknum:2,color:'#7A6E8A',defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-7F  愛書人會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=6Ir1uPjOzDjA25ARbf88rOOq1X80rn.1'},convTitle:'泌尿道癌召集人',conv:'泌尿科::楊哲學醫師',memberKeys:[mk('泌尿科','吳其翔醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  gynecology:{id:'gynecology',name:'婦癌',partner:null,weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'2609926',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦科::吳宏明醫師',memberKeys:[mk('婦產科','林坤沂醫師'),mk('婦產科','吳宏明醫師'),mk('婦產科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
+  gynecology:{id:'gynecology',name:'婦癌',partner:null,weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'2609926',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦產科::吳宏明醫師',memberKeys:[mk('婦產科','林坤沂醫師'),mk('婦產科','吳宏明醫師'),mk('婦產科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
 };
 const USERS=[
   {id:'yang',name:'楊靜雯',ext:'17965',cancers:['lymphoma','digestive','gynecology']},
@@ -1223,7 +1223,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.6.4';
+const VERSION='V4.6.6';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1332,11 +1332,15 @@ function migrateCFGConv(){
     '歐金俊醫師':'一般外科::歐金俊醫師',
     '張正雄醫師':'血液腫瘤科::張正雄醫師',
     '楊哲學醫師':'泌尿科::楊哲學醫師',
-    '吳宏明醫師':'婦科::吳宏明醫師',
+    '吳宏明醫師':'婦產科::吳宏明醫師',
   };
   let changed=false;
   Object.values(CFG).forEach(ca=>{
     if(ca.conv&&nameMap[ca.conv]){ca.conv=nameMap[ca.conv];changed=true;}
+    /* V4.6.5: 修補已部署 localStorage 的「婦科::」殘留 */
+    if(ca.conv&&ca.conv.startsWith('婦科::')){
+      ca.conv=ca.conv.replace('婦科::','婦產科::');changed=true;
+    }
     // Also fix memberKeys dept names
     if(ca.memberKeys){
       ca.memberKeys=ca.memberKeys.map(k=>{
@@ -1346,7 +1350,8 @@ function migrateCFGConv(){
           .replace('腫瘤內科::張正雄醫師','血液腫瘤科::張正雄醫師')
           .replace('腫瘤內科::陳忠宏醫師','消化內科::陳忠宏醫師')
           .replace('腫瘤內科::王俊偉醫師','消化內科::王俊偉醫師')
-          .replace('影像診斷科::侯柏年醫師','核醫科::侯柏年醫師');
+          .replace('影像診斷科::侯柏年醫師','核醫科::侯柏年醫師')
+          .replace('婦科::','婦產科::');  /* V4.6.5: memberKeys 也修 */
       });
       // Remove duplicate memberKeys
       ca.memberKeys=[...new Set(ca.memberKeys)];
@@ -4275,9 +4280,10 @@ function updateFolderStatusBar(){
 
 function onExamTypeChange(sel,caseIdx,examIdx,cid){
   if(sel.value==='__other__'){
-    // Insert text input after select
+    /* V4.6.6: 只把「自訂類型」文字輸入視為已存在;type=date 不算,否則切到「其他」時找不到輸入欄 */
     let inp=sel.nextElementSibling;
-    if(!inp||inp.tagName!=='INPUT'){
+    const isCustomTypeInp=inp&&inp.tagName==='INPUT'&&inp.type!=='date';
+    if(!isCustomTypeInp){
       inp=document.createElement('input');
       inp.placeholder='檢查類型';
       inp.style.cssText='width:100px;font-size:12px;margin-left:4px';
@@ -4295,9 +4301,11 @@ function onExamTypeChange(sel,caseIdx,examIdx,cid){
     if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name='';
     markDirty();
   } else {
-    // Remove custom input if present
+    /* V4.6.6: 只刪「自訂類型」文字輸入(type='text' 或無 type),不要誤刪緊跟的日期欄 type='date'
+       原 bug:`if(inp&&inp.tagName==='INPUT')inp.remove()` 會把任何 INPUT 刪掉,
+       包括 select 後面的 type=date 日期欄,導致選 CT 等項目時日期消失 */
     const inp=sel.nextElementSibling;
-    if(inp&&inp.tagName==='INPUT')inp.remove();
+    if(inp&&inp.tagName==='INPUT'&&inp.type!=='date')inp.remove();
     const c=S.meeting?.sections[cid]?.cases[caseIdx];
     if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name=sel.value;
     markDirty();

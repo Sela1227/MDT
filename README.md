@@ -111,6 +111,12 @@
 
 ## 版本歷程
 
+### V4.6.6
+**影像檢查日期欄被誤刪 bug**:個案編輯區「影像檢查」選了 CT/MRI 等檢查類型後,日期選擇欄整個消失。原因:`onExamTypeChange` 用 `sel.nextElementSibling.tagName === 'INPUT'` 條件刪除「自訂類型輸入欄」,沒區分 type — 而日期欄正好是緊跟 select 的 `<input type="date">`,被一併誤刪。修法:加 `inp.type !== 'date'` 條件,只刪自訂類型(type 非 date)的 INPUT。順便修「其他」分支同類 bug:當 sibling 是日期欄時也會誤判「已有 input」而不插入自訂類型欄。
+
+### V4.6.5
+**婦科 → 婦產科**:修兩處資料一致性 bug — `DEFAULT_C.gynecology.conv` 從 `婦科::吳宏明醫師` 改成 `婦產科::吳宏明醫師`(主檔的「婦科」科別不存在,只有「婦產科」);`migrateCFGConv` 的 nameMap 同步修正。順便加自動修補 — 已部署 V4.6.4 之前版本的個管師 localStorage 裡 `CFG.gynecology.conv` 仍有「婦科::」殘留,下次啟動時 `migrateCFGConv` 會自動把任何 `conv` 或 `memberKeys` 開頭的「婦科::」替換為「婦產科::」(冪等,不踩使用者編輯)。歷史會議資料的個案醫師欄不修動(immutable 原則)。
+
 ### V4.6.4
 使用說明書檔名從中文改英文 — `使用說明書.md` → `USER_GUIDE.md`,避免中文檔名在 Windows 解壓 zip 時變亂碼。CLAUDE.md 內檔名引用同步替換,中文「使用說明書」當作術語保留(自然中文文字仍用)。
 
