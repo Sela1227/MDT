@@ -1223,7 +1223,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.7.0';
+const VERSION='V4.7.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1393,7 +1393,7 @@ function maskName(n){if(!n||n.length<=1)return n;if(n.length===2)return n[0]+'0'
 function caseDemo(c){
   var s=(c.gender||'M')+'/'+(c.age||'—');
   if(c.ecog)s+='  ECOG '+c.ecog;
-  if(c.cfs)s+='  CFS '+c.cfs;
+  if(c.cfs)s+='  衰弱量表 '+c.cfs;
   return s;
 }
 function rocDate(ds){if(!ds)return'';const[y,m,d]=ds.split('-').map(Number);const dow=['日','一','二','三','四','五','六'][new Date(ds).getDay()];return`${y}年${m}月${d}日(星期${dow})`}
@@ -2924,7 +2924,7 @@ function caseViewHTML(cid,i,d){
   return`<div class="vc" id="${cardId}">
 <div class="vc-hdr" onclick="toggleVCCard('${cardId}')" style="cursor:pointer" title="點擊展開/收合">
 <span style="margin-right:8px;font-size:11px;opacity:.5" class="vc-collapse-icon">▶</span>
-${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gender||'M')==='M'?'M':'F'}/${d.age||'—'}${d.ecog?' &nbsp;ECOG '+escA(d.ecog):''}${d.cfs?' &nbsp;CFS '+escA(d.cfs):''} &nbsp;VS ${escA(drs)}</span>
+${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gender||'M')==='M'?'M':'F'}/${d.age||'—'}${d.ecog?' &nbsp;ECOG '+escA(d.ecog):''}${d.cfs?' &nbsp;衰弱量表 '+escA(d.cfs):''} &nbsp;VS ${escA(drs)}</span>
 <button onclick="event.stopPropagation();editSingleCase('${cid}',${i})" style="margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 10px;border-radius:2px;font-size:11px;cursor:pointer">編輯</button>
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
@@ -6896,7 +6896,7 @@ function genLine(){
   return t;
 }
 
-function genAI(){readForm();const m=S.meeting,cids=S.cids;let p=`你是癌症個案管理師的會議記錄助理。請根據以下各個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出MDT會議討論摘要草稿，語言專業精簡。\n\n會議日期：${rocDate(m.date)}\n\n`;cids.forEach(id=>{const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];if(!cases.length)return;p+=`【${ca.name}】\n`;cases.forEach((c,i)=>{p+=`\n個案${i+1}：\n`;p+=`病歷號：${c.chartNo||'—'}　姓名：${c.name?maskName(c.name):'—'}，${c.gender||'M'}/${c.age||'—'}\n`;if(c.ecog||c.cfs){p+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'CFS '+c.cfs+'(衰弱量表)':''}\n`;}p+=`診斷：${c.diagnosis||'—'}\n主治醫師：${getDoctorStr(c)}\n`;if(c.cc)p+=`現病史: ${c.cc}\n`;
+function genAI(){readForm();const m=S.meeting,cids=S.cids;let p=`你是癌症個案管理師的會議記錄助理。請根據以下各個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出MDT會議討論摘要草稿，語言專業精簡。\n\n會議日期：${rocDate(m.date)}\n\n`;cids.forEach(id=>{const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];if(!cases.length)return;p+=`【${ca.name}】\n`;cases.forEach((c,i)=>{p+=`\n個案${i+1}：\n`;p+=`病歷號：${c.chartNo||'—'}　姓名：${c.name?maskName(c.name):'—'}，${c.gender||'M'}/${c.age||'—'}\n`;if(c.ecog||c.cfs){p+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'衰弱量表 '+c.cfs:''}\n`;}p+=`診斷：${c.diagnosis||'—'}\n主治醫師：${getDoctorStr(c)}\n`;if(c.cc)p+=`現病史: ${c.cc}\n`;
       const phAll=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph].filter(Boolean).join('  ');if(phAll)p+=`過去病史: ${phAll}\n`;if(c.exam)p+=`Exam:\n${c.exam}\n`;if(c.treatment)p+=`治療：\n${c.treatment}\n`;p+=`討論重點：${c.discussion||(c.topics||[]).join('、')||'—'}\n`});p+='\n'});p+='\n請對每個個案分別產出結構化討論摘要，供個管師填入MDT會議記錄。';return p}
 function doOutput(mode){
   if(!S.meeting||!S.meeting.version){
@@ -6990,7 +6990,7 @@ async function genAIInline(){
     prompt+=`\n【${ca.name}】\n`;
     cases.forEach((c,i)=>{
       prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name||''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
-      if(c.ecog||c.cfs)prompt+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'CFS '+c.cfs+'(衰弱量表)':''}\n`;
+      if(c.ecog||c.cfs)prompt+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'衰弱量表 '+c.cfs:''}\n`;
       if(c.cc)prompt+=`現病史: ${c.cc}\n`;
       if(c.ph)prompt+=`過去病史: ${c.ph}\n`;
       if((c.exams||[]).length)prompt+=`檢查:\n`+(c.exams||[]).map(e=>e.name+' '+e.date+' : '+e.content).join('\n')+'\n';

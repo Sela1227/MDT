@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.7.1
+**CFS 字樣全面中文化為「衰弱量表」**:把 V4.7.0 各處輸出裡的 `CFS` 改成 `衰弱量表`,跟 UI label 用詞一致。共 5 處變動:`caseDemo` 工具函數、閱覽模式 header、`genAI` 與 `genAIInline` 兩個 AI prompt(同時也精簡掉「CFS X(衰弱量表)」這種重複括號)。內部保留:程式碼變數名 `c.cfs`、HTML title tooltip 仍寫 "Clinical Frailty Scale (CFS)"(滑鼠 hover 給專業使用者對照)、`genImportPrompt` 仍同列中英文(讓 AI 從病歷抽取時兩個術語都認得)、Excel 匯入接受英文「CFS」當欄名別名(向後相容)。
+
 ### V4.7.0
 **新增 ECOG + 衰弱量表(CFS)欄位**:個案編輯區「基本資料」段(年齡/性別下方、主治醫師上方)新增「ECOG / 衰弱量表」一列。ECOG 0–4 五個選項各附中文說明(0=活動正常 / 1=輕症狀可工作 / 2=臥床<50%可自理 / 3=臥床≥50%部分自理 / 4=完全臥床無法自理);CFS 1–9(臨床衰弱量表標準);兩欄都選填、預設留空。資料同步打通到:閱覽模式 header(僅有值才顯示)、PPTX 個案頁標題列、DOCX 表頭、HTML 投影片個案頁、Excel 匯出新增 2 欄、Excel/JSON 匯入接受新欄位、AI 提示詞(`genAI`、`genAIInline`、`genImportPrompt`)欄位定義加 ecog/cfs 並附完整中文說明文字讓 AI 能正確判讀病歷。新工具函數 `caseDemo(c)` 統一格式化(性別/年齡 + ECOG + CFS),共 9 處呼叫。舊資料無 ecog/cfs 欄位完全相容。
 

@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.7.1 | CFS 字樣全面改成「衰弱量表」(5 處輸出);程式變數 cfs 跟 tooltip/匯入別名/AI 抽取術語保留 |
 | V4.7.0 | 個案新增 ECOG + 衰弱量表(CFS)兩欄;caseDemo 工具統一格式;PPTX/DOCX/HTML/Excel/JSON/AI prompt 全打通 |
 | V4.6.6 | 修影像檢查選 CT/MRI 後日期欄被誤刪的 bug:onExamTypeChange 加 type='date' 例外 |
 | V4.6.5 | 婦癌召集人「婦科::吳宏明醫師」修成「婦產科::」(主檔本來就只有婦產科);migrateCFGConv 加自動修補已部署的 localStorage |
@@ -373,4 +374,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V4.7.0 個案基本資料區新增 ECOG(0-4)+ 衰弱量表 CFS(1-9)兩欄,選項都附中文說明文字。新工具 `caseDemo(c)` 統一格式化「性別/年齡 ECOG X CFS Y」,共 9 處輸出(編輯/閱覽/PPTX/DOCX/HTML 投影片/Excel/JSON/兩個 AI prompt)全打通。AI 匯入提示詞 `genImportPrompt` 也加 ecog/cfs 欄位定義 + 完整中文說明,讓 AI 從病歷文字能正確抽取 PS。舊資料無欄位完全相容(caseDemo 看 falsy 不顯示)。下版第一優先還是「記住上次登入者」。
+V4.7.1 把 V4.7.0 留下的「CFS」字樣 5 處輸出全部中文化為「衰弱量表」,跟 UI label 用詞一致。AI prompt 也精簡掉「CFS X(衰弱量表)」的重複括號,變成「衰弱量表 X」。內部術語層保留(程式變數名、HTML tooltip、Excel 匯入別名、AI 匯入提示詞中英並列)— 中文化是給人看的層,機器溝通保留英文 unambiguous。下版第一優先還是「記住上次登入者」。
