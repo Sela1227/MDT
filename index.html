@@ -1223,7 +1223,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.6.6';
+const VERSION='V4.7.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1389,6 +1389,13 @@ async function loadLib(pkg,globalName){
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const escA=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function maskName(n){if(!n||n.length<=1)return n;if(n.length===2)return n[0]+'0'+n[1];return n[0]+'0'+n[n.length-1]}
+/* V4.7.0: 個案性別/年齡/ECOG/CFS 統一字串 — 用於 PPTX/DOCX/HTML/AI prompt */
+function caseDemo(c){
+  var s=(c.gender||'M')+'/'+(c.age||'—');
+  if(c.ecog)s+='  ECOG '+c.ecog;
+  if(c.cfs)s+='  CFS '+c.cfs;
+  return s;
+}
 function rocDate(ds){if(!ds)return'';const[y,m,d]=ds.split('-').map(Number);const dow=['日','一','二','三','四','五','六'][new Date(ds).getDay()];return`${y}年${m}月${d}日(星期${dow})`}
 function timePfx(t){if(!t)return'';const h=parseInt(t);return h<12?'上午':h===12?'中午':'下午'}
 function mtgTitle(cids){return cids.map(id=>CFG[id]?.name||id).join('、')+'多專科團隊會議'}
@@ -2917,7 +2924,7 @@ function caseViewHTML(cid,i,d){
   return`<div class="vc" id="${cardId}">
 <div class="vc-hdr" onclick="toggleVCCard('${cardId}')" style="cursor:pointer" title="點擊展開/收合">
 <span style="margin-right:8px;font-size:11px;opacity:.5" class="vc-collapse-icon">▶</span>
-${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gender||'M')==='M'?'M':'F'}/${d.age||'—'} &nbsp;VS ${escA(drs)}</span>
+${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gender||'M')==='M'?'M':'F'}/${d.age||'—'}${d.ecog?' &nbsp;ECOG '+escA(d.ecog):''}${d.cfs?' &nbsp;CFS '+escA(d.cfs):''} &nbsp;VS ${escA(drs)}</span>
 <button onclick="event.stopPropagation();editSingleCase('${cid}',${i})" style="margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 10px;border-radius:2px;font-size:11px;cursor:pointer">編輯</button>
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
@@ -3124,6 +3131,31 @@ function caseHTML(cid,i,d){
     <div style="display:flex;gap:6px;align-items:center">
       <input value="${escA(d.age||'')}" oninput="upd('${cid}','cases',${i},'age',this.value)" placeholder="年齡" style="font-size:12px;padding:5px 8px;width:72px">
       <select onchange="upd('${cid}','cases',${i},'gender',this.value)" style="font-size:12px;padding:5px 8px"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
+    </div>
+  </div>
+  <!-- V4.7.0: ECOG + 衰弱量表(CFS) — 預設留空,選填 -->
+  <div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>ECOG / 衰弱量表</label>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <select onchange="upd('${cid}','cases',${i},'ecog',this.value)" style="font-size:12px;padding:5px 8px;min-width:175px" title="ECOG Performance Status">
+        <option value="" ${!d.ecog?'selected':''}>— ECOG —</option>
+        <option value="0" ${d.ecog==='0'?'selected':''}>0:活動正常</option>
+        <option value="1" ${d.ecog==='1'?'selected':''}>1:輕症狀,可工作</option>
+        <option value="2" ${d.ecog==='2'?'selected':''}>2:臥床&lt;50%,可自理</option>
+        <option value="3" ${d.ecog==='3'?'selected':''}>3:臥床≥50%,部分自理</option>
+        <option value="4" ${d.ecog==='4'?'selected':''}>4:完全臥床,無法自理</option>
+      </select>
+      <select onchange="upd('${cid}','cases',${i},'cfs',this.value)" style="font-size:12px;padding:5px 8px;min-width:200px" title="Clinical Frailty Scale (CFS)">
+        <option value="" ${!d.cfs?'selected':''}>— 衰弱量表 —</option>
+        <option value="1" ${d.cfs==='1'?'selected':''}>1:非常健朗</option>
+        <option value="2" ${d.cfs==='2'?'selected':''}>2:健康</option>
+        <option value="3" ${d.cfs==='3'?'selected':''}>3:狀況良好</option>
+        <option value="4" ${d.cfs==='4'?'selected':''}>4:輕度脆弱</option>
+        <option value="5" ${d.cfs==='5'?'selected':''}>5:輕度衰弱</option>
+        <option value="6" ${d.cfs==='6'?'selected':''}>6:中度衰弱</option>
+        <option value="7" ${d.cfs==='7'?'selected':''}>7:重度衰弱</option>
+        <option value="8" ${d.cfs==='8'?'selected':''}>8:極重度衰弱</option>
+        <option value="9" ${d.cfs==='9'?'selected':''}>9:臨終</option>
+      </select>
     </div>
   </div>
   <div class="fg full"><label>主治醫師</label>
@@ -4032,7 +4064,7 @@ function renderThemeStrip(){
   el.appendChild(cur);
 }
 
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,ecog:'',cfs:'',doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;
@@ -4999,7 +5031,7 @@ async function genPPTX(){
       addBg(s,'FFFFFF');
       // Header bar: single line, no diagnosis
       s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.52,fill:{color:C.dk},line:{color:C.dk,pt:0}});
-      txt(s,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+(c.gender||'M')+'/'+(c.age||'—')+'  VS '+drs,
+      txt(s,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+caseDemo(c)+'  VS '+drs,
         .18,.11,8.4,.3,{fontSize:14,bold:true,color:C.white,valign:'middle'});
 
       let y=.62;
@@ -5009,7 +5041,7 @@ async function genPPTX(){
         const ns=pptx.addSlide();
         addBg(ns,'FFFFFF');
         ns.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.42,fill:{color:C.dk},line:{color:C.dk,pt:0}});
-        txt(ns,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+(c.gender||'M')+'/'+(c.age||'—')+'  VS '+drs,
+        txt(ns,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+caseDemo(c)+'  VS '+drs,
           .18,.09,8.4,.26,{fontSize:12,bold:true,color:C.white,valign:'middle'});
         return ns;
       };
@@ -5161,7 +5193,7 @@ async function genDOCX(){
               mkRun(no+'.  ',{bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun((c.chartNo||'')+'\u3000'+(c.name?maskName(c.name):''),
                 {bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
-              mkRun('\u3000'+(c.gender||'M')+'/'+(c.age||'\u2014'),
+              mkRun('\u3000'+caseDemo(c),
                 {size:sz(11),color:'A8B5BE',font:'\u65b0\u7d30\u660e\u9ad4'}),
               mkRun('\u3000VS '+drs,
                 {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
@@ -5474,6 +5506,7 @@ function doImportCase(){
     const blank = {
       id:uid(), chartNo:d.chartNo||'', name:d.name||'',
       age:String(d.age||''), gender:d.gender||'M',
+      ecog:String(d.ecog||''), cfs:String(d.cfs||''),
       doctors: Array.isArray(d.doctors)?d.doctors:['','',''],
       doctor: d.doctor||'',
       diagnosis: d.diagnosis||'',
@@ -5703,7 +5736,7 @@ async function genHTMLSlides(){
         +'<div class="cht">'
         +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.dataset.oc=el.style.opacity;el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=el.dataset.oc||\'\'}, 600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
         +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
-        +' <span class="cd">'+escA((c.gender||'M')+'/'+(c.age||'—'))+'</span>'
+        +' <span class="cd">'+escA(caseDemo(c))+'</span>'
         +' <span class="cdr">VS '+escA(drs)+'</span>'
         +'<span class="cat">'+escA(getSubGroup(c)||ca.name)+'</span>'
         +'</div>'
@@ -6256,6 +6289,8 @@ async function importXLSX(inputEl){
       name:String(r['姓名']||'').trim(),
       age:String(r['年齡']||'').trim(),
       gender:String(r['性別']||'M').trim(),
+      ecog:String(r['ECOG']||'').trim(),
+      cfs:String(r['衰弱量表']||r['CFS']||'').trim(),
       diagnosis:String(r['診斷']||'').trim(),
       cc:String(r['現病史']||'').trim(),
       ph:String(r['過去病史']||'').trim(),
@@ -6373,7 +6408,7 @@ async function genXLSX(){
     const wb=XLSX.utils.book_new();
 
     // ── Sheet 1: 個案討論 ──
-    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','家族史','討論要點','討論議題','摘要','決策']];
+    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','ECOG','衰弱量表','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','家族史','討論要點','討論議題','摘要','決策']];
     cids.forEach(cid=>{
       const ca=CFG[cid];
       const sec=m.sections[cid]||{};
@@ -6384,6 +6419,8 @@ async function genXLSX(){
           c.name||'',
           c.gender||'M',
           c.age||'',
+          c.ecog||'',
+          c.cfs||'',
           getDoctorStr(c),
           c.diagnosis||'',
           c.cc||'',
@@ -6519,6 +6556,8 @@ chartNo：病歷號（字串）
 name：姓名（原文，系統顯示時自動遮蔽中間字）
 age：年齡（字串）
 gender："M" 或 "F"
+ecog：ECOG Performance Status，"0"~"4" 字串（0=活動正常 / 1=輕症狀可工作 / 2=臥床<50% 可自理 / 3=臥床≥50% 部分自理 / 4=完全臥床無法自理）。資料未提及則填空字串 ""
+cfs：Clinical Frailty Scale 衰弱量表，"1"~"9" 字串（1=非常健朗 / 2=健康 / 3=狀況良好 / 4=輕度脆弱 / 5=輕度衰弱 / 6=中度衰弱 / 7=重度衰弱 / 8=極重度衰弱 / 9=臨終）。資料未提及則填空字串 ""
 diagnosis：完整診斷（含分期）
 cc：現病史（Present Illness）
 ph：過去病史（Past History），若無請填 "Nil"
@@ -6591,6 +6630,8 @@ function exportCaseJSON(){
         name: c.name||'',
         age: String(c.age||''),
         gender: c.gender||'M',
+        ecog: String(c.ecog||''),
+        cfs: String(c.cfs||''),
         diagnosis: c.diagnosis||'',
         cc: c.cc||'',
         ph: c.ph||'',
@@ -6648,6 +6689,8 @@ function importCaseJSON(inputEl){
         name:String(d.name||'').trim(),
         age:String(d.age||''),
         gender:d.gender||'M',
+        ecog:String(d.ecog||''),
+        cfs:String(d.cfs||''),
         doctors:Array.isArray(d.doctors)?d.doctors:['','',''],
         doctor:d.doctor||'',
         diagnosis:d.diagnosis||'',
@@ -6853,7 +6896,7 @@ function genLine(){
   return t;
 }
 
-function genAI(){readForm();const m=S.meeting,cids=S.cids;let p=`你是癌症個案管理師的會議記錄助理。請根據以下各個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出MDT會議討論摘要草稿，語言專業精簡。\n\n會議日期：${rocDate(m.date)}\n\n`;cids.forEach(id=>{const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];if(!cases.length)return;p+=`【${ca.name}】\n`;cases.forEach((c,i)=>{p+=`\n個案${i+1}：\n`;p+=`病歷號：${c.chartNo||'—'}　姓名：${c.name?maskName(c.name):'—'}，${c.gender||'M'}/${c.age||'—'}\n`;p+=`診斷：${c.diagnosis||'—'}\n主治醫師：${getDoctorStr(c)}\n`;if(c.cc)p+=`現病史: ${c.cc}\n`;
+function genAI(){readForm();const m=S.meeting,cids=S.cids;let p=`你是癌症個案管理師的會議記錄助理。請根據以下各個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出MDT會議討論摘要草稿，語言專業精簡。\n\n會議日期：${rocDate(m.date)}\n\n`;cids.forEach(id=>{const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];if(!cases.length)return;p+=`【${ca.name}】\n`;cases.forEach((c,i)=>{p+=`\n個案${i+1}：\n`;p+=`病歷號：${c.chartNo||'—'}　姓名：${c.name?maskName(c.name):'—'}，${c.gender||'M'}/${c.age||'—'}\n`;if(c.ecog||c.cfs){p+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'CFS '+c.cfs+'(衰弱量表)':''}\n`;}p+=`診斷：${c.diagnosis||'—'}\n主治醫師：${getDoctorStr(c)}\n`;if(c.cc)p+=`現病史: ${c.cc}\n`;
       const phAll=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph].filter(Boolean).join('  ');if(phAll)p+=`過去病史: ${phAll}\n`;if(c.exam)p+=`Exam:\n${c.exam}\n`;if(c.treatment)p+=`治療：\n${c.treatment}\n`;p+=`討論重點：${c.discussion||(c.topics||[]).join('、')||'—'}\n`});p+='\n'});p+='\n請對每個個案分別產出結構化討論摘要，供個管師填入MDT會議記錄。';return p}
 function doOutput(mode){
   if(!S.meeting||!S.meeting.version){
@@ -6947,6 +6990,7 @@ async function genAIInline(){
     prompt+=`\n【${ca.name}】\n`;
     cases.forEach((c,i)=>{
       prompt+=`\n個案${i+1}：${c.chartNo||''}　${c.name||''}　${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;
+      if(c.ecog||c.cfs)prompt+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'CFS '+c.cfs+'(衰弱量表)':''}\n`;
       if(c.cc)prompt+=`現病史: ${c.cc}\n`;
       if(c.ph)prompt+=`過去病史: ${c.ph}\n`;
       if((c.exams||[]).length)prompt+=`檢查:\n`+(c.exams||[]).map(e=>e.name+' '+e.date+' : '+e.content).join('\n')+'\n';

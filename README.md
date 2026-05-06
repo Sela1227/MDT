@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.7.0
+**新增 ECOG + 衰弱量表(CFS)欄位**:個案編輯區「基本資料」段(年齡/性別下方、主治醫師上方)新增「ECOG / 衰弱量表」一列。ECOG 0–4 五個選項各附中文說明(0=活動正常 / 1=輕症狀可工作 / 2=臥床<50%可自理 / 3=臥床≥50%部分自理 / 4=完全臥床無法自理);CFS 1–9(臨床衰弱量表標準);兩欄都選填、預設留空。資料同步打通到:閱覽模式 header(僅有值才顯示)、PPTX 個案頁標題列、DOCX 表頭、HTML 投影片個案頁、Excel 匯出新增 2 欄、Excel/JSON 匯入接受新欄位、AI 提示詞(`genAI`、`genAIInline`、`genImportPrompt`)欄位定義加 ecog/cfs 並附完整中文說明文字讓 AI 能正確判讀病歷。新工具函數 `caseDemo(c)` 統一格式化(性別/年齡 + ECOG + CFS),共 9 處呼叫。舊資料無 ecog/cfs 欄位完全相容。
+
 ### V4.6.6
 **影像檢查日期欄被誤刪 bug**:個案編輯區「影像檢查」選了 CT/MRI 等檢查類型後,日期選擇欄整個消失。原因:`onExamTypeChange` 用 `sel.nextElementSibling.tagName === 'INPUT'` 條件刪除「自訂類型輸入欄」,沒區分 type — 而日期欄正好是緊跟 select 的 `<input type="date">`,被一併誤刪。修法:加 `inp.type !== 'date'` 條件,只刪自訂類型(type 非 date)的 INPUT。順便修「其他」分支同類 bug:當 sibling 是日期欄時也會誤判「已有 input」而不插入自訂類型欄。
 
