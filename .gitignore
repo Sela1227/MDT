@@ -1,0 +1,40 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs / Tempfile
+*.log
+logs/
+*.tmp
+*.bak
+
+# Environment / 機密
+.env
+.env.local
+*.local
+*secret*
+
+# Node (萬一未來引入工具)
+node_modules/
+
+# Python (萬一未來引入腳本)
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# 暫存區 / 開發過程產出
+exports/
+scratch/
+*.draft.*
+
+# zip(避免把交付包又 commit 進來)
+*.zip

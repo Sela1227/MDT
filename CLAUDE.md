@@ -109,7 +109,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
   sections: {
     [cid]: {
       followups: [{..., status:'closed'|'ongoing', _autoImported}],
-      cases: [{..., summary, decision, followNext}],  // followNext=false → 不帶入下次
+      cases: [{..., summary, decision, followNext, ecog, cfs}],  // followNext=false → 不帶入下次;ecog/cfs V4.7.0 加
       special: [...]
     }
   }
@@ -144,6 +144,11 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.8.1 | 加 `SELA-handoff.md`(Kit V1.6.0 回流通道機制);無程式變動 |
+| V4.8.0 | 對齊 SELA Starter Kit V1.6.0:加 favicon 套組、theme-color、右下角 SELA logo、.gitignore;zip 命名改空格(`MDT V*.zip`);無程式功能變動 |
+| V4.7.1 | CFS 字樣全面改成「衰弱量表」(5 處輸出);程式變數 cfs 跟 tooltip/匯入別名/AI 抽取術語保留 |
+| V4.7.0 | 個案新增 ECOG + 衰弱量表(CFS)兩欄;caseDemo 工具統一格式;PPTX/DOCX/HTML/Excel/JSON/AI prompt 全打通 |
+| V4.6.6 | 修影像檢查選 CT/MRI 後日期欄被誤刪的 bug:onExamTypeChange 加 type='date' 例外 |
 | V4.6.5 | 婦癌召集人「婦科::吳宏明醫師」修成「婦產科::」(主檔本來就只有婦產科);migrateCFGConv 加自動修補已部署的 localStorage |
 | V4.6.4 | 使用說明書檔名 `使用說明書.md` → `USER_GUIDE.md`(避免中文檔名亂碼) |
 | V4.6.3 | 章法升級:每版必附「USER_GUIDE.md」(個管師導向);打包檢查 4 份檔不可缺 |
@@ -269,6 +274,14 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:打包前掃 `DEFAULT_C` 內所有 `conv:'X::Y'`,檢查「X 是否存在於 DEFAULT_DRS 任一筆的 dept」;不存在就警告
 - 已知限制:歷史會議 `mdt_m_*` 個案的 `doctors` 欄裡如有「婦科::」殘留**不修**(會議是 immutable 歷史資料)
 
+**#18 nextElementSibling + tagName 條件不夠精準(V4.6.6)**
+- 症狀:個案編輯「影像檢查」選 CT/MRI 後,旁邊的日期選擇欄整個消失
+- 原因:`onExamTypeChange` 想刪「自訂類型輸入欄」,用 `sel.nextElementSibling.tagName === 'INPUT'` 判斷。但同樣 tagName='INPUT' 的還有日期欄 `<input type="date">`,被一併誤刪
+- 做法:加 `inp.type !== 'date'` 例外,只刪 type 非 date 的 INPUT
+- 教訓:用 sibling/parent + tagName 定位 DOM 元素時,**只看 tagName 不夠**,有時要加 type、class、placeholder 等屬性確認。混用「動態插入 input」+「靜態 input」的場景特別容易踩
+- 預防:有「動態插入/移除 sibling」邏輯時,目標 input 加 dataset.role='custom-type' 之類標記,刪除時用 `[data-role="custom-type"]` 選擇器,比 tagName 嚴謹
+- 順便發現的 bug:`__other__` 分支也是 `tagName==='INPUT'` 判斷「已有 input」,使用者從 CT 切到「其他」時看到日期欄(也是 INPUT)就不插自訂類型欄,使用者沒地方輸入。一併修
+
 ---
 
 ## 九、打包驗證(每次必跑)
@@ -349,6 +362,31 @@ if not missing:
 
 ---
 
+## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起)
+
+本專案已對齊 **SELA Starter Kit V1.6.0** 的關鍵規範。每次升版都應檢查是否仍符合:
+
+| 規範 | 對齊方式 | 注意 |
+|------|---------|------|
+| zip 檔名格式 | `MDT V<x.y.z>.zip`(空格,非底線) | 打包時直接用 `zip MDT\ V4.8.0.zip ...` |
+| 必含 `.gitignore` | 已加,擋 `.DS_Store` / 機密 / 暫存區 | 新加目錄時記得評估是否需要忽略 |
+| 必含 SELA 品牌資產 | `favicon/` 整套 + `<head>` 引用 + `theme-color #F36825` | 路徑用相對(GitHub Pages 子路徑相容) |
+| 系統 UI logo | 右下角 fixed `<a id="sela-credit">` | 樣式 `opacity:.42`,hover 放大;不擋 UI |
+| **回流通道**(V4.8.1 起) | `SELA-handoff.md` 在專案根目錄,跟 zip 一起交付 | 重大版本完成後更新內容,讓 SELA 升 Kit 用 |
+| 三位版本號逢十進位 | 同 #14 規則 | 已對齊 |
+| CLAUDE.md 必含五章 | 踩坑 / 業務對映 / 版本歷程 / 下版優先 / 一句話總結 | 已對齊 |
+| USER_GUIDE.md 必含 | 我們有,Kit 沒明文要求(MDT 超越) | — |
+
+**Kit 內 32 條跨專案坑與 MDT 17 條坑互不衝突,可以互相印證**:
+- Kit #20(中文檔名亂碼) ↔ MDT 坑 #16
+- Kit #23(JS 大括號) ↔ MDT 坑 #5、#13
+- Kit #1(三方對齊) ↔ MDT 坑 #17
+- Kit #7(打包前驗證) ↔ MDT 打包驗證腳本(節九)
+
+**未來新對齊項目放這裡**(例如:Kit 升 V1.7.0 時新增的規範要對應檢查)
+
+---
+
 ## 十、下版優先清單
 
 **按優先序：**
@@ -363,4 +401,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V4.6.5 修婦癌召集人「婦科::吳宏明醫師」→「婦產科::」(主檔本來就沒有「婦科」這個科別,只有「婦產科」);migrateCFGConv 加自動修補,已部署的 localStorage 下次啟動會自動把任何「婦科::」殘留改成「婦產科::」(冪等、不踩使用者編輯)。順便發現的頭頸癌 conv 也有類似 bug(寫「頭頸外科::張建明」但張建明在「口腔外科」)— 留作下版處理。坑 #17 進入永久教訓:DEFAULT_C 跟 DEFAULT_DRS 之間的科別名引用沒約束會出事。下版第一優先還是「記住上次登入者」。
+V4.8.1 加 `SELA-handoff.md`(對齊 SELA Starter Kit V1.6.0 的「回流通道機制」規範) — 依 `templates/SELA-handoff-template.md` 七節結構產出,給 Kit 升級用。本案 handoff 整理 6 條跨專案通用觀察(webmanifest 子路徑陷阱、單檔 HTML 場景、規範對齊型 b+1、USER_GUIDE 必含、修舊專案 SOP 缺口、章法手冊已成熟)+ 6 條不回流的業務邏輯 + 對 Kit V1.7.0 的 6 項必做行動清單。CLAUDE.md 九之三節加「回流通道」一列。本版無程式變動,純規範完整性補強。下版第一優先還是「記住上次登入者」。

@@ -111,6 +111,28 @@
 
 ## 版本歷程
 
+### V4.8.1
+**加 `SELA-handoff.md`**(對齊 SELA Starter Kit V1.6.0「回流通道機制」規範):依 `templates/SELA-handoff-template.md` 七節結構產出,給 Kit 升級用 — SELA 升 Kit 時看 handoff 直接判斷哪些經驗值該回流,不用挖整份 CLAUDE.md。本案 handoff 內容包括:6 條跨專案通用觀察(2 條坑、2 條設計模式、2 條結構建議)+ 6 條留在 MDT 不回流的業務邏輯 + 對 Kit V1.7.0 的 6 項必做行動清單。本版無程式變動。
+
+### V4.8.0
+**對齊 SELA Starter Kit V1.6.0 規範**:
+- 加入 SELA favicon 套組(`favicon/` 目錄,7 個檔案;含 ico、PNG 多尺寸、apple-touch-icon、site.webmanifest)
+- index.html `<head>` 加 favicon links 與 `theme-color="#F36825"`(SELA 橘)
+- 右下角加 SELA 浮動 logo(fixed 32x32px,不擋 UI;hover 放大 + 不透明度提升)— 連結到 `github.com/Sela1227`
+- 加 `.gitignore`(用 Kit 模板,擋 .DS_Store / Thumbs.db / 機密 / 暫存區)
+- zip 檔名格式從 `MDT_V*.zip`(底線)改為 `MDT V*.zip`(空格,符合 Git Pusher 慣例)
+- site.webmanifest 客製化:name="MDT 會議管理系統"、相對路徑(GitHub Pages 子路徑相容)
+- 程式無功能變動;純品牌資產 + 部署規範對齊
+
+### V4.7.1
+**CFS 字樣全面中文化為「衰弱量表」**:把 V4.7.0 各處輸出裡的 `CFS` 改成 `衰弱量表`,跟 UI label 用詞一致。共 5 處變動:`caseDemo` 工具函數、閱覽模式 header、`genAI` 與 `genAIInline` 兩個 AI prompt(同時也精簡掉「CFS X(衰弱量表)」這種重複括號)。內部保留:程式碼變數名 `c.cfs`、HTML title tooltip 仍寫 "Clinical Frailty Scale (CFS)"(滑鼠 hover 給專業使用者對照)、`genImportPrompt` 仍同列中英文(讓 AI 從病歷抽取時兩個術語都認得)、Excel 匯入接受英文「CFS」當欄名別名(向後相容)。
+
+### V4.7.0
+**新增 ECOG + 衰弱量表(CFS)欄位**:個案編輯區「基本資料」段(年齡/性別下方、主治醫師上方)新增「ECOG / 衰弱量表」一列。ECOG 0–4 五個選項各附中文說明(0=活動正常 / 1=輕症狀可工作 / 2=臥床<50%可自理 / 3=臥床≥50%部分自理 / 4=完全臥床無法自理);CFS 1–9(臨床衰弱量表標準);兩欄都選填、預設留空。資料同步打通到:閱覽模式 header(僅有值才顯示)、PPTX 個案頁標題列、DOCX 表頭、HTML 投影片個案頁、Excel 匯出新增 2 欄、Excel/JSON 匯入接受新欄位、AI 提示詞(`genAI`、`genAIInline`、`genImportPrompt`)欄位定義加 ecog/cfs 並附完整中文說明文字讓 AI 能正確判讀病歷。新工具函數 `caseDemo(c)` 統一格式化(性別/年齡 + ECOG + CFS),共 9 處呼叫。舊資料無 ecog/cfs 欄位完全相容。
+
+### V4.6.6
+**影像檢查日期欄被誤刪 bug**:個案編輯區「影像檢查」選了 CT/MRI 等檢查類型後,日期選擇欄整個消失。原因:`onExamTypeChange` 用 `sel.nextElementSibling.tagName === 'INPUT'` 條件刪除「自訂類型輸入欄」,沒區分 type — 而日期欄正好是緊跟 select 的 `<input type="date">`,被一併誤刪。修法:加 `inp.type !== 'date'` 條件,只刪自訂類型(type 非 date)的 INPUT。順便修「其他」分支同類 bug:當 sibling 是日期欄時也會誤判「已有 input」而不插入自訂類型欄。
+
 ### V4.6.5
 **婦科 → 婦產科**:修兩處資料一致性 bug — `DEFAULT_C.gynecology.conv` 從 `婦科::吳宏明醫師` 改成 `婦產科::吳宏明醫師`(主檔的「婦科」科別不存在,只有「婦產科」);`migrateCFGConv` 的 nameMap 同步修正。順便加自動修補 — 已部署 V4.6.4 之前版本的個管師 localStorage 裡 `CFG.gynecology.conv` 仍有「婦科::」殘留,下次啟動時 `migrateCFGConv` 會自動把任何 `conv` 或 `memberKeys` 開頭的「婦科::」替換為「婦產科::」(冪等,不踩使用者編輯)。歷史會議資料的個案醫師欄不修動(immutable 原則)。
 

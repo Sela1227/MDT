@@ -1,0 +1,218 @@
+# SELA-handoff.md
+
+> **這份文件是給 SELA Starter Kit 的 Claude 看的,不是給 MDT 的 Claude 看的。**
+>
+> 目的:讓 SELA 升 Kit 時不用挖 MDT 整份 CLAUDE.md,看這份就能高效升 Kit。
+
+---
+
+## 〇、專案速覽(給 Kit Claude 5 秒了解情境)
+
+- **專案名稱:** MDT 會議管理系統
+- **專案類型:** 純靜態網頁(單一 HTML 檔,localStorage 儲存,GitHub Pages 部署)
+- **技術棧:** HTML / 原生 JS(無 framework)/ localStorage / File System Access API(NAS 同步)
+- **規模:** 1 個 index.html(~518KB / ~8150 行)+ 文件 4 份 + favicon 套組 7 檔
+- **使用 Kit 版本:** V1.6.0
+- **完成版本:** V4.8.1(對齊 Kit 後的版本)
+- **完成日期:** 2026-05-07
+
+**特殊背景**:這不是用 Kit 從零做的新專案,是**已存在 4.7 個版本的成熟專案接 Kit 規範**。所以反饋不是「冷啟動體驗」,是「**現有成熟專案接 Kit 的衝突點**」 — 這個視角 Kit 之前沒收過。
+
+---
+
+## 一、用 Kit 的整體感受(給 Kit Claude 校準)
+
+### 預期外的順利
+
+- **CLAUDE.md 章法手冊與 MDT 既有章法幾乎完全相同**,證明章法已穩定成熟。MDT 從 V1.x 累積到 V4.7 的踩坑寫作模式(編號累積、三段式症狀/原因/做法)跟 Kit `conventions/CLAUDE-MD-章法.md` 內容幾乎逐條對應 — 表示這套章法在不同 stack(Web/HTML vs Flet/Python)都收斂到同一個寫法,值得相信。
+
+- **Kit 的「跨專案坑」與 MDT 17 條坑互相印證,沒衝突**:
+  - Kit #20(中文檔名亂碼) ↔ MDT 坑 #16
+  - Kit #23(JS 大括號)↔ MDT 坑 #5、#13(JS 漏到 `</html>` 後、重複函數覆蓋)
+  - Kit #1(三方對齊)↔ MDT 坑 #17(DEFAULT_C ↔ DEFAULT_DRS 不一致)
+  - Kit #7(打包前驗證)↔ MDT 打包驗證腳本
+
+- **logo/CLAUDE.md 的「直接執行不要反問」原則很受用**:對齊時我沒問尺寸/格式,直接照表查到「網頁專案 → svg + favicon 套組」就動手,省下對話往返。
+
+### 預期外的卡住
+
+#### 卡 1:Kit 的 site.webmanifest 預設絕對路徑,GitHub Pages 子路徑會壞
+
+Kit 預設:
+```json
+"src": "/android-chrome-192x192.png"
+```
+
+MDT 部署到 `https://sela1227.github.io/mdt-system/` 子路徑,絕對路徑 `/` 會解析到 `https://sela1227.github.io/android-chrome-192x192.png`(根),圖檔找不到。
+
+我改成相對路徑 `favicon/android-chrome-192x192.png` 才正確。
+
+#### 卡 2:Kit logo 整合對照表的 14 種專案類型沒對應到「單一 HTML 檔系統」
+
+對照表第 1 行寫「Web / Next.js / React / Vue → 用 svg + favicon 整套,放 `public/` 或 `static/`」。
+
+但 MDT 是**純單一 HTML**(localStorage 儲存,沒有 build step、沒有 `public/`、沒有 framework),最接近的選項是「靜態網頁」 — 但 Kit 寫「放網站根目錄」也不直接適用(MDT 根目錄就一個 index.html,沒有「目錄」概念)。
+
+我最後做法:在同一層加 `favicon/` 子目錄 — 但這要自己判斷,Kit 沒明寫。
+
+#### 卡 3:Kit 沒明文要求「使用說明書(USER_GUIDE.md)」
+
+MDT 從 V4.6.3 起加了 `USER_GUIDE.md` 給三位個管師看,事後證明對「**非開發者使用者**」的成熟系統很有價值(尤其是版本變動時告訴使用者「我不用做什麼」)。Kit V1.6.0 沒列為必含,但 MDT 自然演化出來 — 表示這個習慣應該回流。
+
+但對純開發者工具(CLI、Flet 桌面)可能多餘。建議 Kit 加判斷準則。
+
+### 對 Kit 的整體評價
+
+- ✓ **章法部分非常成熟**,直接拿來用沒摩擦
+- ✓ **logo 整合對照表 + 程式碼片段**節省了大量決策時間
+- ✓ **跨專案坑庫 32 條**對「現有 Web 專案」也適用,沒有 stack-specific 過度
+- ✗ **webmanifest 路徑陷阱**:GitHub Pages 子路徑情境沒覆蓋
+- ✗ **單一 HTML 檔系統**:logo 整合對照表沒此類型
+- ✗ **使用說明書習慣**:有非開發者受眾的專案需要,Kit 沒提
+
+---
+
+## 二、發現的「跨專案通用坑」(建議進 Kit)
+
+### 強烈建議加坑
+
+#### 坑 #A. site.webmanifest 在 GitHub Pages 子路徑用絕對路徑會壞
+
+- **症狀**:部署到 `username.github.io/project-name/` 子路徑後,manifest 裡的 icon 路徑 `/foo.png` 解析到 `username.github.io/foo.png`(根),Chrome devtools 報 404,PWA「加到主畫面」無圖示
+- **原因**:zip 內的預設 webmanifest 用絕對路徑(GitHub user/organization site `username.github.io/` 是 OK 的,但 project site `/project/` 子路徑會壞)
+- **做法**:webmanifest 內所有 icon `src` 改相對路徑(`favicon/foo.png` 而非 `/foo.png`),適用所有 GitHub Pages 部署情境
+- **影響範圍**:**所有用 GitHub Pages 部署的專案**(Sela 多個 repo 都這樣部署),特別是 PWA / 任何用 webmanifest 的網頁
+- **證據**:MDT V4.8.0 對齊時實際踩到,改相對路徑後正常
+
+#### 坑 #B. 修改既有專案 vs 開新專案 — Kit 套路不完全適用
+
+- **症狀**:對「已有 4.7 個版本的成熟專案」套 Kit 時,某些 Kit 步驟不適用(如「從零建立檔案」、「用 templates/CLAUDE-template 起手」)
+- **原因**:Kit 預設情境是「開新專案」,沒明文區分「套到既有專案」的差別
+- **做法**:Kit 加一節「套到既有專案的對齊清單」 — 跳過從零建立、保留既有 CLAUDE.md 章節結構,只對齊以下 6 項:
+  1. zip 命名格式(空格)
+  2. 必含 `.gitignore`
+  3. 必含 SELA logo + favicon
+  4. 必含 `CLAUDE.md`(已有則不動)
+  5. 必含 `README.md`(已有則不動)
+  6. 三位版本號規則(已不符則保留歷史 + 從下版開始嚴格)
+- **影響範圍**:Sela 任何「Kit 出來前就做的舊專案」都會踩
+- **證據**:MDT V4.8.0 升級對齊就是這個情境,原本沒明確流程
+
+### 可加但等更多證據確認
+
+- **「規範對齊」型 b+1 的版本號歸屬**:V4.8.0 沒改任何功能,只加品牌資產 + 部署規範,但檔案數量增加(8 個新檔)、新章節進 CLAUDE.md → 是 b+1 還是 c+1?Kit 沒明寫。建議多 1-2 個專案踩到再決定是否寫進 SPEC.md 第 11 章。
+
+---
+
+## 三、發現的「跨專案設計模式」(建議進 sela-philosophy / 規範)
+
+### 模式 #1. 「使用者是誰」決定要不要 USER_GUIDE.md
+
+- **本案發生情境**:MDT 給三位**非開發者**個管師用,V4.6.3 起加 `USER_GUIDE.md` 後,每次升版她們看「九、本版新功能」就知道我不用做什麼、什麼自動修。沒這份檔的話三人會反覆問同樣問題。
+- **可推廣的原則**:**有非開發者受眾的專案應有 USER_GUIDE.md**,純開發者工具可省略。判斷準則:
+  - **要 USER_GUIDE.md** — 醫療系統、企業內部工具、有「使用者 ≠ 開發者」的專案、要交接給接班人的專案
+  - **不需要** — CLI 工具(README 已含 usage)、開發者工具(target 是工程師)、雛型階段
+- **代價/取捨**:USER_GUIDE 要每版同步維護(Kit 應加同步規則,類似 Kit 已有的「版號標記三處」鐵律)。維護成本中等,對非開發者價值極高。
+- **建議寫入**:`templates/CLAUDE-template.md`(加可選章節)+ `start-project-decisions.md`(加判斷準則)
+
+### 模式 #2. 「規範對齊」是專案的合法 b+1 變更
+
+- **本案發生情境**:V4.8.0 沒改任何使用者體驗的程式邏輯,但 favicon、theme-color、右下角 logo、.gitignore、CLAUDE.md 章節結構全動了 — 一般語境會說「這版『沒做什麼』」,但實際上 deliverable 結構大改。
+- **可推廣的原則**:**「外部規範對齊」是 b+1 的合法理由**(等同 Kit 升級到新版時,所有專案逐一對齊)。判斷準則:
+  - 改了**檔案結構** / **必含檔清單** / **打包格式** → b+1
+  - 改了**內部實作但 deliverable 不變** → c+1
+- **代價/取捨**:無代價,只是名詞釐清。
+- **建議寫入**:`deployment/SPEC.md` 第 11 章版本號規則加註
+
+---
+
+## 四、Kit 該瘦身或調整的地方
+
+### Kit 規範修改建議
+
+#### 1. `logo/favicon/site.webmanifest` 改用相對路徑
+
+- **現狀**:`"src": "/android-chrome-192x192.png"`(絕對路徑)
+- **建議改成**:`"src": "favicon/android-chrome-192x192.png"`(相對路徑) + 在 `logo/CLAUDE.md` 加註解「絕對路徑 `/` 在 GitHub Pages 子路徑會壞,預設用相對路徑」
+- **理由**:Sela 多個 repo 是 GitHub Pages 部署,絕對路徑會踩坑;相對路徑兩種情境都通
+
+#### 2. `logo/CLAUDE.md` 第 1 章對照表加「單一 HTML 檔」類型
+
+- **現狀**:14 個專案類型沒涵蓋「單一 HTML 檔(localStorage)」
+- **建議改成**:在「靜態網頁」之下加一行
+  ```
+  | **單一 HTML 檔(localStorage)** | `svg/sela.svg` + 整個 `favicon/` | 同層 `favicon/` 子目錄 + `<head>` 引用 |
+  ```
+- **理由**:這個型態在醫院內部工具特別常見(沒 build step、沒 framework、檔案要好搬)
+
+#### 3. `templates/CLAUDE-template.md` 加可選章節「USER_GUIDE 同步規則」
+
+- **現狀**:Kit V1.6.0 沒提 USER_GUIDE
+- **建議改成**:加章節說明何時需要 USER_GUIDE.md(判斷準則見模式 #1)+ 同步規則(類似既有「使用說明書同步規則」鐵律,版號標記三處)
+- **理由**:這個習慣對非開發者受眾的專案價值極大(MDT 用了 5 個版本實證),回流 Kit 後其他類似專案直接受益
+
+### Kit 結構性建議
+
+#### A. 加「套到既有專案的對齊清單」章節
+
+放 `deployment/SPEC.md` 或 `templates/claude-init.md`。理由見坑 #B。
+
+---
+
+## 五、留在 MDT 專案、**不要回流 Kit** 的東西
+
+> 這節極重要。沒有這節 Kit Claude 容易把醫療業務邏輯誤收進 Kit。
+
+- **MDT 17 條坑全部留在專案** — 醫療領域邏輯,跟 Kit 跨專案抽象不衝突。例如坑 #4「DEFAULT 變更後 localStorage 不自動更新」是 MDT 特定 schema 演進問題,不該推廣到所有專案。
+- **ECOG / CFS 量表的中文說明文字** — 純醫療業務知識
+- **NAS 跨機同步「軟刪除 tombstone」實作** — 軟刪除概念雖可推廣,但 MDT 用 NAS 共享資料夾的場景太特殊(三台醫院機器透過共用磁碟同步,不是用網路 API 服務)
+- **`migrateCFGConv` 等 schema 演進函數** — 純 MDT 業務遷移
+- **彰濱秀傳的科別/醫師清單、癌別配置** — 業務資料
+- **三位個管師(楊靜雯、郭美伶、林伯儒)的個人化機制** — 業務角色
+
+---
+
+## 六、Kit Claude 的建議行動清單
+
+### 建議升 Kit 版本
+
+**V1.7.0**(b+1,新內容,結構性新增)
+
+理由:加 1 條坑(#A webmanifest 路徑) + 加 1 條坑(#B 套既有專案) + 結構新增(USER_GUIDE 章節) + 修 1 個檔案(webmanifest 預設值) + 修 1 個對照表(logo 對照加單一 HTML)
+
+### 必做
+
+- [ ] **`logo/favicon/site.webmanifest` 改用相對路徑**(2 行 src 改寫)
+- [ ] **`logo/CLAUDE.md` 第 1 章對照表加「單一 HTML 檔」類型**
+- [ ] **`conventions/cross-project-pitfalls.md` 加坑 #37「webmanifest 在 GitHub Pages 子路徑路徑陷阱」**(用 MDT V4.8.0 為證據)
+- [ ] **`conventions/cross-project-pitfalls.md` 加坑 #38「修現有專案 vs 開新專案 — 套既有專案的對齊清單」**(用 MDT V4.8.0 為證據)
+- [ ] **`templates/CLAUDE-template.md` 加 USER_GUIDE.md 章節說明**(可選章節 + 何時需要 + 同步規則)
+- [ ] **`conventions/start-project-decisions.md` 加 #5.6「使用者是誰?」判斷有沒有非開發者受眾**
+
+### 暫緩
+
+> 還不夠成熟、或需要更多證據才能決定的。
+
+- [ ] **「規範對齊」型 b+1 的版本號歸屬寫進 SPEC.md** — 等再 1-2 個專案踩到再寫,單一證據不夠
+- [ ] **使用說明書要不要變必含** — V1.7.0 先標可選 + 加判斷準則,等再 2-3 個有非開發者受眾的專案實證後再決定升必含
+
+### 不做
+
+> 明確不該做的,免得 Kit Claude 誤判。
+
+- [ ] **MDT 的 NAS 同步邏輯進 Kit** — 太具體業務情境,不通用(雖然「軟刪除 tombstone」概念可推廣,但 Kit 跨專案坑庫已有更通用的 schema 演進坑,不需要)
+- [ ] **MDT 的醫療領域坑進 Kit** — 17 條全是 MDT 專屬
+- [ ] **MDT 的 caseDemo 工具函數模式進 Kit** — 太具體,只是「用單一函數統一輸出格式」這個小技巧
+
+---
+
+## 七、給 Kit Claude 的最後備註
+
+**這是 Kit V1.6.0 第一個「成熟專案套 Kit」的反饋**,跟「新專案用 Kit 從零做」的反饋本質不同。前者衝突點在「既有結構 vs Kit 規範」,後者在「冷啟動效率」。建議 Kit V1.7.0 之後再收 1-2 個成熟專案 handoff,如果都提到「**現有專案套 Kit 沒明確流程**」這條,就升優先度。
+
+MDT 是醫療系統 + 給 3 位個管師用 + GitHub Pages 部署 + 單一 HTML 檔 + localStorage 儲存,**這個組合 Kit 之前沒看過**(reference 都是 Flet/CLI/multi-file Web)。所以本案反饋偏重「Web 端極簡情境」,Kit Claude 可以參考但別當成普遍真理 — 等下個 Web 專案再交叉驗證。
+
+---
+
+*文件版本:V4.8.1 · 2026/05*
+*產出對象:SELA Starter Kit V1.6.0 → V1.7.0 升級規劃*
