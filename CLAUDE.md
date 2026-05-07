@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.8.2 | Kit 版本標記 V1.6.0 → V1.7.1;handoff 加「提案前檢查紀錄」(回應 V1.7.0 兩個檢查);無程式變動 |
 | V4.8.1 | 加 `SELA-handoff.md`(Kit V1.6.0 回流通道機制);無程式變動 |
 | V4.8.0 | 對齊 SELA Starter Kit V1.6.0:加 favicon 套組、theme-color、右下角 SELA logo、.gitignore;zip 命名改空格(`MDT V*.zip`);無程式功能變動 |
 | V4.7.1 | CFS 字樣全面改成「衰弱量表」(5 處輸出);程式變數 cfs 跟 tooltip/匯入別名/AI 抽取術語保留 |
@@ -364,7 +365,7 @@ if not missing:
 
 ## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起)
 
-本專案已對齊 **SELA Starter Kit V1.6.0** 的關鍵規範。每次升版都應檢查是否仍符合:
+本專案已對齊 **SELA Starter Kit V1.7.1** 的關鍵規範(原於 V4.8.0 對齊 V1.6.0,V4.8.2 升標記到 V1.7.1)。每次升版都應檢查是否仍符合:
 
 | 規範 | 對齊方式 | 注意 |
 |------|---------|------|
@@ -401,4 +402,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V4.8.1 加 `SELA-handoff.md`(對齊 SELA Starter Kit V1.6.0 的「回流通道機制」規範) — 依 `templates/SELA-handoff-template.md` 七節結構產出,給 Kit 升級用。本案 handoff 整理 6 條跨專案通用觀察(webmanifest 子路徑陷阱、單檔 HTML 場景、規範對齊型 b+1、USER_GUIDE 必含、修舊專案 SOP 缺口、章法手冊已成熟)+ 6 條不回流的業務邏輯 + 對 Kit V1.7.0 的 6 項必做行動清單。CLAUDE.md 九之三節加「回流通道」一列。本版無程式變動,純規範完整性補強。下版第一優先還是「記住上次登入者」。
+V4.8.2 微調對齊 Kit V1.7.1(原對齊 V1.6.0):Kit 版本標記更新、handoff 加「提案前檢查紀錄」一小段(回應 V1.7.0 加的「grep Kit 避免重複」+「踩坑 vs 跨平台知識分類」兩個檢查)。本案 6 條反饋未被 Kit V1.7.0/V1.7.1 採納(V1.7.0 收的是 SelaTrip 反饋,不是 MDT),所以仍有效躺在 handoff 裡待 SELA 下次升 Kit 時用;V1.7.0 新增的坑 #37/#38(外部 API 時區、雲端 schema migration)與 MDT 無交集。本版無程式變動,純規範補強。下版第一優先還是「記住上次登入者」。

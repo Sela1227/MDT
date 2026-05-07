@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V4.8.2
+**Kit 版本標記從 V1.6.0 → V1.7.1**:Kit 升到 V1.7.1(V1.7.0 收 SelaTrip 反饋加坑 #37/#38、V1.7.1 修「handoff 機制執行率」)。`SELA-handoff.md` 加「提案前檢查紀錄」一小段,明寫已執行 V1.7.0 加的兩個檢查(grep Kit 避免重複、踩坑 vs 跨平台知識分類)。本案 6 條反饋未被 Kit V1.7.0/V1.7.1 採納(V1.7.0 收的是 SelaTrip 不是 MDT),仍有效;V1.7.0 新增的 #37/#38 與 MDT 無交集(MDT 不接外部 API、不用雲端 schema migration)。本版無程式變動。
+
 ### V4.8.1
 **加 `SELA-handoff.md`**(對齊 SELA Starter Kit V1.6.0「回流通道機制」規範):依 `templates/SELA-handoff-template.md` 七節結構產出,給 Kit 升級用 — SELA 升 Kit 時看 handoff 直接判斷哪些經驗值該回流,不用挖整份 CLAUDE.md。本案 handoff 內容包括:6 條跨專案通用觀察(2 條坑、2 條設計模式、2 條結構建議)+ 6 條留在 MDT 不回流的業務邏輯 + 對 Kit V1.7.0 的 6 項必做行動清單。本版無程式變動。
 
