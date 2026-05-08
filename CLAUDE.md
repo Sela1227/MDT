@@ -144,6 +144,10 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V4.9.0 | LINE 通知多癌別合開時自動合併(改 genLine cids 來源 + 會議名稱動態合成);其他產出不變 |
+| V4.8.2 | Kit 版本標記 V1.6.0 → V1.7.1;handoff 加「提案前檢查紀錄」(回應 V1.7.0 兩個檢查);無程式變動 |
+| V4.8.1 | 加 `SELA-handoff.md`(Kit V1.6.0 回流通道機制);無程式變動 |
+| V4.8.0 | 對齊 SELA Starter Kit V1.6.0:加 favicon 套組、theme-color、右下角 SELA logo、.gitignore;zip 命名改空格(`MDT V*.zip`);無程式功能變動 |
 | V4.7.1 | CFS 字樣全面改成「衰弱量表」(5 處輸出);程式變數 cfs 跟 tooltip/匯入別名/AI 抽取術語保留 |
 | V4.7.0 | 個案新增 ECOG + 衰弱量表(CFS)兩欄;caseDemo 工具統一格式;PPTX/DOCX/HTML/Excel/JSON/AI prompt 全打通 |
 | V4.6.6 | 修影像檢查選 CT/MRI 後日期欄被誤刪的 bug:onExamTypeChange 加 type='date' 例外 |
@@ -360,6 +364,31 @@ if not missing:
 
 ---
 
+## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起)
+
+本專案已對齊 **SELA Starter Kit V1.7.1** 的關鍵規範(原於 V4.8.0 對齊 V1.6.0,V4.8.2 升標記到 V1.7.1)。每次升版都應檢查是否仍符合:
+
+| 規範 | 對齊方式 | 注意 |
+|------|---------|------|
+| zip 檔名格式 | `MDT V<x.y.z>.zip`(空格,非底線) | 打包時直接用 `zip MDT\ V4.8.0.zip ...` |
+| 必含 `.gitignore` | 已加,擋 `.DS_Store` / 機密 / 暫存區 | 新加目錄時記得評估是否需要忽略 |
+| 必含 SELA 品牌資產 | `favicon/` 整套 + `<head>` 引用 + `theme-color #F36825` | 路徑用相對(GitHub Pages 子路徑相容) |
+| 系統 UI logo | 右下角 fixed `<a id="sela-credit">` | 樣式 `opacity:.42`,hover 放大;不擋 UI |
+| **回流通道**(V4.8.1 起) | `SELA-handoff.md` 在專案根目錄,跟 zip 一起交付 | 重大版本完成後更新內容,讓 SELA 升 Kit 用 |
+| 三位版本號逢十進位 | 同 #14 規則 | 已對齊 |
+| CLAUDE.md 必含五章 | 踩坑 / 業務對映 / 版本歷程 / 下版優先 / 一句話總結 | 已對齊 |
+| USER_GUIDE.md 必含 | 我們有,Kit 沒明文要求(MDT 超越) | — |
+
+**Kit 內 32 條跨專案坑與 MDT 17 條坑互不衝突,可以互相印證**:
+- Kit #20(中文檔名亂碼) ↔ MDT 坑 #16
+- Kit #23(JS 大括號) ↔ MDT 坑 #5、#13
+- Kit #1(三方對齊) ↔ MDT 坑 #17
+- Kit #7(打包前驗證) ↔ MDT 打包驗證腳本(節九)
+
+**未來新對齊項目放這裡**(例如:Kit 升 V1.7.0 時新增的規範要對應檢查)
+
+---
+
 ## 十、下版優先清單
 
 **按優先序：**
@@ -374,4 +403,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V4.7.1 把 V4.7.0 留下的「CFS」字樣 5 處輸出全部中文化為「衰弱量表」,跟 UI label 用詞一致。AI prompt 也精簡掉「CFS X(衰弱量表)」的重複括號,變成「衰弱量表 X」。內部術語層保留(程式變數名、HTML tooltip、Excel 匯入別名、AI 匯入提示詞中英並列)— 中文化是給人看的層,機器溝通保留英文 unambiguous。下版第一優先還是「記住上次登入者」。
+V4.9.0 LINE 通知多癌別合開時自動合併 — 過去 `genLine` 寫死 `cids=[getOutputCid()||S.cids[0]]`(永遠 1 個癌別),導致兩會合開要按兩次 LINE 通知產兩份訊息。改成 `cids=S.cids`(全取)+ 會議名稱多癌別時動態合成「X、Y多專科團隊會議」(範例風格)。出席人員區「不去重」(按使用者範例慣例,跨癌別共用成員仍兩段都列,清楚標示哪些是各癌別核心)。其他產出 PPTX/DOCX/HTML/Excel/JSON 行為不變(逐癌別一份)。下版第一優先還是「記住上次登入者」。

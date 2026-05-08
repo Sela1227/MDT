@@ -1,0 +1,19 @@
+{
+  "name": "MDT 會議管理系統",
+  "short_name": "MDT",
+  "icons": [
+    {
+      "src": "favicon/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#F36825",
+  "background_color": "#FAFBFC",
+  "display": "standalone"
+}

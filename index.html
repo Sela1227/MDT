@@ -10,6 +10,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MDT 會議管理系統</title>
+<!-- V4.8.0: SELA logo favicon 套組(對齊 SELA Starter Kit V1.6.0 規範) -->
+<link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
+<link rel="manifest" href="favicon/site.webmanifest">
+<meta name="theme-color" content="#F36825">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1223,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.7.1';
+const VERSION='V4.9.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6754,9 +6761,15 @@ function importCaseJSON(inputEl){
   reader.readAsText(file,'utf-8');
 }
 function genLine(){
-  readForm();const m=S.meeting,cids=[getOutputCid()||S.cids[0]],pfx=timePfx(m.time.split('-')[0]);
+  readForm();const m=S.meeting,pfx=timePfx(m.time.split('-')[0]);
+  /* V4.9.0: 多癌別合開時自動合併 LINE 通知 — 取所有勾選癌別,不再限定當前 active */
+  const cids=(S.cids&&S.cids.length)?S.cids:[getOutputCid()].filter(Boolean);
   const multi=cids.length>1;
-  let t=`開會通知單\n會議名稱　${m.title}\n開會時間　${rocDate(m.date)} ${pfx}${m.time}\n`;
+  /* V4.9.0: 多癌別合開時,會議名稱自動串接「X、Y多專科團隊會議」 */
+  const titleStr=multi
+    ? cids.map(id=>CFG[id]?.name||'').filter(Boolean).join('、')+'多專科團隊會議'
+    : m.title;
+  let t=`開會通知單\n會議名稱　${titleStr}\n開會時間　${rocDate(m.date)} ${pfx}${m.time}\n`;
   t+=`視訊主場　${m.loc}　聯絡人　${m.contact}\n`;
   t+=`視訊會議資訊　會議登入ID:${m.zoom.id}　密碼：${m.zoom.pwd}\n　　　　　　　會議連結：${m.zoom.url}\n`;
   t+=`出席人員`;
@@ -8134,6 +8147,11 @@ function updateImgFolderSettingsStatus(){
     </div>
   </div>
 </div>
+
+<!-- V4.8.0: SELA logo 右下角(對齊 SELA Starter Kit V1.6.0 品牌規範) -->
+<a href="https://github.com/Sela1227" target="_blank" rel="noopener" id="sela-credit" title="Made by SELA, with Claude" style="position:fixed;right:10px;bottom:10px;width:32px;height:32px;border-radius:6px;overflow:hidden;opacity:.42;transition:opacity .2s,transform .2s;z-index:50;cursor:pointer;text-decoration:none;line-height:0;box-shadow:0 1px 3px rgba(0,0,0,.15)" onmouseover="this.style.opacity='1';this.style.transform='scale(1.08)'" onmouseout="this.style.opacity='.42';this.style.transform=''">
+  <img src="favicon/favicon-32x32.png" alt="SELA" width="32" height="32" style="display:block">
+</a>
 
 </body>
 </html>

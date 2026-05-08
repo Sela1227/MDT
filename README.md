@@ -111,6 +111,25 @@
 
 ## 版本歷程
 
+### V4.9.0
+**LINE 通知多癌別自動合併**:過去發 LINE 通知只能取「目前 active 癌別」,多癌別合開的會議要逐個切換產出兩份訊息,使用者要手動合併或重複發送。本版改成**取所有勾選癌別自動合併產出一份 LINE 訊息**,只改一行 `cids=[getOutputCid()||S.cids[0]]` → `S.cids`(若有則全取)。會議名稱在多癌別時自動合成「**X、Y多專科團隊會議**」(會議名稱欄位輸入會被覆蓋),單癌別仍用個管師輸入的標題。出席人員段:各癌別獨立列召集人 + 核心成員(**不去重**,跨癌別共用成員仍會兩段都列,符合既有範例慣例)。會議說明段:依癌別分段「`頭頸癌:`、`血液淋巴癌:`」,個案區塊不變。其他產出 (PPTX/DOCX/HTML/Excel/JSON) 行為不變(各自一個癌別一份)。
+
+### V4.8.2
+**Kit 版本標記從 V1.6.0 → V1.7.1**:Kit 升到 V1.7.1(V1.7.0 收 SelaTrip 反饋加坑 #37/#38、V1.7.1 修「handoff 機制執行率」)。`SELA-handoff.md` 加「提案前檢查紀錄」一小段,明寫已執行 V1.7.0 加的兩個檢查(grep Kit 避免重複、踩坑 vs 跨平台知識分類)。本案 6 條反饋未被 Kit V1.7.0/V1.7.1 採納(V1.7.0 收的是 SelaTrip 不是 MDT),仍有效;V1.7.0 新增的 #37/#38 與 MDT 無交集(MDT 不接外部 API、不用雲端 schema migration)。本版無程式變動。
+
+### V4.8.1
+**加 `SELA-handoff.md`**(對齊 SELA Starter Kit V1.6.0「回流通道機制」規範):依 `templates/SELA-handoff-template.md` 七節結構產出,給 Kit 升級用 — SELA 升 Kit 時看 handoff 直接判斷哪些經驗值該回流,不用挖整份 CLAUDE.md。本案 handoff 內容包括:6 條跨專案通用觀察(2 條坑、2 條設計模式、2 條結構建議)+ 6 條留在 MDT 不回流的業務邏輯 + 對 Kit V1.7.0 的 6 項必做行動清單。本版無程式變動。
+
+### V4.8.0
+**對齊 SELA Starter Kit V1.6.0 規範**:
+- 加入 SELA favicon 套組(`favicon/` 目錄,7 個檔案;含 ico、PNG 多尺寸、apple-touch-icon、site.webmanifest)
+- index.html `<head>` 加 favicon links 與 `theme-color="#F36825"`(SELA 橘)
+- 右下角加 SELA 浮動 logo(fixed 32x32px,不擋 UI;hover 放大 + 不透明度提升)— 連結到 `github.com/Sela1227`
+- 加 `.gitignore`(用 Kit 模板,擋 .DS_Store / Thumbs.db / 機密 / 暫存區)
+- zip 檔名格式從 `MDT_V*.zip`(底線)改為 `MDT V*.zip`(空格,符合 Git Pusher 慣例)
+- site.webmanifest 客製化:name="MDT 會議管理系統"、相對路徑(GitHub Pages 子路徑相容)
+- 程式無功能變動;純品牌資產 + 部署規範對齊
+
 ### V4.7.1
 **CFS 字樣全面中文化為「衰弱量表」**:把 V4.7.0 各處輸出裡的 `CFS` 改成 `衰弱量表`,跟 UI label 用詞一致。共 5 處變動:`caseDemo` 工具函數、閱覽模式 header、`genAI` 與 `genAIInline` 兩個 AI prompt(同時也精簡掉「CFS X(衰弱量表)」這種重複括號)。內部保留:程式碼變數名 `c.cfs`、HTML title tooltip 仍寫 "Clinical Frailty Scale (CFS)"(滑鼠 hover 給專業使用者對照)、`genImportPrompt` 仍同列中英文(讓 AI 從病歷抽取時兩個術語都認得)、Excel 匯入接受英文「CFS」當欄名別名(向後相容)。
 
