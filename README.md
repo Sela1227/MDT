@@ -111,6 +111,12 @@
 
 ## 版本歷程
 
+### V5.0.1
+**HTML 投影片視覺修正(配合 V5.0.0 新加的 team/events 投影片)**:
+- **字級調大**:V5.0.0 加的 `_trackSlide` 沒設響應式字級,在 1080p 投影機現場字看起來只有 ~16px 太小。改用 `clamp()` 響應式 — label `clamp(15px,1.5vw,22px)`、內文 `clamp(17px,1.8vw,26px)`,1080p 投影現場 ≈ 22 / 26px,跟個案討論主投影片的 `.cdx` 字級一致
+- **「尚未填寫」白字 bug**:V5.0.0 寫 `rgba(255,255,255,.5)` 白字,但投影片背景是白的 → 看不到。修成 `rgba(0,0,0,.4)` 黑字
+- **HTML 投影片字型 fallback chain 優化**:過去 `'Noto Sans TC','Microsoft JhengHei',Helvetica,sans-serif` 中英文混排英文 fallback 結果不一致(視作業系統而定)。改成 `-apple-system,BlinkMacSystemFont,'Helvetica Neue','Noto Sans TC','PingFang TC','Microsoft JhengHei',Helvetica,Arial,sans-serif` — 英文 sans-serif 字型在前(SF Pro / Helvetica Neue 等)、中文字型在後(Noto Sans TC / PingFang TC / 微軟正黑),跨 macOS / Windows / iPad 視覺都是「中英文都無襯線、調性一致」
+
 ### V5.0.0
 **醫療小組 / 必要事件 加入 5 個討論欄位**:過去這兩個區塊只能填病歷號+姓名+主治+備註(共用 `followupHTML`),本版讓它們**達到接近個案討論的核心欄位**:診斷、現病史、討論要點、摘要、決策(5 個 textarea)。設計取捨:不做 100% 等同個案討論(否則涉及影像/病理/治療列表/marker/timeline 等 struct 操作,牽涉 100+ 處 `cases` 寫死的程式碼,風險過大且超出實際使用需求)。新增獨立 `teamHTML(cid,i,d,type)` 與 `teamViewHTML(cid,i,d,type)` 兩個函數,team/events 共用;`upd` 用 `${type}` 動態派發,正確指向各自陣列(避免 followupHTML 既有的「`upd` 寫死 `'cases'`」歷史 bug — 那個 bug 不順便修,留待下版單獨處理)。HTML 投影片產出:過去 team/events 合併成「**1 張 5 欄表格**」,本版改成**每筆獨立投影片**(類似個案討論版面),含病歷號+姓名+主治+診斷標題列 + 已填欄位內容區。舊資料(V4.9.0 之前無新欄位)完全相容 — 顯示「(尚未填寫討論內容)」不會 crash。
 

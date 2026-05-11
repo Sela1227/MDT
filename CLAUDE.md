@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.0.1 | HTML 投影片 _trackSlide 字級改 clamp 響應式;修「尚未填寫」白字 bug;字型 fallback chain 加英文 sans-serif 在前(SF Pro/Helvetica Neue) |
 | V5.0.0 | 醫療小組/必要事件加 5 個討論欄位(診斷/現病史/討論要點/摘要/決策);獨立 teamHTML/teamViewHTML 函數;HTML 投影片改每筆獨立(非合併表格);舊資料相容 |
 | V4.9.0 | LINE 通知多癌別合開時自動合併(改 genLine cids 來源 + 會議名稱動態合成);其他產出不變 |
 | V4.8.2 | Kit 版本標記 V1.6.0 → V1.7.1;handoff 加「提案前檢查紀錄」(回應 V1.7.0 兩個檢查);無程式變動 |
@@ -296,6 +297,14 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:多 type 共用的渲染函數,必須用 `${type}` 動態派發,絕不能寫死任一具體 type 名稱 — 這是「跨 type 共用模板」的鐵律
 - 預防:打包前 grep `upd\('\$\{cid\}','cases',` 出現在 `function caseHTML` 以外的位置就警告
 
+**#20 HTML 投影片新區塊字級寫死沒用 clamp(V5.0.1)**
+- 症狀:V5.0.0 新加的醫療小組/必要事件投影片,在 1080p 投影機現場字太小(~16px),個管師回報「字略小」
+- 根因:寫 `_trackSlide` 時內文沒設 `font-size`(繼承 body 預設 16px),label 用 `font-size:0.85em` 相對值。沒參照個案討論主投影片用 `clamp(min,vw,max)` 響應式的慣例
+- 做法:label `clamp(15px,1.5vw,22px)`、內文 `clamp(17px,1.8vw,26px)`,跟 `.cdx` 主投影片字級看齊
+- 順便發現:「(尚未填寫討論內容)」用 `rgba(255,255,255,.5)` 白字,但投影片背景是白的 → 看不到。改 `rgba(0,0,0,.4)` 黑字
+- 教訓:**新增任何 HTML 投影片元素時,字級必須用 `clamp()`,不能用 px 或 em 寫死** — 投影片要支援筆電預覽(800x600)到 4K 投影(3840x2160),寫死字級會在某些尺寸下太小或太大
+- 預防:打包前 grep 新加的投影片相關元素,找 `font-size:\d+px` 或 `font-size:\d+\.\d+em` 警告(`clamp` 或 `vw/vh` 才合格)
+
 ---
 
 ## 九、打包驗證(每次必跑)
@@ -415,4 +424,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.0.0 醫療小組/必要事件加 5 個討論欄位(診斷/現病史/討論要點/摘要/決策),逼近「跟個案討論一樣」但**不做 100% 等同**(影像/病理/treatments/markers/timeline 不加 — 牽涉 100+ 處 cases 寫死的重構,風險過大且超出實際需求)。新增獨立 `teamHTML/teamViewHTML` 函數,team/events 共用;`upd` 用 `${type}` 動態派發。HTML 投影片 team/events 從「合併單一表格」改成「每筆獨立投影片」。**版本號從 V4.9.0 跳 V5.0.0 不是大改版,是 y=9 逢十進位規則**。順便發現 followupHTML 也有「upd 寫死 'cases'」的同類 bug(坑 #19),但本版不順便修,留下版獨立處理。下版第一優先還是「記住上次登入者」(已連續 8 版掛在這),或修坑 #19。
+V5.0.1 修 V5.0.0 新加的 team/events 投影片視覺問題 — 字級沒用 clamp 響應式所以投影機現場字太小(個管師回報「字略小」),改 label `clamp(15px,1.5vw,22px)` + 內文 `clamp(17px,1.8vw,26px)`,1080p 投影到 22/26px。順便修「尚未填寫」白字 bug(背景是白的看不到 → 改黑字)+ HTML 投影片字型 fallback chain 加 SF Pro/Helvetica Neue 在前 + PingFang TC 中文後備,跨平台視覺一致。坑 #20 入帳:HTML 投影片新增元素字級必須用 clamp 不能寫死。下版第一優先:修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。

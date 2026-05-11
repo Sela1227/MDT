@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.0.0';
+const VERSION='V5.0.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5873,6 +5873,7 @@ async function genHTMLSlides(){
     }); // end cases.forEach
 
     // ── Team / Events ── V5.0.0: 每筆一張投影片(類個案討論),含 5 個討論欄位
+    // V5.0.1: 字級加 clamp 響應式,配合投影機現場觀看
     function _trackSlide(c,trackLabel){
       var drs=getDoctorStr(c)||'—';
       var dxLine=c.diagnosis?('<div class="cdx">'+escA(c.diagnosis)+'</div>'):'';
@@ -5882,8 +5883,8 @@ async function genHTMLSlides(){
       if(c.summary)sections.push({lbl:'摘要',txt:c.summary});
       if(c.decision)sections.push({lbl:'決策',txt:c.decision});
       var body=sections.length
-        ? sections.map(function(s){return '<div style="margin-bottom:1.2em"><div style="font-size:0.85em;font-weight:700;color:'+caColor+';margin-bottom:0.3em">'+s.lbl+'</div><div style="white-space:pre-wrap;line-height:1.55">'+escA(s.txt)+'</div></div>';}).join('')
-        : '<div style="color:rgba(255,255,255,.5);font-style:italic;text-align:center;margin-top:3em">（尚未填寫討論內容）</div>';
+        ? sections.map(function(s){return '<div style="margin-bottom:1.8vh"><div style="font-size:clamp(15px,1.5vw,22px);font-weight:700;color:'+caColor+';margin-bottom:0.6vh;letter-spacing:.02em">'+s.lbl+'</div><div style="white-space:pre-wrap;line-height:1.6;font-size:clamp(17px,1.8vw,26px);color:#2A3540">'+escA(s.txt)+'</div></div>';}).join('')
+        : '<div style="color:rgba(0,0,0,.4);font-style:italic;text-align:center;margin-top:6vh;font-size:clamp(15px,1.5vw,22px)">（尚未填寫討論內容）</div>';
       return '<section class="slide case" style="--ca:'+caColor+';">'
         +'<div class="ch"><div class="cht">'
         +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=\'\'},600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
@@ -5892,7 +5893,7 @@ async function genHTMLSlides(){
         +'<span class="cat">'+trackLabel+'</span></div>'
         +dxLine
         +'</div>'
-        +'<div class="cb"><div style="padding:2vh 4vw;overflow:auto;max-height:100%">'+body+'</div></div>'
+        +'<div class="cb"><div style="padding:3vh 5vw;overflow:auto;max-height:100%">'+body+'</div></div>'
         +'</section>';
     }
     team.forEach(function(c){slides.push(_trackSlide(c,'醫療小組'));});
@@ -6135,7 +6136,7 @@ async function genHTMLSlides(){
   const css=''
     +':root{--dk:'+_theme.dk+';--acc:'+_theme.acc+';--lt:'+_theme.lt+';}'
     +'*{margin:0;padding:0;box-sizing:border-box;}'
-    +'html,body{width:100%;height:100%;overflow:hidden;font-family:"Noto Sans TC","Microsoft JhengHei",Helvetica,sans-serif;background:#111;}'
+    +'html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Noto Sans TC","PingFang TC","Microsoft JhengHei",Helvetica,Arial,sans-serif;background:#111;}'
     +'.slide{position:absolute;inset:0;display:none;background:#fff;flex-direction:column;}'
     +'.slide.on{display:flex;}'
     +'.cover{background:var(--dk);justify-content:center;gap:clamp(10px,1.8vh,24px);padding:7vh 8vw;}'
