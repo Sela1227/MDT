@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.0.0 | 醫療小組/必要事件加 5 個討論欄位(診斷/現病史/討論要點/摘要/決策);獨立 teamHTML/teamViewHTML 函數;HTML 投影片改每筆獨立(非合併表格);舊資料相容 |
 | V4.9.0 | LINE 通知多癌別合開時自動合併(改 genLine cids 來源 + 會議名稱動態合成);其他產出不變 |
 | V4.8.2 | Kit 版本標記 V1.6.0 → V1.7.1;handoff 加「提案前檢查紀錄」(回應 V1.7.0 兩個檢查);無程式變動 |
 | V4.8.1 | 加 `SELA-handoff.md`(Kit V1.6.0 回流通道機制);無程式變動 |
@@ -284,6 +285,17 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:有「動態插入/移除 sibling」邏輯時,目標 input 加 dataset.role='custom-type' 之類標記,刪除時用 `[data-role="custom-type"]` 選擇器,比 tagName 嚴謹
 - 順便發現的 bug:`__other__` 分支也是 `tagName==='INPUT'` 判斷「已有 input」,使用者從 CT 切到「其他」時看到日期欄(也是 INPUT)就不插自訂類型欄,使用者沒地方輸入。一併修
 
+**#19 followupHTML 內 upd 寫死 `'cases'`(V5.0.0 發現,本版不修)**
+- 症狀:前期追蹤事項(followups)的欄位編輯後**可能不會儲存**;某些情況下會**寫進個案討論(cases)的同 index 物件**,造成資料污染
+- 根因:`followupHTML(cid,i,d,type='followups')` 函數內所有 `upd` 呼叫都寫死 `upd('${cid}','cases',${i},...)`,沒有用 `${type}`。但 `upd` 函數本身是 `S.meeting.sections[cid][type][i]` 動態派發 — 收到 'cases' 就去 cases 陣列存取
+- 兩種壞情境:
+  - `cases[i]` 不存在(常見,因追蹤數通常少於個案) → `if(!item)return;` → 編輯靜默失敗,個管師可能以為有存
+  - `cases[i]` 存在 → 改到 cases[i] 上,造成資料污染
+- 為什麼長期沒人回報:個管師可能很少深度編輯「前期追蹤事項」的所有欄位(主要只看「上次討論」追蹤狀態);加上看起來像「儲存了」,實際只是 UI 暫態
+- 做法(本版**不順便修**):V5.0.0 寫的 `teamHTML` 用 `${type}` 動態派發,不複製這個 bug。followupHTML 留下次獨立修(改一行 + 完整測試前期追蹤的所有編輯場景)
+- 教訓:多 type 共用的渲染函數,必須用 `${type}` 動態派發,絕不能寫死任一具體 type 名稱 — 這是「跨 type 共用模板」的鐵律
+- 預防:打包前 grep `upd\('\$\{cid\}','cases',` 出現在 `function caseHTML` 以外的位置就警告
+
 ---
 
 ## 九、打包驗證(每次必跑)
@@ -403,4 +415,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V4.9.0 LINE 通知多癌別合開時自動合併 — 過去 `genLine` 寫死 `cids=[getOutputCid()||S.cids[0]]`(永遠 1 個癌別),導致兩會合開要按兩次 LINE 通知產兩份訊息。改成 `cids=S.cids`(全取)+ 會議名稱多癌別時動態合成「X、Y多專科團隊會議」(範例風格)。出席人員區「不去重」(按使用者範例慣例,跨癌別共用成員仍兩段都列,清楚標示哪些是各癌別核心)。其他產出 PPTX/DOCX/HTML/Excel/JSON 行為不變(逐癌別一份)。下版第一優先還是「記住上次登入者」。
+V5.0.0 醫療小組/必要事件加 5 個討論欄位(診斷/現病史/討論要點/摘要/決策),逼近「跟個案討論一樣」但**不做 100% 等同**(影像/病理/treatments/markers/timeline 不加 — 牽涉 100+ 處 cases 寫死的重構,風險過大且超出實際需求)。新增獨立 `teamHTML/teamViewHTML` 函數,team/events 共用;`upd` 用 `${type}` 動態派發。HTML 投影片 team/events 從「合併單一表格」改成「每筆獨立投影片」。**版本號從 V4.9.0 跳 V5.0.0 不是大改版,是 y=9 逢十進位規則**。順便發現 followupHTML 也有「upd 寫死 'cases'」的同類 bug(坑 #19),但本版不順便修,留下版獨立處理。下版第一優先還是「記住上次登入者」(已連續 8 版掛在這),或修坑 #19。

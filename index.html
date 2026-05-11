@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V4.9.0';
+const VERSION='V5.0.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3037,7 +3037,7 @@ function casesPane(cid){
       '<div class="sh-track">'+
       '<div class="sh-track-hdr"><span class="sh-track-dot"></span>醫療小組</div>'+
       '<div id="div-team-'+cid+'">'+
-        (team.length?team.map((c,i)=>{try{return fFn(cid,i,c,'team');}catch(err){console.error('teamHTML error',err);return '';}}).join(''):'<div class="sh-empty">（本次無醫療小組成員）</div>')+
+        (team.length?team.map((c,i)=>{try{return vm?teamViewHTML(cid,i,c,'team'):teamHTML(cid,i,c,'team',true);}catch(err){console.error('teamHTML error',err);return '';}}).join(''):'<div class="sh-empty">（本次無醫療小組成員）</div>')+
       '</div>'+bTeam+
       '</div>'
     ):'')+
@@ -3046,7 +3046,7 @@ function casesPane(cid){
       '<div class="sh-track">'+
       '<div class="sh-track-hdr"><span class="sh-track-dot"></span>必要事件</div>'+
       '<div id="div-events-'+cid+'">'+
-        (events.length?events.map((c,i)=>{try{return fFn(cid,i,c,'events');}catch(err){console.error('eventsHTML error',err);return '';}}).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
+        (events.length?events.map((c,i)=>{try{return vm?teamViewHTML(cid,i,c,'events'):teamHTML(cid,i,c,'events',true);}catch(err){console.error('eventsHTML error',err);return '';}}).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
       '</div>'+bEvents+
       '</div>'
     ):'')+
@@ -3237,11 +3237,45 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','cases',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','cases',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','cases',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
+</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','cases',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','cases',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
+/* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論要點、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
+function teamHTML(cid,i,d,type='team',collapsed=false){
+  const _cardId='cc-'+cid+'-'+type+'-'+i;
+  const lbl=type==='team'?'醫療小組成員':'必要事件';
+  return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此${lbl}？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2">
+<div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)" style="font-size:12px;padding:5px 8px"></div>
+<div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)" style="font-size:12px;padding:5px 8px"></div>
+<div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
+<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
+</div></div>
+<div class="fg full"><label>診斷</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'diagnosis',this.value)" placeholder="癌別、分期、組織型態" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.diagnosis||'')}</textarea></div>
+<div class="fg full"><label>現病史</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'cc',this.value)" placeholder="目前狀況、就醫經過" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.cc||'')}</textarea></div>
+<div class="fg full"><label>討論要點</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="本次MDT討論的主要議題" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.discussion||'')}</textarea></div>
+<div class="fg full"><label>摘要</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'summary',this.value)" placeholder="會議結論摘要" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.summary||'')}</textarea></div>
+<div class="fg full"><label>決策</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'decision',this.value)" placeholder="下一步處置 / 治療方向" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.decision||'')}</textarea></div>
+</div></div>`;
+}
+/* V5.0.0: teamViewHTML — 閱覽模式,只顯示有填的欄位 */
+function teamViewHTML(cid,i,d,type='team'){
+  const _cardId='cv-'+cid+'-'+type+'-'+i;
+  const drs=getDoctorStr(d);
+  const rows=[];
+  if(d.diagnosis)rows.push(['診斷',d.diagnosis]);
+  if(d.cc)rows.push(['現病史',d.cc]);
+  if(d.discussion)rows.push(['討論要點',d.discussion]);
+  if(d.summary)rows.push(['摘要',d.summary]);
+  if(d.decision)rows.push(['決策',d.decision]);
+  const body=rows.length
+    ? rows.map(r=>`<div class="vc-row"><div class="vc-lbl">${r[0]}</div><div class="vc-val" style="white-space:pre-wrap">${escA(r[1])}</div></div>`).join('')
+    : '<div class="vc-row" style="color:var(--textlt);font-style:italic">（尚未填寫討論內容）</div>';
+  return`<div class="casecard vc track-card" id="${_cardId}"><div class="vc-hdr">${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> VS ${escA(drs)}</span></div>${body}</div>`;
+}
 function specialHTML(cid,i,d){
   if(d.topicType==='完治率') return specialCRHTML(cid,i,d);
   if(['失聯率','留治率','訪視率'].includes(d.topicType)) return specialRateHTML(cid,i,d);
@@ -4071,8 +4105,9 @@ function renderThemeStrip(){
   el.appendChild(cur);
 }
 
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,ecog:'',cfs:'',doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
-    type==='followups'||type==='team'||type==='events'?followupHTML(cid,i,blank,type,true):
+function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,ecog:'',cfs:'',doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:'',diagnosis:'',cc:'',discussion:'',summary:'',decision:''}/* V5.0.0: 加 5 個討論欄位 */:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+    type==='team'||type==='events'?teamHTML(cid,i,blank,type,false):/* V5.0.0: team/events 用 teamHTML */
+    type==='followups'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;
   // For new cases: remove cc-collapsed so new card starts expanded
@@ -4113,7 +4148,8 @@ function delItem(cid,type,i){
   const items=S.meeting.sections[cid][type];
   cont.innerHTML=items.map((d,idx)=>
     type==='cases'?caseHTML(cid,idx,d):
-    type==='followups'||type==='team'||type==='events'?followupHTML(cid,idx,d,type):
+    type==='team'||type==='events'?teamHTML(cid,idx,d,type):
+    type==='followups'?followupHTML(cid,idx,d,type):
     specialHTML(cid,idx,d)
   ).join('');
   if(type==='followups'&&!items.length)cont.innerHTML='<div class="sh-empty">（本次無前期追蹤個案）</div>';
@@ -5836,16 +5872,31 @@ async function genHTMLSlides(){
 
     }); // end cases.forEach
 
-    // ── Team / Events ──
-    if(team.length||events.length){
-      slides.push('<section class="slide tbl">'
-        +'<div class="th"><span style="border-left:4px solid '+caColor+';padding-left:10px">醫療小組 / 必要事件</span>'
-        +' <span class="tc">'+escA(ca.name)+'</span></div>'
-        +'<table><thead><tr><th>類別</th><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>說明</th></tr></thead><tbody>'
-        +[...team.map(c=>'<tr><td>醫療小組</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>'),
-           ...events.map(c=>'<tr><td>必要事件</td><td>'+escA(c.chartNo||'')+'</td><td>'+escA(c.name?maskName(c.name):'—')+'</td><td>'+escA(getDoctorStr(c))+'</td><td>'+escA(c.note||'')+'</td></tr>')].join('')
-        +'</tbody></table></section>');
+    // ── Team / Events ── V5.0.0: 每筆一張投影片(類個案討論),含 5 個討論欄位
+    function _trackSlide(c,trackLabel){
+      var drs=getDoctorStr(c)||'—';
+      var dxLine=c.diagnosis?('<div class="cdx">'+escA(c.diagnosis)+'</div>'):'';
+      var sections=[];
+      if(c.cc)sections.push({lbl:'現病史',txt:c.cc});
+      if(c.discussion)sections.push({lbl:'討論要點',txt:c.discussion});
+      if(c.summary)sections.push({lbl:'摘要',txt:c.summary});
+      if(c.decision)sections.push({lbl:'決策',txt:c.decision});
+      var body=sections.length
+        ? sections.map(function(s){return '<div style="margin-bottom:1.2em"><div style="font-size:0.85em;font-weight:700;color:'+caColor+';margin-bottom:0.3em">'+s.lbl+'</div><div style="white-space:pre-wrap;line-height:1.55">'+escA(s.txt)+'</div></div>';}).join('')
+        : '<div style="color:rgba(255,255,255,.5);font-style:italic;text-align:center;margin-top:3em">（尚未填寫討論內容）</div>';
+      return '<section class="slide case" style="--ca:'+caColor+';">'
+        +'<div class="ch"><div class="cht">'
+        +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=\'\'},600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
+        +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+        +' <span class="cdr">VS '+escA(drs)+'</span>'
+        +'<span class="cat">'+trackLabel+'</span></div>'
+        +dxLine
+        +'</div>'
+        +'<div class="cb"><div style="padding:2vh 4vw;overflow:auto;max-height:100%">'+body+'</div></div>'
+        +'</section>';
     }
+    team.forEach(function(c){slides.push(_trackSlide(c,'醫療小組'));});
+    events.forEach(function(c){slides.push(_trackSlide(c,'必要事件'));});
   });
   // Flush deferred pathology slides (when grouping enabled)
   _deferredPath.forEach(function(sl){slides.push(sl);});
