@@ -111,6 +111,12 @@
 
 ## 版本歷程
 
+### V5.0.2
+**AI 匯入提示詞精準化(genImportPrompt)**:從一筆真實 AI 產出的 JSON 反饋發現兩個常見偏差,在 prompt 加明文修正:
+- **markers**:加「值與括號間不可有空格」明文 + 單時間點範例 `{"name":"AFP","content":"8.96(2026-04-02)"}`(過去 AI 常產出 `"8.96 (2026-04-02)"` 多了空格);加「同一 marker name 在陣列中只能出現一次」明文(避免 AI 把多時間點寫成多筆,系統會自動去重但格式應由 AI 一次到位);marker 範例增列 HCC 常用的 PIVKA-II
+- **topics**:加智慧勾選原則 — exams 有內容→勾影像、pathologies 有內容→勾病理、diagnosis 含 cTNM/pTNM/分期→勾分期、treatments 有內容或診斷提及 RT/Chemo/標靶→勾治療策略;加註「通常 MDT 個案 3-4 項都會勾」(過去 AI 常偷懶只勾 2 項,跟個案實際資料豐富度不匹配)
+- 本版**只改 prompt 文字**,系統解析邏輯不動。下次個管師按「AI 匯入提示詞」複製到 claude.ai,生成的 JSON 會更貼齊規範
+
 ### V5.0.1
 **HTML 投影片視覺修正(配合 V5.0.0 新加的 team/events 投影片)**:
 - **字級調大**:V5.0.0 加的 `_trackSlide` 沒設響應式字級,在 1080p 投影機現場字看起來只有 ~16px 太小。改用 `clamp()` 響應式 — label `clamp(15px,1.5vw,22px)`、內文 `clamp(17px,1.8vw,26px)`,1080p 投影現場 ≈ 22 / 26px,跟個案討論主投影片的 `.cdx` 字級一致

@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.0.2 | AI 匯入提示詞 markers 加「不可有空格」明文 + 單時間點範例 + PIVKA-II;topics 加智慧勾選原則(資料對應規則) |
 | V5.0.1 | HTML 投影片 _trackSlide 字級改 clamp 響應式;修「尚未填寫」白字 bug;字型 fallback chain 加英文 sans-serif 在前(SF Pro/Helvetica Neue) |
 | V5.0.0 | 醫療小組/必要事件加 5 個討論欄位(診斷/現病史/討論要點/摘要/決策);獨立 teamHTML/teamViewHTML 函數;HTML 投影片改每筆獨立(非合併表格);舊資料相容 |
 | V4.9.0 | LINE 通知多癌別合開時自動合併(改 genLine cids 來源 + 會議名稱動態合成);其他產出不變 |
@@ -424,4 +425,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.0.1 修 V5.0.0 新加的 team/events 投影片視覺問題 — 字級沒用 clamp 響應式所以投影機現場字太小(個管師回報「字略小」),改 label `clamp(15px,1.5vw,22px)` + 內文 `clamp(17px,1.8vw,26px)`,1080p 投影到 22/26px。順便修「尚未填寫」白字 bug(背景是白的看不到 → 改黑字)+ HTML 投影片字型 fallback chain 加 SF Pro/Helvetica Neue 在前 + PingFang TC 中文後備,跨平台視覺一致。坑 #20 入帳:HTML 投影片新增元素字級必須用 clamp 不能寫死。下版第一優先:修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。
+V5.0.2 改 `genImportPrompt` AI 提示詞,從一筆真實 AI 產出的肝癌 JSON 反饋兩個偏差: markers 常加空格(「8.96 (2026-04-02)」應為「8.96(2026-04-02)」)+ topics 漏勾(有完整影像/病理卻只勾 2 項)。修法:markers 加「值與括號不可有空格」明文 + 單時間點範例 + 「同 name 只一次」規則 + PIVKA-II 範例;topics 加智慧勾選對應表(exams→影像、pathologies→病理、cTNM→分期、treatments/RT→治療策略)+ 「通常 3-4 項都勾」。只改 prompt 文字、系統解析邏輯不動。下版第一優先還是修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。
