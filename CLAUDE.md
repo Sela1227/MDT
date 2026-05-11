@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.0.3 | AI 匯入 JSON 容錯:新 `_parseAIJSON` 工具(剝 markdown 圍籬/BOM/智慧引號/前後綴文字);prompt 加強格式規則(範例展示) |
 | V5.0.2 | AI 匯入提示詞 markers 加「不可有空格」明文 + 單時間點範例 + PIVKA-II;topics 加智慧勾選原則(資料對應規則) |
 | V5.0.1 | HTML 投影片 _trackSlide 字級改 clamp 響應式;修「尚未填寫」白字 bug;字型 fallback chain 加英文 sans-serif 在前(SF Pro/Helvetica Neue) |
 | V5.0.0 | 醫療小組/必要事件加 5 個討論欄位(診斷/現病史/討論要點/摘要/決策);獨立 teamHTML/teamViewHTML 函數;HTML 投影片改每筆獨立(非合併表格);舊資料相容 |
@@ -306,6 +307,14 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:**新增任何 HTML 投影片元素時,字級必須用 `clamp()`,不能用 px 或 em 寫死** — 投影片要支援筆電預覽(800x600)到 4K 投影(3840x2160),寫死字級會在某些尺寸下太小或太大
 - 預防:打包前 grep 新加的投影片相關元素,找 `font-size:\d+px` 或 `font-size:\d+\.\d+em` 警告(`clamp` 或 `vw/vh` 才合格)
 
+**#21 LLM 輸出的「純 JSON」不可信,必須容錯解析(V5.0.3)**
+- 症狀:個管師按「AI 匯入提示詞」貼到 claude.ai,生成的 JSON 貼回系統時 `JSON.parse` 炸:「Unexpected token '`', "\`\`\`json [ "...」
+- 根因:claude.ai/ChatGPT 等 LLM 即使 prompt 明文寫「不要加 markdown 符號」,仍經常自動加 ```json ... ``` markdown 圍籬。這不是 prompt 寫錯,是 LLM 訓練習慣的頑固偏差,要當作「無法消除的事實」
+- 做法:**雙管齊下** — (1) 系統端寫 `_parseAIJSON` 容錯解析(剝 markdown 圍籬、UTF-8 BOM、智慧引號 → 直引號、抓 `[...]` 區塊容錯前後綴),所有 AI 匯入入口必用;(2) prompt 仍加強格式規則(範例展示「錯誤」vs「正確」)讓 AI 提高成功率,但不依賴它
+- 教訓:**任何「跟 LLM 互動」的整合,輸出端必須有容錯解析,prompt 絕不能是唯一防線**。LLM 是機率輸出,不是確定行為;當作「外部 API」處理,輸入消毒要做完整
+- 預防:任何 `JSON.parse(llm_output)` 都改用 `_parseAIJSON()`;未來其他 LLM 整合(如語音轉文字、影像 OCR)同樣原則 — 對 LLM 輸出做容錯轉換,不假設它一定符合格式
+- 容錯機制需覆蓋:① markdown 圍籬(```json / ```)② UTF-8 BOM ③ 智慧引號(\u201C/\u201D) ④ AI 加的前言/結語文字
+
 ---
 
 ## 九、打包驗證(每次必跑)
@@ -425,4 +434,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.0.2 改 `genImportPrompt` AI 提示詞,從一筆真實 AI 產出的肝癌 JSON 反饋兩個偏差: markers 常加空格(「8.96 (2026-04-02)」應為「8.96(2026-04-02)」)+ topics 漏勾(有完整影像/病理卻只勾 2 項)。修法:markers 加「值與括號不可有空格」明文 + 單時間點範例 + 「同 name 只一次」規則 + PIVKA-II 範例;topics 加智慧勾選對應表(exams→影像、pathologies→病理、cTNM→分期、treatments/RT→治療策略)+ 「通常 3-4 項都勾」。只改 prompt 文字、系統解析邏輯不動。下版第一優先還是修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。
+V5.0.3 修個管師回報「AI 產的 JSON 貼回系統解析失敗」(訊息:`Unexpected token '`'`) — 根因:LLM 即使 prompt 寫「不要加 markdown 符號」仍頑固加 ```json...``` 圍籬。雙管齊下:新工具 `_parseAIJSON(raw)` 容錯解析(剝圍籬/BOM/智慧引號/抓 [...] 區塊),兩個 AI 匯入入口都改用;prompt 加「【輸出格式絕對規則】」區塊含錯誤 vs 正確示範。10 種真實 AI 輸出情境壓測 10/10 過。坑 #21 入帳:**LLM 輸出永遠要當作不可信的外部資料源來消毒**。下版第一優先:修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。

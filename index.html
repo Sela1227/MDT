@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.0.2';
+const VERSION='V5.0.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1402,6 +1402,34 @@ function caseDemo(c){
   if(c.ecog)s+='  ECOG '+c.ecog;
   if(c.cfs)s+='  衰弱量表 '+c.cfs;
   return s;
+}
+/* V5.0.3: AI 匯入 JSON 容錯解析 — 剝除 markdown 圍籬、容錯 BOM/前後綴文字、清理智慧引號 */
+function _parseAIJSON(raw){
+  if(!raw||typeof raw!=='string')throw new Error('輸入為空');
+  var s=raw;
+  // 1. 去除 UTF-8 BOM
+  if(s.charCodeAt(0)===0xFEFF)s=s.slice(1);
+  s=s.trim();
+  // 2. 剝除 markdown 圍籬:```json ... ``` 或 ``` ... ```
+  //    匹配開頭的 ``` 後接選擇性的語言標籤(json/JSON/javascript 等),到結尾的 ```
+  var fenceMatch=s.match(/^```(?:json|JSON|javascript|js)?\s*\n?([\s\S]*?)\n?```\s*$/);
+  if(fenceMatch){s=fenceMatch[1].trim();}
+  else{
+    // 寬鬆處理:只有開頭 ``` 沒有結尾、或只有結尾沒開頭
+    s=s.replace(/^```(?:json|JSON|javascript|js)?\s*\n?/,'').replace(/\n?```\s*$/,'').trim();
+  }
+  // 3. 智慧引號(curly quotes)→ 直引號(避免 AI 偶爾混用)
+  s=s.replace(/[\u201C\u201D]/g,'"').replace(/[\u2018\u2019]/g,"'");
+  // 4. 容錯:AI 偶爾在 JSON 前後加說明文字。抓 [...] 或 {...} 第一個合法區塊
+  //    只有當直接 parse 失敗時才走這條,避免破壞合法 JSON 內含的 [ ] 字面
+  try{return JSON.parse(s);}catch(e1){
+    var firstBracket=Math.min.apply(null,[s.indexOf('['),s.indexOf('{')].filter(function(x){return x>=0;}).concat([Infinity]));
+    if(firstBracket===Infinity)throw e1;
+    var lastBracket=Math.max(s.lastIndexOf(']'),s.lastIndexOf('}'));
+    if(lastBracket<firstBracket)throw e1;
+    var trimmed=s.slice(firstBracket,lastBracket+1);
+    try{return JSON.parse(trimmed);}catch(e2){throw e1;}/* 仍失敗回報原始錯,線索較清楚 */
+  }
 }
 function rocDate(ds){if(!ds)return'';const[y,m,d]=ds.split('-').map(Number);const dow=['日','一','二','三','四','五','六'][new Date(ds).getDay()];return`${y}年${m}月${d}日(星期${dow})`}
 function timePfx(t){if(!t)return'';const h=parseInt(t);return h<12?'上午':h===12?'中午':'下午'}
@@ -5539,7 +5567,7 @@ function doImportCase(){
   const errEl = document.getElementById('import-case-err');
   if(!raw){errEl.textContent = '請貼入 JSON 內容';return;}
   let data;
-  try{data = JSON.parse(raw);}
+  try{data = _parseAIJSON(raw);}
   catch(e){errEl.textContent = 'JSON 格式錯誤：' + e.message;return;}
   // Support array (import multiple) or single object
   const cases = Array.isArray(data) ? data : [data];
@@ -6607,7 +6635,16 @@ async function genXLSX(){
 
 
 function genImportPrompt(){
-  const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出，只輸出 JSON 陣列（即使只有一筆也用陣列），不要加任何說明文字或 markdown 符號。
+  const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出。
+
+【輸出格式絕對規則】
+- 只輸出 JSON 陣列（即使只有一筆也用陣列）
+- 第一個字必須是「[」，最後一個字必須是「]」
+- 絕對不要加 markdown 圍籬：不要在前面寫 \`\`\`json，不要在後面寫 \`\`\`
+- 絕對不要加任何說明文字、前言、結語、註解
+- 錯誤示範：\`\`\`json [{...}] \`\`\`  ← 加了圍籬，會讓系統解析失敗
+- 正確示範：[{...}]  ← 直接 JSON 陣列，無任何包裝
+
 【重要限制】只能使用貼上的資料，絕對不可自行推斷、補充、或引用任何外部醫學知識與記憶。資料中沒有的欄位一律留空字串或空陣列。
 欄位定義：
 _cancer：癌別名稱，從以下選填（必填）：「頭頸癌」「血液淋巴癌」「胸腔癌」「乳癌」「消化道癌」「肝膽胰癌」「泌尿道癌」「婦癌」
@@ -6738,7 +6775,7 @@ function importCaseJSON(inputEl){
   const reader=new FileReader();
   reader.onload=function(ev){
     let data;
-    try{data=JSON.parse(ev.target.result);}
+    try{data=_parseAIJSON(ev.target.result);}
     catch(e){alert('JSON 格式錯誤：'+e.message);return;}
     const cases=Array.isArray(data)?data:[data];
     if(!cases.length){alert('JSON 沒有個案資料');return;}

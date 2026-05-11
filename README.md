@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V5.0.3
+**AI 匯入 JSON 容錯解析**:個管師回報「**Unexpected token '`', "```json [ "...**」JSON 格式錯誤。根因:AI(claude.ai)即使 prompt 寫「不要加 markdown 符號」,仍經常在 JSON 前後加 ```json ... ``` markdown 圍籬,系統直接 `JSON.parse` 炸開。雙管齊下解決:**(1) 系統端容錯** — 新工具函式 `_parseAIJSON(raw)` 自動剝除 markdown 圍籬(```json / ```)、處理 UTF-8 BOM、智慧引號(curly quotes)→ 直引號、容錯 AI 加的前言/結語(抓第一個 `[` 到最後一個 `]` 的合法 JSON 區塊),文字框匯入(L5542)和檔案匯入(L6741)兩處入口都改用;**(2) prompt 加強** — 開頭加「【輸出格式絕對規則】」區塊,含錯誤示範跟正確示範,要求 AI「第一個字必須是 `[`,最後一個字必須是 `]`」。10 種真實 AI 輸出情境壓測全過。
+
 ### V5.0.2
 **AI 匯入提示詞精準化(genImportPrompt)**:從一筆真實 AI 產出的 JSON 反饋發現兩個常見偏差,在 prompt 加明文修正:
 - **markers**:加「值與括號間不可有空格」明文 + 單時間點範例 `{"name":"AFP","content":"8.96(2026-04-02)"}`(過去 AI 常產出 `"8.96 (2026-04-02)"` 多了空格);加「同一 marker name 在陣列中只能出現一次」明文(避免 AI 把多時間點寫成多筆,系統會自動去重但格式應由 AI 一次到位);marker 範例增列 HCC 常用的 PIVKA-II
