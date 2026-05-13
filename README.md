@@ -111,6 +111,13 @@
 
 ## 版本歷程
 
+### V5.1.1
+**HTML 投影片特殊議程 inline display:flex 蓋掉 CSS 顯示控制 bug 修正**:個管師回報「填失聯率後,HTML 投影片產出時 7 頁都只剩失聯率,個案投影片消失」。透過比對使用者實機產出的兩份 HTML 檔(填失聯率前 / 填失聯率後)精準定位:`slides` 陣列正確產出 7 個 section,個案投影片**並沒有消失** — 真正原因是**特殊議程投影片的 inline style 含 `display:flex`**,CSS 優先級「inline > class」,結果 `display:flex` 覆蓋了 `.slide { display:none }`,讓特殊議程投影片**永遠顯示**;加上 `.slide { position:absolute; inset:0 }`(絕對定位填滿視窗),失聯率投影片**疊在所有其他投影片之上,蓋掉個案內容**。
+
+**影響範圍**:不只失聯率 — **完治率 / 失聯率 / 留治率 / 訪視率 4 個特殊議程主表 + 病人清單共 4 處 inline style** 都有同樣 bug。任何個管師按「特殊議程」+「HTML 投影片」都會踩到。
+
+**修法**:4 處 inline style 移除 `display:flex;`(保留 `flex-direction:column`)。讓 `display` 完全由 `.slide`/`.slide.on` CSS class 控制 — `.slide.on { display:flex }` 已存在,切換時會正常套用。新坑 #23 入帳:CSS 優先級 inline > class,不該在 inline style 寫 `display:xxx` 跟 class 競爭。
+
 ### V5.1.0
 **姓名遮蔽 bug + 7 癌別 defaultDept 補齊(兩個獨立修正)**:
 - **姓名遮蔽兩字 bug**:個管師回報「林一」遮蔽後變成「林0一」三字。根因:`maskName` 兩字邏輯 `n[0]+'0'+n[1]` 沒拿掉末字。修法 `n[0]+'○'`(只留首字 + 圓圈)。**順便把遮蔽符號從數字 `0` 改成 `○`(U+25CB WHITE CIRCLE)** — 正體中文媒體標準遮蔽符號,視覺更清楚不會混淆數字。三字邏輯同步改:「陳0明」→「陳○明」。8 種姓名情境壓測全過(兩字/三字/四字/單字/空值/null)

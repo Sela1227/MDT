@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.1.0';
+const VERSION='V5.1.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5948,7 +5948,7 @@ async function genHTMLSlides(){
         var pass=actual!==null?actual>=thNum:null;
         var rateColor=pass===null?'#fff':pass?'#7FE87F':'#FF9980';
         // Summary slide
-        slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+        slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;flex-direction:column">'
           +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
           +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">完治率</span>'
           +'<span class="cat">特殊議程</span></div>'
@@ -5994,7 +5994,7 @@ async function genHTMLSlides(){
                 +'<td style="padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top;line-height:1.6">'+escA(p.note||'').replace(/\n/g,'<br>')+'</td>'
                 +'</tr>';
             }).join('');
-            slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+            slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;flex-direction:column">'
               +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
               +'<span style="font-size:clamp(15px,1.7vw,24px);font-weight:800">未完治病人清單</span>'
               +'<span class="cat">特殊議程</span>'
@@ -6057,7 +6057,7 @@ async function genHTMLSlides(){
             +'<td style="text-align:center;padding:1.2vh 1.5vw;font-size:clamp(20px,2.4vw,34px);font-weight:800;color:'+rc+';border:1px solid #ddd">'+escA(pct)+'</td>'
             +'</tr>';
         }).join('');
-        slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+        slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;flex-direction:column">'
           +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
           +'<span style="font-size:clamp(18px,2.2vw,30px);font-weight:800">'+escA(t)+'</span>'
           +'<span class="cat">特殊議程</span></div>'
@@ -6095,7 +6095,7 @@ async function genHTMLSlides(){
                 +'<td style="padding:1vh 1vw;font-size:clamp(11px,1.05vw,15px);border:1px solid #ddd;vertical-align:top;line-height:1.6">'+escA(p.note||'').replace(/\n/g,'<br>')+'</td>'
                 +'</tr>';
             }).join('');
-            slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;display:flex;flex-direction:column">'
+            slides.push('<section class="slide" style="--ca:'+caColor+';background:#fff;flex-direction:column">'
               +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
               +'<span style="font-size:clamp(15px,1.7vw,24px);font-weight:800">病人清單</span>'
               +'<span class="cat">'+escA(t)+'</span>'

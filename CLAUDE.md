@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.1.1 | 修「特殊議程 inline display:flex 覆蓋 .slide CSS class」造成 4 率投影片永遠顯示蓋掉個案的 bug;4 處全部修 |
 | V5.1.0 | 姓名遮蔽兩字 bug 修(林一→林○);遮蔽符號從 `0` 改 `○`(U+25CB);7 癌別補齊 defaultDept(乳癌已有,其他 7 個新加) |
 | V5.0.3 | AI 匯入 JSON 容錯:新 `_parseAIJSON` 工具(剝 markdown 圍籬/BOM/智慧引號/前後綴文字);prompt 加強格式規則(範例展示) |
 | V5.0.2 | AI 匯入提示詞 markers 加「不可有空格」明文 + 單時間點範例 + PIVKA-II;topics 加智慧勾選原則(資料對應規則) |
@@ -324,6 +325,16 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 為什麼長期沒被發現:三位個管師可能很少接觸兩字姓名(MDT 個案多是 3-4 字),即使遇到也以為「就是這樣顯示」
 - 預防:遮蔽相關的測試應該涵蓋字串長度 1/2/3/4+ 邊界 case
 
+**#23 inline `display:flex` 覆蓋 `.slide { display:none }` CSS class(V5.1.1)**
+- 症狀:HTML 投影片產出時,只要有任何特殊議程(完治率/失聯率/留治率/訪視率),所有投影片畫面都被特殊議程內容覆蓋,看起來像「個案投影片消失,每頁都是同一個特殊議程」
+- 表象誤導:個管師描述「個案資料消失」,實際 slides 陣列產出完全正確(diff 兩份實機 HTML 檔證實 — `<section>` 數量、class、內容都對),只是視覺被覆蓋
+- 根因:HTML 投影片用 `.slide { position:absolute; inset:0; display:none }` + `.slide.on { display:flex }` 雙態邏輯。**4 個特殊議程投影片**(完治率/失聯率/留治率/訪視率,主表 + 病人清單共 4 處)在 inline style 寫了 `display:flex` — **CSS 優先級 inline > class**,導致這 4 張投影片**忽略 `.slide` 跟 `.slide.on` 控制,永遠顯示**;因為絕對定位填滿視窗,蓋住所有其他投影片
+- 做法:inline style 移除 `display:flex;`,保留 `flex-direction:column`(這個無 `display:flex` 時不生效,留著無害但無用 — 為了 diff 最小化保留)。`display` 完全交給 CSS class 控制
+- 教訓:**`display`(尤其 `none/flex/block` 切換)永遠用 CSS class 控制,絕不寫在 inline style** — inline 蓋 class 是 CSS 優先級鐵律,跟 class 競爭不會贏。Inline style 只該寫「個別實例的色彩、變數」(如 `--ca:#XXX`、`background:#fff`),不該碰會被切換的屬性
+- 為什麼長期沒被發現:特殊議程是 V4 後期才加的功能,使用頻率本來就低(每季品質報告才用一次),加上 bug 表現太怪(個管師以為「個案消失」),歸因錯誤難 reproduce
+- 為什麼這次 V5.1.1 才修:個管師回報「個案消失」被連續追了 11 個方向都不對,直到拿到實機產出的 HTML 檔做 diff,才從 `<section>` 結構完全正確 + 視覺結果完全錯誤的矛盾找到「視覺問題」這條路,進而發現 inline display 覆蓋 class 的 CSS 優先級陷阱
+- 預防:打包前 grep `<section[^>]*style="[^"]*display:` 在 genHTMLSlides 內出現就警告(`.slide` 的 display 永遠該由 class 控制)
+
 ---
 
 ## 九、打包驗證(每次必跑)
@@ -443,4 +454,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.1.0 兩個獨立修正:(1)姓名遮蔽 `maskName` 兩字 bug — 「林一」原本變「林0一」(三字),修成「林○」(兩字);順便把遮蔽符號從 `0`(數字)改成 `○`(U+25CB,正體中文標準)避免混淆數字 / 人名;三字「陳0明」變「陳○明」(坑 #22)。(2)7 個癌別補齊 `defaultDept`(乳癌原本有,其他 7 個從第一 memberKey 科別推導):頭頸癌→口腔外科、血液淋巴癌→血液腫瘤科、胸腔癌→胸腔外科、消化道癌→一般外科、肝膽胰癌→一般外科、泌尿道癌→泌尿科、婦癌→婦產科。新增個案時第一主治欄自動帶該科別,個管師不用每次手選。舊資料完全相容。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。
+V5.1.1 修個管師回報「填失聯率後 HTML 投影片每頁都變失聯率」 — 追了 11 個方向都失敗,最後用兩份實機 HTML 檔 diff 找到真因:**特殊議程投影片的 inline style 含 `display:flex`,覆蓋了 `.slide { display:none }`**(CSS 優先級 inline > class),導致特殊議程**永遠顯示且絕對定位疊在最上層,蓋掉個案投影片**(視覺問題,不是資料消失)。4 處全修(完治率/失聯率/留治率/訪視率 主表 + 病人清單),inline style 移除 `display:flex` 留 `flex-direction:column`,`display` 完全交給 `.slide`/`.slide.on` class 控制。坑 #23 入帳:**`display` 永遠用 CSS class 控制,不寫在 inline style**。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。
