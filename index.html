@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.1.1';
+const VERSION='V5.1.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6664,11 +6664,16 @@ exams：影像檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/SONO/Breast SON
   - 若檢查類型不在上述清單，name 填實際名稱
 treatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"劑量/說明"}
 markers：癌指數（PSA/CEA/CA125/AFP/CA19-9/CA15-3/PIVKA-II/β-hCG/LDH 等，HCC 常用 AFP 與 PIVKA-II），陣列，每筆：
-  {"name":"CEA","date":"最早一筆的日期YYYY-MM-DD","content":"值(日期)→值(日期)，如：5.2(2025-01-10)→8.7(2025-04-15)"}
-  - 趨勢格式：值與括號間不可有空格，例如「8.96(2026-04-02)」非「8.96 (2026-04-02)」
-  - 單一時間點範例：{"name":"AFP","date":"2026-04-02","content":"8.96(2026-04-02)"}
-  - content 不重複指數名稱；若僅一次檢驗則 content 只填 值(日期)
+  {"name":"指數名稱","date":"YYYY-MM-DD 或 空字串","content":"值(日期)→值(日期)"}
   - 同一 marker name 在陣列中只能出現一次（多次檢驗併進同一筆的 content 趨勢字串）
+  - 值與括號間不可有空格，例如「8.96(2026-04-02)」非「8.96 (2026-04-02)」
+  - content 不重複指數名稱
+  - 【date 欄位規則】
+    * 序列（content 含 2 個以上時間點，有「→」符號）→ date 一律填空字串 ""
+      （所有日期已寫在 content 趨勢字串裡，date 欄重複沒意義）
+      範例：{"name":"AFP","date":"","content":"1.64(2023-05-15)→134(2026-05-04)"}
+    * 單筆（content 只有 1 個時間點，無「→」符號）→ date 填那個時間點的 YYYY-MM-DD
+      範例：{"name":"AFP","date":"2026-04-02","content":"8.96(2026-04-02)"}
 familyHistory：家族癌症史，自由文字；僅 _cancer 為「乳癌」或「婦癌」時填寫，其他癌別填空字串 ""
 mammo：乳房攝影，僅 _cancer 為「乳癌」時填寫，格式：{"date":"YYYY-MM-DD","report":"Findings:...\nImpression:...","images":[]}；其他癌別省略此欄位
 discussion：討論要點，一句話摘要本次討論重點

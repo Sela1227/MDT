@@ -111,6 +111,9 @@
 
 ## 版本歷程
 
+### V5.1.2
+**AI 匯入提示詞 markers 段落改寫 — 序列 marker 不填 date 欄**:個管師回報 AI 匯入後序列 marker(像 AFP `1.64(2023-05-15)→134(2026-05-04)`)被 AI 自動填入「最早一筆日期」到 date 欄,造成日期欄顯示一個日期,但其實趨勢有 2 個日期都已寫在 content 字串內,date 欄那個日期反而是冗餘 + 誤導(個管師要手動刪)。修法:改 prompt 明確區分序列 vs 單筆 — **序列(content 含「→」符號)→ date 一律填空字串**;單筆(content 無「→」)→ date 填那個時間點。加錯誤示範 + 正確示範雙範例,讓 AI 對齊。只改 prompt 文字,系統解析邏輯不動。
+
 ### V5.1.1
 **HTML 投影片特殊議程 inline display:flex 蓋掉 CSS 顯示控制 bug 修正**:個管師回報「填失聯率後,HTML 投影片產出時 7 頁都只剩失聯率,個案投影片消失」。透過比對使用者實機產出的兩份 HTML 檔(填失聯率前 / 填失聯率後)精準定位:`slides` 陣列正確產出 7 個 section,個案投影片**並沒有消失** — 真正原因是**特殊議程投影片的 inline style 含 `display:flex`**,CSS 優先級「inline > class」,結果 `display:flex` 覆蓋了 `.slide { display:none }`,讓特殊議程投影片**永遠顯示**;加上 `.slide { position:absolute; inset:0 }`(絕對定位填滿視窗),失聯率投影片**疊在所有其他投影片之上,蓋掉個案內容**。
 

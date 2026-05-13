@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.1.2 | AI 匯入 prompt markers 序列 marker date 欄改填空字串(避免冗餘 + 誤導);加序列 vs 單筆雙範例 |
 | V5.1.1 | 修「特殊議程 inline display:flex 覆蓋 .slide CSS class」造成 4 率投影片永遠顯示蓋掉個案的 bug;4 處全部修 |
 | V5.1.0 | 姓名遮蔽兩字 bug 修(林一→林○);遮蔽符號從 `0` 改 `○`(U+25CB);7 癌別補齊 defaultDept(乳癌已有,其他 7 個新加) |
 | V5.0.3 | AI 匯入 JSON 容錯:新 `_parseAIJSON` 工具(剝 markdown 圍籬/BOM/智慧引號/前後綴文字);prompt 加強格式規則(範例展示) |
@@ -454,4 +455,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.1.1 修個管師回報「填失聯率後 HTML 投影片每頁都變失聯率」 — 追了 11 個方向都失敗,最後用兩份實機 HTML 檔 diff 找到真因:**特殊議程投影片的 inline style 含 `display:flex`,覆蓋了 `.slide { display:none }`**(CSS 優先級 inline > class),導致特殊議程**永遠顯示且絕對定位疊在最上層,蓋掉個案投影片**(視覺問題,不是資料消失)。4 處全修(完治率/失聯率/留治率/訪視率 主表 + 病人清單),inline style 移除 `display:flex` 留 `flex-direction:column`,`display` 完全交給 `.slide`/`.slide.on` class 控制。坑 #23 入帳:**`display` 永遠用 CSS class 控制,不寫在 inline style**。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。
+V5.1.2 改 AI 匯入 prompt 的 markers 段落 — 序列 marker(content 含「→」的趨勢字串,如 `1.64(2023-05-15)→134(2026-05-04)`)的 date 欄改填空字串,避免「日期欄填一個日期 + content 又有 2 個日期」的冗餘 + 誤導(個管師回報要手動刪)。單筆 marker 不變,date 仍填那個時間點。改 prompt 文字加序列 vs 單筆雙範例,系統解析邏輯不動。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。
