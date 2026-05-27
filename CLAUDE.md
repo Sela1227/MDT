@@ -144,6 +144,16 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.1.4 | HTML 投影片標記工具加 5 色字色按鈕(<span class="fc">);hlClear 同時清 mark+fc;toolbar 寬度更新 |
+| V5.1.3 | HTML 投影片螢光筆「清除」改成精確清除(用 Range.intersectsNode);個案年齡 .cd 字級加大(22→26px) |
+| V5.1.2 | AI 匯入 prompt markers 序列 marker date 欄改填空字串(避免冗餘 + 誤導);加序列 vs 單筆雙範例 |
+| V5.1.1 | 修「特殊議程 inline display:flex 覆蓋 .slide CSS class」造成 4 率投影片永遠顯示蓋掉個案的 bug;4 處全部修 |
+| V5.1.0 | 姓名遮蔽兩字 bug 修(林一→林○);遮蔽符號從 `0` 改 `○`(U+25CB);7 癌別補齊 defaultDept(乳癌已有,其他 7 個新加) |
+| V5.0.3 | AI 匯入 JSON 容錯:新 `_parseAIJSON` 工具(剝 markdown 圍籬/BOM/智慧引號/前後綴文字);prompt 加強格式規則(範例展示) |
+| V5.0.2 | AI 匯入提示詞 markers 加「不可有空格」明文 + 單時間點範例 + PIVKA-II;topics 加智慧勾選原則(資料對應規則) |
+| V5.0.1 | HTML 投影片 _trackSlide 字級改 clamp 響應式;修「尚未填寫」白字 bug;字型 fallback chain 加英文 sans-serif 在前(SF Pro/Helvetica Neue) |
+| V5.0.0 | 醫療小組/必要事件加 5 個討論欄位(診斷/現病史/討論要點/摘要/決策);獨立 teamHTML/teamViewHTML 函數;HTML 投影片改每筆獨立(非合併表格);舊資料相容 |
+| V4.9.0 | LINE 通知多癌別合開時自動合併(改 genLine cids 來源 + 會議名稱動態合成);其他產出不變 |
 | V4.8.2 | Kit 版本標記 V1.6.0 → V1.7.1;handoff 加「提案前檢查紀錄」(回應 V1.7.0 兩個檢查);無程式變動 |
 | V4.8.1 | 加 `SELA-handoff.md`(Kit V1.6.0 回流通道機制);無程式變動 |
 | V4.8.0 | 對齊 SELA Starter Kit V1.6.0:加 favicon 套組、theme-color、右下角 SELA logo、.gitignore;zip 命名改空格(`MDT V*.zip`);無程式功能變動 |
@@ -283,6 +293,51 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:有「動態插入/移除 sibling」邏輯時,目標 input 加 dataset.role='custom-type' 之類標記,刪除時用 `[data-role="custom-type"]` 選擇器,比 tagName 嚴謹
 - 順便發現的 bug:`__other__` 分支也是 `tagName==='INPUT'` 判斷「已有 input」,使用者從 CT 切到「其他」時看到日期欄(也是 INPUT)就不插自訂類型欄,使用者沒地方輸入。一併修
 
+**#19 followupHTML 內 upd 寫死 `'cases'`(V5.0.0 發現,本版不修)**
+- 症狀:前期追蹤事項(followups)的欄位編輯後**可能不會儲存**;某些情況下會**寫進個案討論(cases)的同 index 物件**,造成資料污染
+- 根因:`followupHTML(cid,i,d,type='followups')` 函數內所有 `upd` 呼叫都寫死 `upd('${cid}','cases',${i},...)`,沒有用 `${type}`。但 `upd` 函數本身是 `S.meeting.sections[cid][type][i]` 動態派發 — 收到 'cases' 就去 cases 陣列存取
+- 兩種壞情境:
+  - `cases[i]` 不存在(常見,因追蹤數通常少於個案) → `if(!item)return;` → 編輯靜默失敗,個管師可能以為有存
+  - `cases[i]` 存在 → 改到 cases[i] 上,造成資料污染
+- 為什麼長期沒人回報:個管師可能很少深度編輯「前期追蹤事項」的所有欄位(主要只看「上次討論」追蹤狀態);加上看起來像「儲存了」,實際只是 UI 暫態
+- 做法(本版**不順便修**):V5.0.0 寫的 `teamHTML` 用 `${type}` 動態派發,不複製這個 bug。followupHTML 留下次獨立修(改一行 + 完整測試前期追蹤的所有編輯場景)
+- 教訓:多 type 共用的渲染函數,必須用 `${type}` 動態派發,絕不能寫死任一具體 type 名稱 — 這是「跨 type 共用模板」的鐵律
+- 預防:打包前 grep `upd\('\$\{cid\}','cases',` 出現在 `function caseHTML` 以外的位置就警告
+
+**#20 HTML 投影片新區塊字級寫死沒用 clamp(V5.0.1)**
+- 症狀:V5.0.0 新加的醫療小組/必要事件投影片,在 1080p 投影機現場字太小(~16px),個管師回報「字略小」
+- 根因:寫 `_trackSlide` 時內文沒設 `font-size`(繼承 body 預設 16px),label 用 `font-size:0.85em` 相對值。沒參照個案討論主投影片用 `clamp(min,vw,max)` 響應式的慣例
+- 做法:label `clamp(15px,1.5vw,22px)`、內文 `clamp(17px,1.8vw,26px)`,跟 `.cdx` 主投影片字級看齊
+- 順便發現:「(尚未填寫討論內容)」用 `rgba(255,255,255,.5)` 白字,但投影片背景是白的 → 看不到。改 `rgba(0,0,0,.4)` 黑字
+- 教訓:**新增任何 HTML 投影片元素時,字級必須用 `clamp()`,不能用 px 或 em 寫死** — 投影片要支援筆電預覽(800x600)到 4K 投影(3840x2160),寫死字級會在某些尺寸下太小或太大
+- 預防:打包前 grep 新加的投影片相關元素,找 `font-size:\d+px` 或 `font-size:\d+\.\d+em` 警告(`clamp` 或 `vw/vh` 才合格)
+
+**#21 LLM 輸出的「純 JSON」不可信,必須容錯解析(V5.0.3)**
+- 症狀:個管師按「AI 匯入提示詞」貼到 claude.ai,生成的 JSON 貼回系統時 `JSON.parse` 炸:「Unexpected token '`', "\`\`\`json [ "...」
+- 根因:claude.ai/ChatGPT 等 LLM 即使 prompt 明文寫「不要加 markdown 符號」,仍經常自動加 ```json ... ``` markdown 圍籬。這不是 prompt 寫錯,是 LLM 訓練習慣的頑固偏差,要當作「無法消除的事實」
+- 做法:**雙管齊下** — (1) 系統端寫 `_parseAIJSON` 容錯解析(剝 markdown 圍籬、UTF-8 BOM、智慧引號 → 直引號、抓 `[...]` 區塊容錯前後綴),所有 AI 匯入入口必用;(2) prompt 仍加強格式規則(範例展示「錯誤」vs「正確」)讓 AI 提高成功率,但不依賴它
+- 教訓:**任何「跟 LLM 互動」的整合,輸出端必須有容錯解析,prompt 絕不能是唯一防線**。LLM 是機率輸出,不是確定行為;當作「外部 API」處理,輸入消毒要做完整
+- 預防:任何 `JSON.parse(llm_output)` 都改用 `_parseAIJSON()`;未來其他 LLM 整合(如語音轉文字、影像 OCR)同樣原則 — 對 LLM 輸出做容錯轉換,不假設它一定符合格式
+- 容錯機制需覆蓋:① markdown 圍籬(```json / ```)② UTF-8 BOM ③ 智慧引號(\u201C/\u201D) ④ AI 加的前言/結語文字
+
+**#22 maskName 兩字姓名變三字 + 遮蔽符號用數字 0 易混淆(V5.1.0)**
+- 症狀:兩字姓名「林一」遮蔽後變成「林0一」(三個字,多了個字);三字「陳建明」變「陳0明」用的也是阿拉伯數字 0,看起來像「陳零明」容易誤讀為人名
+- 根因:`maskName` 兩字邏輯 `n[0]+'0'+n[1]` 公式從三字邏輯複製過來但沒拿掉末字。遮蔽符號用 ASCII `'0'`(數字零)是早期方便打字寫的,沒考慮跟「真實姓名含零字輩」混淆
+- 做法:兩字改成 `n[0]+'○'`(只留首字 + 圓圈);三字改成 `n[0]+'○'+n[n.length-1]`(首末字 + 圓圈);**遮蔽符號統一用 `○`(U+25CB WHITE CIRCLE)** — 正體中文媒體標準
+- 教訓:**遮蔽符號要選一個「絕對不會出現在真實姓名」的字元** — 數字 0 / 字母 O 都可能被誤認;全形中文圓圈 `○` 純視覺符號,無法當人名讀
+- 為什麼長期沒被發現:三位個管師可能很少接觸兩字姓名(MDT 個案多是 3-4 字),即使遇到也以為「就是這樣顯示」
+- 預防:遮蔽相關的測試應該涵蓋字串長度 1/2/3/4+ 邊界 case
+
+**#23 inline `display:flex` 覆蓋 `.slide { display:none }` CSS class(V5.1.1)**
+- 症狀:HTML 投影片產出時,只要有任何特殊議程(完治率/失聯率/留治率/訪視率),所有投影片畫面都被特殊議程內容覆蓋,看起來像「個案投影片消失,每頁都是同一個特殊議程」
+- 表象誤導:個管師描述「個案資料消失」,實際 slides 陣列產出完全正確(diff 兩份實機 HTML 檔證實 — `<section>` 數量、class、內容都對),只是視覺被覆蓋
+- 根因:HTML 投影片用 `.slide { position:absolute; inset:0; display:none }` + `.slide.on { display:flex }` 雙態邏輯。**4 個特殊議程投影片**(完治率/失聯率/留治率/訪視率,主表 + 病人清單共 4 處)在 inline style 寫了 `display:flex` — **CSS 優先級 inline > class**,導致這 4 張投影片**忽略 `.slide` 跟 `.slide.on` 控制,永遠顯示**;因為絕對定位填滿視窗,蓋住所有其他投影片
+- 做法:inline style 移除 `display:flex;`,保留 `flex-direction:column`(這個無 `display:flex` 時不生效,留著無害但無用 — 為了 diff 最小化保留)。`display` 完全交給 CSS class 控制
+- 教訓:**`display`(尤其 `none/flex/block` 切換)永遠用 CSS class 控制,絕不寫在 inline style** — inline 蓋 class 是 CSS 優先級鐵律,跟 class 競爭不會贏。Inline style 只該寫「個別實例的色彩、變數」(如 `--ca:#XXX`、`background:#fff`),不該碰會被切換的屬性
+- 為什麼長期沒被發現:特殊議程是 V4 後期才加的功能,使用頻率本來就低(每季品質報告才用一次),加上 bug 表現太怪(個管師以為「個案消失」),歸因錯誤難 reproduce
+- 為什麼這次 V5.1.1 才修:個管師回報「個案消失」被連續追了 11 個方向都不對,直到拿到實機產出的 HTML 檔做 diff,才從 `<section>` 結構完全正確 + 視覺結果完全錯誤的矛盾找到「視覺問題」這條路,進而發現 inline display 覆蓋 class 的 CSS 優先級陷阱
+- 預防:打包前 grep `<section[^>]*style="[^"]*display:` 在 genHTMLSlides 內出現就警告(`.slide` 的 display 永遠該由 class 控制)
+
 ---
 
 ## 九、打包驗證(每次必跑)
@@ -402,4 +457,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V4.8.2 微調對齊 Kit V1.7.1(原對齊 V1.6.0):Kit 版本標記更新、handoff 加「提案前檢查紀錄」一小段(回應 V1.7.0 加的「grep Kit 避免重複」+「踩坑 vs 跨平台知識分類」兩個檢查)。本案 6 條反饋未被 Kit V1.7.0/V1.7.1 採納(V1.7.0 收的是 SelaTrip 反饋,不是 MDT),所以仍有效躺在 handoff 裡待 SELA 下次升 Kit 時用;V1.7.0 新增的坑 #37/#38(外部 API 時區、雲端 schema migration)與 MDT 無交集。本版無程式變動,純規範補強。下版第一優先還是「記住上次登入者」。
+V5.1.4 HTML 投影片標記工具加「字色變更」 — 除了原本 5 色螢光筆(背景色),加 5 色字色按鈕(A 樣式),用 `<span class="fc">` 包字色 + 略加粗(font-weight:600)。Toolbar 結構:5 螢光圓 → 分隔線 → 5 字色 A → 分隔線 → ✕ 清除。「✕ 清除」同時清螢光筆 `<mark>` + 字色 `<span class="fc">` 兩種。Toolbar 寬度估算從 200→320px。支援疊加(同一段先螢光再字色 = 黃底紅字)。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。

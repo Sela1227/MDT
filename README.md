@@ -111,6 +111,53 @@
 
 ## 版本歷程
 
+### V5.1.4
+**HTML 投影片標記工具加「字色變更」**:除了原本的 5 色螢光筆(背景色),新增 **5 色字色按鈕**(A 樣式),讓使用者在投影片現場標記時有兩種獨立工具。字色用對比強烈的飽和暗色:紅 `#D32F2F` / 藍 `#1976D2` / 綠 `#388E3C` / 橘 `#F57C00` / 紫 `#7B1FA2`。字色變更時 wrapper 是 `<span class="fc">` 加 `color` + `font-weight:600`(略加粗增加辨識),跟螢光筆的 `<mark>` 分開。Toolbar 結構:5 螢光圓 → 分隔線 → 5 字色 A → 分隔線 → ✕ 清除。「✕ 清除」同時清螢光筆 `<mark>` + 字色 `<span class="fc">` 兩種標記(無論精準或全清)。Toolbar 寬度估算更新(舊 200px → 新 320px,避免靠視窗邊緣時超出)。
+
+### V5.1.3
+**HTML 投影片兩個 bug fix**:
+- **螢光筆「清除」改成精確清除**:過去 `hlClear()` 用 `document.querySelectorAll('mark').forEach(...)` **無條件清掉本頁所有 mark**,個管師回報「畫了五個標記想清掉一個結果全沒了」。改成「**選取範圍內精確清除**」:有 `_hlSel`(剛選取的範圍)→ 用 `Range.intersectsNode()` 找與範圍重疊的 mark,只清這些;沒選取 → 加 `confirm` 二次確認後才清全頁(保留原行為作為「清全頁」入口,避免誤觸)
+- **個案投影片年齡字級加大**:`.cd`(caseDemo:性別/年齡/ECOG/CFS)桌面字級 `clamp(14px,1.5vw,22px)` → `clamp(16px,1.8vw,26px)`(1080p 從 22 → 26px,+4px),Mobile media query 同步加大 `clamp(13px,3.5vw,20px)` → `clamp(15px,4vw,24px)`。個管師回報「年紀字型略小」,跟旁邊「.cdr 主治醫師 23px」、「.cdx 診斷 28px」對比明顯偏小,本版調整後跟主治醫師字級接近,跟診斷的層級也合理
+
+### V5.1.2
+**AI 匯入提示詞 markers 段落改寫 — 序列 marker 不填 date 欄**:個管師回報 AI 匯入後序列 marker(像 AFP `1.64(2023-05-15)→134(2026-05-04)`)被 AI 自動填入「最早一筆日期」到 date 欄,造成日期欄顯示一個日期,但其實趨勢有 2 個日期都已寫在 content 字串內,date 欄那個日期反而是冗餘 + 誤導(個管師要手動刪)。修法:改 prompt 明確區分序列 vs 單筆 — **序列(content 含「→」符號)→ date 一律填空字串**;單筆(content 無「→」)→ date 填那個時間點。加錯誤示範 + 正確示範雙範例,讓 AI 對齊。只改 prompt 文字,系統解析邏輯不動。
+
+### V5.1.1
+**HTML 投影片特殊議程 inline display:flex 蓋掉 CSS 顯示控制 bug 修正**:個管師回報「填失聯率後,HTML 投影片產出時 7 頁都只剩失聯率,個案投影片消失」。透過比對使用者實機產出的兩份 HTML 檔(填失聯率前 / 填失聯率後)精準定位:`slides` 陣列正確產出 7 個 section,個案投影片**並沒有消失** — 真正原因是**特殊議程投影片的 inline style 含 `display:flex`**,CSS 優先級「inline > class」,結果 `display:flex` 覆蓋了 `.slide { display:none }`,讓特殊議程投影片**永遠顯示**;加上 `.slide { position:absolute; inset:0 }`(絕對定位填滿視窗),失聯率投影片**疊在所有其他投影片之上,蓋掉個案內容**。
+
+**影響範圍**:不只失聯率 — **完治率 / 失聯率 / 留治率 / 訪視率 4 個特殊議程主表 + 病人清單共 4 處 inline style** 都有同樣 bug。任何個管師按「特殊議程」+「HTML 投影片」都會踩到。
+
+**修法**:4 處 inline style 移除 `display:flex;`(保留 `flex-direction:column`)。讓 `display` 完全由 `.slide`/`.slide.on` CSS class 控制 — `.slide.on { display:flex }` 已存在,切換時會正常套用。新坑 #23 入帳:CSS 優先級 inline > class,不該在 inline style 寫 `display:xxx` 跟 class 競爭。
+
+### V5.1.0
+**姓名遮蔽 bug + 7 癌別 defaultDept 補齊(兩個獨立修正)**:
+- **姓名遮蔽兩字 bug**:個管師回報「林一」遮蔽後變成「林0一」三字。根因:`maskName` 兩字邏輯 `n[0]+'0'+n[1]` 沒拿掉末字。修法 `n[0]+'○'`(只留首字 + 圓圈)。**順便把遮蔽符號從數字 `0` 改成 `○`(U+25CB WHITE CIRCLE)** — 正體中文媒體標準遮蔽符號,視覺更清楚不會混淆數字。三字邏輯同步改:「陳0明」→「陳○明」。8 種姓名情境壓測全過(兩字/三字/四字/單字/空值/null)
+- **7 癌別補齊 defaultDept**:過去只有「乳癌」設了 `defaultDept:'一般外科'`,其他 7 個癌別在新增個案時第一主治欄留空,個管師要每次手選。本版補齊:頭頸癌→口腔外科、血液淋巴癌→血液腫瘤科、胸腔癌→胸腔外科、消化道癌→一般外科、肝膽胰癌→一般外科、泌尿道癌→泌尿科、婦癌→婦產科。設定依據:該癌別第一個 memberKey 科別(代表主治流向最常見的科別)
+- **舊資料相容**:已存的歷史會議個案不受影響(maskName 是顯示時動態調用,不存進 localStorage);defaultDept 只影響「新增空白個案」的初值,不動既有個案
+
+### V5.0.3
+**AI 匯入 JSON 容錯解析**:個管師回報「**Unexpected token '`', "```json [ "...**」JSON 格式錯誤。根因:AI(claude.ai)即使 prompt 寫「不要加 markdown 符號」,仍經常在 JSON 前後加 ```json ... ``` markdown 圍籬,系統直接 `JSON.parse` 炸開。雙管齊下解決:**(1) 系統端容錯** — 新工具函式 `_parseAIJSON(raw)` 自動剝除 markdown 圍籬(```json / ```)、處理 UTF-8 BOM、智慧引號(curly quotes)→ 直引號、容錯 AI 加的前言/結語(抓第一個 `[` 到最後一個 `]` 的合法 JSON 區塊),文字框匯入(L5542)和檔案匯入(L6741)兩處入口都改用;**(2) prompt 加強** — 開頭加「【輸出格式絕對規則】」區塊,含錯誤示範跟正確示範,要求 AI「第一個字必須是 `[`,最後一個字必須是 `]`」。10 種真實 AI 輸出情境壓測全過。
+
+### V5.0.2
+**AI 匯入提示詞精準化(genImportPrompt)**:從一筆真實 AI 產出的 JSON 反饋發現兩個常見偏差,在 prompt 加明文修正:
+- **markers**:加「值與括號間不可有空格」明文 + 單時間點範例 `{"name":"AFP","content":"8.96(2026-04-02)"}`(過去 AI 常產出 `"8.96 (2026-04-02)"` 多了空格);加「同一 marker name 在陣列中只能出現一次」明文(避免 AI 把多時間點寫成多筆,系統會自動去重但格式應由 AI 一次到位);marker 範例增列 HCC 常用的 PIVKA-II
+- **topics**:加智慧勾選原則 — exams 有內容→勾影像、pathologies 有內容→勾病理、diagnosis 含 cTNM/pTNM/分期→勾分期、treatments 有內容或診斷提及 RT/Chemo/標靶→勾治療策略;加註「通常 MDT 個案 3-4 項都會勾」(過去 AI 常偷懶只勾 2 項,跟個案實際資料豐富度不匹配)
+- 本版**只改 prompt 文字**,系統解析邏輯不動。下次個管師按「AI 匯入提示詞」複製到 claude.ai,生成的 JSON 會更貼齊規範
+
+### V5.0.1
+**HTML 投影片視覺修正(配合 V5.0.0 新加的 team/events 投影片)**:
+- **字級調大**:V5.0.0 加的 `_trackSlide` 沒設響應式字級,在 1080p 投影機現場字看起來只有 ~16px 太小。改用 `clamp()` 響應式 — label `clamp(15px,1.5vw,22px)`、內文 `clamp(17px,1.8vw,26px)`,1080p 投影現場 ≈ 22 / 26px,跟個案討論主投影片的 `.cdx` 字級一致
+- **「尚未填寫」白字 bug**:V5.0.0 寫 `rgba(255,255,255,.5)` 白字,但投影片背景是白的 → 看不到。修成 `rgba(0,0,0,.4)` 黑字
+- **HTML 投影片字型 fallback chain 優化**:過去 `'Noto Sans TC','Microsoft JhengHei',Helvetica,sans-serif` 中英文混排英文 fallback 結果不一致(視作業系統而定)。改成 `-apple-system,BlinkMacSystemFont,'Helvetica Neue','Noto Sans TC','PingFang TC','Microsoft JhengHei',Helvetica,Arial,sans-serif` — 英文 sans-serif 字型在前(SF Pro / Helvetica Neue 等)、中文字型在後(Noto Sans TC / PingFang TC / 微軟正黑),跨 macOS / Windows / iPad 視覺都是「中英文都無襯線、調性一致」
+
+### V5.0.0
+**醫療小組 / 必要事件 加入 5 個討論欄位**:過去這兩個區塊只能填病歷號+姓名+主治+備註(共用 `followupHTML`),本版讓它們**達到接近個案討論的核心欄位**:診斷、現病史、討論要點、摘要、決策(5 個 textarea)。設計取捨:不做 100% 等同個案討論(否則涉及影像/病理/治療列表/marker/timeline 等 struct 操作,牽涉 100+ 處 `cases` 寫死的程式碼,風險過大且超出實際使用需求)。新增獨立 `teamHTML(cid,i,d,type)` 與 `teamViewHTML(cid,i,d,type)` 兩個函數,team/events 共用;`upd` 用 `${type}` 動態派發,正確指向各自陣列(避免 followupHTML 既有的「`upd` 寫死 `'cases'`」歷史 bug — 那個 bug 不順便修,留待下版單獨處理)。HTML 投影片產出:過去 team/events 合併成「**1 張 5 欄表格**」,本版改成**每筆獨立投影片**(類似個案討論版面),含病歷號+姓名+主治+診斷標題列 + 已填欄位內容區。舊資料(V4.9.0 之前無新欄位)完全相容 — 顯示「(尚未填寫討論內容)」不會 crash。
+
+**版本號跳到 V5.0.0**:不是因為大改版,而是因為 V4.9.0 已到 y=9,按章法手冊「**每碼最大 9 逢十進位**」規則,y+1 自動進位 x+1。
+
+### V4.9.0
+**LINE 通知多癌別自動合併**:過去發 LINE 通知只能取「目前 active 癌別」,多癌別合開的會議要逐個切換產出兩份訊息,使用者要手動合併或重複發送。本版改成**取所有勾選癌別自動合併產出一份 LINE 訊息**,只改一行 `cids=[getOutputCid()||S.cids[0]]` → `S.cids`(若有則全取)。會議名稱在多癌別時自動合成「**X、Y多專科團隊會議**」(會議名稱欄位輸入會被覆蓋),單癌別仍用個管師輸入的標題。出席人員段:各癌別獨立列召集人 + 核心成員(**不去重**,跨癌別共用成員仍會兩段都列,符合既有範例慣例)。會議說明段:依癌別分段「`頭頸癌:`、`血液淋巴癌:`」,個案區塊不變。其他產出 (PPTX/DOCX/HTML/Excel/JSON) 行為不變(各自一個癌別一份)。
+
 ### V4.8.2
 **Kit 版本標記從 V1.6.0 → V1.7.1**:Kit 升到 V1.7.1(V1.7.0 收 SelaTrip 反饋加坑 #37/#38、V1.7.1 修「handoff 機制執行率」)。`SELA-handoff.md` 加「提案前檢查紀錄」一小段,明寫已執行 V1.7.0 加的兩個檢查(grep Kit 避免重複、踩坑 vs 跨平台知識分類)。本案 6 條反饋未被 Kit V1.7.0/V1.7.1 採納(V1.7.0 收的是 SelaTrip 不是 MDT),仍有效;V1.7.0 新增的 #37/#38 與 MDT 無交集(MDT 不接外部 API、不用雲端 schema migration)。本版無程式變動。
 
