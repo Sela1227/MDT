@@ -111,6 +111,11 @@
 
 ## 版本歷程
 
+### V5.1.3
+**HTML 投影片兩個 bug fix**:
+- **螢光筆「清除」改成精確清除**:過去 `hlClear()` 用 `document.querySelectorAll('mark').forEach(...)` **無條件清掉本頁所有 mark**,個管師回報「畫了五個標記想清掉一個結果全沒了」。改成「**選取範圍內精確清除**」:有 `_hlSel`(剛選取的範圍)→ 用 `Range.intersectsNode()` 找與範圍重疊的 mark,只清這些;沒選取 → 加 `confirm` 二次確認後才清全頁(保留原行為作為「清全頁」入口,避免誤觸)
+- **個案投影片年齡字級加大**:`.cd`(caseDemo:性別/年齡/ECOG/CFS)桌面字級 `clamp(14px,1.5vw,22px)` → `clamp(16px,1.8vw,26px)`(1080p 從 22 → 26px,+4px),Mobile media query 同步加大 `clamp(13px,3.5vw,20px)` → `clamp(15px,4vw,24px)`。個管師回報「年紀字型略小」,跟旁邊「.cdr 主治醫師 23px」、「.cdx 診斷 28px」對比明顯偏小,本版調整後跟主治醫師字級接近,跟診斷的層級也合理
+
 ### V5.1.2
 **AI 匯入提示詞 markers 段落改寫 — 序列 marker 不填 date 欄**:個管師回報 AI 匯入後序列 marker(像 AFP `1.64(2023-05-15)→134(2026-05-04)`)被 AI 自動填入「最早一筆日期」到 date 欄,造成日期欄顯示一個日期,但其實趨勢有 2 個日期都已寫在 content 字串內,date 欄那個日期反而是冗餘 + 誤導(個管師要手動刪)。修法:改 prompt 明確區分序列 vs 單筆 — **序列(content 含「→」符號)→ date 一律填空字串**;單筆(content 無「→」)→ date 填那個時間點。加錯誤示範 + 正確示範雙範例,讓 AI 對齊。只改 prompt 文字,系統解析邏輯不動。
 

@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.1.2';
+const VERSION='V5.1.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6180,7 +6180,7 @@ async function genHTMLSlides(){
     +'.cht{display:flex;align-items:center;gap:2vw;flex-wrap:wrap;}'+'.ci{font-size:clamp(22px,2.8vw,40px);font-weight:800;letter-spacing:-.01em;cursor:pointer;user-select:none;}'
     +'.ci:hover{opacity:.75;}'
     +'.cn{font-size:clamp(20px,2.6vw,38px);font-weight:700;}'
-    +'.cd{font-size:clamp(14px,1.5vw,22px);color:rgba(255,255,255,.78);}'
+    +'.cd{font-size:clamp(16px,1.8vw,26px);color:rgba(255,255,255,.78);}'
     +'.cdr{font-size:clamp(14px,1.6vw,23px);color:rgba(255,255,255,.85);}'
     +'.cat{margin-left:auto;background:var(--ca,#4A7C8E);padding:.5vh 1.4vw;border-radius:20px;font-size:clamp(13px,1.3vw,19px);white-space:nowrap;font-weight:600;}'+'.cdx{font-size:clamp(16px,2vw,28px);color:rgba(255,255,255,.85);line-height:1.45;}'
     +'.cb{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}'
@@ -6211,7 +6211,7 @@ async function genHTMLSlides(){
     +'.rv{padding:1.2vh 3vw 1.2vh 1vw;font-size:14px;line-height:1.5;}'
     +'.ci{font-size:clamp(20px,5vw,32px)!important;}'
     +'.cn{font-size:clamp(18px,4.5vw,30px)!important;}'
-    +'.cd,.cdr{font-size:clamp(13px,3.5vw,20px)!important;}'
+    +'.cd,.cdr{font-size:clamp(15px,4vw,24px)!important;}'
     +'.cdx{font-size:clamp(13px,3.5vw,20px)!important;}'
     +'.cat{font-size:clamp(12px,3vw,18px)!important;padding:.4vh 2.5vw;}'
     +'.tp{font-size:clamp(12px,3vw,18px)!important;padding:.5vh 2.5vw;}'
@@ -6272,7 +6272,30 @@ document.addEventListener('keydown',function(e){
 if(e.key==='Escape')document.getElementById('hl-toolbar').style.display='none';
 });
 function hlApply(color){if(!_hlSel)return;try{var span=document.createElement('mark');span.style.background=color;span.style.color='inherit';_hlSel.surroundContents(span);}catch(ex){try{var frag=_hlSel.extractContents();var sp=document.createElement('mark');sp.style.background=color;sp.style.color='inherit';sp.appendChild(frag);_hlSel.insertNode(sp);}catch(e2){}}window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;}
-function hlClear(){document.querySelectorAll('mark').forEach(function(m){var p=m.parentNode;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);});document.getElementById('hl-toolbar').style.display='none';}
+function hlClear(){
+  /* V5.1.3: 若有選取範圍,只清該範圍內的 mark;否則確認後清全頁 */
+  if(_hlSel){
+    var range=_hlSel;
+    var marks=document.querySelectorAll('mark');
+    var cleared=0;
+    marks.forEach(function(m){
+      /* 判斷 mark 是否與 selection range 重疊:任一端點在範圍內就視為重疊 */
+      var inRange=range.intersectsNode?range.intersectsNode(m):false;
+      if(inRange){
+        var p=m.parentNode;
+        while(m.firstChild)p.insertBefore(m.firstChild,m);
+        p.removeChild(m);
+        cleared++;
+      }
+    });
+    window.getSelection().removeAllRanges();
+    _hlSel=null;
+  }else{
+    if(!confirm('沒有選取任何文字,是否清除本頁所有螢光筆標記?'))return;
+    document.querySelectorAll('mark').forEach(function(m){var p=m.parentNode;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);});
+  }
+  document.getElementById('hl-toolbar').style.display='none';
+}
 var _magMode=false,_magCv=null;
 function _initMag(){if(_magCv)return;_magCv=document.createElement('canvas');_magCv.style.cssText='position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;';document.body.appendChild(_magCv);}
 function _toggleMag(){_initMag();_magMode=!_magMode;var btn=document.getElementById('nb-mag');if(btn)btn.style.color=_magMode?'#7FE87F':'';if(!_magMode)_magCv.style.display='none';}

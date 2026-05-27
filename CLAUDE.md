@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.1.3 | HTML 投影片螢光筆「清除」改成精確清除(用 Range.intersectsNode);個案年齡 .cd 字級加大(22→26px) |
 | V5.1.2 | AI 匯入 prompt markers 序列 marker date 欄改填空字串(避免冗餘 + 誤導);加序列 vs 單筆雙範例 |
 | V5.1.1 | 修「特殊議程 inline display:flex 覆蓋 .slide CSS class」造成 4 率投影片永遠顯示蓋掉個案的 bug;4 處全部修 |
 | V5.1.0 | 姓名遮蔽兩字 bug 修(林一→林○);遮蔽符號從 `0` 改 `○`(U+25CB);7 癌別補齊 defaultDept(乳癌已有,其他 7 個新加) |
@@ -455,4 +456,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.1.2 改 AI 匯入 prompt 的 markers 段落 — 序列 marker(content 含「→」的趨勢字串,如 `1.64(2023-05-15)→134(2026-05-04)`)的 date 欄改填空字串,避免「日期欄填一個日期 + content 又有 2 個日期」的冗餘 + 誤導(個管師回報要手動刪)。單筆 marker 不變,date 仍填那個時間點。改 prompt 文字加序列 vs 單筆雙範例,系統解析邏輯不動。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。
+V5.1.3 修兩個 HTML 投影片 bug:(1)螢光筆「清除」鈕原本無條件清全頁,改成「選取範圍內精確清除」 — 用 `Range.intersectsNode()` 找與範圍重疊的 mark 只清這些;沒選取時走 else 分支 + confirm 二次確認後清全頁(保留入口);(2)個案年齡 `.cd` 字級從 `clamp(14px,1.5vw,22px)` 加大到 `clamp(16px,1.8vw,26px)`(1080p 22→26px),跟「VS 主治醫師」`.cdr` 23px 平齊。Mobile media query 同步加大。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。
