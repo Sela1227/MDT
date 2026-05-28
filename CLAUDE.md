@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.2.0 | 醫療小組/必要事件加「年齡 / 性別」+「家族史」三欄,三介面(編輯/閱覽/HTML 投影片)同步擴充;舊資料相容(沒填不顯示) |
 | V5.1.4 | HTML 投影片標記工具加 5 色字色按鈕(<span class="fc">);hlClear 同時清 mark+fc;toolbar 寬度更新 |
 | V5.1.3 | HTML 投影片螢光筆「清除」改成精確清除(用 Range.intersectsNode);個案年齡 .cd 字級加大(22→26px) |
 | V5.1.2 | AI 匯入 prompt markers 序列 marker date 欄改填空字串(避免冗餘 + 誤導);加序列 vs 單筆雙範例 |
@@ -457,4 +458,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.1.4 HTML 投影片標記工具加「字色變更」 — 除了原本 5 色螢光筆(背景色),加 5 色字色按鈕(A 樣式),用 `<span class="fc">` 包字色 + 略加粗(font-weight:600)。Toolbar 結構:5 螢光圓 → 分隔線 → 5 字色 A → 分隔線 → ✕ 清除。「✕ 清除」同時清螢光筆 `<mark>` + 字色 `<span class="fc">` 兩種。Toolbar 寬度估算從 200→320px。支援疊加(同一段先螢光再字色 = 黃底紅字)。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。
+V5.2.0 醫療小組 / 必要事件欄位擴充:抬頭加「年齡 / 性別」(沿用 caseHTML 一樣的 input+select 配置)+ 現病史下加「家族史(選填)」。三介面同步:**編輯**(`teamHTML`)、**閱覽**(`teamViewHTML`)、**HTML 投影片**(`_trackSlide`)。閱覽跟 HTML 投影片用 `if(d.familyHistory)` + `(c.age||c.gender)` 條件渲染 — 沒填不顯示,完全相容舊資料(undefined 為 falsy)。下版第一優先:修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。

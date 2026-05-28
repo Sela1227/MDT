@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.1.4';
+const VERSION='V5.2.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3277,6 +3277,12 @@ function teamHTML(cid,i,d,type='team',collapsed=false){
   return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此${lbl}？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2">
 <div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)" style="font-size:12px;padding:5px 8px"></div>
 <div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)" style="font-size:12px;padding:5px 8px"></div>
+<div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>年齡 / 性別</label>
+<div style="display:flex;gap:6px;align-items:center">
+<input value="${escA(d.age||'')}" oninput="upd('${cid}','${type}',${i},'age',this.value)" placeholder="年齡" style="font-size:12px;padding:5px 8px;width:72px">
+<select onchange="upd('${cid}','${type}',${i},'gender',this.value)" style="font-size:12px;padding:5px 8px"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
+</div>
+</div>
 <div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
@@ -3284,6 +3290,7 @@ function teamHTML(cid,i,d,type='team',collapsed=false){
 </div></div>
 <div class="fg full"><label>診斷</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'diagnosis',this.value)" placeholder="癌別、分期、組織型態" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.diagnosis||'')}</textarea></div>
 <div class="fg full"><label>現病史</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'cc',this.value)" placeholder="目前狀況、就醫經過" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.cc||'')}</textarea></div>
+<div class="fg full"><label>家族史（選填）</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'familyHistory',this.value)" placeholder="家族癌症史或重要遺傳病史（沒填則不顯示）" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>
 <div class="fg full"><label>討論要點</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="本次MDT討論的主要議題" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.discussion||'')}</textarea></div>
 <div class="fg full"><label>摘要</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'summary',this.value)" placeholder="會議結論摘要" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.summary||'')}</textarea></div>
 <div class="fg full"><label>決策</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'decision',this.value)" placeholder="下一步處置 / 治療方向" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.decision||'')}</textarea></div>
@@ -3293,16 +3300,18 @@ function teamHTML(cid,i,d,type='team',collapsed=false){
 function teamViewHTML(cid,i,d,type='team'){
   const _cardId='cv-'+cid+'-'+type+'-'+i;
   const drs=getDoctorStr(d);
+  const dm=(d.age||d.gender)?caseDemo(d):'';
   const rows=[];
   if(d.diagnosis)rows.push(['診斷',d.diagnosis]);
   if(d.cc)rows.push(['現病史',d.cc]);
+  if(d.familyHistory)rows.push(['家族史',d.familyHistory]);
   if(d.discussion)rows.push(['討論要點',d.discussion]);
   if(d.summary)rows.push(['摘要',d.summary]);
   if(d.decision)rows.push(['決策',d.decision]);
   const body=rows.length
     ? rows.map(r=>`<div class="vc-row"><div class="vc-lbl">${r[0]}</div><div class="vc-val" style="white-space:pre-wrap">${escA(r[1])}</div></div>`).join('')
     : '<div class="vc-row" style="color:var(--textlt);font-style:italic">（尚未填寫討論內容）</div>';
-  return`<div class="casecard vc track-card" id="${_cardId}"><div class="vc-hdr">${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> VS ${escA(drs)}</span></div>${body}</div>`;
+  return`<div class="casecard vc track-card" id="${_cardId}"><div class="vc-hdr">${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub">${dm?' '+escA(dm):''} VS ${escA(drs)}</span></div>${body}</div>`;
 }
 function specialHTML(cid,i,d){
   if(d.topicType==='完治率') return specialCRHTML(cid,i,d);
@@ -5905,8 +5914,10 @@ async function genHTMLSlides(){
     function _trackSlide(c,trackLabel){
       var drs=getDoctorStr(c)||'—';
       var dxLine=c.diagnosis?('<div class="cdx">'+escA(c.diagnosis)+'</div>'):'';
+      var dm=(c.age||c.gender)?caseDemo(c):'';
       var sections=[];
       if(c.cc)sections.push({lbl:'現病史',txt:c.cc});
+      if(c.familyHistory)sections.push({lbl:'家族史',txt:c.familyHistory});
       if(c.discussion)sections.push({lbl:'討論要點',txt:c.discussion});
       if(c.summary)sections.push({lbl:'摘要',txt:c.summary});
       if(c.decision)sections.push({lbl:'決策',txt:c.decision});
@@ -5917,6 +5928,7 @@ async function genHTMLSlides(){
         +'<div class="ch"><div class="cht">'
         +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=\'\'},600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
         +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
+        +(dm?' <span class="cd">'+escA(dm)+'</span>':'')
         +' <span class="cdr">VS '+escA(drs)+'</span>'
         +'<span class="cat">'+trackLabel+'</span></div>'
         +dxLine
