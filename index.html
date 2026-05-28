@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.3.0';
+const VERSION='V5.4.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1473,8 +1473,32 @@ function showShell(id){document.querySelectorAll('.shell').forEach(s=>s.classLis
 function showView(id){['home','meeting','settings','history','cancer'].forEach(v=>{const el=document.getElementById('view-'+v);if(el)el.style.display=v===id?'block':'none'})}
 
 /* ════ Login ════ */
-function renderLogin(){document.getElementById('login-users').innerHTML=USERS.map(u=>`<button class="ubtn" onclick="pickUser('${u.id}')"><div class="u-init">${u.name[0]}</div><div><div class="u-name">${u.name}</div><div class="u-ext">${u.ext?'分機 '+u.ext:'兼任個管師'}</div><div class="u-tags">${u.cancers.map(c=>CFG[c]?.name||c).join('・')}</div></div><span class="u-arr">›</span></button>`).join('')}
-function pickUser(uid_){S.user=USERS.find(u=>u.id===uid_);showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步：新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(){_markNasBackupToday();}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+/* V5.4.0: 記住上次登入者(localStorage 'mdt_last_user'),自動倒數 1.5 秒登入(可取消) */
+let _autoLoginTimer=null;
+function _cancelAutoLogin(){
+  if(_autoLoginTimer){clearTimeout(_autoLoginTimer);_autoLoginTimer=null;}
+  const el=document.getElementById('lg-auto-toast');if(el)el.remove();
+}
+function renderLogin(){
+  const lastUid=localStorage.getItem('mdt_last_user')||'';
+  const lastUser=lastUid?USERS.find(u=>u.id===lastUid):null;
+  document.getElementById('login-users').innerHTML=USERS.map(u=>{
+    const isLast=lastUser&&u.id===lastUser.id;
+    const lastTag=isLast?'<span style="position:absolute;top:6px;right:8px;background:var(--acc);color:#fff;font-size:10px;padding:1px 7px;border-radius:8px;letter-spacing:.05em">上次</span>':'';
+    const extraStyle=isLast?'border:2px solid var(--acc);box-shadow:0 0 0 3px rgba(243,104,37,.12);position:relative':'position:relative';
+    return `<button class="ubtn" style="${extraStyle}" onclick="pickUser('${u.id}')">${lastTag}<div class="u-init">${u.name[0]}</div><div><div class="u-name">${u.name}</div><div class="u-ext">${u.ext?'分機 '+u.ext:'兼任個管師'}</div><div class="u-tags">${u.cancers.map(c=>CFG[c]?.name||c).join('・')}</div></div><span class="u-arr">›</span></button>`;
+  }).join('');
+  /* 倒數自動登入 toast — 只在有 lastUser 時觸發 */
+  if(lastUser){
+    const toast=document.createElement('div');
+    toast.id='lg-auto-toast';
+    toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(20,30,40,.92);color:#fff;padding:12px 18px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:9999;display:flex;align-items:center;gap:12px;font-size:13px;backdrop-filter:blur(8px)';
+    toast.innerHTML='<span>1.5 秒後自動以 <b style="color:#FFE066">'+lastUser.name+'</b> 登入</span><button onclick="_cancelAutoLogin()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;padding:4px 12px;border-radius:14px;cursor:pointer;font-size:12px">取消</button>';
+    document.body.appendChild(toast);
+    _autoLoginTimer=setTimeout(function(){_cancelAutoLogin();pickUser(lastUser.id);},1500);
+  }
+}
+function pickUser(uid_){_cancelAutoLogin();S.user=USERS.find(u=>u.id===uid_);if(S.user)try{localStorage.setItem('mdt_last_user',uid_);}catch(e){}showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步:新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(){_markNasBackupToday();}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){

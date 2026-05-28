@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.4.0 | 記住上次登入者(localStorage `mdt_last_user`)+ 1.5 秒倒數自動登入 toast(取消按鈕讓共用電腦 fallback) |
 | V5.3.0 | 子資料夾匯入支援(以病歷號分,4 入口全改 + 失聯率佐證圖 _特殊議程);修 V5.2.1 引入的病理新分頁放大鏡 regression(完整搬移 zoom + 放大鏡邏輯到新分頁) |
 | V5.2.1 | HTML 投影片病理影像改「主投影片按鈕觸發新分頁」 — 不再 push 獨立 slides,window.open + document.write 開新頁;移除「病理切片集中」勾選框 |
 | V5.2.0 | 醫療小組/必要事件加「年齡 / 性別」+「家族史」三欄,三介面(編輯/閱覽/HTML 投影片)同步擴充;舊資料相容(沒填不顯示) |
@@ -450,7 +451,7 @@ if not missing:
 
 **按優先序：**
 
-1. **記住上次登入者** — 上線必備:登入頁預選最近登入的個管師,不用每次都點;localStorage 存 `mdt_last_user`,登入頁渲染時讀出來預選;這個摩擦感最強、改動最小
+1. **修坑 #19 followupHTML 寫死 'cases' bug** — 累積超過 10 版未修,upd 派發呼叫實際走 cases 陣列,可能造成跟「個案討論」資料的隱性衝突;不確定真實是否觸發過 bug,但邏輯確實錯,該修
 2. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
 3. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
 4. DOCX 繼續微調(依測試回饋)
@@ -460,4 +461,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.3.0 兩項合併:**(1)子資料夾匯入** — 個管師回報「圖太多混在一資料夾很難找」,經討論決定以**病歷號為子資料夾名**(個管師願手動建)。共用工具 `_resolveSubFolder(rootHandle, subName)` 試讀子資料夾、失敗回 null 讓呼叫端 fallback 平面,4 個選圖入口(病理 / 手術 / 相關 / 乳攝)全改套用 `c.chartNo` 子資料夾解析;特殊議程佐證圖先試 `p.chartNo` 再試 `_特殊議程`;圖檔儲存格式加 `subFolder` 欄位;讀檔 + `_pathImgCache` cache key 改用 `subFolder/name` 兩層;modal 標題顯示子資料夾路徑。舊資料完全相容(沒 subFolder 走平面)。**(2)修 V5.2.1 regression** — 病理新分頁(`.ps` class)沒繼承主投影片(`.img-slide`)的放大鏡跟滾輪 zoom 邏輯,個管師回報「放大鏡功能消失」。完整搬移放大鏡 + 滾輪 zoom + 雙擊重設邏輯到 `openPathoWindow` 新分頁 inline JS,新增 🔍 按鈕、L 鍵、Esc 雙態。新分頁 inline JS 透過真實產出後跑 Node syntax check 驗證 OK。下版第一優先:修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。
+V5.4.0 記住上次登入者:個管師基本各自有自己的電腦(共用少見),每次登入都要點選個管師太繁瑣。實作:`pickUser` 寫入 `localStorage.setItem('mdt_last_user', uid_)`;`renderLogin` 讀取,有 lastUser → 該按鈕加橘邊框 + 「上次」標籤;觸發 1.5 秒倒數 toast「1.5 秒後自動以 [姓名] 登入」+ 取消按鈕讓共用電腦情境可中斷。`_cancelAutoLogin()` 清 timer 跟移除 toast。Safe 機制:lastUser 在 USERS 不存在(主檔變更)→ 不啟動 toast;`pickUser` 內先 `_cancelAutoLogin` 避免雙觸發。改動小(~30 行),純前端 localStorage,風險低。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。

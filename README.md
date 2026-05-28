@@ -111,6 +111,14 @@
 
 ## 版本歷程
 
+### V5.4.0
+**記住上次登入者**:個管師基本上都各自有自己的電腦,共用情況少見 — 但每次打開系統還要點一次「選擇使用者」摩擦感累積。本版實作:
+- **`pickUser` 寫入** `localStorage.setItem('mdt_last_user', uid_)`
+- **`renderLogin` 讀取**:有 lastUser → 該按鈕加橘色邊框 + 右上「上次」標籤;觸發 1.5 秒倒數 toast「1.5 秒後自動以 [姓名] 登入」+ 取消按鈕
+- **共用電腦 fallback**:若另一位個管師想用同台電腦,點 toast「取消」→ timer 清除,正常選人
+- **safe 機制**:lastUser 在 USERS 已不存在(主檔變更)→ 不啟動 toast,正常選人邏輯;`pickUser` 內先 `_cancelAutoLogin` 避免快過倒數時雙觸發
+- 改動小(~30 行),風險低(純前端 localStorage,不動資料結構)
+
 ### V5.3.0
 **兩項改動合併出貨**:
 
