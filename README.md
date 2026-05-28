@@ -111,6 +111,24 @@
 
 ## 版本歷程
 
+### V5.3.0
+**兩項改動合併出貨**:
+
+**1. 子資料夾匯入支援(主要新功能)**
+
+個管師回報「整個會議用到的圖片太多,混在一個資料夾很難找」。經討論決定:**個管師願意手動建一個病人一個資料夾,以病歷號為名**。本版實作:
+- **4 個選圖入口**(病理 / 手術 / 相關影像 / 乳攝)進入時,先試 `_resolveSubFolder(imgFolderHandle, c.chartNo)`,找到該病歷號子資料夾就用,找不到 fallback 到根目錄(向後相容)
+- **特殊議程佐證圖**(失聯率病人)先試 `p.chartNo` 子資料夾,再試 `_特殊議程`,最後 fallback 到根目錄
+- **圖檔儲存格式**新增 `subFolder` 欄位,讀檔時 `imgFolderHandle.getDirectoryHandle(subFolder).getFileHandle(name)` 兩層查找
+- **modal 標題**顯示子資料夾路徑:「📂 20260521 頭頸癌 / **5176721**」讓個管師知道當前位置
+- **`_pathImgCache` cache key 改用 `subFolder/name`** 避免不同子資料夾同名檔(`HE.jpg`)互相覆蓋
+- 共用工具函式 `_resolveSubFolder(rootHandle, subName)` 試讀子資料夾、失敗回 null 讓呼叫端 fallback
+- **舊資料完全相容**:沒 `subFolder` 欄位的圖檔(`undefined`)走平面 `getFileHandle`,跟 V5.2.x 行為一致
+
+**2. 修 V5.2.1 引入的 regression — 病理新分頁放大鏡功能消失**
+
+個管師回報「病理影像獨立到新分頁後,主投影片有的放大鏡(L 鍵)新分頁沒有了」。根因:`openPathoWindow` 開的新分頁用 `.ps` class,但放大鏡跟滾輪 zoom 邏輯只綁定在 `.img-slide`,新分頁不繼承。修法:**完整搬移**主投影片的放大鏡 + 滾輪 zoom + 雙擊重設邏輯到新分頁 inline JS,改用 `.ps` selector;新增 `🔍` 按鈕、L 鍵快捷、Esc 雙態(放大鏡開 → 先關放大鏡,再 Esc 才關視窗)。新分頁的 inline JS 透過真實產出後跑 Node syntax check 確認語法 OK。
+
 ### V5.2.1
 **HTML 投影片病理影像改「按鈕觸發新分頁」**:個管師回報「病理影像插在報告裡讓整份投影片變很冗長」(例如一個個案有 5 張染色,變成個案投影片後緊接 5 張染色投影片,連續播 6 頁才到下一個案,翻頁很煩)。本版調整:
 - **HTML 投影片產出時,病理影像不再 push 成獨立 slides**(原本一張影像一張投影片的邏輯移除)

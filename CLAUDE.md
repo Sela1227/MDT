@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.3.0 | 子資料夾匯入支援(以病歷號分,4 入口全改 + 失聯率佐證圖 _特殊議程);修 V5.2.1 引入的病理新分頁放大鏡 regression(完整搬移 zoom + 放大鏡邏輯到新分頁) |
 | V5.2.1 | HTML 投影片病理影像改「主投影片按鈕觸發新分頁」 — 不再 push 獨立 slides,window.open + document.write 開新頁;移除「病理切片集中」勾選框 |
 | V5.2.0 | 醫療小組/必要事件加「年齡 / 性別」+「家族史」三欄,三介面(編輯/閱覽/HTML 投影片)同步擴充;舊資料相容(沒填不顯示) |
 | V5.1.4 | HTML 投影片標記工具加 5 色字色按鈕(<span class="fc">);hlClear 同時清 mark+fc;toolbar 寬度更新 |
@@ -459,4 +460,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.2.1 HTML 投影片病理影像產出邏輯重構:從「**每張影像 1 張投影片**」改成「**主投影片按鈕,點了開新分頁**」 — 解決個管師回報的「病理影像太多讓投影片變得很冗長」問題。技術:`_pathoData` 收集每個個案的影像 base64,主投影片標題列加 `.patho-btn` 按鈕(只在有圖時顯示),`window.openPathoWindow(caseId)` 用 `window.open + document.write` 開新分頁顯示完整投影片(支援鍵盤左右切換、Esc 關)。順手移除「病理切片影像集中」勾選框(在新邏輯下無意義)。手術照片/特殊議程影像不動。下版第一優先:修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。
+V5.3.0 兩項合併:**(1)子資料夾匯入** — 個管師回報「圖太多混在一資料夾很難找」,經討論決定以**病歷號為子資料夾名**(個管師願手動建)。共用工具 `_resolveSubFolder(rootHandle, subName)` 試讀子資料夾、失敗回 null 讓呼叫端 fallback 平面,4 個選圖入口(病理 / 手術 / 相關 / 乳攝)全改套用 `c.chartNo` 子資料夾解析;特殊議程佐證圖先試 `p.chartNo` 再試 `_特殊議程`;圖檔儲存格式加 `subFolder` 欄位;讀檔 + `_pathImgCache` cache key 改用 `subFolder/name` 兩層;modal 標題顯示子資料夾路徑。舊資料完全相容(沒 subFolder 走平面)。**(2)修 V5.2.1 regression** — 病理新分頁(`.ps` class)沒繼承主投影片(`.img-slide`)的放大鏡跟滾輪 zoom 邏輯,個管師回報「放大鏡功能消失」。完整搬移放大鏡 + 滾輪 zoom + 雙擊重設邏輯到 `openPathoWindow` 新分頁 inline JS,新增 🔍 按鈕、L 鍵、Esc 雙態。新分頁 inline JS 透過真實產出後跑 Node syntax check 驗證 OK。下版第一優先:修坑 #19 followupHTML 寫死 cases bug,或「記住上次登入者」。

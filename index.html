@@ -1230,7 +1230,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.2.1';
+const VERSION='V5.3.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3434,7 +3434,13 @@ function crSaveDef(txt){try{localStorage.setItem('mdt_cr_template',txt);showSave
 function crUpdPatient(cid,si,pi,key,val){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;if(!d.patients)d.patients=[];if(!d.patients[pi])d.patients[pi]={};d.patients[pi][key]=val;markDirty();}
 function crAddPatient(cid,si){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;if(!d.patients)d.patients=[];d.patients.push({chartNo:'',name:'',doctor:'',note:'',images:[]});markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;var pi=d.patients.length-1;var div=document.createElement('div');div.innerHTML=crPatientRow(cid,si,pi,d.patients[pi]);cont.appendChild(div.firstElementChild);}
 function crDelPatient(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients)return;if(!confirm('確定刪除此病人？'))return;d.patients.splice(pi,1);markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;cont.innerHTML=((d.patients||[]).map(function(p,i2){return crPatientRow(cid,si,i2,p);}).join(''));}
-function crPickImages(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients||!d.patients[pi])return;var p=d.patients[pi];if(!p.images)p.images=[];(async function(){try{if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});var entries=await _folderEntries(imgFolderHandle);var files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));files.sort((a,b)=>a.name.localeCompare(b.name));if(!files.length){alert('資料夾內沒有圖檔');return;}var existing=new Set(p.images.map(x=>x.name));var list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0"><input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span></label>').join('');var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px"><div style="font-weight:700;font-size:15px">選取佐証圖片</div><div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button><button id="cr-img-ok" class="btn btn-a btn-sm">確認</button></div></div>';document.body.appendChild(overlay);overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);overlay.querySelector('#cr-img-ok').onclick=()=>{var checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true}));markDirty();document.body.removeChild(overlay);var el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';};}catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}})();}
+function crPickImages(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients||!d.patients[pi])return;var p=d.patients[pi];if(!p.images)p.images=[];(async function(){try{if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+  /* V5.3.0: 失聯率病人佐證圖 — 先試 p.chartNo 子資料夾,再試 _特殊議程,最後退根目錄 */
+  var _sub=await _resolveSubFolder(imgFolderHandle,p.chartNo);
+  if(!_sub)_sub=await _resolveSubFolder(imgFolderHandle,'_特殊議程');
+  var _scanHandle=_sub?_sub.handle:imgFolderHandle;
+  var _subName=_sub?_sub.name:'';
+  var entries=await _folderEntries(_scanHandle);var files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));files.sort((a,b)=>a.name.localeCompare(b.name));if(!files.length){alert(_subName?('子資料夾「'+_subName+'」內沒有圖檔'):'資料夾內沒有圖檔');return;}var existing=new Set(p.images.map(x=>x.name));var list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0"><input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span></label>').join('');var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px"><div style="font-weight:700;font-size:15px">選取佐証圖片</div><div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+(_subName?' / <b style="color:#2a3540">'+escA(_subName)+'</b>':'')+'</div><div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button><button id="cr-img-ok" class="btn btn-a btn-sm">確認</button></div></div>';document.body.appendChild(overlay);overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);overlay.querySelector('#cr-img-ok').onclick=()=>{var checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''}));markDirty();document.body.removeChild(overlay);var el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';};}catch(e){if(e.name!=='AbortError')alert('無法存取資料夾:'+e.message);}})();}
 function crPatientRow(cid,si,pi,p){
   var imgLabel=(p.images&&p.images.length)?p.images.length+'張已選':'未選圖片';
   var cidE=escA(cid);
@@ -3692,7 +3698,12 @@ async function backupToNAS(){
             var src=entry.img.dataUrl||'';
             if(!src&&entry.img.fromFolder&&entry.img.name&&imgFolderHandle){
               try{
-                var fh=await imgFolderHandle.getFileHandle(entry.img.name);
+                /* V5.3.0: 有 subFolder 走子資料夾,沒有走平面(向後相容) */
+                var _scan=imgFolderHandle;
+                if(entry.img.subFolder){
+                  try{_scan=await imgFolderHandle.getDirectoryHandle(entry.img.subFolder,{create:false});}catch(_e){_scan=imgFolderHandle;}
+                }
+                var fh=await _scan.getFileHandle(entry.img.name);
                 var file=await fh.getFile();
                 src=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
               }catch(e){src='';}
@@ -4308,6 +4319,15 @@ async function _folderEntries(handle){
   const arr=[];
   for await(const e of handle.values())arr.push(e);
   return arr;
+}
+/* V5.3.0: 嘗試解析子資料夾(以病歷號為名),找到回傳 {handle, name},找不到回傳 null
+   設計上 fallback:沒給 subName 或找不到 → 回 null,讓呼叫端用 root handle 平面查找 */
+async function _resolveSubFolder(rootHandle,subName){
+  if(!rootHandle||!subName)return null;
+  try{
+    const h=await rootHandle.getDirectoryHandle(String(subName).trim(),{create:false});
+    return{handle:h,name:String(subName).trim()};
+  }catch(e){return null;}
 }
 function getGhToken(){return localStorage.getItem('mdt_gh_token')||'';}
 function saveGhToken(){
@@ -5680,6 +5700,8 @@ async function genHTMLSlides(){
   }
   // Pre-load folder-based pathology images to base64 (TEMP COPY ONLY - never write back to S.meeting)
   const _pathImgCache={};
+  /* V5.3.0: cache key 改用 subFolder/name,避免不同子資料夾同名檔(HE.jpg)覆蓋 */
+  function _pathCacheKey(img){return(img.subFolder?img.subFolder+'/':'')+(img.name||'');}
   if(imgFolderHandle){
     for(const cid of cids){
       for(const c of (m.sections[cid]?.cases||[])){
@@ -5691,12 +5713,18 @@ async function genHTMLSlides(){
           ...((c.mammo&&c.mammo.images)||[])
         ];
         for(const img of _allImgs){
-          if(img.fromFolder&&!img.dataUrl&&!_pathImgCache[img.name]){
+          const _ck=_pathCacheKey(img);
+          if(img.fromFolder&&!img.dataUrl&&!_pathImgCache[_ck]){
             try{
-              const fh=await imgFolderHandle.getFileHandle(img.name);
+              /* V5.3.0: 有 subFolder 走子資料夾,否則平面 */
+              let _scan=imgFolderHandle;
+              if(img.subFolder){
+                try{_scan=await imgFolderHandle.getDirectoryHandle(img.subFolder,{create:false});}catch(_e){_scan=imgFolderHandle;}
+              }
+              const fh=await _scan.getFileHandle(img.name);
               const file=await fh.getFile();
-              _pathImgCache[img.name]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
-            }catch(e){console.warn('無法讀取影像:',img.name,e);}
+              _pathImgCache[_ck]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
+            }catch(e){console.warn('無法讀取影像:',_ck,e);}
           }
         }
       }
@@ -5849,7 +5877,7 @@ async function genHTMLSlides(){
           var _gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_cols+',1fr);grid-template-rows:repeat('+_rows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
           var _wSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
           var _iSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
-          var _h=_grp.map(function(img){return '<div style="'+_wSt+'"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="'+_iSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          var _h=_grp.map(function(img){return '<div style="'+_wSt+'"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+(img.caption||'')+'" style="'+_iSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
           slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
             +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
             +'<div style="'+_gSt+'">'+_h+'</div>'
@@ -5858,7 +5886,7 @@ async function genHTMLSlides(){
       }
       // Mammo slide (breast only, 4:6 layout)
       if(cid==='breast'&&c.mammo&&(c.mammo.report||(c.mammo.images&&c.mammo.images.length))){
-        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
+        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
         const mDate=c.mammo.date?'<div style="font-size:.85em;opacity:.65;margin-bottom:.6vh">'+escA(c.mammo.date)+'</div>':'';
         const mRep=escA(c.mammo.report||'').replace(/\n/g,'<br>');
         slides.push('<section class="slide img-slide mammo-slide" style="--ca:'+caColor+';">'
@@ -5883,7 +5911,7 @@ async function genHTMLSlides(){
           images:(c.pathologyImages||[]).map(function(img){
             return{
               caption:img.caption||img.name||'病理影像',
-              src:img.dataUrl||_pathImgCache[img.name]||''
+              src:img.dataUrl||_pathImgCache[_pathCacheKey(img)]||''
             };
           })
         };
@@ -5900,7 +5928,7 @@ async function genHTMLSlides(){
           var _swSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
           var _siSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
           var _sCap=_sgrp.length===1?escA(_sgrp[0].caption||_sgrp[0].name||'手術照片'):'';
-          var _sh=_sgrp.map(function(img){return '<div style="'+_swSt+'"><img src="'+(img.dataUrl||_pathImgCache[img.name]||'')+'" alt="'+(img.caption||'')+'" style="'+_siSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          var _sh=_sgrp.map(function(img){return '<div style="'+_swSt+'"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+(img.caption||'')+'" style="'+_siSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
           slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
             +'<div class="ch"><div class="cht"><span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.style.opacity=\'.4\';setTimeout(function(){el.style.opacity=\'\'},600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
             +(_sCap?'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+_sCap+'</span>':'')
@@ -6041,7 +6069,7 @@ async function genHTMLSlides(){
             pagePats.forEach(function(p){
               if(!p.images||!p.images.length)return;
               var imgH=p.images.map(function(img){
-                var src=img.dataUrl||_pathImgCache[img.name]||'';if(!src)return'';
+                var src=img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'';if(!src)return'';
                 return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
                   +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
                   +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';
@@ -6141,7 +6169,7 @@ async function genHTMLSlides(){
             pagePats2.forEach(function(p){
               if(!p.images||!p.images.length)return;
               var imgH2=p.images.map(function(img){
-                var src=img.dataUrl||_pathImgCache[img.name]||'';if(!src)return'';
+                var src=img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'';if(!src)return'';
                 return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
                   +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
                   +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';
@@ -6168,7 +6196,7 @@ async function genHTMLSlides(){
             var _scols=_ips===1?1:2,_srows=_ips===4?2:1;
             var _sgSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_scols+',1fr);grid-template-rows:repeat('+_srows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
             var _sImgH=_sgrp.map(function(img){
-              var src=img.dataUrl||_pathImgCache[img.name]||'';if(!src)return'';
+              var src=img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'';if(!src)return'';
               return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
                 +'<img src="'+src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
                 +(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';
@@ -6394,8 +6422,30 @@ window.openPathoWindow=function(caseId){
     +'</style></head><body>'
     +slidesH
     +'<div class="pbar" id="pbar" style="width:'+(100/data.images.length).toFixed(1)+'%"></div>'
-    +'<div class="pnav"><button class="pnb" id="pnb-prev" onclick="pgo(pc-1)">‹</button><span class="pni" id="pni">1<br>/'+data.images.length+'</span><button class="pnb" id="pnb-next" onclick="pgo(pc+1)">›</button></div>'
-    +'<'+'script>var pc=0,pn='+data.images.length+';function pgo(i){var s=document.querySelectorAll(".ps");s[pc].classList.remove("on");pc=Math.max(0,Math.min(i,pn-1));s[pc].classList.add("on");document.getElementById("pni").innerHTML=(pc+1)+"<br>/"+pn;document.getElementById("pbar").style.width=((pc+1)/pn*100)+"%";document.getElementById("pnb-prev").disabled=pc===0;document.getElementById("pnb-next").disabled=pc===pn-1;}document.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" ")pgo(pc+1);if(e.key==="ArrowLeft")pgo(pc-1);if(e.key==="Escape")window.close();});pgo(0);<'+'/script>'
+    +'<div class="pnav"><button class="pnb" id="pnb-prev" onclick="pgo(pc-1)">‹</button><span class="pni" id="pni">1<br>/'+data.images.length+'</span><button class="pnb" id="pnb-next" onclick="pgo(pc+1)">›</button><button class="pnb" id="pnb-mag" onclick="_pmTog()" title="放大鏡 L" style="font-size:18px">🔍</button></div>'
+    +'<'+'script>'
+    /* V5.2.2: 新分頁也要有放大鏡 + 滾輪 zoom + 雙擊重設(複用主投影片邏輯,改 class 為 .ps) */
+    +'var pc=0,pn='+data.images.length+';'
+    +'function pgo(i){var s=document.querySelectorAll(".ps");s[pc].classList.remove("on");pc=Math.max(0,Math.min(i,pn-1));s[pc].classList.add("on");document.getElementById("pni").innerHTML=(pc+1)+"<br>/"+pn;document.getElementById("pbar").style.width=((pc+1)/pn*100)+"%";document.getElementById("pnb-prev").disabled=pc===0;document.getElementById("pnb-next").disabled=pc===pn-1;_pmReset();}'
+    /* 滾輪 zoom */
+    +'var _pz=1,_ppx=0,_ppy=0,_pdrag=false,_psx=0,_psy=0,_pPx=0,_pPy=0,_pzT=null;'
+    +'function _pzI(){if(!_pzT)return;_pzT.style.transform="scale("+_pz+") translate("+_ppx+"px,"+_ppy+"px)";_pzT.style.cursor=_pz>1?"grab":"default";_pzT.style.transition=_pdrag?"":"transform .15s";}'
+    +'function _pzR(){if(_pzT){_pzT.style.transform="";_pzT.style.cursor="";}_pz=1;_ppx=0;_ppy=0;_pzT=null;}'
+    +'document.addEventListener("wheel",function(e){var s=document.querySelectorAll(".ps")[pc];if(!s)return;e.preventDefault();var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=="IMG")el=el.parentElement;var t=(el&&el.tagName==="IMG"&&s.contains(el))?el:s.querySelector("img");if(!t)return;if(_pzT&&_pzT!==t){_pzT.style.transform="";_pzT.style.cursor="";_pz=1;_ppx=0;_ppy=0;}_pzT=t;_pz=Math.max(1,Math.min(8,_pz*(e.deltaY<0?1.12:0.89)));if(_pz===1){_ppx=0;_ppy=0;}_pzI();},{passive:false});'
+    +'document.addEventListener("dblclick",function(e){var s=document.querySelectorAll(".ps")[pc];if(!s)return;var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=="IMG")el=el.parentElement;if(el&&el.tagName==="IMG"&&s.contains(el)){_pzT=el;}_pzR();});'
+    +'document.addEventListener("mousedown",function(e){if(!_pzT||_pz<=1)return;_pdrag=true;_psx=e.clientX;_psy=e.clientY;_pPx=_ppx;_pPy=_ppy;e.preventDefault();});'
+    +'document.addEventListener("mousemove",function(e){if(!_pdrag)return;_ppx=_pPx+(e.clientX-_psx)/_pz;_ppy=_pPy+(e.clientY-_psy)/_pz;_pzI();});'
+    +'document.addEventListener("mouseup",function(){if(_pdrag){_pdrag=false;_pzI();}});'
+    /* 放大鏡 */
+    +'var _pmOn=false,_pmCv=null;'
+    +'function _pmInit(){if(_pmCv)return;_pmCv=document.createElement("canvas");_pmCv.style.cssText="position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;";document.body.appendChild(_pmCv);}'
+    +'function _pmTog(){_pmInit();_pmOn=!_pmOn;var b=document.getElementById("pnb-mag");if(b)b.style.color=_pmOn?"#7FE87F":"";if(!_pmOn)_pmCv.style.display="none";}'
+    +'function _pmReset(){if(_pmCv)_pmCv.style.display="none";}'
+    +'document.addEventListener("mousemove",function(e){if(!_pmOn||!_pmCv)return;var s=document.querySelectorAll(".ps")[pc];if(!s){_pmCv.style.display="none";return;}var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=="IMG")el=el.parentElement;var img=(el&&el.tagName==="IMG"&&s.contains(el))?el:s.querySelector("img");if(!img){_pmCv.style.display="none";return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_pmCv.style.display="none";return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rW=natW*scale,rH=natH*scale;var oX=(rect.width-rW)/2,oY=(rect.height-rH)/2;var cx=mx-oX,cy=my-oY;if(cx<0||cy<0||cx>rW||cy>rH){_pmCv.style.display="none";return;}var SZ=220,MAG=3.5;_pmCv.width=SZ;_pmCv.height=SZ;var ctx=_pmCv.getContext("2d");ctx.clearRect(0,0,SZ,SZ);var sx=(cx/rW)*natW,sy=(cy/rH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle="rgba(255,255,255,.6)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_pmCv.style.display="block";var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_pmCv.style.left=lx+"px";_pmCv.style.top=ly+"px";});'
+    +'document.addEventListener("mouseleave",function(){if(_pmCv)_pmCv.style.display="none";});'
+    +'document.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" ")pgo(pc+1);if(e.key==="ArrowLeft")pgo(pc-1);if(e.key==="Escape"){if(_pmOn){_pmTog();}else{window.close();}}if(e.key==="l"||e.key==="L")_pmTog();});'
+    +'pgo(0);'
+    +'<'+'/script>'
     +'</body></html>';
   w.document.write(html);
   w.document.close();
@@ -7665,13 +7715,17 @@ document.addEventListener('click',function(e){
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
       if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
+        /* V5.3.0: 嘗試以病歷號為子資料夾名 */
+        const _sub=await _resolveSubFolder(imgFolderHandle,c.chartNo);
+        const _scanHandle=_sub?_sub.handle:imgFolderHandle;
+        const _subName=_sub?_sub.name:'';
         // List image files in folder
         const files=[];
-        const _entries3=await _folderEntries(imgFolderHandle);
+        const _entries3=await _folderEntries(_scanHandle);
         for(const entry of _entries3){
           if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
         }
-        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
+        if(!files.length){alert(_subName?('子資料夾「'+_subName+'」內沒有找到圖檔'):'資料夾內沒有找到圖檔');return;}
         // Build selection dialog
         const existing=new Set(c.pathologyImages.map(function(x){return x.name;}));
         // Sort files alphabetically
@@ -7684,7 +7738,7 @@ document.addEventListener('click',function(e){
         overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
         overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
           +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取病理影像</div>'
-          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+(_subName?' / <b style="color:#2a3540">'+escA(_subName)+'</b>':'')+'　共 '+files.length+' 個圖檔</div>'
           +'<div style="display:flex;gap:6px;align-items:center">'
           +'<button id="pathfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
           +'<button id="pathfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
@@ -7714,7 +7768,7 @@ document.addEventListener('click',function(e){
           const checked=[...overlay.querySelectorAll('#pathfolder-list input:checked')].map(function(x){return x.value;});
           // Keep existing non-folder images; replace folder refs
           c.pathologyImages=c.pathologyImages.filter(function(x){return x.dataUrl&&!existing.has(x.name);});
-          checked.forEach(function(fname){c.pathologyImages.push({name:fname,caption:fname.replace(/\.[^.]+$/,''),fromFolder:true});});
+          checked.forEach(function(fname){c.pathologyImages.push({name:fname,caption:fname.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''});});
           markDirty();
           document.body.removeChild(overlay);
           const el3=document.getElementById('pathimgs-'+cid+'-'+idx);
@@ -7760,13 +7814,17 @@ document.addEventListener('click',function(e){
         updateFolderStatusBar();
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
+        /* V5.3.0: 嘗試以病歷號為子資料夾名 */
+        const _sub=await _resolveSubFolder(imgFolderHandle,c.chartNo);
+        const _scanHandle=_sub?_sub.handle:imgFolderHandle;
+        const _subName=_sub?_sub.name:'';
         const files=[];
-        const _entries1=await _folderEntries(imgFolderHandle);
+        const _entries1=await _folderEntries(_scanHandle);
         for(const entry of _entries1){
           if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
         }
         files.sort(function(a,b){return a.name.localeCompare(b.name);});
-        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
+        if(!files.length){alert(_subName?('子資料夾「'+_subName+'」內沒有找到圖檔'):'資料夾內沒有找到圖檔');return;}
         const existing=new Set(c.surgicalImages.map(function(x){return x.name;}));
         const list=files.map(function(f){
           var base=f.name.replace(/\.[^.]+$/,''),ext=f.name.split('.').pop().toUpperCase();
@@ -7779,7 +7837,7 @@ document.addEventListener('click',function(e){
         overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
         overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
           +'<div style="font-weight:700;font-size:16px">選取手術照片</div>'
-          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+(_subName?' / <b style="color:#2a3540">'+escA(_subName)+'</b>':'')+'　共 '+files.length+' 個圖檔</div>'
           +'<div style="display:flex;gap:6px"><button id="surgsela" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer">全選</button>'
           +'<button id="surgclr" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer">清除</button>'
           +'<span id="surgcnt" style="font-size:11px;color:#888;margin-left:4px"></span></div>'
@@ -7795,7 +7853,7 @@ document.addEventListener('click',function(e){
         document.getElementById('surgcancel').onclick=function(){document.body.removeChild(overlay);};
         document.getElementById('surgok').onclick=function(){
           const checked=[...overlay.querySelectorAll('#surg-list input:checked')].map(function(x){return x.value;});
-          c.surgicalImages=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});
+          c.surgicalImages=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''};});
           markDirty();document.body.removeChild(overlay);
           const el3=document.getElementById('surgimgs-'+cid+'-'+idx);
           if(el3){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el3.replaceWith(tmp.firstElementChild);}
@@ -7912,13 +7970,17 @@ document.addEventListener('click',function(e){
         if(!imgFolderHandle) imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         const arr=type==='mammo'?(c.mammo=c.mammo||{date:'',report:'',images:[]},c.mammo.images=c.mammo.images||[],c.mammo.images):c.images=(c.images||[]);
+        /* V5.3.0: 嘗試以病歷號為子資料夾名 */
+        const _sub=await _resolveSubFolder(imgFolderHandle,c.chartNo);
+        const _scanHandle=_sub?_sub.handle:imgFolderHandle;
+        const _subName=_sub?_sub.name:'';
         const files=[];
-        const _entries2=await _folderEntries(imgFolderHandle);
+        const _entries2=await _folderEntries(_scanHandle);
         for(const entry of _entries2){
           if(entry.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(entry.name))files.push(entry);
         }
         files.sort(function(a,b){return a.name.localeCompare(b.name);});
-        if(!files.length){alert('資料夾內沒有找到圖檔');return;}
+        if(!files.length){alert(_subName?('子資料夾「'+_subName+'」內沒有找到圖檔'):'資料夾內沒有找到圖檔');return;}
         const existing=new Set(arr.map(function(x){return x.name;}));
         const list=files.map(function(f){
           var baseName=f.name.replace(/\.[^.]+$/,'');
@@ -7933,7 +7995,7 @@ document.addEventListener('click',function(e){
         overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
         overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px 20px 16px;width:min(520px,94vw);max-height:84vh;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.18)">'
           +'<div style="font-weight:700;font-size:16px;color:#1a2530">選取影像</div>'
-          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+'　共 '+files.length+' 個圖檔　最多 '+maxN+' 張</div>'
+          +'<div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+(_subName?' / <b style="color:#2a3540">'+escA(_subName)+'</b>':'')+'　共 '+files.length+' 個圖檔　最多 '+maxN+' 張</div>'
           +'<div style="display:flex;gap:6px;align-items:center">'
           +'<button id="imgfolder-selall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">全選</button>'
           +'<button id="imgfolder-clrall" style="font-size:11px;padding:3px 10px;border:1px solid #ccc;border-radius:3px;cursor:pointer;background:#fff">清除</button>'
@@ -7960,8 +8022,8 @@ document.addEventListener('click',function(e){
         };
         document.getElementById('imgfolder-ok').onclick=function(){
           const checked=[...overlay.querySelectorAll('#imgfolder-list input:checked')].map(function(x){return x.value;}).slice(0,maxN);
-          if(type==='mammo'){c.mammo.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});}
-          else{c.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true};});}
+          if(type==='mammo'){c.mammo.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''};});}
+          else{c.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''};});}
           markDirty();document.body.removeChild(overlay);
           const elOk=type==='mammo'?document.getElementById('mammo-imgs-'+cid+'-'+idx):document.getElementById('imgs-'+cid+'-'+idx);
           if(elOk){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elOk.replaceWith(tmp.firstElementChild);}
