@@ -111,6 +111,57 @@
 
 ## 版本歷程
 
+### V5.6.0
+**JSON 個案匯出可選打包圖片成 zip**:個管師回報「匯出個案 JSON 後想連帶把圖片一起打包帶走」。本版實作:
+- **inline JSZip 3.10.1**(MIT License,壓縮後 ~96KB)— 內網醫院能用,不靠 CDN
+- **產出區加勾選框**「☐ 附圖片打包 zip」(預設不勾,**舊行為完全保留**)
+- 勾選後,點「JSON 個案匯出」→ 走 `_exportCaseJSONWithImagesZip` 分支
+- **zip 結構**(對齊 V5.3.0 子資料夾規則):
+  ```
+  頭頸癌_2026-05-21_個案.zip
+  ├── cases.json                  (跟舊版 JSON 格式 100% 一樣,無 dataUrl)
+  └── images/
+      ├── 5176721/                (病歷號子資料夾)
+      │   ├── pathology_HE.jpg
+      │   ├── pathology_IHC.jpg
+      │   ├── surgical_OP1.jpg
+      │   ├── related_CT.jpg
+      │   └── mammo_R-CC.jpg       (乳癌才有)
+      └── _no_chartno_1/          (沒填病歷號的 fallback)
+  ```
+- **三種圖片來源全支援**:
+  - `dataUrl` 已存 → `fetch(dataUrl) → blob → zip.file()`
+  - `fromFolder` + handle 在 → 從資料夾讀(支援 V5.3.0 subFolder 兩層)
+  - `fromFolder` + handle 沒授權 → 跳 `confirm` 請使用者選資料夾
+- **錯誤穩健**:單張讀檔失敗不中斷,累積到 `failedImgs[]`,結尾 toast + alert 列出失敗清單
+- 壓縮:DEFLATE level 6(平衡速度跟大小)
+- 影響 index.html 大小:530KB → 627KB(+97KB),GitHub Pages gzip 後實際傳輸 ~30KB,可接受
+
+### V5.5.0
+**兩項新功能合併**:
+
+**1. HTML 投影片檔名語言切換(中文 / 英文)**
+
+過去 HTML 檔名固定中文(`2026-05-21_頭頸癌多專科會議.html`),個管師回報「外院分享或存 NAS 時想要英文檔名」。本版實作:
+- **8 個癌別 cancer code 對映表**(`CANCER_EN_CODES`):
+  - `head_neck → HeadNeck` / `blood_lymph → BloodLymph` / `chest → Chest` / `breast → Breast`
+  - `gi → GI` / `hbp → HBP` / `gu → GU` / `gynecology → Gyn`
+- **設定頁配色 bar 加「檔名 中 / EN」切換**(沿用 V4.6.2 theme-strip 風格)
+- 偏好存 `localStorage.mdt_html_fname_lang_<userId>`,**每個個管師獨立記憶**
+- 多癌別合開時用底線串接:`2026-05-21_HeadNeck_BloodLymph_MDT.html`
+- 中文預設不變:`2026-05-21_頭頸癌+血液淋巴癌多專科會議.html`
+
+**2. 個案大欄位多行輸入支援**
+
+過去 textarea 內按 Enter 換行,但 HTML 投影片產出時換行被擠掉變成一行。本版修法:**5 個欄位**渲染時加 `.replace(/\n/g,'<br>')` 讓換行轉成 HTML `<br>`:
+- 診斷 diagnosis(case + team 投影片兩處)
+- 家族史 familyHistory
+- 討論 discussion
+- 現病史 cc(原本已支援,保留)
+- 過去病史 ph(原本已支援,保留)
+
+**舊資料完全相容**:沒換行的字串 replace 後結果不變,行為跟舊版一致。
+
 ### V5.4.0
 **記住上次登入者**:個管師基本上都各自有自己的電腦,共用情況少見 — 但每次打開系統還要點一次「選擇使用者」摩擦感累積。本版實作:
 - **`pickUser` 寫入** `localStorage.setItem('mdt_last_user', uid_)`

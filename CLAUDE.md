@@ -144,6 +144,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.6.0 | JSON 個案匯出可選打包圖片成 zip(inline JSZip ~96KB);UI 加勾選框「附圖片打包 zip」;zip 結構對齊 V5.3.0 子資料夾(images/[病歷號]/[類型]_[檔名]);三種圖來源全支援(dataUrl/fromFolder 已授權/未授權跳 confirm) |
+| V5.5.0 | HTML 投影片檔名中/英可選(`CANCER_EN_CODES` + `getHtmlFnameLang/setHtmlFnameLang`,設定頁切換);5 個個案大欄位渲染加 `\n→<br>` 多行支援 |
 | V5.4.0 | 記住上次登入者(localStorage `mdt_last_user`)+ 1.5 秒倒數自動登入 toast(取消按鈕讓共用電腦 fallback) |
 | V5.3.0 | 子資料夾匯入支援(以病歷號分,4 入口全改 + 失聯率佐證圖 _特殊議程);修 V5.2.1 引入的病理新分頁放大鏡 regression(完整搬移 zoom + 放大鏡邏輯到新分頁) |
 | V5.2.1 | HTML 投影片病理影像改「主投影片按鈕觸發新分頁」 — 不再 push 獨立 slides,window.open + document.write 開新頁;移除「病理切片集中」勾選框 |
@@ -451,7 +453,7 @@ if not missing:
 
 **按優先序：**
 
-1. **修坑 #19 followupHTML 寫死 'cases' bug** — 累積超過 10 版未修,upd 派發呼叫實際走 cases 陣列,可能造成跟「個案討論」資料的隱性衝突;不確定真實是否觸發過 bug,但邏輯確實錯,該修
+1. **修坑 #19 followupHTML 寫死 'cases' bug** — 累積超過 10 版未修;upd 派發呼叫實際走 cases 陣列,可能造成跟「個案討論」資料的隱性衝突
 2. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
 3. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
 4. DOCX 繼續微調(依測試回饋)
@@ -461,4 +463,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.4.0 記住上次登入者:個管師基本各自有自己的電腦(共用少見),每次登入都要點選個管師太繁瑣。實作:`pickUser` 寫入 `localStorage.setItem('mdt_last_user', uid_)`;`renderLogin` 讀取,有 lastUser → 該按鈕加橘邊框 + 「上次」標籤;觸發 1.5 秒倒數 toast「1.5 秒後自動以 [姓名] 登入」+ 取消按鈕讓共用電腦情境可中斷。`_cancelAutoLogin()` 清 timer 跟移除 toast。Safe 機制:lastUser 在 USERS 不存在(主檔變更)→ 不啟動 toast;`pickUser` 內先 `_cancelAutoLogin` 避免雙觸發。改動小(~30 行),純前端 localStorage,風險低。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
+V5.6.0 JSON 個案匯出可選打包圖片成 zip:個管師回報「想把 JSON + 圖片一起帶走」。inline JSZip 3.10.1(MIT License,96KB minified)在第一個 `<script>` 區段,index.html 從 530KB 升到 627KB(GitHub Pages gzip 後實際傳輸 ~30KB)。產出區加勾選框 `chk-json-with-images`(預設不勾,舊行為完全保留);勾了走 `_exportCaseJSONWithImagesZip` 分支。zip 結構對齊 V5.3.0 子資料夾(`images/[病歷號]/[類型]_[檔名]`,類型=pathology/surgical/related/mammo);三種圖來源全支援(dataUrl/fromFolder+handle/fromFolder 未授權跳 confirm)。失敗穩健:單張讀檔失敗不中斷,累積到 `failedImgs[]`,結尾 toast + alert 列失敗清單。DEFLATE level 6 壓縮。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
