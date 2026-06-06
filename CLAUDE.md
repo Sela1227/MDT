@@ -144,6 +144,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.6.2 | DOCX mkBlock 左欄 16%→12%、cell paragraph 行距收緊(before:0/after:0),回應 V5.6.1 後個管師「左欄太寬+項與項間距太多」回饋 |
+| V5.6.1 | DOCX mkBlock 加細灰邊框(SINGLE size:4 color:C.divider),讓「左標籤右內容」表格樣式更清楚對應個管師會議記錄需求 |
 | V5.6.0 | JSON 個案匯出可選打包圖片成 zip(inline JSZip ~96KB);UI 加勾選框「附圖片打包 zip」;zip 結構對齊 V5.3.0 子資料夾(images/[病歷號]/[類型]_[檔名]);三種圖來源全支援(dataUrl/fromFolder 已授權/未授權跳 confirm) |
 | V5.5.0 | HTML 投影片檔名中/英可選(`CANCER_EN_CODES` + `getHtmlFnameLang/setHtmlFnameLang`,設定頁切換);5 個個案大欄位渲染加 `\n→<br>` 多行支援 |
 | V5.4.0 | 記住上次登入者(localStorage `mdt_last_user`)+ 1.5 秒倒數自動登入 toast(取消按鈕讓共用電腦 fallback) |
@@ -463,4 +465,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.6.0 JSON 個案匯出可選打包圖片成 zip:個管師回報「想把 JSON + 圖片一起帶走」。inline JSZip 3.10.1(MIT License,96KB minified)在第一個 `<script>` 區段,index.html 從 530KB 升到 627KB(GitHub Pages gzip 後實際傳輸 ~30KB)。產出區加勾選框 `chk-json-with-images`(預設不勾,舊行為完全保留);勾了走 `_exportCaseJSONWithImagesZip` 分支。zip 結構對齊 V5.3.0 子資料夾(`images/[病歷號]/[類型]_[檔名]`,類型=pathology/surgical/related/mammo);三種圖來源全支援(dataUrl/fromFolder+handle/fromFolder 未授權跳 confirm)。失敗穩健:單張讀檔失敗不中斷,累積到 `failedImgs[]`,結尾 toast + alert 列失敗清單。DEFLATE level 6 壓縮。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
+V5.6.2 DOCX `mkBlock` 兩個視覺微調(回應 V5.6.1 個管師回饋):**(1)左欄太寬** — 16% → 12%,右欄 84% → 88%,內容空間多 4%;**(2)項與項中間留白太多** — cell 內 paragraph `spacing` 從預設的 `{after:pt(2)}` 改成 `{before:0, after:0}`,移除 cell 內每段 paragraph 下方 2pt 空白,讓多行內容更緊湊、框與框視覺上連續排列。邊框樣式沿用 V5.6.1(細灰 SINGLE size:4 color:'CFD8DC')。Node syntax check + docx 模擬產出驗證 OK。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。

@@ -1254,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.6.0';
+const VERSION='V5.6.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5398,26 +5398,32 @@ async function genDOCX(){
     // Label + content block
     const mkBlock=(label,content,isEmpty)=>new Table({
       width:{size:100,type:WidthType.PERCENTAGE},
-      borders:{top:{style:BorderStyle.NONE},bottom:{style:BorderStyle.NONE},
-               left:{style:BorderStyle.NONE},right:{style:BorderStyle.NONE},
-               insideH:{style:BorderStyle.NONE},insideV:{style:BorderStyle.NONE}},
+      /* V5.6.1: 加細灰邊框讓表格結構更清楚(對應個管師會議記錄格式需求) */
+      /* V5.6.2: 左欄 16% → 12%、cell paragraph 行距收緊,讓框與框緊貼 */
+      borders:{top:{style:BorderStyle.SINGLE,size:4,color:C.divider},
+               bottom:{style:BorderStyle.SINGLE,size:4,color:C.divider},
+               left:{style:BorderStyle.SINGLE,size:4,color:C.divider},
+               right:{style:BorderStyle.SINGLE,size:4,color:C.divider},
+               insideH:{style:BorderStyle.SINGLE,size:4,color:C.divider},
+               insideV:{style:BorderStyle.SINGLE,size:4,color:C.divider}},
       rows:[new TableRow({children:[
         new TableCell({
-          width:{size:16,type:WidthType.PERCENTAGE},
+          width:{size:12,type:WidthType.PERCENTAGE},
           shading:{type:ShadingType.CLEAR,fill:C.bg},
           margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
-          children:[new Paragraph({children:[
-            mkRun(label,{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})
-          ]})]
+          children:[new Paragraph({
+            children:[mkRun(label,{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            spacing:{before:0,after:0}
+          })]
         }),
         new TableCell({
-          width:{size:84,type:WidthType.PERCENTAGE},
+          width:{size:88,type:WidthType.PERCENTAGE},
           margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
           children:isEmpty
-            ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:pt(2),after:pt(2)}})]
+            ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:0,after:0}})]
             :(content||'').split('\n').map(line=>new Paragraph({
                 children:[mkRun(line,{size:sz(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
-                spacing:{after:pt(2)}
+                spacing:{before:0,after:0}
               }))
         })
       ]})]
