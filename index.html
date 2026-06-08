@@ -1254,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.7.1';
+const VERSION='V5.8.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5435,7 +5435,7 @@ async function genDOCX(){
 
     // Section header (e.g. ▌前期追蹤)
     const mkSecHdr=(text)=>new Paragraph({
-      children:[mkRun(text,{bold:true,size:sz(13),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun(text,{bold:true,size:sz(13),color:C.accent,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
       spacing:{before:pt(14),after:pt(6)},
       border:{left:{style:BorderStyle.THICK,size:12,color:C.accent}}
     });
@@ -5453,13 +5453,13 @@ async function genDOCX(){
           margins:{top:pt(4),bottom:pt(4),left:pt(6),right:pt(6)},
           children:[new Paragraph({
             children:[
-              mkRun(no+'.  ',{bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun(no+'.  ',{bold:true,size:sz(12),color:C.white,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun((c.chartNo||'')+'\u3000'+(c.name?maskName(c.name):''),
-                {bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {bold:true,size:sz(12),color:C.white,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun('\u3000'+caseDemo(c),
-                {size:sz(11),color:'A8B5BE',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'A8B5BE',font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun('\u3000VS '+drs,
-                {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'B8D4EA',font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
             ]
           })]
         })
@@ -5467,7 +5467,15 @@ async function genDOCX(){
     });
 
     // Label + content block
-    const mkBlock=(label,content,isEmpty)=>new Table({
+    /* V5.8.0: 加 opts 參數
+       - opts.emphasis=true → 標籤背景深色(C.dark)+ 白色文字,突顯重要欄位(用於決策結論)
+       - opts.contentSize → 自訂內容字級(預設 12,治療欄縮小到 10) */
+    const mkBlock=(label,content,isEmpty,opts)=>{
+      opts=opts||{};
+      const labelBg=opts.emphasis?C.dark:C.bg;
+      const labelColor=opts.emphasis?'FFFFFF':C.mid;
+      const contentSize=opts.contentSize||12;
+      return new Table({
       width:{size:100,type:WidthType.PERCENTAGE},
       /* V5.6.1: 加細灰邊框讓表格結構更清楚(對應個管師會議記錄格式需求) */
       /* V5.6.2: 左欄 16% → 12%、cell paragraph 行距收緊,讓框與框緊貼 */
@@ -5480,10 +5488,10 @@ async function genDOCX(){
       rows:[new TableRow({children:[
         new TableCell({
           width:{size:12,type:WidthType.PERCENTAGE},
-          shading:{type:ShadingType.CLEAR,fill:C.bg},
+          shading:{type:ShadingType.CLEAR,fill:labelBg},
           margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
           children:[new Paragraph({
-            children:[mkRun(label,{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(label,{bold:true,size:sz(11),color:labelColor,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{before:0,after:0}
           })]
         }),
@@ -5493,21 +5501,22 @@ async function genDOCX(){
           children:isEmpty
             ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:0,after:0}})]
             :(content||'').split('\n').map(line=>new Paragraph({
-                children:[mkRun(line,{size:sz(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
+                children:[mkRun(line,{size:sz(contentSize),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
                 spacing:{before:0,after:0}
               }))
         })
       ]})]
     });
+    };
 
     // Followup status badge
     const mkFupStatus=(status)=>new Paragraph({
       children:[
-        mkRun('\u72c0\u614b\uff1a',{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u72c0\u614b\uff1a',{bold:true,size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
         mkRun(status==='ongoing'?'\u7e7c\u7e8c\u8ffd\u8e64':'\u7d50\u6848',
           {bold:true,size:sz(11),
            color:status==='ongoing'?'1565C0':'B71C1C',
-           font:'\u65b0\u7d30\u660e\u9ad4'})
+           font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})
       ],
       spacing:{before:pt(2),after:pt(4)}
     });
@@ -5517,19 +5526,19 @@ async function genDOCX(){
     // ── Header: hospital + meeting info ──
     children.push(new Paragraph({
       children:[mkRun('\u5f70\u6ff1\u79c0\u50b3\u764c\u75c7\u4e2d\u5fc3',
-        {bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+        {bold:true,size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
       spacing:{after:pt(2)}
     }));
     children.push(new Paragraph({
       children:[mkRun(mtgTitle(cids),
-        {bold:true,size:sz(16),color:C.title,font:'\u65b0\u7d30\u660e\u9ad4'})],
+        {bold:true,size:sz(16),color:C.title,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
       spacing:{after:pt(4)}
     }));
     // Date + time + location on one line
     const dateStr=rocDate(m.date).replace(/\(\u661f\u671f.\)$/,'');
     const infoLine=[dateStr,m.time,m.loc].filter(Boolean).join('\u3000\u3000');
     children.push(new Paragraph({
-      children:[mkRun(infoLine,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun(infoLine,{size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
       spacing:{after:pt(2)}
     }));
     children.push(mkHR());
@@ -5538,7 +5547,7 @@ async function genDOCX(){
       const ca=CFG[cid],sec=m.sections[cid]||{followups:[],cases:[],special:[]};
       if(cids.length>1){
         children.push(new Paragraph({
-          children:[mkRun(ca.name,{bold:true,size:sz(14),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+          children:[mkRun(ca.name,{bold:true,size:sz(14),color:C.accent,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
           spacing:{before:pt(10),after:pt(6)},
           border:{bottom:{style:BorderStyle.SINGLE,size:4,color:C.accent}}
         }));
@@ -5552,23 +5561,23 @@ async function genDOCX(){
           const drs=getDoctorStr(f);
           children.push(new Paragraph({
             children:[
-              mkRun((i+1)+'.  ',{bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun((i+1)+'.  ',{bold:true,size:sz(12),color:C.dark,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun((f.chartNo||'')+'\u3000'+(f.name?maskName(f.name):''),
-                {bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {bold:true,size:sz(12),color:C.dark,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun(drs&&drs!=='\u2014'?'\u3000VS '+drs:'',
-                {size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
             ],
             spacing:{before:pt(6),after:pt(2)}
           }));
           if(f.note)children.push(new Paragraph({
-            children:[mkRun(f.note,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(f.note,{size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{after:pt(2)},
             indent:{left:pt(16)}
           }));
           children.push(mkFupStatus(f.status||'closed'));
           /* V5.7.0: 前期追蹤的會後填寫摘要+決策 */
           if(f.summary)children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',f.summary,false));
-          if(f.decision)children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',f.decision,false));
+          if(f.decision)children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',f.decision,false,{emphasis:true}));
         });
         children.push(mkHR());
       }
@@ -5582,30 +5591,31 @@ async function genDOCX(){
           // Case header (blue bg)
           children.push(mkCaseHdr(i+1,c,drs));
           // Diagnosis
+          /* V5.8.1: 診斷改用 mkBlock,跟其他欄位視覺一致(有外框 + 左欄「診斷」標籤);刪除原本下方那條多餘的細線 */
           if(c.diagnosis){
-            children.push(new Paragraph({
-              children:[mkRun(c.diagnosis,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
-              spacing:{before:pt(3),after:pt(3)},
-              indent:{left:pt(4)}
-            }));
-            // Thin line between diagnosis and treatment
-            children.push(new Paragraph({
-              border:{bottom:{style:BorderStyle.SINGLE,size:2,color:C.divider}},
-              spacing:{before:0,after:pt(3)}
-            }));
+            children.push(mkBlock('\u8a3a\u65b7',c.diagnosis,false));
           }
           // Treatment
+          /* V5.8.0: 治療每項加編號 + 日期前置(date)name : content,讓視覺結構更清楚 */
           const trStr=(c.treatments||[]).length
             ?(c.treatments||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
-              .map(function(tr){return(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'');}).join('\n')
+              .map(function(tr,ti){
+                var idx='['+(ti+1)+'] ';
+                var date=tr.date?'('+tr.date+') ':'';
+                var name=tr.name||'';
+                var content=tr.content?' : '+tr.content:'';
+                return idx+date+name+content;
+              }).join('\n')
             :(c.treatment&&c.treatment!=='\u5c1a\u672a\u6cbb\u7642'?c.treatment:'');
-          if(trStr)children.push(mkBlock('\u6cbb\u7642',trStr,false));
+          /* V5.8.0: 治療字級 12 → 10(資訊性,讓決策結論更突出) */
+          if(trStr)children.push(mkBlock('\u6cbb\u7642',trStr,false,{contentSize:10}));
 
           // Summary & Decision - hide label if completely empty
           if(c.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',c.summary,false));}
-          else{children.push(new Paragraph({children:[mkRun('\u8a0e\u8ad6\u6458\u8981\uff1a',{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
-          if(c.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',c.decision,false));}
-          else{children.push(new Paragraph({children:[mkRun('\u6c7a\u7b56\u7d50\u8ad6\uff1a',{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
+          else{children.push(new Paragraph({children:[mkRun('\u8a0e\u8ad6\u6458\u8981\uff1a',{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
+          /* V5.8.0: 決策結論 emphasis,標籤深色背景白色文字突顯重點 */
+          if(c.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',c.decision,false,{emphasis:true}));}
+          else{children.push(new Paragraph({children:[mkRun('\u6c7a\u7b56\u7d50\u8ad6\uff1a',{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
           children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
@@ -5617,15 +5627,12 @@ async function genDOCX(){
         team.forEach(function(t,i){
           const drs=getDoctorStr(t);
           children.push(mkCaseHdr(i+1,t,drs));
+          /* V5.8.1: 診斷改用 mkBlock 統一視覺 */
           if(t.diagnosis){
-            children.push(new Paragraph({
-              children:[mkRun(t.diagnosis,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
-              spacing:{before:pt(3),after:pt(3)},
-              indent:{left:pt(4)}
-            }));
+            children.push(mkBlock('\u8a3a\u65b7',t.diagnosis,false));
           }
           if(t.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',t.summary,false));}
-          if(t.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',t.decision,false));}
+          if(t.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',t.decision,false,{emphasis:true}));}
           children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
@@ -5637,15 +5644,12 @@ async function genDOCX(){
         events.forEach(function(ev,i){
           const drs=getDoctorStr(ev);
           children.push(mkCaseHdr(i+1,ev,drs));
+          /* V5.8.1: 診斷改用 mkBlock 統一視覺 */
           if(ev.diagnosis){
-            children.push(new Paragraph({
-              children:[mkRun(ev.diagnosis,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
-              spacing:{before:pt(3),after:pt(3)},
-              indent:{left:pt(4)}
-            }));
+            children.push(mkBlock('\u8a3a\u65b7',ev.diagnosis,false));
           }
           if(ev.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',ev.summary,false));}
-          if(ev.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',ev.decision,false));}
+          if(ev.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',ev.decision,false,{emphasis:true}));}
           children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
@@ -5657,11 +5661,11 @@ async function genDOCX(){
         sp.forEach(function(s){
           const label=(s.topicType?'['+s.topicType+'] ':'')+( s.title||'');
           children.push(new Paragraph({
-            children:[mkRun(label,{bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(label,{bold:true,size:sz(12),color:C.dark,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{before:pt(6),after:pt(2)}
           }));
           if(s.note)children.push(new Paragraph({
-            children:[mkRun(s.note,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(s.note,{size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{after:pt(4)},indent:{left:pt(8)}
           }));
         });
@@ -5675,14 +5679,14 @@ async function genDOCX(){
     children.push(new Paragraph({text:'',spacing:{before:pt(12),after:0}}));
     children.push(new Paragraph({
       children:[
-        mkRun('\u8a18\u9304\uff1a'+recorder,{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
-        mkRun('\u3000\u3000'+recDate,{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u8a18\u9304\uff1a'+recorder,{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
+        mkRun('\u3000\u3000'+recDate,{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
       ],
       alignment:AlignmentType.RIGHT
     }));
 
     const doc=new Document({
-      styles:{default:{document:{run:{font:'\u65b0\u7d30\u660e\u9ad4',size:sz(12)}}}},
+      styles:{default:{document:{run:{font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4',size:sz(12)}}}},
       sections:[{
         properties:{page:{margin:{
           top:convertInchesToTwip(0.8),

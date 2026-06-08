@@ -144,6 +144,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.8.1 | DOCX 視覺一致性兩項微調:診斷也用 mkBlock(個案討論/醫療小組/必要事件三處,刪掉診斷下方多餘細線);字體 27 處從「新細明體」改成「微軟正黑體」(跨平台 Word 自動 fallback) |
+| V5.8.0 | DOCX 個案討論視覺優化:治療日期前置+編號 `[i] (date) name`、治療字級 12→10、決策結論 emphasis(標籤深色背景+白字);`mkBlock` 擴充 `opts={emphasis, contentSize}` 參數 |
 | V5.7.1 | 修 V5.7.0 regression:前期追蹤面板「繼續/結案」按鈕視覺異常,因為新加的 postfup-summary/decision textarea 被 prefix match selector `[data-action^="postfup-"]` 誤匹配當按鈕處理。改精確匹配 ongoing+closed 兩個。新增坑 #24 |
 | V5.7.0 | 會後填寫面板擴充:前期追蹤 / 醫療小組 / 必要事件 三區段都加摘要+決策 textarea;DOCX 同步加(讓醫療小組 / 必要事件 出現在會議記錄,且前期追蹤帶摘要決策) |
 | V5.6.2 | DOCX mkBlock 左欄 16%→12%、cell paragraph 行距收緊(before:0/after:0),回應 V5.6.1 後個管師「左欄太寬+項與項間距太多」回饋 |
@@ -475,4 +477,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.7.1 修 V5.7.0 引入的 regression — 個管師回報「前期追蹤面板的繼續/結案按鈕點了沒反應」。根因(坑 #24):V5.7.0 加 `postfup-summary` / `postfup-decision` 兩個 textarea 後,event handler 內 `_card.querySelectorAll('[data-action^="postfup-"]')` 的 **prefix match selector 變得太寬**,把新加的 textarea 也誤匹配,當成按鈕處理(加 `btn` className + `opacity:.5`),讓 textarea 視覺半透明、看起來像被禁用。修法:把 prefix match 改成精確匹配兩個 toggle button(`[data-action="postfup-ongoing"],[data-action="postfup-closed"]`)。寫入坑 #24 — 「**有 prefix selector 的 handler,新增同 prefix 命名前先 grep 確認**」,教訓跟坑 #23「inline `display:flex` 覆蓋 CSS class」同類:**新增元素時忘記檢查既有 selector 是否會誤匹配**。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
+V5.8.1 DOCX 視覺一致性兩項微調(回應 V5.8.0 個管師回饋):**(1)診斷欄位沒外框,跟其他欄位視覺不一致** — V5.8.0 結構是「標題列→純 Paragraph 診斷+細線→mkBlock 治療/摘要/決策」,個管師看到「4 個有外框+診斷單獨無框」覺得不一致。修法:診斷也改用 mkBlock,左欄加「診斷」標籤,跟其他 4 個一致;同時刪除診斷下方那條多餘細線(V5.6.1 加 mkBlock 邊框後該細線多餘)。套用範圍:個案討論 / 醫療小組 / 必要事件 三處診斷(前期追蹤本來就沒 diagnosis 欄位)。**(2)預設字體改成黑體**:全 DOCX 27 處 `font:'新細明體'`→`font:'微軟正黑體'`,可讀性提升。docx 7.8.2 的 font 參數只接受單一字串,跨平台靠 Word 自動 fallback(Mac→PingFang TC,Linux→Noto Sans CJK)。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
