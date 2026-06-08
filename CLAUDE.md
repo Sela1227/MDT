@@ -144,6 +144,16 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.7.0 | 會後填寫面板擴充:前期追蹤 / 醫療小組 / 必要事件 三區段都加摘要+決策 textarea;DOCX 同步加(讓醫療小組 / 必要事件 出現在會議記錄,且前期追蹤帶摘要決策) |
+| V5.6.2 | DOCX mkBlock 左欄 16%→12%、cell paragraph 行距收緊(before:0/after:0),回應 V5.6.1 後個管師「左欄太寬+項與項間距太多」回饋 |
+| V5.6.1 | DOCX mkBlock 加細灰邊框(SINGLE size:4 color:C.divider),讓「左標籤右內容」表格樣式更清楚對應個管師會議記錄需求 |
+| V5.6.0 | JSON 個案匯出可選打包圖片成 zip(inline JSZip ~96KB);UI 加勾選框「附圖片打包 zip」;zip 結構對齊 V5.3.0 子資料夾(images/[病歷號]/[類型]_[檔名]);三種圖來源全支援(dataUrl/fromFolder 已授權/未授權跳 confirm) |
+| V5.5.0 | HTML 投影片檔名中/英可選(`CANCER_EN_CODES` + `getHtmlFnameLang/setHtmlFnameLang`,設定頁切換);5 個個案大欄位渲染加 `\n→<br>` 多行支援 |
+| V5.4.0 | 記住上次登入者(localStorage `mdt_last_user`)+ 1.5 秒倒數自動登入 toast(取消按鈕讓共用電腦 fallback) |
+| V5.3.0 | 子資料夾匯入支援(以病歷號分,4 入口全改 + 失聯率佐證圖 _特殊議程);修 V5.2.1 引入的病理新分頁放大鏡 regression(完整搬移 zoom + 放大鏡邏輯到新分頁) |
+| V5.2.1 | HTML 投影片病理影像改「主投影片按鈕觸發新分頁」 — 不再 push 獨立 slides,window.open + document.write 開新頁;移除「病理切片集中」勾選框 |
+| V5.2.0 | 醫療小組/必要事件加「年齡 / 性別」+「家族史」三欄,三介面(編輯/閱覽/HTML 投影片)同步擴充;舊資料相容(沒填不顯示) |
+| V5.1.4 | HTML 投影片標記工具加 5 色字色按鈕(<span class="fc">);hlClear 同時清 mark+fc;toolbar 寬度更新 |
 | V5.1.3 | HTML 投影片螢光筆「清除」改成精確清除(用 Range.intersectsNode);個案年齡 .cd 字級加大(22→26px) |
 | V5.1.2 | AI 匯入 prompt markers 序列 marker date 欄改填空字串(避免冗餘 + 誤導);加序列 vs 單筆雙範例 |
 | V5.1.1 | 修「特殊議程 inline display:flex 覆蓋 .slide CSS class」造成 4 率投影片永遠顯示蓋掉個案的 bug;4 處全部修 |
@@ -446,7 +456,7 @@ if not missing:
 
 **按優先序：**
 
-1. **記住上次登入者** — 上線必備:登入頁預選最近登入的個管師,不用每次都點;localStorage 存 `mdt_last_user`,登入頁渲染時讀出來預選;這個摩擦感最強、改動最小
+1. **修坑 #19 followupHTML 寫死 'cases' bug** — 累積超過 10 版未修;upd 派發呼叫實際走 cases 陣列,可能造成跟「個案討論」資料的隱性衝突
 2. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
 3. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
 4. DOCX 繼續微調(依測試回饋)
@@ -456,4 +466,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.1.3 修兩個 HTML 投影片 bug:(1)螢光筆「清除」鈕原本無條件清全頁,改成「選取範圍內精確清除」 — 用 `Range.intersectsNode()` 找與範圍重疊的 mark 只清這些;沒選取時走 else 分支 + confirm 二次確認後清全頁(保留入口);(2)個案年齡 `.cd` 字級從 `clamp(14px,1.5vw,22px)` 加大到 `clamp(16px,1.8vw,26px)`(1080p 22→26px),跟「VS 主治醫師」`.cdr` 23px 平齊。Mobile media query 同步加大。下版第一優先還是「修坑 #19 followupHTML 寫死 cases bug」或「記住上次登入者」。
+V5.7.0 會後填寫面板擴充 + DOCX 同步加區段:個管師回報「會後填寫面板只能填個案討論的摘要決策,前期追蹤 / 醫療小組 / 必要事件 都無法填寫結論」。**(1)會後填寫面板**:前期追蹤加 `f.summary/f.decision` 兩 textarea(欄位新增,在「繼續追蹤/結案」按鈕之下);醫療小組 / 必要事件**從零新增整個區段**(資料欄位 `t.summary/t.decision` V5.2.0 已有,只是面板沒呈現)。共用卡片產生器 `_mkTeamCard(cid, arr, arrType, t, ti)`,`arrType='team'/'events'` 區分。`savePostMtg` 加 4 個新 selector(postfup-summary/decision、postteam-summary/decision 後者用 arrtype 區分)。**(2)DOCX**:V5.6.x 之前只有前期追蹤→個案討論→特殊議程,**完全沒有醫療小組 / 必要事件**。本版補上:前期追蹤狀態 badge 後加 summary/decision mkBlock;醫療小組 / 必要事件在個案討論之後、特殊議程之前各新增整個區段(`mkSecHdr` + mkCaseHdr + diagnosis + summary + decision)。沿用 V5.6.2 mkBlock 邊框 + 12% 左欄樣式。舊資料相容(沒填過的 summary/decision → 面板 textarea 空、DOCX `if` 為 false 不 push)。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。

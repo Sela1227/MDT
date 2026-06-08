@@ -111,6 +111,133 @@
 
 ## 版本歷程
 
+### V5.7.0
+**會後填寫面板擴充 + DOCX 同步加區段**:個管師回報「會後填寫面板只能填個案討論的摘要決策,前期追蹤 / 醫療小組 / 必要事件 都無法填寫結論」。本版兩大改動:
+
+**1. 會後填寫面板擴充**
+
+- **前期追蹤**:在原有「繼續追蹤 / 結案」按鈕下方,加上**討論摘要 + 決策結論**兩個 textarea(舊版完全沒有,V5.7.0 新增 `f.summary` / `f.decision` 欄位)
+- **醫療小組**(新增整個區段):每位成員加**討論摘要 + 決策結論**(資料欄位 V5.2.0 早已存在,只是會後填寫面板沒呈現)
+- **必要事件**(新增整個區段):同上
+- 共用卡片產生器 `_mkTeamCard(cid, arr, arrType, t, ti)`,`arrType='team'/'events'` 區分,避免重複 code
+- 資料寫入 `savePostMtg` 加 4 個新 selector:`postfup-summary` / `postfup-decision` / `postteam-summary` / `postteam-decision`(後兩者用 `arrtype` 區分 team/events)
+
+**2. DOCX 同步擴充**
+
+V5.6.x 之前 DOCX 只有「前期追蹤 → 個案討論 → 特殊議程」,**完全沒有醫療小組 / 必要事件**。本版補上:
+- 前期追蹤:在原有狀態 badge 之後加 `if(f.summary) mkBlock` + `if(f.decision) mkBlock`
+- 醫療小組:在個案討論之後、特殊議程之前新增整個區段(`mkSecHdr('醫療小組')` + 每位成員 `mkCaseHdr` + diagnosis + summary + decision)
+- 必要事件:同上,獨立區段(`mkSecHdr('必要事件')`)
+- 醫療小組 / 必要事件 DOCX 區段沿用 V5.6.2 的 mkBlock 邊框 + 12% 左欄樣式
+
+**舊資料相容**:沒填過 summary/decision 的舊資料,面板 textarea 為空、DOCX 內 `if(f.summary)` 為 false 不 push,完全不影響舊行為。
+
+### V5.6.2
+**DOCX `mkBlock` 兩個視覺微調**:V5.6.1 加邊框後個管師回饋兩點:
+- **左欄太寬**:`16% → 12%`,右欄相應 `84% → 88%`,內容空間多 4%,個管師寫長文時換行頻率降低
+- **項與項中間留白太多**:cell 內 paragraph `spacing` 從 `{before:pt(0), after:pt(2)}` 改 `{before:0, after:0}`,移除每個 cell 內 paragraph 預設的「下方 2pt 空白」,讓多行內容更緊湊;表格之間原本就無顯式空白段,間距收緊後框與框視覺上更貼近(像截圖那樣連續排列)
+- 邊框樣式不動(沿用 V5.6.1 細灰 SINGLE size:4 color:'CFD8DC')
+
+### V5.6.1
+**DOCX 個案討論區塊 mkBlock 加細灰邊框**:個管師上傳了希望的會議記錄格式截圖(左標籤右內容、有清楚灰色邊框)。對比現行 DOCX 發現結構已經是「左 16% 標籤欄(淺灰底)+ 右 84% 內容欄」的表格,**只是 `borders` 全設 `BorderStyle.NONE`**,看起來像沒有框。本版改成 `BorderStyle.SINGLE size:4 color:C.divider`(沿用現行 `'CFD8DC'` 淺灰常數),讓每個 mkBlock 都有清楚的細灰邊框。多欄位結構保留(現病史 / 過去病史 / 病理 / 治療 / 討論摘要 / 決策結論 各自一個 mkBlock,各自加邊框),跟個管師需求一致。
+
+### V5.6.0
+**JSON 個案匯出可選打包圖片成 zip**:個管師回報「匯出個案 JSON 後想連帶把圖片一起打包帶走」。本版實作:
+- **inline JSZip 3.10.1**(MIT License,壓縮後 ~96KB)— 內網醫院能用,不靠 CDN
+- **產出區加勾選框**「☐ 附圖片打包 zip」(預設不勾,**舊行為完全保留**)
+- 勾選後,點「JSON 個案匯出」→ 走 `_exportCaseJSONWithImagesZip` 分支
+- **zip 結構**(對齊 V5.3.0 子資料夾規則):
+  ```
+  頭頸癌_2026-05-21_個案.zip
+  ├── cases.json                  (跟舊版 JSON 格式 100% 一樣,無 dataUrl)
+  └── images/
+      ├── 5176721/                (病歷號子資料夾)
+      │   ├── pathology_HE.jpg
+      │   ├── pathology_IHC.jpg
+      │   ├── surgical_OP1.jpg
+      │   ├── related_CT.jpg
+      │   └── mammo_R-CC.jpg       (乳癌才有)
+      └── _no_chartno_1/          (沒填病歷號的 fallback)
+  ```
+- **三種圖片來源全支援**:
+  - `dataUrl` 已存 → `fetch(dataUrl) → blob → zip.file()`
+  - `fromFolder` + handle 在 → 從資料夾讀(支援 V5.3.0 subFolder 兩層)
+  - `fromFolder` + handle 沒授權 → 跳 `confirm` 請使用者選資料夾
+- **錯誤穩健**:單張讀檔失敗不中斷,累積到 `failedImgs[]`,結尾 toast + alert 列出失敗清單
+- 壓縮:DEFLATE level 6(平衡速度跟大小)
+- 影響 index.html 大小:530KB → 627KB(+97KB),GitHub Pages gzip 後實際傳輸 ~30KB,可接受
+
+### V5.5.0
+**兩項新功能合併**:
+
+**1. HTML 投影片檔名語言切換(中文 / 英文)**
+
+過去 HTML 檔名固定中文(`2026-05-21_頭頸癌多專科會議.html`),個管師回報「外院分享或存 NAS 時想要英文檔名」。本版實作:
+- **8 個癌別 cancer code 對映表**(`CANCER_EN_CODES`):
+  - `head_neck → HeadNeck` / `blood_lymph → BloodLymph` / `chest → Chest` / `breast → Breast`
+  - `gi → GI` / `hbp → HBP` / `gu → GU` / `gynecology → Gyn`
+- **設定頁配色 bar 加「檔名 中 / EN」切換**(沿用 V4.6.2 theme-strip 風格)
+- 偏好存 `localStorage.mdt_html_fname_lang_<userId>`,**每個個管師獨立記憶**
+- 多癌別合開時用底線串接:`2026-05-21_HeadNeck_BloodLymph_MDT.html`
+- 中文預設不變:`2026-05-21_頭頸癌+血液淋巴癌多專科會議.html`
+
+**2. 個案大欄位多行輸入支援**
+
+過去 textarea 內按 Enter 換行,但 HTML 投影片產出時換行被擠掉變成一行。本版修法:**5 個欄位**渲染時加 `.replace(/\n/g,'<br>')` 讓換行轉成 HTML `<br>`:
+- 診斷 diagnosis(case + team 投影片兩處)
+- 家族史 familyHistory
+- 討論 discussion
+- 現病史 cc(原本已支援,保留)
+- 過去病史 ph(原本已支援,保留)
+
+**舊資料完全相容**:沒換行的字串 replace 後結果不變,行為跟舊版一致。
+
+### V5.4.0
+**記住上次登入者**:個管師基本上都各自有自己的電腦,共用情況少見 — 但每次打開系統還要點一次「選擇使用者」摩擦感累積。本版實作:
+- **`pickUser` 寫入** `localStorage.setItem('mdt_last_user', uid_)`
+- **`renderLogin` 讀取**:有 lastUser → 該按鈕加橘色邊框 + 右上「上次」標籤;觸發 1.5 秒倒數 toast「1.5 秒後自動以 [姓名] 登入」+ 取消按鈕
+- **共用電腦 fallback**:若另一位個管師想用同台電腦,點 toast「取消」→ timer 清除,正常選人
+- **safe 機制**:lastUser 在 USERS 已不存在(主檔變更)→ 不啟動 toast,正常選人邏輯;`pickUser` 內先 `_cancelAutoLogin` 避免快過倒數時雙觸發
+- 改動小(~30 行),風險低(純前端 localStorage,不動資料結構)
+
+### V5.3.0
+**兩項改動合併出貨**:
+
+**1. 子資料夾匯入支援(主要新功能)**
+
+個管師回報「整個會議用到的圖片太多,混在一個資料夾很難找」。經討論決定:**個管師願意手動建一個病人一個資料夾,以病歷號為名**。本版實作:
+- **4 個選圖入口**(病理 / 手術 / 相關影像 / 乳攝)進入時,先試 `_resolveSubFolder(imgFolderHandle, c.chartNo)`,找到該病歷號子資料夾就用,找不到 fallback 到根目錄(向後相容)
+- **特殊議程佐證圖**(失聯率病人)先試 `p.chartNo` 子資料夾,再試 `_特殊議程`,最後 fallback 到根目錄
+- **圖檔儲存格式**新增 `subFolder` 欄位,讀檔時 `imgFolderHandle.getDirectoryHandle(subFolder).getFileHandle(name)` 兩層查找
+- **modal 標題**顯示子資料夾路徑:「📂 20260521 頭頸癌 / **5176721**」讓個管師知道當前位置
+- **`_pathImgCache` cache key 改用 `subFolder/name`** 避免不同子資料夾同名檔(`HE.jpg`)互相覆蓋
+- 共用工具函式 `_resolveSubFolder(rootHandle, subName)` 試讀子資料夾、失敗回 null 讓呼叫端 fallback
+- **舊資料完全相容**:沒 `subFolder` 欄位的圖檔(`undefined`)走平面 `getFileHandle`,跟 V5.2.x 行為一致
+
+**2. 修 V5.2.1 引入的 regression — 病理新分頁放大鏡功能消失**
+
+個管師回報「病理影像獨立到新分頁後,主投影片有的放大鏡(L 鍵)新分頁沒有了」。根因:`openPathoWindow` 開的新分頁用 `.ps` class,但放大鏡跟滾輪 zoom 邏輯只綁定在 `.img-slide`,新分頁不繼承。修法:**完整搬移**主投影片的放大鏡 + 滾輪 zoom + 雙擊重設邏輯到新分頁 inline JS,改用 `.ps` selector;新增 `🔍` 按鈕、L 鍵快捷、Esc 雙態(放大鏡開 → 先關放大鏡,再 Esc 才關視窗)。新分頁的 inline JS 透過真實產出後跑 Node syntax check 確認語法 OK。
+
+### V5.2.1
+**HTML 投影片病理影像改「按鈕觸發新分頁」**:個管師回報「病理影像插在報告裡讓整份投影片變很冗長」(例如一個個案有 5 張染色,變成個案投影片後緊接 5 張染色投影片,連續播 6 頁才到下一個案,翻頁很煩)。本版調整:
+- **HTML 投影片產出時,病理影像不再 push 成獨立 slides**(原本一張影像一張投影片的邏輯移除)
+- **個案主投影片標題列加按鈕**「🔬 病理影像(N)」— `N` 是該個案的影像數量;沒影像則不顯示
+- **點按鈕** → JS 用 `window.open('','_blank')` 開新分頁,即時組裝完整 HTML 投影片格式(含病歷號姓名、染色標題、進度條、上下切換)
+- **新分頁** 完全獨立,可用鍵盤左右切換、Esc 關閉;不影響原投影片
+- **「病理切片影像集中」勾選框移除**(原本「勾了= 病理影像統一放最後」的選項,在新行為下沒意義)
+- 技術:`_pathoData` 全域物件儲存每個個案的影像 base64,按鈕點擊時呼叫 `openPathoWindow(caseId)`;HTML 大小不變(影像 base64 一樣只存一次,只是從 slides 字串移到 `__casePathos` 變數);手術照片邏輯不動
+
+### V5.2.0
+**醫療小組 / 必要事件欄位擴充**:個管師回報需求 — 醫療小組的人員除了病歷號姓名外,還需要看到年齡與性別(快速判斷)+ 家族史(乳癌、消化道癌等遺傳相關病史的會議常用)。本版三處同步擴充:
+- **編輯介面 `teamHTML`**:抬頭區加「年齡 / 性別」欄(複用 `caseHTML` 一樣的 input+select 配置);現病史下面新增「**家族史(選填)**」textarea
+- **閱覽介面 `teamViewHTML`**:抬頭顯示 caseDemo(性別/年齡)— 只在有填時顯示;rows 加家族史(只在有填時 push)
+- **HTML 投影片 `_trackSlide`**:標題列加 `.cd` 顯示 caseDemo;sections 加家族史(在現病史之後);兩者都只在有填時才出現
+
+**舊資料完全相容**:沒有 `age/gender/familyHistory` 欄位的舊個案會自動忽略這些新欄位(`undefined` 邏輯運算為 falsy,跳過渲染)— 顯示跟 V5.1.x 一模一樣,個管師打開不會看到任何變化。
+
+### V5.1.4
+**HTML 投影片標記工具加「字色變更」**:除了原本的 5 色螢光筆(背景色),新增 **5 色字色按鈕**(A 樣式),讓使用者在投影片現場標記時有兩種獨立工具。字色用對比強烈的飽和暗色:紅 `#D32F2F` / 藍 `#1976D2` / 綠 `#388E3C` / 橘 `#F57C00` / 紫 `#7B1FA2`。字色變更時 wrapper 是 `<span class="fc">` 加 `color` + `font-weight:600`(略加粗增加辨識),跟螢光筆的 `<mark>` 分開。Toolbar 結構:5 螢光圓 → 分隔線 → 5 字色 A → 分隔線 → ✕ 清除。「✕ 清除」同時清螢光筆 `<mark>` + 字色 `<span class="fc">` 兩種標記(無論精準或全清)。Toolbar 寬度估算更新(舊 200px → 新 320px,避免靠視窗邊緣時超出)。
+
 ### V5.1.3
 **HTML 投影片兩個 bug fix**:
 - **螢光筆「清除」改成精確清除**:過去 `hlClear()` 用 `document.querySelectorAll('mark').forEach(...)` **無條件清掉本頁所有 mark**,個管師回報「畫了五個標記想清掉一個結果全沒了」。改成「**選取範圍內精確清除**」:有 `_hlSel`(剛選取的範圍)→ 用 `Range.intersectsNode()` 找與範圍重疊的 mark,只清這些;沒選取 → 加 `confirm` 二次確認後才清全頁(保留原行為作為「清全頁」入口,避免誤觸)
