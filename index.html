@@ -1254,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.8.6';
+const VERSION='V5.8.7';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3322,7 +3322,7 @@ function caseHTML(cid,i,d){
   </div>
 
   <div class="fsec">討論</div>
-  <div class="fg full"><label>討論要點</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
+  <div class="fg full"><label>討論方向</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
   <div class="fg full"><label>討論項目</label><div class="trow">${topicChips}</div></div>
 
   <div class="fsec" style="color:var(--fog)">會議記錄（開會後填入）</div>
@@ -3338,7 +3338,7 @@ function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='c
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
 </div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
-/* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論要點、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
+/* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論方向、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
 function teamHTML(cid,i,d,type='team',collapsed=false){
   const _cardId='cc-'+cid+'-'+type+'-'+i;
   const lbl=type==='team'?'醫療小組成員':'必要事件';
@@ -3359,7 +3359,7 @@ function teamHTML(cid,i,d,type='team',collapsed=false){
 <div class="fg full"><label>診斷</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'diagnosis',this.value)" placeholder="癌別、分期、組織型態" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.diagnosis||'')}</textarea></div>
 <div class="fg full"><label>現病史</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'cc',this.value)" placeholder="目前狀況、就醫經過" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.cc||'')}</textarea></div>
 <div class="fg full"><label>家族史（選填）</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'familyHistory',this.value)" placeholder="家族癌症史或重要遺傳病史（沒填則不顯示）" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>
-<div class="fg full"><label>討論要點</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="本次MDT討論的主要議題" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.discussion||'')}</textarea></div>
+<div class="fg full"><label>討論方向</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="本次MDT要討論的方向" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.discussion||'')}</textarea></div>
 <div class="fg full"><label>摘要</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'summary',this.value)" placeholder="會議結論摘要" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.summary||'')}</textarea></div>
 <div class="fg full"><label>決策</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'decision',this.value)" placeholder="下一步處置 / 治療方向" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.decision||'')}</textarea></div>
 </div></div>`;
@@ -3373,7 +3373,7 @@ function teamViewHTML(cid,i,d,type='team'){
   if(d.diagnosis)rows.push(['診斷',d.diagnosis]);
   if(d.cc)rows.push(['現病史',d.cc]);
   if(d.familyHistory)rows.push(['家族史',d.familyHistory]);
-  if(d.discussion)rows.push(['討論要點',d.discussion]);
+  if(d.discussion)rows.push(['討論方向',d.discussion]);
   if(d.summary)rows.push(['摘要',d.summary]);
   if(d.decision)rows.push(['決策',d.decision]);
   const body=rows.length
@@ -6205,7 +6205,7 @@ async function genHTMLSlides(){
       var sections=[];
       if(c.cc)sections.push({lbl:'現病史',txt:c.cc});
       if(c.familyHistory)sections.push({lbl:'家族史',txt:c.familyHistory});
-      if(c.discussion)sections.push({lbl:'討論要點',txt:c.discussion});
+      if(c.discussion)sections.push({lbl:'討論方向',txt:c.discussion});
       if(c.summary)sections.push({lbl:'摘要',txt:c.summary});
       if(c.decision)sections.push({lbl:'決策',txt:c.decision});
       var body=sections.length
@@ -6797,7 +6797,7 @@ async function importXLSX(inputEl){
       ph:String(r['過去病史']||'').trim(),
       pathologies:[],exams:[],treatments:[],markers:[],
       familyHistory:String(r['家族史']||'').trim(),
-      discussion:String(r['討論要點']||r['討論']||'').trim(),
+      discussion:String(r['討論方向']||r['討論要點']||r['討論']||'').trim(),
       topics:(r['討論議題']?String(r['討論議題']).split('、').filter(Boolean):[]),
       doctors:['','',''],doctor:'',
       phChips:(r['過去病史（chip）']?String(r['過去病史（chip）']).split(' ').map(x=>x.replace('(+)','').trim()).filter(x=>['HTN','DM','CAD','CVA','HBV','HCV','CKD','COPD'].includes(x)):[]),
@@ -6909,7 +6909,7 @@ async function genXLSX(){
     const wb=XLSX.utils.book_new();
 
     // ── Sheet 1: 個案討論 ──
-    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','ECOG','衰弱量表','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','家族史','討論要點','討論議題','摘要','決策']];
+    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','ECOG','衰弱量表','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','家族史','討論方向','討論議題','摘要','決策']];
     cids.forEach(cid=>{
       const ca=CFG[cid];
       const sec=m.sections[cid]||{};
@@ -7090,7 +7090,7 @@ markers：癌指數（PSA/CEA/CA125/AFP/CA19-9/CA15-3/PIVKA-II/β-hCG/LDH 等，
       範例：{"name":"AFP","date":"2026-04-02","content":"8.96(2026-04-02)"}
 familyHistory：家族癌症史，自由文字；僅 _cancer 為「乳癌」或「婦癌」時填寫，其他癌別填空字串 ""
 mammo：乳房攝影，僅 _cancer 為「乳癌」時填寫，格式：{"date":"YYYY-MM-DD","report":"Findings:...\nImpression:...","images":[]}；其他癌別省略此欄位
-discussion：討論要點，一句話摘要本次討論重點
+discussion:討論方向，一句話摘要本次討論重點
 topics：討論議題，從以下選填一或多項：["影像討論","病理討論","分期討論","治療策略討論"]
   - 勾選原則（看資料對應，不漏勾、不憑空增加）：
     * exams 陣列有內容 → 勾「影像討論」
