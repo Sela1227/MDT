@@ -1254,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.8.2';
+const VERSION='V5.8.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5413,7 +5413,7 @@ async function genDOCX(){
   try{
     const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const{Document,Paragraph,TextRun,HeadingLevel,Packer,
-          Table,TableRow,TableCell,WidthType,ShadingType,
+          Table,TableRow,TableCell,WidthType,ShadingType,TableLayoutType,
           AlignmentType,BorderStyle,PageNumber,Footer,Header,
           convertInchesToTwip}=docx;
 
@@ -5481,6 +5481,8 @@ async function genDOCX(){
       return new Table({
       width:{size:_MKB_TOTAL,type:WidthType.DXA},
       columnWidths:[_MKB_L,_MKB_R],
+      /* V5.8.3: 加 layout=FIXED 強制 Word 服從欄寬(V5.8.2 雖改 DXA 但少這個,Word 仍可 autofit 改寬度,坑 #25 補完) */
+      layout:TableLayoutType.FIXED,
       /* V5.6.1: 加細灰邊框讓表格結構更清楚(對應個管師會議記錄格式需求) */
       /* V5.6.2: 左欄 16% → 12%、cell paragraph 行距收緊,讓框與框緊貼 */
       borders:{top:{style:BorderStyle.SINGLE,size:4,color:C.divider},

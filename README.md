@@ -111,6 +111,18 @@
 
 ## 版本歷程
 
+### V5.8.3
+**V5.8.2 沒真正修好,V5.8.3 才是完整修法**:個管師回報 V5.8.2 出貨後**仍然格式跑掉**(標籤欄超寬、內容欄超窄)。
+
+**根因**:V5.8.2 雖把 width 改成 DXA(絕對 twip),但**沒指定 `layout=fixed`** → Word 端仍會 autofit,把 DXA 當「建議值」。XML 內缺 `<w:tblLayout w:type="fixed"/>`。
+
+**正確修法**:在 mkBlock 的 Table 加 `layout: TableLayoutType.FIXED`,搭配 V5.8.2 的 DXA + columnWidths 才完整。三件套缺一不可:
+1. `width: DXA` 絕對 twip
+2. `columnWidths: [1080, 7920]` 陣列
+3. `layout: TableLayoutType.FIXED` ← V5.8.3 補上
+
+更新坑 #25:「docx Table 嚴格控制欄寬三件套」+ 加教訓「真實內容測試 vs 預覽」。
+
 ### V5.8.2
 **修 V5.8.1 引入的 layout 跑掉 regression**:個管師回報 V5.8.1 出貨後「**整個 DOCX 格式跑掉了**」— 左欄被擠到 ~50%、右欄變超窄一條、本來 1-2 頁變 3 頁。
 
