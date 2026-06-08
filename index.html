@@ -1254,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.8.4';
+const VERSION='V5.8.6';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3333,11 +3333,11 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','cases',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','cases',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','cases',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','cases',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','cases',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
+</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
 /* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論要點、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
 function teamHTML(cid,i,d,type='team',collapsed=false){
   const _cardId='cc-'+cid+'-'+type+'-'+i;
@@ -5513,12 +5513,20 @@ async function genDOCX(){
           margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
           /* V5.8.4: 垂直置中(短內容居中,長內容自然從頂部展開) */
           verticalAlign:VerticalAlign.CENTER,
+          /* V5.8.5: 加 opts.lines 支援 — array of {text, shaded, bold, indent},每行可指定獨立樣式(治療欄用) */
           children:isEmpty
             ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:0,after:0}})]
-            :(content||'').split('\n').map(line=>new Paragraph({
-                children:[mkRun(line,{size:sz(contentSize),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
-                spacing:{before:0,after:0}
-              }))
+            :(opts.lines
+              ?opts.lines.map(ln=>new Paragraph({
+                  children:[mkRun(ln.text||'',{bold:!!ln.bold,size:sz(contentSize),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
+                  shading:ln.shaded?{type:ShadingType.CLEAR,fill:C.bg}:undefined,
+                  indent:ln.indent?{left:pt(ln.indent)}:undefined,
+                  spacing:{before:0,after:0}
+                }))
+              :(content||'').split('\n').map(line=>new Paragraph({
+                  children:[mkRun(line,{size:sz(contentSize),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
+                  spacing:{before:0,after:0}
+                })))
         })
       ]})]
     });
@@ -5611,19 +5619,24 @@ async function genDOCX(){
             children.push(mkBlock('\u8a3a\u65b7',c.diagnosis,false));
           }
           // Treatment
-          /* V5.8.0: 治療每項加編號 + 日期前置(date)name : content,讓視覺結構更清楚 */
-          const trStr=(c.treatments||[]).length
+          /* V5.8.0: 治療每項加編號 + 日期前置(date)name : content
+             V5.8.5: 拆成 2 行 — 標題行「(date) name :」灰底粗體,詳細內容縮排 8pt;移除 [1][2][3] 編號(個管師覺得多餘) */
+          const trs=(c.treatments||[]).length
             ?(c.treatments||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
-              .map(function(tr,ti){
-                var idx='['+(ti+1)+'] ';
-                var date=tr.date?'('+tr.date+') ':'';
-                var name=tr.name||'';
-                var content=tr.content?' : '+tr.content:'';
-                return idx+date+name+content;
-              }).join('\n')
-            :(c.treatment&&c.treatment!=='\u5c1a\u672a\u6cbb\u7642'?c.treatment:'');
-          /* V5.8.0: 治療字級 12 → 10(資訊性,讓決策結論更突出) */
-          if(trStr)children.push(mkBlock('\u6cbb\u7642',trStr,false,{contentSize:10}));
+            :[];
+          if(trs.length){
+            var trLines=[];
+            trs.forEach(function(tr){
+              var date=tr.date?'('+tr.date+') ':'';
+              var name=tr.name||'';
+              trLines.push({text:date+name+(tr.content?' :':''),shaded:true,bold:true});
+              if(tr.content)trLines.push({text:tr.content,indent:8});
+            });
+            children.push(mkBlock('\u6cbb\u7642','',false,{contentSize:10,lines:trLines}));
+          }else if(c.treatment&&c.treatment!=='\u5c1a\u672a\u6cbb\u7642'){
+            /* 舊資料相容:單一字串 c.treatment 走原邏輯 */
+            children.push(mkBlock('\u6cbb\u7642',c.treatment,false,{contentSize:10}));
+          }
 
           // Summary & Decision - hide label if completely empty
           if(c.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',c.summary,false));}

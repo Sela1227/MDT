@@ -144,6 +144,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.8.6 | 修坑 #19(累積 10+ 版未修):followupHTML 內 L3336+L3340 五處 `upd('${cid}','cases',${i},...)` 寫死 → 改 `'${type}'`。前期追蹤改名不再污染個案討論,DOCX 名字病歷號正常出現 |
+| V5.8.5 | DOCX 治療欄樣式升級:標題行 `(date) name :` 灰底粗體、詳細內容縮排 8pt、去掉 `[i]` 編號;mkBlock 擴充 `opts.lines` 支援每行獨立樣式 |
 | V5.8.4 | DOCX 視覺微調 × 3:mkCaseHdr 改用 DXA+layout=FIXED(修右側凸出);mkBlock cell 加垂直置中;標籤欄 12%→14%(讓 4 字標籤單行) |
 | V5.8.3 | V5.8.2 沒真正修好(個管師回報仍格式跑掉):mkBlock 加 `layout:TableLayoutType.FIXED`,搭配 V5.8.2 DXA+columnWidths 三件套才完整。更新坑 #25 + 教訓「真實內容測試 vs 預覽」 |
 | V5.8.2 | 修 V5.8.1 引入的 DOCX layout 跑掉(坑 #25,但未完整修):mkBlock 寬度從 PERCENTAGE 改 DXA 絕對 twip + columnWidths,解決長 diagnosis 觸發 Word auto layout 把標籤欄擠寬到 50% 的問題 |
@@ -308,14 +310,14 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:有「動態插入/移除 sibling」邏輯時,目標 input 加 dataset.role='custom-type' 之類標記,刪除時用 `[data-role="custom-type"]` 選擇器,比 tagName 嚴謹
 - 順便發現的 bug:`__other__` 分支也是 `tagName==='INPUT'` 判斷「已有 input」,使用者從 CT 切到「其他」時看到日期欄(也是 INPUT)就不插自訂類型欄,使用者沒地方輸入。一併修
 
-**#19 followupHTML 內 upd 寫死 `'cases'`(V5.0.0 發現,本版不修)**
-- 症狀:前期追蹤事項(followups)的欄位編輯後**可能不會儲存**;某些情況下會**寫進個案討論(cases)的同 index 物件**,造成資料污染
+**#19 followupHTML 內 upd 寫死 `'cases'`(V5.0.0 發現,V5.8.6 修)** ✅
+- 症狀:前期追蹤事項(followups)的欄位編輯後**可能不會儲存**;某些情況下會**寫進個案討論(cases)的同 index 物件**,造成資料污染。V5.8.6 個管師回報實機:「改前期追蹤的名字,結果同步改到個案討論;DOCX 上前期追蹤沒名字沒病歷號」
 - 根因:`followupHTML(cid,i,d,type='followups')` 函數內所有 `upd` 呼叫都寫死 `upd('${cid}','cases',${i},...)`,沒有用 `${type}`。但 `upd` 函數本身是 `S.meeting.sections[cid][type][i]` 動態派發 — 收到 'cases' 就去 cases 陣列存取
 - 兩種壞情境:
   - `cases[i]` 不存在(常見,因追蹤數通常少於個案) → `if(!item)return;` → 編輯靜默失敗,個管師可能以為有存
   - `cases[i]` 存在 → 改到 cases[i] 上,造成資料污染
 - 為什麼長期沒人回報:個管師可能很少深度編輯「前期追蹤事項」的所有欄位(主要只看「上次討論」追蹤狀態);加上看起來像「儲存了」,實際只是 UI 暫態
-- 做法(本版**不順便修**):V5.0.0 寫的 `teamHTML` 用 `${type}` 動態派發,不複製這個 bug。followupHTML 留下次獨立修(改一行 + 完整測試前期追蹤的所有編輯場景)
+- V5.8.6 修法:L3336 + L3340 兩行內 5 處 `upd('${cid}','cases',${i},...)` → `upd('${cid}','${type}',${i},...)`(改用 followupHTML 第 4 參數 type='followups')。Cases editor 內的 13 處 'cases' 維持不動(那是正確的寫死)
 - 教訓:多 type 共用的渲染函數,必須用 `${type}` 動態派發,絕不能寫死任一具體 type 名稱 — 這是「跨 type 共用模板」的鐵律
 - 預防:打包前 grep `upd\('\$\{cid\}','cases',` 出現在 `function caseHTML` 以外的位置就警告
 
@@ -482,14 +484,15 @@ if not missing:
 
 **按優先序：**
 
-1. **修坑 #19 followupHTML 寫死 'cases' bug** — 累積超過 10 版未修;upd 派發呼叫實際走 cases 陣列,可能造成跟「個案討論」資料的隱性衝突
-2. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
-3. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
-4. DOCX 繼續微調(依測試回饋)
-5. 設定頁新增「同步狀態」面板:NAS 上有幾筆 tombstone、上次同步時間、衝突歷史
+1. **醫療小組「討論要點」改名「討論方向」** — 個管師回報三欄名稱混淆(討論要點/摘要/決策語意太重疊);改名後語意明確「會議要討論的方向(會前填)+ 討論摘要(會後填) + 決策(會後填)」。同步檢視 DOCX 是否要加 discussion(改名後可能值得放上去)
+2. 「(8-其他特殊複雜個案)」討論原因快速標籤系統(早期就提的待辦,個管師有時要標案因如「治療中死亡」「必要提報」)
+3. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
+4. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
+5. DOCX 繼續微調(依個管師回饋)
+6. 設定頁新增「同步狀態」面板:NAS 上有幾筆 tombstone、上次同步時間、衝突歷史
 
 ---
 
 ## 十一、一句話總結
 
-V5.8.4 DOCX 視覺微調 × 3(個管師回報 V5.8.3 後可優化點):**(1)mkCaseHdr 標題列右側凸出** — V5.8.3 mkCaseHdr 仍用 `WidthType.PERCENTAGE` 100%,跟 mkBlock 的 DXA 9000 twips 不對齊。修法:mkCaseHdr 也改用 DXA 9000 + `columnWidths:[9000]` + `layout=FIXED`。**(2)mkBlock cell 垂直置中** — 之前標籤跟內容預設靠頂,視覺不對等。兩個 cell 加 `verticalAlign:VerticalAlign.CENTER`。**(3)標籤欄 12%→14%** — 「決策結論」「討論摘要」4 字會擠成兩行,改 14% 後單行容納。對應 twip 1080→1260,右欄 7920→7740。Import 加 `VerticalAlign`。XML 驗證:5 個 tblLayout=fixed(1 mkCaseHdr + 4 mkBlock)+ 8 個 vAlign=center(4 mkBlock × 2 cells)。三件套(DXA + columnWidths + FIXED)現在所有 Table 都齊全。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
+V5.8.6 **修坑 #19**(累積 10+ 版未修的歷史坑) — 個管師回報「改前期追蹤的名字,實際上同步改到個案討論,DOCX 前期追蹤沒名字沒病歷號」。根因(V5.0.0 發現):`followupHTML(cid, i, d, type='followups')` 函數內 5 處 `upd` 呼叫**寫死 `'cases'`** 而不是用 `${type}`,導致前期追蹤的編輯**寫到 sec.cases[i]**(個案討論)而不是 sec.followups[i]。修法:L3336 + L3340 兩行內 5 處 `upd('${cid}','cases',${i},...)` → `upd('${cid}','${type}',${i},...)`(涉及 chartNo×2、name、prevDate、note)。Cases editor 內的 13 處 'cases' 維持不動(那是正確的寫死)。**坑 #19 標記為 ✅ V5.8.6 修**。下版優先:**醫療小組「討論要點」改名「討論方向」**(三欄名稱混淆,個管師指出討論要點/摘要/決策語意太重疊)+ 順便檢視 DOCX 醫療小組 / 必要事件區段(目前只有 summary+decision,要不要加 discussion 也看討論方向改名後的角色定位)。

@@ -111,6 +111,33 @@
 
 ## 版本歷程
 
+### V5.8.6
+**修坑 #19(累積 10+ 版未修的歷史坑) — 前期追蹤改名同步寫到個案討論**:V5.8.5 後個管師回報「改前期追蹤的名字,實際上同步改到個案討論,而且 DOCX 上前期追蹤完全沒名字沒病歷號」。
+
+**根因(坑 #19,V5.0.0 發現)**:`followupHTML(cid, i, d, type='followups')` 函數內 5 處 `upd` 呼叫都**寫死 `'cases'`** 而不是用 `${type}`。`upd(cid, type, i, field, value)` 是動態派發到 `S.meeting.sections[cid][type][i]`,收到 `'cases'` 就去 cases 陣列存取。導致:
+- `cases[i]` 不存在 → 編輯靜默失敗(個管師以為有存)
+- `cases[i]` 存在 → **改到個案討論第 i 個的同欄位,資料污染**
+- followups[i] 從沒被更新 → DOCX 內 f.chartNo / f.name 取出空值
+
+**修法**:L3336 + L3340 兩行內 5 處 `upd('${cid}','cases',${i},...)` → `upd('${cid}','${type}',${i},...)`。涉及欄位:chartNo(2 處)、name、prevDate、note。Cases editor 內的 13 處 `'cases'` 維持不動(那是正確的寫死)。
+
+**驗證**:Node syntax check + 桌面演練(改前期追蹤名字 → 寫到 sec.followups[0].name,cases 不受影響)。坑 #19 標記為 ✅ V5.8.6 修。
+
+### V5.8.5
+**DOCX 治療欄樣式升級 — 標題行灰底粗體 + 移除編號 + 詳細內容縮排**:V5.8.4 後個管師上傳截圖,手動標記想要的治療樣式 — 治療標題行(日期 + 治療名稱 + `:`)灰底粗體,後面詳細內容**不要前置編號**(`[1] [2] [3]` 多餘)。
+
+**設計細節**:
+- 治療標題行樣式:`(date) name :` 整行 → 灰底(`C.bg #F5F7F8`)+ 粗體
+- 詳細內容:縮排 8pt(twip 160)讓視覺層次清楚
+- **去掉編號**:從 `[1] (date) name : content` → `(date) name :\n    content`(2 行)
+- 灰底選 `C.bg` 而非 `C.dark`,**避免跟決策結論的深色標籤搶眼球**(決策結論才是最高優先級)
+
+**`mkBlock` 函式擴充**:加 `opts.lines`(array of `{text, shaded, bold, indent}`)— 如果有給就走「每行獨立樣式」邏輯,否則走舊的「content 字串 + `\n` 分割,每行同樣式」邏輯。**非破壞性,舊呼叫不影響**。
+
+**舊資料相容**:`c.treatment`(舊版單一字串欄位)走原邏輯,只有 `c.treatments`(陣列)走新樣式。
+
+XML 驗證:3 個治療標題灰底 + 3 個詳細內容縮排 160 twips ✓
+
 ### V5.8.4
 **DOCX 視覺微調 × 3(個管師回報 V5.8.3 後可優化點)**:V5.8.3 正確修好 layout 後,個管師回報 3 個優化點:
 
