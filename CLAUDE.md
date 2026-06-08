@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.8.2 | 修 V5.8.1 引入的 DOCX layout 跑掉(坑 #25):mkBlock 寬度從 PERCENTAGE 改 DXA 絕對 twip + columnWidths,解決長 diagnosis 觸發 Word auto layout 把標籤欄擠寬到 50% 的問題 |
 | V5.8.1 | DOCX 視覺一致性兩項微調:診斷也用 mkBlock(個案討論/醫療小組/必要事件三處,刪掉診斷下方多餘細線);字體 27 處從「新細明體」改成「微軟正黑體」(跨平台 Word 自動 fallback) |
 | V5.8.0 | DOCX 個案討論視覺優化:治療日期前置+編號 `[i] (date) name`、治療字級 12→10、決策結論 emphasis(標籤深色背景+白字);`mkBlock` 擴充 `opts={emphasis, contentSize}` 參數 |
 | V5.7.1 | 修 V5.7.0 regression:前期追蹤面板「繼續/結案」按鈕視覺異常,因為新加的 postfup-summary/decision textarea 被 prefix match selector `[data-action^="postfup-"]` 誤匹配當按鈕處理。改精確匹配 ongoing+closed 兩個。新增坑 #24 |
@@ -360,6 +361,16 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 ---
 
+**#25 docx Table `PERCENTAGE` 寬度在 auto layout 下被內容覆蓋(V5.8.1 → V5.8.2)**
+- 症狀:個管師回報 V5.8.1 出貨後「整個 DOCX 格式跑掉了」— 截圖顯示左欄被擠到 ~50%(本來該 12%),右欄被擠成超窄一條,每行 3-5 個字,本來 1-2 頁的會議記錄變 3 頁
+- 為何 V5.6.x 沒問題,V5.8.1 才壞:V5.6.x 時診斷是純 Paragraph(沒走 mkBlock),只有 3 個 mkBlock(治療/摘要/決策)+ 內容相對短。V5.8.1 把診斷也改成 mkBlock,但 diagnosis 常 200+ 字一行 wrap,觸發 Word 的 auto layout 算法:**Table 沒指定 layout 時預設 auto,Word 會根據 cell 內容字數猜算欄寬,無視 cell 的 `width: PERCENTAGE`**
+- 根因:docx 7.8.2 的 `WidthType.PERCENTAGE` 在 Word 端只是「建議值」。當 Table 沒指定 `layout=fixed` 也沒指定 `columnWidths` 時,Word 會用 auto algorithm 重算欄寬,常常把長內容那欄擠窄
+- 做法:**改用 `WidthType.DXA`(絕對 twip)+ 加 `columnWidths` 陣列**,讓 Word 100% 服從。A4 可用寬度約 9000 twips(扣邊距),12% ≈ 1080,88% ≈ 7920
+- 教訓:**docx Table 要嚴格控制欄寬時用 DXA,別用 PERCENTAGE**;PERCENTAGE 只適合內容差異不大、auto 算出來也 OK 的情境
+- 預防:打包前 grep `mkBlock` 改動,如果 cell width 用 PERCENTAGE 同時有長內容(>100 字),就警告
+
+---
+
 
 
 ```python
@@ -477,4 +488,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.8.1 DOCX 視覺一致性兩項微調(回應 V5.8.0 個管師回饋):**(1)診斷欄位沒外框,跟其他欄位視覺不一致** — V5.8.0 結構是「標題列→純 Paragraph 診斷+細線→mkBlock 治療/摘要/決策」,個管師看到「4 個有外框+診斷單獨無框」覺得不一致。修法:診斷也改用 mkBlock,左欄加「診斷」標籤,跟其他 4 個一致;同時刪除診斷下方那條多餘細線(V5.6.1 加 mkBlock 邊框後該細線多餘)。套用範圍:個案討論 / 醫療小組 / 必要事件 三處診斷(前期追蹤本來就沒 diagnosis 欄位)。**(2)預設字體改成黑體**:全 DOCX 27 處 `font:'新細明體'`→`font:'微軟正黑體'`,可讀性提升。docx 7.8.2 的 font 參數只接受單一字串,跨平台靠 Word 自動 fallback(Mac→PingFang TC,Linux→Noto Sans CJK)。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
+V5.8.2 修 V5.8.1 引入的 DOCX layout 跑掉 regression — 個管師回報「整個 DOCX 格式跑掉,左欄被擠到 50%、右欄超窄」。根因(坑 #25):V5.8.1 把診斷從純 Paragraph 改 mkBlock 後,長 diagnosis 內容(常 200+ 字一行)觸發 Word 的 auto layout algorithm,**無視 cell 的 `width:PERCENTAGE`**,根據內容猜算欄寬,把標籤欄擠寬到 50%。修法:mkBlock 寬度從 `WidthType.PERCENTAGE` 改 `WidthType.DXA`(絕對 twip)+ 加 `columnWidths` 陣列。A4 可用寬度 ≈ 9000 twips,12% ≈ 1080、88% ≈ 7920,Word 100% 服從 DXA。新增坑 #25:「docx Table 要嚴格控制欄寬時用 DXA,別用 PERCENTAGE」。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。

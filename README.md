@@ -111,6 +111,15 @@
 
 ## 版本歷程
 
+### V5.8.2
+**修 V5.8.1 引入的 layout 跑掉 regression**:個管師回報 V5.8.1 出貨後「**整個 DOCX 格式跑掉了**」— 左欄被擠到 ~50%、右欄變超窄一條、本來 1-2 頁變 3 頁。
+
+**根因(坑 #25)**:V5.8.1 把診斷從純 Paragraph 改用 mkBlock,但 diagnosis 內容常 200+ 字一行。docx Table 在沒指定 `layout=fixed` 也沒指定 `columnWidths` 時,Word 用 auto layout algorithm 重算欄寬,**無視 cell 的 `width:PERCENTAGE`,根據內容字數猜算**。長 diagnosis 觸發 Word 把標籤欄擠寬到 50%。
+
+**修法**:`mkBlock` 寬度從 `WidthType.PERCENTAGE` 改成 `WidthType.DXA`(絕對 twip)+ 加 `columnWidths` 陣列。A4 可用寬度約 9000 twips(扣邊距),12% ≈ 1080(標籤),88% ≈ 7920(內容)。Word 100% 服從 DXA。
+
+新增坑 #25 — 「docx Table 要嚴格控制欄寬時用 DXA,別用 PERCENTAGE」。
+
 ### V5.8.1
 **DOCX 個案討論視覺一致性兩項微調**:V5.8.0 出貨後個管師回報:
 

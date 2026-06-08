@@ -1254,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.8.1';
+const VERSION='V5.8.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5469,14 +5469,18 @@ async function genDOCX(){
     // Label + content block
     /* V5.8.0: 加 opts 參數
        - opts.emphasis=true → 標籤背景深色(C.dark)+ 白色文字,突顯重要欄位(用於決策結論)
-       - opts.contentSize → 自訂內容字級(預設 12,治療欄縮小到 10) */
+       - opts.contentSize → 自訂內容字級(預設 12,治療欄縮小到 10)
+       V5.8.2: 寬度從 PERCENTAGE 改 DXA 絕對 twip + columnWidths,修 V5.8.1 引入的「長 diagnosis 內容讓 auto layout 把左欄擠寬至 50%」regression。
+       A4 可用寬度約 9000 twips(扣邊距),12%≈1080、88%≈7920。 */
+    const _MKB_TOTAL=9000,_MKB_L=Math.floor(_MKB_TOTAL*0.12),_MKB_R=_MKB_TOTAL-_MKB_L;
     const mkBlock=(label,content,isEmpty,opts)=>{
       opts=opts||{};
       const labelBg=opts.emphasis?C.dark:C.bg;
       const labelColor=opts.emphasis?'FFFFFF':C.mid;
       const contentSize=opts.contentSize||12;
       return new Table({
-      width:{size:100,type:WidthType.PERCENTAGE},
+      width:{size:_MKB_TOTAL,type:WidthType.DXA},
+      columnWidths:[_MKB_L,_MKB_R],
       /* V5.6.1: 加細灰邊框讓表格結構更清楚(對應個管師會議記錄格式需求) */
       /* V5.6.2: 左欄 16% → 12%、cell paragraph 行距收緊,讓框與框緊貼 */
       borders:{top:{style:BorderStyle.SINGLE,size:4,color:C.divider},
@@ -5487,7 +5491,7 @@ async function genDOCX(){
                insideV:{style:BorderStyle.SINGLE,size:4,color:C.divider}},
       rows:[new TableRow({children:[
         new TableCell({
-          width:{size:12,type:WidthType.PERCENTAGE},
+          width:{size:_MKB_L,type:WidthType.DXA},
           shading:{type:ShadingType.CLEAR,fill:labelBg},
           margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
           children:[new Paragraph({
@@ -5496,7 +5500,7 @@ async function genDOCX(){
           })]
         }),
         new TableCell({
-          width:{size:88,type:WidthType.PERCENTAGE},
+          width:{size:_MKB_R,type:WidthType.DXA},
           margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
           children:isEmpty
             ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:0,after:0}})]
