@@ -1254,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.7.0';
+const VERSION='V5.7.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -8442,7 +8442,8 @@ document.addEventListener('click',function(e){
     _f.status=postfupToggle.dataset.action==='postfup-ongoing'?'ongoing':'closed';
     var _card=postfupToggle.closest('div[style*="border:1px solid"]');
     if(_card){
-      _card.querySelectorAll('[data-action^="postfup-"]').forEach(function(b){
+      /* V5.7.1: 修 prefix match selector 太寬 — V5.7.0 加 postfup-summary/decision textarea 後,原本 [data-action^="postfup-"] 會誤匹配 textarea 並當成按鈕處理(加 btn class + opacity:.5),導致按鈕看似失效。改精確匹配只兩個 toggle 按鈕。 */
+      _card.querySelectorAll('[data-action="postfup-ongoing"],[data-action="postfup-closed"]').forEach(function(b){
         var isActive=b.dataset.action==='postfup-'+_f.status;
         b.className='btn btn-sm '+(isActive?'btn-a':'btn-b');
         b.style.opacity=isActive?'1':'0.5';

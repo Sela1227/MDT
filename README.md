@@ -111,6 +111,21 @@
 
 ## 版本歷程
 
+### V5.7.1
+**修 V5.7.0 引入的 regression — 前期追蹤會後填寫面板「繼續追蹤/結案」按鈕視覺異常**:個管師回報「點繼續追蹤/結案沒反應」。
+
+**根因**:V5.7.0 加 `postfup-summary` / `postfup-decision` 兩個 textarea 後,event handler 內的 `[data-action^="postfup-"]` **prefix match selector 變得太寬**,把新加的兩個 textarea 也誤匹配進去,當成按鈕處理:加上 `btn` className、改 `style.opacity='0.5'`,讓 textarea 視覺上半透明、像被禁用。
+
+**修法**:把 prefix match 改成**精確匹配兩個 toggle 按鈕**:
+```js
+// 修前
+.querySelectorAll('[data-action^="postfup-"]')
+// 修後
+.querySelectorAll('[data-action="postfup-ongoing"],[data-action="postfup-closed"]')
+```
+
+新增坑 #24 記錄此類「新增元素時忘記檢查既有 prefix selector 是否會誤匹配」陷阱。
+
 ### V5.7.0
 **會後填寫面板擴充 + DOCX 同步加區段**:個管師回報「會後填寫面板只能填個案討論的摘要決策,前期追蹤 / 醫療小組 / 必要事件 都無法填寫結論」。本版兩大改動:
 

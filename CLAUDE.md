@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.7.1 | 修 V5.7.0 regression:前期追蹤面板「繼續/結案」按鈕視覺異常,因為新加的 postfup-summary/decision textarea 被 prefix match selector `[data-action^="postfup-"]` 誤匹配當按鈕處理。改精確匹配 ongoing+closed 兩個。新增坑 #24 |
 | V5.7.0 | 會後填寫面板擴充:前期追蹤 / 醫療小組 / 必要事件 三區段都加摘要+決策 textarea;DOCX 同步加(讓醫療小組 / 必要事件 出現在會議記錄,且前期追蹤帶摘要決策) |
 | V5.6.2 | DOCX mkBlock 左欄 16%→12%、cell paragraph 行距收緊(before:0/after:0),回應 V5.6.1 後個管師「左欄太寬+項與項間距太多」回饋 |
 | V5.6.1 | DOCX mkBlock 加細灰邊框(SINGLE size:4 color:C.divider),讓「左標籤右內容」表格樣式更清楚對應個管師會議記錄需求 |
@@ -347,9 +348,17 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 為什麼這次 V5.1.1 才修:個管師回報「個案消失」被連續追了 11 個方向都不對,直到拿到實機產出的 HTML 檔做 diff,才從 `<section>` 結構完全正確 + 視覺結果完全錯誤的矛盾找到「視覺問題」這條路,進而發現 inline display 覆蓋 class 的 CSS 優先級陷阱
 - 預防:打包前 grep `<section[^>]*style="[^"]*display:` 在 genHTMLSlides 內出現就警告(`.slide` 的 display 永遠該由 class 控制)
 
+**#24 prefix match attribute selector 加新元素後誤匹配(V5.7.0 → V5.7.1)**
+- 症狀:個管師回報「前期追蹤的會後填寫面板,繼續追蹤/結案按鈕點了沒反應」(實際是有反應,但視覺異常讓人以為失效)
+- 根因:V5.7.0 加 `postfup-summary` / `postfup-decision` 兩個 textarea 後,event handler 內 L8445 `_card.querySelectorAll('[data-action^="postfup-"]')` 的 prefix match selector 變得太寬,連 textarea 也被匹配。handler 把它們當按鈕處理:加 `b.className='btn btn-sm btn-b'`、`b.style.opacity='0.5'`。textarea 被改 className + 半透明,視覺像被禁用
+- 做法:把 prefix match 改成**精確匹配 ongoing + closed 兩個 button**:`'[data-action="postfup-ongoing"],[data-action="postfup-closed"]'`
+- 教訓:**寫 `[data-action^="prefix-"]` prefix selector 時要小心**,後續加任何 `prefix-*` 命名的新 data-action 都會被誤匹配。新增 data-action 時要 grep 既有 prefix selector 確認不會撞到
+- 預防:有 prefix selector 的 handler,旁邊加註解列出「目前匹配的 actions」,以後新增同 prefix 命名前先 grep 確認
+- 替代方案:用更明確的命名空間,例如按鈕用 `postfup-toggle-ongoing` / `postfup-toggle-closed`,textarea 用 `postfup-field-summary` / `postfup-field-decision`,selector 就可以用 `[data-action^="postfup-toggle-"]` 而不會誤匹配
+
 ---
 
-## 九、打包驗證(每次必跑)
+
 
 ```python
 import os
@@ -466,4 +475,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.7.0 會後填寫面板擴充 + DOCX 同步加區段:個管師回報「會後填寫面板只能填個案討論的摘要決策,前期追蹤 / 醫療小組 / 必要事件 都無法填寫結論」。**(1)會後填寫面板**:前期追蹤加 `f.summary/f.decision` 兩 textarea(欄位新增,在「繼續追蹤/結案」按鈕之下);醫療小組 / 必要事件**從零新增整個區段**(資料欄位 `t.summary/t.decision` V5.2.0 已有,只是面板沒呈現)。共用卡片產生器 `_mkTeamCard(cid, arr, arrType, t, ti)`,`arrType='team'/'events'` 區分。`savePostMtg` 加 4 個新 selector(postfup-summary/decision、postteam-summary/decision 後者用 arrtype 區分)。**(2)DOCX**:V5.6.x 之前只有前期追蹤→個案討論→特殊議程,**完全沒有醫療小組 / 必要事件**。本版補上:前期追蹤狀態 badge 後加 summary/decision mkBlock;醫療小組 / 必要事件在個案討論之後、特殊議程之前各新增整個區段(`mkSecHdr` + mkCaseHdr + diagnosis + summary + decision)。沿用 V5.6.2 mkBlock 邊框 + 12% 左欄樣式。舊資料相容(沒填過的 summary/decision → 面板 textarea 空、DOCX `if` 為 false 不 push)。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
+V5.7.1 修 V5.7.0 引入的 regression — 個管師回報「前期追蹤面板的繼續/結案按鈕點了沒反應」。根因(坑 #24):V5.7.0 加 `postfup-summary` / `postfup-decision` 兩個 textarea 後,event handler 內 `_card.querySelectorAll('[data-action^="postfup-"]')` 的 **prefix match selector 變得太寬**,把新加的 textarea 也誤匹配,當成按鈕處理(加 `btn` className + `opacity:.5`),讓 textarea 視覺半透明、看起來像被禁用。修法:把 prefix match 改成精確匹配兩個 toggle button(`[data-action="postfup-ongoing"],[data-action="postfup-closed"]`)。寫入坑 #24 — 「**有 prefix selector 的 handler,新增同 prefix 命名前先 grep 確認**」,教訓跟坑 #23「inline `display:flex` 覆蓋 CSS class」同類:**新增元素時忘記檢查既有 selector 是否會誤匹配**。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
