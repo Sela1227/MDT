@@ -111,6 +111,24 @@
 
 ## 版本歷程
 
+### V5.8.4
+**DOCX 視覺微調 × 3(個管師回報 V5.8.3 後可優化點)**:V5.8.3 正確修好 layout 後,個管師回報 3 個優化點:
+
+**1. mkCaseHdr 標題列右側凸出 → 跟 mkBlock 寬度對齊**
+- V5.8.3 mkCaseHdr 仍用 `WidthType.PERCENTAGE` 100%,跟 mkBlock 的 DXA 9000 twips 不對齊,視覺上標題列右邊凸出一小段
+- 修法:mkCaseHdr 也改用 `WidthType.DXA` 9000 twips + `columnWidths` + `layout=FIXED`,跟 mkBlock 完全對齊
+
+**2. mkBlock cell 加垂直置中**
+- 之前標籤跟內容預設靠頂部對齊,內容多行時標籤頂在最上面,視覺感不對等
+- 修法:兩個 cell 加 `verticalAlign: VerticalAlign.CENTER`,標籤跟內容垂直置中對齊
+
+**3. 標籤欄 12% → 14%**
+- 12% 太窄,「決策結論」「討論摘要」4 字標籤會擠成兩行
+- 14% 剛好可單行容納 4 個中文字,易讀性提升
+- 對應 twip:1080 → 1260,右欄 7920 → 7740(差 180 twip 內容欄,影響極小)
+
+需要 import 加 `VerticalAlign`。XML 驗證:每個 mkBlock 兩個 vAlign=center、Tables 全有 tblLayout=fixed。
+
 ### V5.8.3
 **V5.8.2 沒真正修好,V5.8.3 才是完整修法**:個管師回報 V5.8.2 出貨後**仍然格式跑掉**(標籤欄超寬、內容欄超窄)。
 

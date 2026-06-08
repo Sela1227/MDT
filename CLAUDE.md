@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.8.4 | DOCX 視覺微調 × 3:mkCaseHdr 改用 DXA+layout=FIXED(修右側凸出);mkBlock cell 加垂直置中;標籤欄 12%→14%(讓 4 字標籤單行) |
 | V5.8.3 | V5.8.2 沒真正修好(個管師回報仍格式跑掉):mkBlock 加 `layout:TableLayoutType.FIXED`,搭配 V5.8.2 DXA+columnWidths 三件套才完整。更新坑 #25 + 教訓「真實內容測試 vs 預覽」 |
 | V5.8.2 | 修 V5.8.1 引入的 DOCX layout 跑掉(坑 #25,但未完整修):mkBlock 寬度從 PERCENTAGE 改 DXA 絕對 twip + columnWidths,解決長 diagnosis 觸發 Word auto layout 把標籤欄擠寬到 50% 的問題 |
 | V5.8.1 | DOCX 視覺一致性兩項微調:診斷也用 mkBlock(個案討論/醫療小組/必要事件三處,刪掉診斷下方多餘細線);字體 27 處從「新細明體」改成「微軟正黑體」(跨平台 Word 自動 fallback) |
@@ -491,4 +492,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.8.3 V5.8.2 沒真正修好,V5.8.3 才完整修法:個管師回報 V5.8.2 出貨後**仍然格式跑掉**。根因:V5.8.2 雖把 cell width 改成 DXA(絕對 twip),但**沒在 Table 上指定 `layout=fixed`** → Word 端仍 autofit,把 DXA 當建議值。XML 內缺 `<w:tblLayout w:type="fixed"/>`。修法:mkBlock 加 `layout: TableLayoutType.FIXED`(import 加 `TableLayoutType`),Word 寫入 fixed 後 100% 服從欄寬,4 個 mkBlock 各有一個 `tblLayout=fixed` XML 元素。**docx 嚴格控欄寬三件套缺一不可**:(1)DXA 絕對寬度、(2)columnWidths、(3)layout=FIXED。更新坑 #25 + 教訓 #2「真實內容測試 vs 預覽 — 下次 docx 改動必須請個管師打開實機產出回報,不能只看自己 mock 預覽」。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
+V5.8.4 DOCX 視覺微調 × 3(個管師回報 V5.8.3 後可優化點):**(1)mkCaseHdr 標題列右側凸出** — V5.8.3 mkCaseHdr 仍用 `WidthType.PERCENTAGE` 100%,跟 mkBlock 的 DXA 9000 twips 不對齊。修法:mkCaseHdr 也改用 DXA 9000 + `columnWidths:[9000]` + `layout=FIXED`。**(2)mkBlock cell 垂直置中** — 之前標籤跟內容預設靠頂,視覺不對等。兩個 cell 加 `verticalAlign:VerticalAlign.CENTER`。**(3)標籤欄 12%→14%** — 「決策結論」「討論摘要」4 字會擠成兩行,改 14% 後單行容納。對應 twip 1080→1260,右欄 7920→7740。Import 加 `VerticalAlign`。XML 驗證:5 個 tblLayout=fixed(1 mkCaseHdr + 4 mkBlock)+ 8 個 vAlign=center(4 mkBlock × 2 cells)。三件套(DXA + columnWidths + FIXED)現在所有 Table 都齊全。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。

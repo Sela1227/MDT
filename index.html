@@ -1254,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.8.3';
+const VERSION='V5.8.4';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5413,7 +5413,7 @@ async function genDOCX(){
   try{
     const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const{Document,Paragraph,TextRun,HeadingLevel,Packer,
-          Table,TableRow,TableCell,WidthType,ShadingType,TableLayoutType,
+          Table,TableRow,TableCell,WidthType,ShadingType,TableLayoutType,VerticalAlign,
           AlignmentType,BorderStyle,PageNumber,Footer,Header,
           convertInchesToTwip}=docx;
 
@@ -5442,13 +5442,16 @@ async function genDOCX(){
 
     // Case header paragraph (deep blue bg via shading in table)
     const mkCaseHdr=(no,c,drs)=>new Table({
-      width:{size:100,type:WidthType.PERCENTAGE},
+      /* V5.8.4: 寬度從 PERCENTAGE 改 DXA + layout=FIXED,跟 mkBlock 對齊,避免右側凸出 */
+      width:{size:9000,type:WidthType.DXA},
+      columnWidths:[9000],
+      layout:TableLayoutType.FIXED,
       borders:{top:{style:BorderStyle.NONE},bottom:{style:BorderStyle.NONE},
                left:{style:BorderStyle.NONE},right:{style:BorderStyle.NONE},
                insideH:{style:BorderStyle.NONE},insideV:{style:BorderStyle.NONE}},
       rows:[new TableRow({children:[
         new TableCell({
-          width:{size:100,type:WidthType.PERCENTAGE},
+          width:{size:9000,type:WidthType.DXA},
           shading:{type:ShadingType.CLEAR,fill:C.accent},
           margins:{top:pt(4),bottom:pt(4),left:pt(6),right:pt(6)},
           children:[new Paragraph({
@@ -5471,8 +5474,10 @@ async function genDOCX(){
        - opts.emphasis=true → 標籤背景深色(C.dark)+ 白色文字,突顯重要欄位(用於決策結論)
        - opts.contentSize → 自訂內容字級(預設 12,治療欄縮小到 10)
        V5.8.2: 寬度從 PERCENTAGE 改 DXA 絕對 twip + columnWidths,修 V5.8.1 引入的「長 diagnosis 內容讓 auto layout 把左欄擠寬至 50%」regression。
-       A4 可用寬度約 9000 twips(扣邊距),12%≈1080、88%≈7920。 */
-    const _MKB_TOTAL=9000,_MKB_L=Math.floor(_MKB_TOTAL*0.12),_MKB_R=_MKB_TOTAL-_MKB_L;
+       V5.8.3: 加 layout=FIXED 強制 Word 服從欄寬(V5.8.2 缺這個,Word 仍會 autofit,坑 #25 完整修復)
+       V5.8.4: 標籤欄 12%→14% 讓「決策結論/討論摘要」4 字單行;cell 垂直置中讓標籤跟內容對齊
+       A4 可用寬度約 9000 twips(扣邊距),14%≈1260、86%≈7740。 */
+    const _MKB_TOTAL=9000,_MKB_L=Math.floor(_MKB_TOTAL*0.14),_MKB_R=_MKB_TOTAL-_MKB_L;
     const mkBlock=(label,content,isEmpty,opts)=>{
       opts=opts||{};
       const labelBg=opts.emphasis?C.dark:C.bg;
@@ -5496,6 +5501,8 @@ async function genDOCX(){
           width:{size:_MKB_L,type:WidthType.DXA},
           shading:{type:ShadingType.CLEAR,fill:labelBg},
           margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
+          /* V5.8.4: 垂直置中讓標籤跟內容對齊 */
+          verticalAlign:VerticalAlign.CENTER,
           children:[new Paragraph({
             children:[mkRun(label,{bold:true,size:sz(11),color:labelColor,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{before:0,after:0}
@@ -5504,6 +5511,8 @@ async function genDOCX(){
         new TableCell({
           width:{size:_MKB_R,type:WidthType.DXA},
           margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
+          /* V5.8.4: 垂直置中(短內容居中,長內容自然從頂部展開) */
+          verticalAlign:VerticalAlign.CENTER,
           children:isEmpty
             ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:0,after:0}})]
             :(content||'').split('\n').map(line=>new Paragraph({
