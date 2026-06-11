@@ -10,13 +10,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MDT 會議管理系統</title>
-<!-- V4.8.0: SELA logo favicon 套組(對齊 SELA Starter Kit V1.6.0 規範) -->
+<!-- V4.8.0: SELA logo favicon 套組 / V5.8.8: 對齊 Starter Kit V1.15.0 — 加 SVG icon、theme-color 改醫療系預設北歐霧藍 -->
+<link rel="icon" type="image/svg+xml" href="favicon/sela.svg">
 <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="favicon/apple-touch-icon.png">
 <link rel="manifest" href="favicon/site.webmanifest">
-<meta name="theme-color" content="#F36825">
+<meta name="theme-color" content="#5A7A8B">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1254,7 +1255,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.6.2';
+const VERSION='V5.8.8';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3322,7 +3323,7 @@ function caseHTML(cid,i,d){
   </div>
 
   <div class="fsec">討論</div>
-  <div class="fg full"><label>討論要點</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
+  <div class="fg full"><label>討論方向</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
   <div class="fg full"><label>討論項目</label><div class="trow">${topicChips}</div></div>
 
   <div class="fsec" style="color:var(--fog)">會議記錄（開會後填入）</div>
@@ -3333,12 +3334,12 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','cases',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','cases',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','cases',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','cases',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','cases',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
-/* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論要點、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
+</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
+/* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論方向、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
 function teamHTML(cid,i,d,type='team',collapsed=false){
   const _cardId='cc-'+cid+'-'+type+'-'+i;
   const lbl=type==='team'?'醫療小組成員':'必要事件';
@@ -3359,7 +3360,7 @@ function teamHTML(cid,i,d,type='team',collapsed=false){
 <div class="fg full"><label>診斷</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'diagnosis',this.value)" placeholder="癌別、分期、組織型態" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.diagnosis||'')}</textarea></div>
 <div class="fg full"><label>現病史</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'cc',this.value)" placeholder="目前狀況、就醫經過" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.cc||'')}</textarea></div>
 <div class="fg full"><label>家族史（選填）</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'familyHistory',this.value)" placeholder="家族癌症史或重要遺傳病史（沒填則不顯示）" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>
-<div class="fg full"><label>討論要點</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="本次MDT討論的主要議題" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.discussion||'')}</textarea></div>
+<div class="fg full"><label>討論方向</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="本次MDT要討論的方向" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.discussion||'')}</textarea></div>
 <div class="fg full"><label>摘要</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'summary',this.value)" placeholder="會議結論摘要" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.summary||'')}</textarea></div>
 <div class="fg full"><label>決策</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'decision',this.value)" placeholder="下一步處置 / 治療方向" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.decision||'')}</textarea></div>
 </div></div>`;
@@ -3373,7 +3374,7 @@ function teamViewHTML(cid,i,d,type='team'){
   if(d.diagnosis)rows.push(['診斷',d.diagnosis]);
   if(d.cc)rows.push(['現病史',d.cc]);
   if(d.familyHistory)rows.push(['家族史',d.familyHistory]);
-  if(d.discussion)rows.push(['討論要點',d.discussion]);
+  if(d.discussion)rows.push(['討論方向',d.discussion]);
   if(d.summary)rows.push(['摘要',d.summary]);
   if(d.decision)rows.push(['決策',d.decision]);
   const body=rows.length
@@ -3845,12 +3846,36 @@ function openPostMtgPanel(){
   readForm();
   var body=document.getElementById('postmtg-body');if(!body)return;
   body.innerHTML='';
+  /* V5.7.0: 共用卡片產生器 — 用於團隊/事件區段(摘要+決策兩欄) */
+  function _mkTeamCard(cid,arr,arrType,t,ti){
+    var card=document.createElement('div');
+    card.style.cssText='background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:12px 14px;margin-bottom:10px';
+    card.innerHTML=
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+      +'<span style="font-weight:600;font-size:13px;color:var(--fog-dk)">'+(ti+1)+'.&nbsp;'
+      +escA(t.chartNo||'')+(t.name?' &nbsp;'+escA(maskName(t.name)):'')
+      +'</span>'
+      +(getDoctorStr(t)&&getDoctorStr(t)!=='—'?'<span style="font-size:11px;color:var(--textlt)">VS '+escA(getDoctorStr(t))+'</span>':'')
+      +(t.diagnosis?'<span style="font-size:11px;color:var(--textlt);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(t.diagnosis)+'</span>':'')
+      +'</div>'
+      +'<div style="margin-bottom:8px">'
+      +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
+      +'<textarea data-action="postteam-summary" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="3" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.summary||'')+'</textarea>'
+      +'</div>'
+      +'<div>'
+      +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
+      +'<textarea data-action="postteam-decision" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.decision||'')+'</textarea>'
+      +'</div>';
+    return card;
+  }
   S.cids.forEach(function(cid){
     var sec=S.meeting.sections[cid]||{};
     var ca=CFG[cid];
     var fups=sec.followups||[];
     var cases=sec.cases||[];
-    if(!fups.length&&!cases.length)return;
+    var team=sec.team||[];
+    var events=sec.events||[];
+    if(!fups.length&&!cases.length&&!team.length&&!events.length)return;
     if(S.cids.length>1){
       var hdr=document.createElement('div');
       hdr.style.cssText='font-weight:700;font-size:14px;color:var(--acc);padding:12px 4px 6px;border-bottom:2px solid var(--acc);margin-bottom:12px';
@@ -3873,9 +3898,18 @@ function openPostMtgPanel(){
           +'</span>'
           +(getDoctorStr(f)&&getDoctorStr(f)!=='—'?'<span style="font-size:11px;color:var(--textlt)">VS '+escA(getDoctorStr(f))+'</span>':'')
           +'</div>'
-          +'<div style="display:flex;gap:6px">'
+          +'<div style="display:flex;gap:6px;margin-bottom:10px">'
           +'<button class="btn btn-sm '+(isOngoing?'btn-a':'btn-b')+'" data-action="postfup-ongoing" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(isOngoing?'':'opacity:.5')+'">繼續追蹤</button>'
           +'<button class="btn btn-sm '+(!isOngoing?'btn-a':'btn-b')+'" data-action="postfup-closed" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(!isOngoing?'':'opacity:.5')+'">結案</button>'
+          +'</div>'
+          /* V5.7.0: 前期追蹤加摘要+決策 */
+          +'<div style="margin-bottom:8px">'
+          +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
+          +'<textarea data-action="postfup-summary" data-cid="'+escA(cid)+'" data-fi="'+fi+'" rows="2" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(f.summary||'')+'</textarea>'
+          +'</div>'
+          +'<div>'
+          +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
+          +'<textarea data-action="postfup-decision" data-cid="'+escA(cid)+'" data-fi="'+fi+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(f.decision||'')+'</textarea>'
           +'</div>';
         body.appendChild(card);
       });
@@ -3911,6 +3945,22 @@ function openPostMtgPanel(){
         body.appendChild(card);
       });
     }
+    /* V5.7.0: 醫療小組會後填寫 */
+    if(team.length){
+      var thdr=document.createElement('div');
+      thdr.style.cssText='font-weight:600;font-size:12px;color:var(--fog);padding:10px 0 8px;letter-spacing:.5px';
+      thdr.textContent='醫療小組';
+      body.appendChild(thdr);
+      team.forEach(function(t,ti){body.appendChild(_mkTeamCard(cid,team,'team',t,ti));});
+    }
+    /* V5.7.0: 必要事件會後填寫 */
+    if(events.length){
+      var ehdr=document.createElement('div');
+      ehdr.style.cssText='font-weight:600;font-size:12px;color:var(--fog);padding:10px 0 8px;letter-spacing:.5px';
+      ehdr.textContent='必要事件';
+      body.appendChild(ehdr);
+      events.forEach(function(e,ei){body.appendChild(_mkTeamCard(cid,events,'events',e,ei));});
+    }
   });
   document.getElementById('postmtg-panel').style.display='flex';
 }
@@ -3930,6 +3980,28 @@ function savePostMtg(){
     var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
     var c=(S.meeting.sections[cid]||{}).cases[ci];
     if(c)c.decision=el.value.trim();
+  });
+  /* V5.7.0: 前期追蹤的摘要 / 決策 */
+  panel.querySelectorAll('[data-action="postfup-summary"]').forEach(function(el){
+    var cid=el.dataset.cid,fi=parseInt(el.dataset.fi);
+    var f=(S.meeting.sections[cid]||{}).followups?.[fi];
+    if(f)f.summary=el.value.trim();
+  });
+  panel.querySelectorAll('[data-action="postfup-decision"]').forEach(function(el){
+    var cid=el.dataset.cid,fi=parseInt(el.dataset.fi);
+    var f=(S.meeting.sections[cid]||{}).followups?.[fi];
+    if(f)f.decision=el.value.trim();
+  });
+  /* V5.7.0: 醫療小組 / 必要事件 共用 postteam-summary/decision,用 arrtype 決定 team or events */
+  panel.querySelectorAll('[data-action="postteam-summary"]').forEach(function(el){
+    var cid=el.dataset.cid,arrType=el.dataset.arrtype,ti=parseInt(el.dataset.ti);
+    var arr=(S.meeting.sections[cid]||{})[arrType];
+    if(arr&&arr[ti])arr[ti].summary=el.value.trim();
+  });
+  panel.querySelectorAll('[data-action="postteam-decision"]').forEach(function(el){
+    var cid=el.dataset.cid,arrType=el.dataset.arrtype,ti=parseInt(el.dataset.ti);
+    var arr=(S.meeting.sections[cid]||{})[arrType];
+    if(arr&&arr[ti])arr[ti].decision=el.value.trim();
   });
   S.cids.forEach(function(cid){
     ((S.meeting.sections[cid]||{}).cases||[]).forEach(function(c){c.followNext=true;});
@@ -5342,7 +5414,7 @@ async function genDOCX(){
   try{
     const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const{Document,Paragraph,TextRun,HeadingLevel,Packer,
-          Table,TableRow,TableCell,WidthType,ShadingType,
+          Table,TableRow,TableCell,WidthType,ShadingType,TableLayoutType,VerticalAlign,
           AlignmentType,BorderStyle,PageNumber,Footer,Header,
           convertInchesToTwip}=docx;
 
@@ -5364,31 +5436,34 @@ async function genDOCX(){
 
     // Section header (e.g. ▌前期追蹤)
     const mkSecHdr=(text)=>new Paragraph({
-      children:[mkRun(text,{bold:true,size:sz(13),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun(text,{bold:true,size:sz(13),color:C.accent,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
       spacing:{before:pt(14),after:pt(6)},
       border:{left:{style:BorderStyle.THICK,size:12,color:C.accent}}
     });
 
     // Case header paragraph (deep blue bg via shading in table)
     const mkCaseHdr=(no,c,drs)=>new Table({
-      width:{size:100,type:WidthType.PERCENTAGE},
+      /* V5.8.4: 寬度從 PERCENTAGE 改 DXA + layout=FIXED,跟 mkBlock 對齊,避免右側凸出 */
+      width:{size:9000,type:WidthType.DXA},
+      columnWidths:[9000],
+      layout:TableLayoutType.FIXED,
       borders:{top:{style:BorderStyle.NONE},bottom:{style:BorderStyle.NONE},
                left:{style:BorderStyle.NONE},right:{style:BorderStyle.NONE},
                insideH:{style:BorderStyle.NONE},insideV:{style:BorderStyle.NONE}},
       rows:[new TableRow({children:[
         new TableCell({
-          width:{size:100,type:WidthType.PERCENTAGE},
+          width:{size:9000,type:WidthType.DXA},
           shading:{type:ShadingType.CLEAR,fill:C.accent},
           margins:{top:pt(4),bottom:pt(4),left:pt(6),right:pt(6)},
           children:[new Paragraph({
             children:[
-              mkRun(no+'.  ',{bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun(no+'.  ',{bold:true,size:sz(12),color:C.white,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun((c.chartNo||'')+'\u3000'+(c.name?maskName(c.name):''),
-                {bold:true,size:sz(12),color:C.white,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {bold:true,size:sz(12),color:C.white,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun('\u3000'+caseDemo(c),
-                {size:sz(11),color:'A8B5BE',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'A8B5BE',font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun('\u3000VS '+drs,
-                {size:sz(11),color:'B8D4EA',font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:'B8D4EA',font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
             ]
           })]
         })
@@ -5396,8 +5471,24 @@ async function genDOCX(){
     });
 
     // Label + content block
-    const mkBlock=(label,content,isEmpty)=>new Table({
-      width:{size:100,type:WidthType.PERCENTAGE},
+    /* V5.8.0: 加 opts 參數
+       - opts.emphasis=true → 標籤背景深色(C.dark)+ 白色文字,突顯重要欄位(用於決策結論)
+       - opts.contentSize → 自訂內容字級(預設 12,治療欄縮小到 10)
+       V5.8.2: 寬度從 PERCENTAGE 改 DXA 絕對 twip + columnWidths,修 V5.8.1 引入的「長 diagnosis 內容讓 auto layout 把左欄擠寬至 50%」regression。
+       V5.8.3: 加 layout=FIXED 強制 Word 服從欄寬(V5.8.2 缺這個,Word 仍會 autofit,坑 #25 完整修復)
+       V5.8.4: 標籤欄 12%→14% 讓「決策結論/討論摘要」4 字單行;cell 垂直置中讓標籤跟內容對齊
+       A4 可用寬度約 9000 twips(扣邊距),14%≈1260、86%≈7740。 */
+    const _MKB_TOTAL=9000,_MKB_L=Math.floor(_MKB_TOTAL*0.14),_MKB_R=_MKB_TOTAL-_MKB_L;
+    const mkBlock=(label,content,isEmpty,opts)=>{
+      opts=opts||{};
+      const labelBg=opts.emphasis?C.dark:C.bg;
+      const labelColor=opts.emphasis?'FFFFFF':C.mid;
+      const contentSize=opts.contentSize||12;
+      return new Table({
+      width:{size:_MKB_TOTAL,type:WidthType.DXA},
+      columnWidths:[_MKB_L,_MKB_R],
+      /* V5.8.3: 加 layout=FIXED 強制 Word 服從欄寬(V5.8.2 雖改 DXA 但少這個,Word 仍可 autofit 改寬度,坑 #25 補完) */
+      layout:TableLayoutType.FIXED,
       /* V5.6.1: 加細灰邊框讓表格結構更清楚(對應個管師會議記錄格式需求) */
       /* V5.6.2: 左欄 16% → 12%、cell paragraph 行距收緊,讓框與框緊貼 */
       borders:{top:{style:BorderStyle.SINGLE,size:4,color:C.divider},
@@ -5408,35 +5499,48 @@ async function genDOCX(){
                insideV:{style:BorderStyle.SINGLE,size:4,color:C.divider}},
       rows:[new TableRow({children:[
         new TableCell({
-          width:{size:12,type:WidthType.PERCENTAGE},
-          shading:{type:ShadingType.CLEAR,fill:C.bg},
+          width:{size:_MKB_L,type:WidthType.DXA},
+          shading:{type:ShadingType.CLEAR,fill:labelBg},
           margins:{top:pt(3),bottom:pt(3),left:pt(6),right:pt(4)},
+          /* V5.8.4: 垂直置中讓標籤跟內容對齊 */
+          verticalAlign:VerticalAlign.CENTER,
           children:[new Paragraph({
-            children:[mkRun(label,{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(label,{bold:true,size:sz(11),color:labelColor,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{before:0,after:0}
           })]
         }),
         new TableCell({
-          width:{size:88,type:WidthType.PERCENTAGE},
+          width:{size:_MKB_R,type:WidthType.DXA},
           margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
+          /* V5.8.4: 垂直置中(短內容居中,長內容自然從頂部展開) */
+          verticalAlign:VerticalAlign.CENTER,
+          /* V5.8.5: 加 opts.lines 支援 — array of {text, shaded, bold, indent},每行可指定獨立樣式(治療欄用) */
           children:isEmpty
             ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:0,after:0}})]
-            :(content||'').split('\n').map(line=>new Paragraph({
-                children:[mkRun(line,{size:sz(12),font:'\u65b0\u7d30\u660e\u9ad4'})],
-                spacing:{before:0,after:0}
-              }))
+            :(opts.lines
+              ?opts.lines.map(ln=>new Paragraph({
+                  children:[mkRun(ln.text||'',{bold:!!ln.bold,size:sz(contentSize),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
+                  shading:ln.shaded?{type:ShadingType.CLEAR,fill:C.bg}:undefined,
+                  indent:ln.indent?{left:pt(ln.indent)}:undefined,
+                  spacing:{before:0,after:0}
+                }))
+              :(content||'').split('\n').map(line=>new Paragraph({
+                  children:[mkRun(line,{size:sz(contentSize),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
+                  spacing:{before:0,after:0}
+                })))
         })
       ]})]
     });
+    };
 
     // Followup status badge
     const mkFupStatus=(status)=>new Paragraph({
       children:[
-        mkRun('\u72c0\u614b\uff1a',{bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u72c0\u614b\uff1a',{bold:true,size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
         mkRun(status==='ongoing'?'\u7e7c\u7e8c\u8ffd\u8e64':'\u7d50\u6848',
           {bold:true,size:sz(11),
            color:status==='ongoing'?'1565C0':'B71C1C',
-           font:'\u65b0\u7d30\u660e\u9ad4'})
+           font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})
       ],
       spacing:{before:pt(2),after:pt(4)}
     });
@@ -5446,19 +5550,19 @@ async function genDOCX(){
     // ── Header: hospital + meeting info ──
     children.push(new Paragraph({
       children:[mkRun('\u5f70\u6ff1\u79c0\u50b3\u764c\u75c7\u4e2d\u5fc3',
-        {bold:true,size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+        {bold:true,size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
       spacing:{after:pt(2)}
     }));
     children.push(new Paragraph({
       children:[mkRun(mtgTitle(cids),
-        {bold:true,size:sz(16),color:C.title,font:'\u65b0\u7d30\u660e\u9ad4'})],
+        {bold:true,size:sz(16),color:C.title,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
       spacing:{after:pt(4)}
     }));
     // Date + time + location on one line
     const dateStr=rocDate(m.date).replace(/\(\u661f\u671f.\)$/,'');
     const infoLine=[dateStr,m.time,m.loc].filter(Boolean).join('\u3000\u3000');
     children.push(new Paragraph({
-      children:[mkRun(infoLine,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+      children:[mkRun(infoLine,{size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
       spacing:{after:pt(2)}
     }));
     children.push(mkHR());
@@ -5467,7 +5571,7 @@ async function genDOCX(){
       const ca=CFG[cid],sec=m.sections[cid]||{followups:[],cases:[],special:[]};
       if(cids.length>1){
         children.push(new Paragraph({
-          children:[mkRun(ca.name,{bold:true,size:sz(14),color:C.accent,font:'\u65b0\u7d30\u660e\u9ad4'})],
+          children:[mkRun(ca.name,{bold:true,size:sz(14),color:C.accent,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
           spacing:{before:pt(10),after:pt(6)},
           border:{bottom:{style:BorderStyle.SINGLE,size:4,color:C.accent}}
         }));
@@ -5481,20 +5585,23 @@ async function genDOCX(){
           const drs=getDoctorStr(f);
           children.push(new Paragraph({
             children:[
-              mkRun((i+1)+'.  ',{bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+              mkRun((i+1)+'.  ',{bold:true,size:sz(12),color:C.dark,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun((f.chartNo||'')+'\u3000'+(f.name?maskName(f.name):''),
-                {bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {bold:true,size:sz(12),color:C.dark,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
               mkRun(drs&&drs!=='\u2014'?'\u3000VS '+drs:'',
-                {size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'}),
+                {size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
             ],
             spacing:{before:pt(6),after:pt(2)}
           }));
           if(f.note)children.push(new Paragraph({
-            children:[mkRun(f.note,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(f.note,{size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{after:pt(2)},
             indent:{left:pt(16)}
           }));
           children.push(mkFupStatus(f.status||'closed'));
+          /* V5.7.0: 前期追蹤的會後填寫摘要+決策 */
+          if(f.summary)children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',f.summary,false));
+          if(f.decision)children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',f.decision,false,{emphasis:true}));
         });
         children.push(mkHR());
       }
@@ -5508,30 +5615,70 @@ async function genDOCX(){
           // Case header (blue bg)
           children.push(mkCaseHdr(i+1,c,drs));
           // Diagnosis
+          /* V5.8.1: 診斷改用 mkBlock,跟其他欄位視覺一致(有外框 + 左欄「診斷」標籤);刪除原本下方那條多餘的細線 */
           if(c.diagnosis){
-            children.push(new Paragraph({
-              children:[mkRun(c.diagnosis,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
-              spacing:{before:pt(3),after:pt(3)},
-              indent:{left:pt(4)}
-            }));
-            // Thin line between diagnosis and treatment
-            children.push(new Paragraph({
-              border:{bottom:{style:BorderStyle.SINGLE,size:2,color:C.divider}},
-              spacing:{before:0,after:pt(3)}
-            }));
+            children.push(mkBlock('\u8a3a\u65b7',c.diagnosis,false));
           }
           // Treatment
-          const trStr=(c.treatments||[]).length
+          /* V5.8.0: 治療每項加編號 + 日期前置(date)name : content
+             V5.8.5: 拆成 2 行 — 標題行「(date) name :」灰底粗體,詳細內容縮排 8pt;移除 [1][2][3] 編號(個管師覺得多餘) */
+          const trs=(c.treatments||[]).length
             ?(c.treatments||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
-              .map(function(tr){return(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'');}).join('\n')
-            :(c.treatment&&c.treatment!=='\u5c1a\u672a\u6cbb\u7642'?c.treatment:'');
-          if(trStr)children.push(mkBlock('\u6cbb\u7642',trStr,false));
+            :[];
+          if(trs.length){
+            var trLines=[];
+            trs.forEach(function(tr){
+              var date=tr.date?'('+tr.date+') ':'';
+              var name=tr.name||'';
+              trLines.push({text:date+name+(tr.content?' :':''),shaded:true,bold:true});
+              if(tr.content)trLines.push({text:tr.content,indent:8});
+            });
+            children.push(mkBlock('\u6cbb\u7642','',false,{contentSize:10,lines:trLines}));
+          }else if(c.treatment&&c.treatment!=='\u5c1a\u672a\u6cbb\u7642'){
+            /* 舊資料相容:單一字串 c.treatment 走原邏輯 */
+            children.push(mkBlock('\u6cbb\u7642',c.treatment,false,{contentSize:10}));
+          }
 
           // Summary & Decision - hide label if completely empty
           if(c.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',c.summary,false));}
-          else{children.push(new Paragraph({children:[mkRun('\u8a0e\u8ad6\u6458\u8981\uff1a',{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
-          if(c.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',c.decision,false));}
-          else{children.push(new Paragraph({children:[mkRun('\u6c7a\u7b56\u7d50\u8ad6\uff1a',{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
+          else{children.push(new Paragraph({children:[mkRun('\u8a0e\u8ad6\u6458\u8981\uff1a',{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
+          /* V5.8.0: 決策結論 emphasis,標籤深色背景白色文字突顯重點 */
+          if(c.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',c.decision,false,{emphasis:true}));}
+          else{children.push(new Paragraph({children:[mkRun('\u6c7a\u7b56\u7d50\u8ad6\uff1a',{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
+          children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
+        });
+      }
+
+      /* V5.7.0: 醫療小組 DOCX 區段 */
+      const team=sec.team||[];
+      if(team.length){
+        children.push(mkSecHdr('\u91ab\u7642\u5c0f\u7d44'));
+        team.forEach(function(t,i){
+          const drs=getDoctorStr(t);
+          children.push(mkCaseHdr(i+1,t,drs));
+          /* V5.8.1: 診斷改用 mkBlock 統一視覺 */
+          if(t.diagnosis){
+            children.push(mkBlock('\u8a3a\u65b7',t.diagnosis,false));
+          }
+          if(t.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',t.summary,false));}
+          if(t.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',t.decision,false,{emphasis:true}));}
+          children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
+        });
+      }
+
+      /* V5.7.0: 必要事件 DOCX 區段 */
+      const events=sec.events||[];
+      if(events.length){
+        children.push(mkSecHdr('\u5fc5\u8981\u4e8b\u4ef6'));
+        events.forEach(function(ev,i){
+          const drs=getDoctorStr(ev);
+          children.push(mkCaseHdr(i+1,ev,drs));
+          /* V5.8.1: 診斷改用 mkBlock 統一視覺 */
+          if(ev.diagnosis){
+            children.push(mkBlock('\u8a3a\u65b7',ev.diagnosis,false));
+          }
+          if(ev.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',ev.summary,false));}
+          if(ev.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',ev.decision,false,{emphasis:true}));}
           children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
@@ -5543,11 +5690,11 @@ async function genDOCX(){
         sp.forEach(function(s){
           const label=(s.topicType?'['+s.topicType+'] ':'')+( s.title||'');
           children.push(new Paragraph({
-            children:[mkRun(label,{bold:true,size:sz(12),color:C.dark,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(label,{bold:true,size:sz(12),color:C.dark,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{before:pt(6),after:pt(2)}
           }));
           if(s.note)children.push(new Paragraph({
-            children:[mkRun(s.note,{size:sz(11),color:C.mid,font:'\u65b0\u7d30\u660e\u9ad4'})],
+            children:[mkRun(s.note,{size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
             spacing:{after:pt(4)},indent:{left:pt(8)}
           }));
         });
@@ -5561,14 +5708,14 @@ async function genDOCX(){
     children.push(new Paragraph({text:'',spacing:{before:pt(12),after:0}}));
     children.push(new Paragraph({
       children:[
-        mkRun('\u8a18\u9304\uff1a'+recorder,{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
-        mkRun('\u3000\u3000'+recDate,{size:sz(10),color:C.xlt,font:'\u65b0\u7d30\u660e\u9ad4'}),
+        mkRun('\u8a18\u9304\uff1a'+recorder,{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
+        mkRun('\u3000\u3000'+recDate,{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
       ],
       alignment:AlignmentType.RIGHT
     }));
 
     const doc=new Document({
-      styles:{default:{document:{run:{font:'\u65b0\u7d30\u660e\u9ad4',size:sz(12)}}}},
+      styles:{default:{document:{run:{font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4',size:sz(12)}}}},
       sections:[{
         properties:{page:{margin:{
           top:convertInchesToTwip(0.8),
@@ -6059,7 +6206,7 @@ async function genHTMLSlides(){
       var sections=[];
       if(c.cc)sections.push({lbl:'現病史',txt:c.cc});
       if(c.familyHistory)sections.push({lbl:'家族史',txt:c.familyHistory});
-      if(c.discussion)sections.push({lbl:'討論要點',txt:c.discussion});
+      if(c.discussion)sections.push({lbl:'討論方向',txt:c.discussion});
       if(c.summary)sections.push({lbl:'摘要',txt:c.summary});
       if(c.decision)sections.push({lbl:'決策',txt:c.decision});
       var body=sections.length
@@ -6651,7 +6798,7 @@ async function importXLSX(inputEl){
       ph:String(r['過去病史']||'').trim(),
       pathologies:[],exams:[],treatments:[],markers:[],
       familyHistory:String(r['家族史']||'').trim(),
-      discussion:String(r['討論要點']||r['討論']||'').trim(),
+      discussion:String(r['討論方向']||r['討論要點']||r['討論']||'').trim(),
       topics:(r['討論議題']?String(r['討論議題']).split('、').filter(Boolean):[]),
       doctors:['','',''],doctor:'',
       phChips:(r['過去病史（chip）']?String(r['過去病史（chip）']).split(' ').map(x=>x.replace('(+)','').trim()).filter(x=>['HTN','DM','CAD','CVA','HBV','HCV','CKD','COPD'].includes(x)):[]),
@@ -6763,7 +6910,7 @@ async function genXLSX(){
     const wb=XLSX.utils.book_new();
 
     // ── Sheet 1: 個案討論 ──
-    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','ECOG','衰弱量表','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','家族史','討論要點','討論議題','摘要','決策']];
+    const caseRows=[['癌別','病歷號','姓名（遮蔽）','性別','年齡','ECOG','衰弱量表','主治醫師','診斷','現病史','過去病史（chip）','過去病史（其他）','家族史','討論方向','討論議題','摘要','決策']];
     cids.forEach(cid=>{
       const ca=CFG[cid];
       const sec=m.sections[cid]||{};
@@ -6944,7 +7091,7 @@ markers：癌指數（PSA/CEA/CA125/AFP/CA19-9/CA15-3/PIVKA-II/β-hCG/LDH 等，
       範例：{"name":"AFP","date":"2026-04-02","content":"8.96(2026-04-02)"}
 familyHistory：家族癌症史，自由文字；僅 _cancer 為「乳癌」或「婦癌」時填寫，其他癌別填空字串 ""
 mammo：乳房攝影，僅 _cancer 為「乳癌」時填寫，格式：{"date":"YYYY-MM-DD","report":"Findings:...\nImpression:...","images":[]}；其他癌別省略此欄位
-discussion：討論要點，一句話摘要本次討論重點
+discussion:討論方向，一句話摘要本次討論重點
 topics：討論議題，從以下選填一或多項：["影像討論","病理討論","分期討論","治療策略討論"]
   - 勾選原則（看資料對應，不漏勾、不憑空增加）：
     * exams 陣列有內容 → 勾「影像討論」
@@ -8328,7 +8475,8 @@ document.addEventListener('click',function(e){
     _f.status=postfupToggle.dataset.action==='postfup-ongoing'?'ongoing':'closed';
     var _card=postfupToggle.closest('div[style*="border:1px solid"]');
     if(_card){
-      _card.querySelectorAll('[data-action^="postfup-"]').forEach(function(b){
+      /* V5.7.1: 修 prefix match selector 太寬 — V5.7.0 加 postfup-summary/decision textarea 後,原本 [data-action^="postfup-"] 會誤匹配 textarea 並當成按鈕處理(加 btn class + opacity:.5),導致按鈕看似失效。改精確匹配只兩個 toggle 按鈕。 */
+      _card.querySelectorAll('[data-action="postfup-ongoing"],[data-action="postfup-closed"]').forEach(function(b){
         var isActive=b.dataset.action==='postfup-'+_f.status;
         b.className='btn btn-sm '+(isActive?'btn-a':'btn-b');
         b.style.opacity=isActive?'1':'0.5';

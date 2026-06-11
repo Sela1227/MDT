@@ -144,6 +144,17 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.8.8 | 對齊 SELA Starter Kit V1.15.0(從 V1.7.1):theme-color `#F36825`→`#5A7A8B`(品牌色 vs 介面色分離,醫療型預設北歐霧藍);加 `favicon/sela.svg` + `<head>` SVG icon link;SELA-handoff 更新對齊紀錄 |
+| V5.8.7 | 「討論要點」全系統 7 處改名「討論方向」(個案討論/醫療小組/必要事件/CSV/投影片/AI prompt 一致);CSV 匯入向後相容(舊「討論要點」欄位 fallback);DOCX 不動,仍只出 2 欄(摘要+決策)|
+| V5.8.6 | 修坑 #19(累積 10+ 版未修):followupHTML 內 L3336+L3340 五處 `upd('${cid}','cases',${i},...)` 寫死 → 改 `'${type}'`。前期追蹤改名不再污染個案討論,DOCX 名字病歷號正常出現 |
+| V5.8.5 | DOCX 治療欄樣式升級:標題行 `(date) name :` 灰底粗體、詳細內容縮排 8pt、去掉 `[i]` 編號;mkBlock 擴充 `opts.lines` 支援每行獨立樣式 |
+| V5.8.4 | DOCX 視覺微調 × 3:mkCaseHdr 改用 DXA+layout=FIXED(修右側凸出);mkBlock cell 加垂直置中;標籤欄 12%→14%(讓 4 字標籤單行) |
+| V5.8.3 | V5.8.2 沒真正修好(個管師回報仍格式跑掉):mkBlock 加 `layout:TableLayoutType.FIXED`,搭配 V5.8.2 DXA+columnWidths 三件套才完整。更新坑 #25 + 教訓「真實內容測試 vs 預覽」 |
+| V5.8.2 | 修 V5.8.1 引入的 DOCX layout 跑掉(坑 #25,但未完整修):mkBlock 寬度從 PERCENTAGE 改 DXA 絕對 twip + columnWidths,解決長 diagnosis 觸發 Word auto layout 把標籤欄擠寬到 50% 的問題 |
+| V5.8.1 | DOCX 視覺一致性兩項微調:診斷也用 mkBlock(個案討論/醫療小組/必要事件三處,刪掉診斷下方多餘細線);字體 27 處從「新細明體」改成「微軟正黑體」(跨平台 Word 自動 fallback) |
+| V5.8.0 | DOCX 個案討論視覺優化:治療日期前置+編號 `[i] (date) name`、治療字級 12→10、決策結論 emphasis(標籤深色背景+白字);`mkBlock` 擴充 `opts={emphasis, contentSize}` 參數 |
+| V5.7.1 | 修 V5.7.0 regression:前期追蹤面板「繼續/結案」按鈕視覺異常,因為新加的 postfup-summary/decision textarea 被 prefix match selector `[data-action^="postfup-"]` 誤匹配當按鈕處理。改精確匹配 ongoing+closed 兩個。新增坑 #24 |
+| V5.7.0 | 會後填寫面板擴充:前期追蹤 / 醫療小組 / 必要事件 三區段都加摘要+決策 textarea;DOCX 同步加(讓醫療小組 / 必要事件 出現在會議記錄,且前期追蹤帶摘要決策) |
 | V5.6.2 | DOCX mkBlock 左欄 16%→12%、cell paragraph 行距收緊(before:0/after:0),回應 V5.6.1 後個管師「左欄太寬+項與項間距太多」回饋 |
 | V5.6.1 | DOCX mkBlock 加細灰邊框(SINGLE size:4 color:C.divider),讓「左標籤右內容」表格樣式更清楚對應個管師會議記錄需求 |
 | V5.6.0 | JSON 個案匯出可選打包圖片成 zip(inline JSZip ~96KB);UI 加勾選框「附圖片打包 zip」;zip 結構對齊 V5.3.0 子資料夾(images/[病歷號]/[類型]_[檔名]);三種圖來源全支援(dataUrl/fromFolder 已授權/未授權跳 confirm) |
@@ -301,14 +312,14 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:有「動態插入/移除 sibling」邏輯時,目標 input 加 dataset.role='custom-type' 之類標記,刪除時用 `[data-role="custom-type"]` 選擇器,比 tagName 嚴謹
 - 順便發現的 bug:`__other__` 分支也是 `tagName==='INPUT'` 判斷「已有 input」,使用者從 CT 切到「其他」時看到日期欄(也是 INPUT)就不插自訂類型欄,使用者沒地方輸入。一併修
 
-**#19 followupHTML 內 upd 寫死 `'cases'`(V5.0.0 發現,本版不修)**
-- 症狀:前期追蹤事項(followups)的欄位編輯後**可能不會儲存**;某些情況下會**寫進個案討論(cases)的同 index 物件**,造成資料污染
+**#19 followupHTML 內 upd 寫死 `'cases'`(V5.0.0 發現,V5.8.6 修)** ✅
+- 症狀:前期追蹤事項(followups)的欄位編輯後**可能不會儲存**;某些情況下會**寫進個案討論(cases)的同 index 物件**,造成資料污染。V5.8.6 個管師回報實機:「改前期追蹤的名字,結果同步改到個案討論;DOCX 上前期追蹤沒名字沒病歷號」
 - 根因:`followupHTML(cid,i,d,type='followups')` 函數內所有 `upd` 呼叫都寫死 `upd('${cid}','cases',${i},...)`,沒有用 `${type}`。但 `upd` 函數本身是 `S.meeting.sections[cid][type][i]` 動態派發 — 收到 'cases' 就去 cases 陣列存取
 - 兩種壞情境:
   - `cases[i]` 不存在(常見,因追蹤數通常少於個案) → `if(!item)return;` → 編輯靜默失敗,個管師可能以為有存
   - `cases[i]` 存在 → 改到 cases[i] 上,造成資料污染
 - 為什麼長期沒人回報:個管師可能很少深度編輯「前期追蹤事項」的所有欄位(主要只看「上次討論」追蹤狀態);加上看起來像「儲存了」,實際只是 UI 暫態
-- 做法(本版**不順便修**):V5.0.0 寫的 `teamHTML` 用 `${type}` 動態派發,不複製這個 bug。followupHTML 留下次獨立修(改一行 + 完整測試前期追蹤的所有編輯場景)
+- V5.8.6 修法:L3336 + L3340 兩行內 5 處 `upd('${cid}','cases',${i},...)` → `upd('${cid}','${type}',${i},...)`(改用 followupHTML 第 4 參數 type='followups')。Cases editor 內的 13 處 'cases' 維持不動(那是正確的寫死)
 - 教訓:多 type 共用的渲染函數,必須用 `${type}` 動態派發,絕不能寫死任一具體 type 名稱 — 這是「跨 type 共用模板」的鐵律
 - 預防:打包前 grep `upd\('\$\{cid\}','cases',` 出現在 `function caseHTML` 以外的位置就警告
 
@@ -346,9 +357,29 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 為什麼這次 V5.1.1 才修:個管師回報「個案消失」被連續追了 11 個方向都不對,直到拿到實機產出的 HTML 檔做 diff,才從 `<section>` 結構完全正確 + 視覺結果完全錯誤的矛盾找到「視覺問題」這條路,進而發現 inline display 覆蓋 class 的 CSS 優先級陷阱
 - 預防:打包前 grep `<section[^>]*style="[^"]*display:` 在 genHTMLSlides 內出現就警告(`.slide` 的 display 永遠該由 class 控制)
 
+**#24 prefix match attribute selector 加新元素後誤匹配(V5.7.0 → V5.7.1)**
+- 症狀:個管師回報「前期追蹤的會後填寫面板,繼續追蹤/結案按鈕點了沒反應」(實際是有反應,但視覺異常讓人以為失效)
+- 根因:V5.7.0 加 `postfup-summary` / `postfup-decision` 兩個 textarea 後,event handler 內 L8445 `_card.querySelectorAll('[data-action^="postfup-"]')` 的 prefix match selector 變得太寬,連 textarea 也被匹配。handler 把它們當按鈕處理:加 `b.className='btn btn-sm btn-b'`、`b.style.opacity='0.5'`。textarea 被改 className + 半透明,視覺像被禁用
+- 做法:把 prefix match 改成**精確匹配 ongoing + closed 兩個 button**:`'[data-action="postfup-ongoing"],[data-action="postfup-closed"]'`
+- 教訓:**寫 `[data-action^="prefix-"]` prefix selector 時要小心**,後續加任何 `prefix-*` 命名的新 data-action 都會被誤匹配。新增 data-action 時要 grep 既有 prefix selector 確認不會撞到
+- 預防:有 prefix selector 的 handler,旁邊加註解列出「目前匹配的 actions」,以後新增同 prefix 命名前先 grep 確認
+- 替代方案:用更明確的命名空間,例如按鈕用 `postfup-toggle-ongoing` / `postfup-toggle-closed`,textarea 用 `postfup-field-summary` / `postfup-field-decision`,selector 就可以用 `[data-action^="postfup-toggle-"]` 而不會誤匹配
+
 ---
 
-## 九、打包驗證(每次必跑)
+**#25 docx Table PERCENTAGE 寬度在 auto layout 下被內容覆蓋(V5.8.1 → V5.8.2 → V5.8.3 才真正修好)**
+- 症狀:個管師回報 V5.8.1 出貨後「整個 DOCX 格式跑掉了」— 截圖顯示左欄被擠到 ~50%(本來該 12%),右欄被擠成超窄一條,每行 3-5 個字,本來 1-2 頁的會議記錄變 3 頁
+- 為何 V5.6.x 沒問題,V5.8.1 才壞:V5.6.x 時診斷是純 Paragraph(沒走 mkBlock),只有 3 個 mkBlock(治療/摘要/決策)+ 內容相對短。V5.8.1 把診斷也改成 mkBlock,但 diagnosis 常 200+ 字一行 wrap,觸發 Word 的 auto layout 算法
+- 根因:docx 7.8.2 的 `WidthType.PERCENTAGE` 在 Word 端只是「建議值」。即使改成 `WidthType.DXA` + `columnWidths` 也不夠 — **Table 沒明確指定 `layout=fixed` 時,Word 仍會 autofit、根據內容調整,把 DXA 當建議**
+- V5.8.2 失敗的修法:把 width 改成 DXA(`tcW dxa w=1080/7920`),但**沒有 `<w:tblLayout w:type="fixed"/>`** → Word 仍會 autofit,個管師回報仍壞
+- V5.8.3 正確修法:加 `layout: TableLayoutType.FIXED`,寫入 `<w:tblLayout w:type="fixed"/>` 後 Word 100% 服從欄寬
+- 教訓:**docx Table 要嚴格控制欄寬時三件套缺一不可:DXA 絕對寬度 + columnWidths + layout=FIXED**;PERCENTAGE 在長內容情境根本不可靠
+- 預防:打包前 grep `mkBlock`,如果有改動,XML 內必須有 `tblLayout="fixed"`(可用 `unzip -p docx word/document.xml | grep tblLayout` 驗)
+- 教訓 #2:**真實內容測試 vs 預覽**:V5.8.2 我自己 mock 的測試 docx 在某些 Word 版本看起來 OK(可能默認服從 DXA),但個管師端 Word 版本不同 → 仍壞。**下次 docx 改動必須請個管師打開實機產出回報,不能只看自己 mock 預覽**
+
+---
+
+
 
 ```python
 import os
@@ -426,15 +457,17 @@ if not missing:
 
 ---
 
-## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起)
+## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起;V5.8.8 升至 V1.15.0)
 
-本專案已對齊 **SELA Starter Kit V1.7.1** 的關鍵規範(原於 V4.8.0 對齊 V1.6.0,V4.8.2 升標記到 V1.7.1)。每次升版都應檢查是否仍符合:
+本專案已對齊 **SELA Starter Kit V1.15.0**(原於 V4.8.0 對齊 V1.6.0,V4.8.2 升 V1.7.1,V5.8.8 升 V1.15.0)。每次升版都應檢查是否仍符合:
 
 | 規範 | 對齊方式 | 注意 |
 |------|---------|------|
 | zip 檔名格式 | `MDT V<x.y.z>.zip`(空格,非底線) | 打包時直接用 `zip MDT\ V4.8.0.zip ...` |
 | 必含 `.gitignore` | 已加,擋 `.DS_Store` / 機密 / 暫存區 | 新加目錄時記得評估是否需要忽略 |
-| 必含 SELA 品牌資產 | `favicon/` 整套 + `<head>` 引用 + `theme-color #F36825` | 路徑用相對(GitHub Pages 子路徑相容) |
+| 必含 SELA 品牌資產 | `favicon/` 整套(8 檔含 sela.svg)+ `<head>` 引用 + theme-color | V5.8.8 起 theme-color 改 `#5A7A8B`(品牌色 vs 介面色分離) |
+| 介面色選擇(V1.8.1+) | `theme-color` 跟 `theme_color` in manifest 同步用 `#5A7A8B`(醫療型) | **不是** SELA 橘!Kit V1.8.1 起的分離鐵律;醫療型避免橘色警示聯想 |
+| SVG icon link(V1.6.0+) | `<link rel="icon" type="image/svg+xml" href="favicon/sela.svg">` 放最前 | 現代瀏覽器優先 SVG,任何大小銳利 |
 | 系統 UI logo | 右下角 fixed `<a id="sela-credit">` | 樣式 `opacity:.42`,hover 放大;不擋 UI |
 | **回流通道**(V4.8.1 起) | `SELA-handoff.md` 在專案根目錄,跟 zip 一起交付 | 重大版本完成後更新內容,讓 SELA 升 Kit 用 |
 | 三位版本號逢十進位 | 同 #14 規則 | 已對齊 |
@@ -455,14 +488,14 @@ if not missing:
 
 **按優先序：**
 
-1. **修坑 #19 followupHTML 寫死 'cases' bug** — 累積超過 10 版未修;upd 派發呼叫實際走 cases 陣列,可能造成跟「個案討論」資料的隱性衝突
+1. **「(8-其他特殊複雜個案)」討論原因快速標籤系統** — 個管師有時要標個案因(如「治療中死亡」「必要提報」),用快速標籤而非每次手動打字
 2. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
-3. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
-4. DOCX 繼續微調(依測試回饋)
+3. DOCX 微調觀察期:V5.8.5 治療欄樣式 + V5.8.7 改名後,個管師實際用幾場會議後可能還有微調(如灰底色階、縮排幅度)
+4. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
 5. 設定頁新增「同步狀態」面板:NAS 上有幾筆 tombstone、上次同步時間、衝突歷史
 
 ---
 
 ## 十一、一句話總結
 
-V5.6.2 DOCX `mkBlock` 兩個視覺微調(回應 V5.6.1 個管師回饋):**(1)左欄太寬** — 16% → 12%,右欄 84% → 88%,內容空間多 4%;**(2)項與項中間留白太多** — cell 內 paragraph `spacing` 從預設的 `{after:pt(2)}` 改成 `{before:0, after:0}`,移除 cell 內每段 paragraph 下方 2pt 空白,讓多行內容更緊湊、框與框視覺上連續排列。邊框樣式沿用 V5.6.1(細灰 SINGLE size:4 color:'CFD8DC')。Node syntax check + docx 模擬產出驗證 OK。下版第一優先:**修坑 #19 followupHTML 寫死 cases bug**(累積 10+ 版未修)。
+V5.8.8 對齊 SELA Starter Kit V1.15.0(從 V1.7.1 跳 8 版):**三件事**。**(1)theme-color 改北歐霧藍**:V1.8.1 起 Kit 區分「品牌色 vs 介面色」— 品牌色永遠 SELA 橘 #F36825(logo 用,不變),介面色依 app 主題(V1.15.0 §14.3 醫療型預設 `#5A7A8B`)。`<head>` 跟 `site.webmanifest` 同步改 `#F36825` → `#5A7A8B`。**(2)加 sela.svg**:從 Starter Kit `logo/svg/sela.svg` 拷貝進 `favicon/`,`<head>` 加 `<link rel="icon" type="image/svg+xml">` 放最前(現代瀏覽器優先 SVG,任何大小銳利)。favicon 從 7→8 檔。**(3)SELA-handoff 更新對齊紀錄**:Kit 版本標記從 V1.7.1 → V1.15.0,加對齊表(已對齊 3 項 + 不複製進 MDT 的 2 項,如 §14 子 app logo prompt 範本庫,需要時去 Starter Kit 取)。**logo 本身不變**(SELA 橘+白壁虎,品牌色鐵律);系統 UI 不變(MDT UI 是霧藍/灰色系,跟 SELA 橘原本就無關)。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統。

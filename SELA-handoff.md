@@ -11,12 +11,27 @@
 - **專案名稱:** MDT 會議管理系統
 - **專案類型:** 純靜態網頁(單一 HTML 檔,localStorage 儲存,GitHub Pages 部署)
 - **技術棧:** HTML / 原生 JS(無 framework)/ localStorage / File System Access API(NAS 同步)
-- **規模:** 1 個 index.html(~518KB / ~8150 行)+ 文件 4 份 + favicon 套組 7 檔
-- **使用 Kit 版本:** V1.7.1(handoff 內容首版於 V4.8.1 對齊 V1.6.0 時寫成;V4.8.2 升 Kit 版本標記至 V1.7.1)
-- **完成版本:** V4.8.2(對齊 Kit V1.7.1 後的版本)
-- **完成日期:** 2026-05-07
+- **規模:** 1 個 index.html(~644KB / ~8770 行)+ 文件 4 份 + favicon 套組 8 檔(V5.8.8 加 sela.svg)
+- **使用 Kit 版本:** V1.15.0(V5.8.8 起,從 V1.7.1 升上來;首版 handoff 內容於 V4.8.1 對齊 V1.6.0)
+- **完成版本:** V5.8.8(對齊 Kit V1.15.0 後的版本)
+- **完成日期:** 2026-06-12
 
 **特殊背景**:這不是用 Kit 從零做的新專案,是**已存在 4.7 個版本的成熟專案接 Kit 規範**。所以反饋不是「冷啟動體驗」,是「**現有成熟專案接 Kit 的衝突點**」 — 這個視角 Kit 之前沒收過。
+
+### V1.15.0 對齊紀錄(V5.8.8)
+
+從 V1.7.1 → V1.15.0 跨 8 個小版本,Kit 新增了若干規範。**MDT 對齊範圍 + 不對齊範圍**:
+
+| Kit 規範 | MDT V5.8.8 對齊狀態 |
+|---|---|
+| V1.8.1 品牌色 vs 介面色分離(`theme-color` 依 app 主題,不要永遠用 SELA 橘) | ✅ 已對齊 — theme-color 從 `#F36825` 改 `#5A7A8B`(北歐霧藍,V1.15.0 §14.3 醫療型預設) |
+| V1.8.1 `site.webmanifest` 客製化 `theme_color` | ✅ 已對齊 — manifest 同步 `#5A7A8B` |
+| V1.6.0+ `<head>` 加 SVG icon link(現代瀏覽器優先) | ✅ V5.8.8 加 `favicon/sela.svg` + `<link rel="icon" type="image/svg+xml">` |
+| V1.13.0+ §14 子 app logo prompt 範本庫(5 種類型) | ⏸ **不複製進 MDT CLAUDE.md**(會稀釋工作上下文)— 未來若做 Cancer Drug / Cancer Nav 等子 app logo,**直接去 Starter Kit `/logo/CLAUDE.md §14` 取範本**(MDT 主系統屬醫療型 → 用範本 B;不過 MDT 主系統不需要做新 logo,沿用 SELA 主 logo 即可) |
+| V1.14.0+ §15 共通檢核清單 | ⏸ 同上,子 app 設計時去 Starter Kit 參考 |
+| V1.8.0 favicon 用相對路徑(坑 #39) | ✅ MDT 從 V4.8.x 就一直用相對路徑(`favicon/...` 而非 `/favicon/...`),本來就對 |
+
+**logo 本身不變**:仍是 SELA 橘 +白壁虎(品牌色鐵律,Kit §2 不可違反)。只變「介面色」(PWA 啟動畫面 / 瀏覽器分頁列顏色)。
 
 ### 提案前檢查紀錄(回應 V1.7.0 加的兩個檢查)
 

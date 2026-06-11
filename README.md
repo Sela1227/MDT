@@ -111,6 +111,194 @@
 
 ## 版本歷程
 
+### V5.8.8
+**對齊 SELA Starter Kit V1.15.0**(從 V1.7.1 跳 8 個小版本):個管師交付新版 Starter Kit,主要對齊三件事。
+
+**1. theme-color 改北歐霧藍 `#5A7A8B`**(V1.8.1 起的新規範)
+- Kit V1.8.1 起區分「**品牌色**」(SELA 橘 #F36825,logo 用,不變)vs「**介面色**」(theme-color、PWA 啟動畫面,依 app 主題)
+- 醫療型 app 預設 `#5A7A8B` 北歐霧藍(V1.15.0 §14.3),避免橘色帶來的「警示/警告」聯想
+- `<head>` 的 `<meta name="theme-color">` 跟 `site.webmanifest` 的 `theme_color` 同步改
+
+**2. 加 `favicon/sela.svg` + `<head>` SVG icon link**
+- 從 Starter Kit `logo/svg/sela.svg` 拷貝進 `favicon/`
+- `<head>` 加 `<link rel="icon" type="image/svg+xml" href="favicon/sela.svg">` 放在 ico/png 之前 — 現代瀏覽器優先 SVG,任何大小都銳利
+- favicon/ 從 7 個檔案 → 8 個
+
+**3. SELA-handoff.md 更新 Kit 版本標記 + 加 V1.15.0 對齊紀錄**
+- Kit 版本標記從 V1.7.1 → V1.15.0
+- 加對齊表:已對齊的 3 項 + 不複製進 MDT 的 2 項(子 app logo prompt 範本、共通檢核清單,需要時去 Starter Kit 取)
+- 理由:MDT 的 CLAUDE.md 章法第十條「上下文密度檢查 — 不會被下次 Claude 引用的段落要砍」 → 子 app prompt 對 MDT 後續會議無用,留指引即可
+
+**logo 本身不變**(品牌色鐵律):仍是 SELA 橘 + 白壁虎。**只變介面色**。
+**系統 UI 不變**:MDT UI 是霧藍 / 灰色系(`--fog-*`),原本就跟 SELA 橘無關,改 theme-color 不會造成 UI 不一致。
+
+### V5.8.7
+**「討論要點」全系統一律改名「討論方向」**:V5.8.6 個管師回報「醫療小組三欄(討論要點/摘要/決策)名稱容易搞混」,建議改成更明確的命名:
+
+| 舊 | 新 | 角色定位 |
+|---|---|---|
+| 討論要點 | **討論方向** | 會議要討論什麼方向(會前填,提醒個管師跟進什麼) |
+| 摘要 | 摘要 | 會議當下/會後的摘要 |
+| 決策 | 決策 | 結論(會後填) |
+
+**改名範圍** — 全系統 7 處 + placeholder:
+- L3325:個案討論編輯介面 label
+- L3362:醫療小組/必要事件編輯介面 label + placeholder(`本次MDT討論的主要議題` → `本次MDT要討論的方向`)
+- L3376:teamViewHTML(view 模式)顯示
+- L6208:HTML 投影片 sections 標籤
+- L6800:**CSV 匯入向後相容**:`r['討論方向']||r['討論要點']||r['討論']` 三層 fallback
+- L6912:CSV 匯出欄位名稱
+- L7093:AI prompt 說明
+
+**程式變數 `discussion` 完全不動**,只改顯示文字。**舊 CSV 匯入仍能正確讀取**(`r['討論要點']` fallback)。
+
+**DOCX 不加 discussion 欄**(個管師決定):「討論方向」是個管師提醒自己「會議要討論什麼」的會前筆記,不需要在會議記錄出現。DOCX 醫療小組 / 必要事件仍維持兩欄(討論摘要 + 決策)。
+
+### V5.8.6
+**修坑 #19(累積 10+ 版未修的歷史坑) — 前期追蹤改名同步寫到個案討論**:V5.8.5 後個管師回報「改前期追蹤的名字,實際上同步改到個案討論,而且 DOCX 上前期追蹤完全沒名字沒病歷號」。
+
+**根因(坑 #19,V5.0.0 發現)**:`followupHTML(cid, i, d, type='followups')` 函數內 5 處 `upd` 呼叫都**寫死 `'cases'`** 而不是用 `${type}`。`upd(cid, type, i, field, value)` 是動態派發到 `S.meeting.sections[cid][type][i]`,收到 `'cases'` 就去 cases 陣列存取。導致:
+- `cases[i]` 不存在 → 編輯靜默失敗(個管師以為有存)
+- `cases[i]` 存在 → **改到個案討論第 i 個的同欄位,資料污染**
+- followups[i] 從沒被更新 → DOCX 內 f.chartNo / f.name 取出空值
+
+**修法**:L3336 + L3340 兩行內 5 處 `upd('${cid}','cases',${i},...)` → `upd('${cid}','${type}',${i},...)`。涉及欄位:chartNo(2 處)、name、prevDate、note。Cases editor 內的 13 處 `'cases'` 維持不動(那是正確的寫死)。
+
+**驗證**:Node syntax check + 桌面演練(改前期追蹤名字 → 寫到 sec.followups[0].name,cases 不受影響)。坑 #19 標記為 ✅ V5.8.6 修。
+
+### V5.8.5
+**DOCX 治療欄樣式升級 — 標題行灰底粗體 + 移除編號 + 詳細內容縮排**:V5.8.4 後個管師上傳截圖,手動標記想要的治療樣式 — 治療標題行(日期 + 治療名稱 + `:`)灰底粗體,後面詳細內容**不要前置編號**(`[1] [2] [3]` 多餘)。
+
+**設計細節**:
+- 治療標題行樣式:`(date) name :` 整行 → 灰底(`C.bg #F5F7F8`)+ 粗體
+- 詳細內容:縮排 8pt(twip 160)讓視覺層次清楚
+- **去掉編號**:從 `[1] (date) name : content` → `(date) name :\n    content`(2 行)
+- 灰底選 `C.bg` 而非 `C.dark`,**避免跟決策結論的深色標籤搶眼球**(決策結論才是最高優先級)
+
+**`mkBlock` 函式擴充**:加 `opts.lines`(array of `{text, shaded, bold, indent}`)— 如果有給就走「每行獨立樣式」邏輯,否則走舊的「content 字串 + `\n` 分割,每行同樣式」邏輯。**非破壞性,舊呼叫不影響**。
+
+**舊資料相容**:`c.treatment`(舊版單一字串欄位)走原邏輯,只有 `c.treatments`(陣列)走新樣式。
+
+XML 驗證:3 個治療標題灰底 + 3 個詳細內容縮排 160 twips ✓
+
+### V5.8.4
+**DOCX 視覺微調 × 3(個管師回報 V5.8.3 後可優化點)**:V5.8.3 正確修好 layout 後,個管師回報 3 個優化點:
+
+**1. mkCaseHdr 標題列右側凸出 → 跟 mkBlock 寬度對齊**
+- V5.8.3 mkCaseHdr 仍用 `WidthType.PERCENTAGE` 100%,跟 mkBlock 的 DXA 9000 twips 不對齊,視覺上標題列右邊凸出一小段
+- 修法:mkCaseHdr 也改用 `WidthType.DXA` 9000 twips + `columnWidths` + `layout=FIXED`,跟 mkBlock 完全對齊
+
+**2. mkBlock cell 加垂直置中**
+- 之前標籤跟內容預設靠頂部對齊,內容多行時標籤頂在最上面,視覺感不對等
+- 修法:兩個 cell 加 `verticalAlign: VerticalAlign.CENTER`,標籤跟內容垂直置中對齊
+
+**3. 標籤欄 12% → 14%**
+- 12% 太窄,「決策結論」「討論摘要」4 字標籤會擠成兩行
+- 14% 剛好可單行容納 4 個中文字,易讀性提升
+- 對應 twip:1080 → 1260,右欄 7920 → 7740(差 180 twip 內容欄,影響極小)
+
+需要 import 加 `VerticalAlign`。XML 驗證:每個 mkBlock 兩個 vAlign=center、Tables 全有 tblLayout=fixed。
+
+### V5.8.3
+**V5.8.2 沒真正修好,V5.8.3 才是完整修法**:個管師回報 V5.8.2 出貨後**仍然格式跑掉**(標籤欄超寬、內容欄超窄)。
+
+**根因**:V5.8.2 雖把 width 改成 DXA(絕對 twip),但**沒指定 `layout=fixed`** → Word 端仍會 autofit,把 DXA 當「建議值」。XML 內缺 `<w:tblLayout w:type="fixed"/>`。
+
+**正確修法**:在 mkBlock 的 Table 加 `layout: TableLayoutType.FIXED`,搭配 V5.8.2 的 DXA + columnWidths 才完整。三件套缺一不可:
+1. `width: DXA` 絕對 twip
+2. `columnWidths: [1080, 7920]` 陣列
+3. `layout: TableLayoutType.FIXED` ← V5.8.3 補上
+
+更新坑 #25:「docx Table 嚴格控制欄寬三件套」+ 加教訓「真實內容測試 vs 預覽」。
+
+### V5.8.2
+**修 V5.8.1 引入的 layout 跑掉 regression**:個管師回報 V5.8.1 出貨後「**整個 DOCX 格式跑掉了**」— 左欄被擠到 ~50%、右欄變超窄一條、本來 1-2 頁變 3 頁。
+
+**根因(坑 #25)**:V5.8.1 把診斷從純 Paragraph 改用 mkBlock,但 diagnosis 內容常 200+ 字一行。docx Table 在沒指定 `layout=fixed` 也沒指定 `columnWidths` 時,Word 用 auto layout algorithm 重算欄寬,**無視 cell 的 `width:PERCENTAGE`,根據內容字數猜算**。長 diagnosis 觸發 Word 把標籤欄擠寬到 50%。
+
+**修法**:`mkBlock` 寬度從 `WidthType.PERCENTAGE` 改成 `WidthType.DXA`(絕對 twip)+ 加 `columnWidths` 陣列。A4 可用寬度約 9000 twips(扣邊距),12% ≈ 1080(標籤),88% ≈ 7920(內容)。Word 100% 服從 DXA。
+
+新增坑 #25 — 「docx Table 要嚴格控制欄寬時用 DXA,別用 PERCENTAGE」。
+
+### V5.8.1
+**DOCX 個案討論視覺一致性兩項微調**:V5.8.0 出貨後個管師回報:
+
+**1. 診斷欄位沒外框 — 跟其他欄位視覺不一致**
+- V5.8.0 結構:**標題列 → 純 Paragraph 診斷 + 細線 → mkBlock 治療 → mkBlock 討論摘要 → mkBlock 決策結論**
+- 個管師看到「**有 4 個有外框、診斷單獨沒外框**」覺得不一致
+- 修法:**診斷也改用 `mkBlock`,左欄加「診斷」標籤**,跟其他四個欄位一致;同時刪除診斷下方那條多餘細線(V5.6.1 加邊框之前留下的視覺分隔線,現在 mkBlock 自身有邊框,線多餘)
+- 套用範圍:個案討論 / 醫療小組 / 必要事件 三處診斷(前期追蹤本來就沒 diagnosis 欄位)
+
+**2. 預設字體改成黑體(微軟正黑體)**
+- 全 DOCX 內 27 處 `font:'新細明體'`(serif 明體)→ `font:'微軟正黑體'`(sans-serif 黑體)
+- 黑體比明體在數位螢幕跟列印筆畫均勻,可讀性更高
+- 跨平台保護:Word 在 Mac 自動 fallback 到 PingFang TC,Linux fallback 到 Noto Sans CJK(docx 7.8.2 的 `font` 參數只接受單一字串,但 Word 自動替代機制可靠)
+
+### V5.8.0
+**DOCX 個案討論視覺優化 — 三項合併**:個管師回報 V5.7.1 出貨的 DOCX 雖然格式正確,但「**治療欄資訊混亂、決策結論不夠突出**」,本版做三項視覺優化:
+
+**1. 治療欄日期前置 + 編號**
+- 舊:`Laparoscopic S8 hepatectomy(2020-06-11) : Initial HCC treatment...`
+- 新:`[1] (2020-06-11) Laparoscopic S8 hepatectomy : Initial HCC treatment...`
+- 編號 `[1] [2] [3]` 讓多個治療事件視覺上明確分隔
+- 日期前置讓眼睛快速掃過時序
+
+**2. 治療欄字級縮小(12 → 10)**
+- 治療是「資訊性」內容,不該跟摘要/決策同字級搶眼球
+- 字級縮小後,治療框視覺重量降低,決策結論才能「跳出來」
+
+**3. 決策結論加強(emphasis 深色標籤)**
+- mkBlock 加 `opts.emphasis=true` 參數
+- 標籤背景:淺灰 `C.bg` → 深灰 `C.dark`
+- 標籤文字:`C.mid`(暗灰) → 白色
+- 視覺效果類似「個案標題列」風格,讓「決策結論」一眼看見「這個是重點」
+- 個案討論 / 醫療小組 / 必要事件 / 前期追蹤 四處的決策結論**全部一致加 emphasis**
+
+### 副改動:`mkBlock` 函式擴充
+
+**舊**:`mkBlock(label, content, isEmpty)`
+**新**:`mkBlock(label, content, isEmpty, opts)`,opts 支援:
+- `opts.emphasis=true` → 標籤深色背景 + 白色文字
+- `opts.contentSize=N` → 自訂內容字級(預設 12)
+
+擴充非破壞性(opts 預設 `{}`,舊呼叫不受影響)。
+
+### V5.7.1
+**修 V5.7.0 引入的 regression — 前期追蹤會後填寫面板「繼續追蹤/結案」按鈕視覺異常**:個管師回報「點繼續追蹤/結案沒反應」。
+
+**根因**:V5.7.0 加 `postfup-summary` / `postfup-decision` 兩個 textarea 後,event handler 內的 `[data-action^="postfup-"]` **prefix match selector 變得太寬**,把新加的兩個 textarea 也誤匹配進去,當成按鈕處理:加上 `btn` className、改 `style.opacity='0.5'`,讓 textarea 視覺上半透明、像被禁用。
+
+**修法**:把 prefix match 改成**精確匹配兩個 toggle 按鈕**:
+```js
+// 修前
+.querySelectorAll('[data-action^="postfup-"]')
+// 修後
+.querySelectorAll('[data-action="postfup-ongoing"],[data-action="postfup-closed"]')
+```
+
+新增坑 #24 記錄此類「新增元素時忘記檢查既有 prefix selector 是否會誤匹配」陷阱。
+
+### V5.7.0
+**會後填寫面板擴充 + DOCX 同步加區段**:個管師回報「會後填寫面板只能填個案討論的摘要決策,前期追蹤 / 醫療小組 / 必要事件 都無法填寫結論」。本版兩大改動:
+
+**1. 會後填寫面板擴充**
+
+- **前期追蹤**:在原有「繼續追蹤 / 結案」按鈕下方,加上**討論摘要 + 決策結論**兩個 textarea(舊版完全沒有,V5.7.0 新增 `f.summary` / `f.decision` 欄位)
+- **醫療小組**(新增整個區段):每位成員加**討論摘要 + 決策結論**(資料欄位 V5.2.0 早已存在,只是會後填寫面板沒呈現)
+- **必要事件**(新增整個區段):同上
+- 共用卡片產生器 `_mkTeamCard(cid, arr, arrType, t, ti)`,`arrType='team'/'events'` 區分,避免重複 code
+- 資料寫入 `savePostMtg` 加 4 個新 selector:`postfup-summary` / `postfup-decision` / `postteam-summary` / `postteam-decision`(後兩者用 `arrtype` 區分 team/events)
+
+**2. DOCX 同步擴充**
+
+V5.6.x 之前 DOCX 只有「前期追蹤 → 個案討論 → 特殊議程」,**完全沒有醫療小組 / 必要事件**。本版補上:
+- 前期追蹤:在原有狀態 badge 之後加 `if(f.summary) mkBlock` + `if(f.decision) mkBlock`
+- 醫療小組:在個案討論之後、特殊議程之前新增整個區段(`mkSecHdr('醫療小組')` + 每位成員 `mkCaseHdr` + diagnosis + summary + decision)
+- 必要事件:同上,獨立區段(`mkSecHdr('必要事件')`)
+- 醫療小組 / 必要事件 DOCX 區段沿用 V5.6.2 的 mkBlock 邊框 + 12% 左欄樣式
+
+**舊資料相容**:沒填過 summary/decision 的舊資料,面板 textarea 為空、DOCX 內 `if(f.summary)` 為 false 不 push,完全不影響舊行為。
+
 ### V5.6.2
 **DOCX `mkBlock` 兩個視覺微調**:V5.6.1 加邊框後個管師回饋兩點:
 - **左欄太寬**:`16% → 12%`,右欄相應 `84% → 88%`,內容空間多 4%,個管師寫長文時換行頻率降低
