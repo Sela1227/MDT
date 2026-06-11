@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.9.0 | 換 MDT 主 logo:Gemini 生圖(圍桌+6 身影+中心焦點),依 Kit V1.15.0 §14.3 範本 B 醫療專業型設計。雙軌共存:favicon/PWA = MDT,右下角微標仍 SELA(改引用 sela.svg)。產出 5 個 PNG 套組 + ico + 1024 備用 |
 | V5.8.8 | 對齊 SELA Starter Kit V1.15.0(從 V1.7.1):theme-color `#F36825`→`#5A7A8B`(品牌色 vs 介面色分離,醫療型預設北歐霧藍);加 `favicon/sela.svg` + `<head>` SVG icon link;SELA-handoff 更新對齊紀錄 |
 | V5.8.7 | 「討論要點」全系統 7 處改名「討論方向」(個案討論/醫療小組/必要事件/CSV/投影片/AI prompt 一致);CSV 匯入向後相容(舊「討論要點」欄位 fallback);DOCX 不動,仍只出 2 欄(摘要+決策)|
 | V5.8.6 | 修坑 #19(累積 10+ 版未修):followupHTML 內 L3336+L3340 五處 `upd('${cid}','cases',${i},...)` 寫死 → 改 `'${type}'`。前期追蹤改名不再污染個案討論,DOCX 名字病歷號正常出現 |
@@ -465,10 +466,10 @@ if not missing:
 |------|---------|------|
 | zip 檔名格式 | `MDT V<x.y.z>.zip`(空格,非底線) | 打包時直接用 `zip MDT\ V4.8.0.zip ...` |
 | 必含 `.gitignore` | 已加,擋 `.DS_Store` / 機密 / 暫存區 | 新加目錄時記得評估是否需要忽略 |
-| 必含 SELA 品牌資產 | `favicon/` 整套(8 檔含 sela.svg)+ `<head>` 引用 + theme-color | V5.8.8 起 theme-color 改 `#5A7A8B`(品牌色 vs 介面色分離) |
+| **雙軌品牌 logo**(V1.15.0 §9 共存規則,V5.9.0 起)| favicon / PWA / apple-touch / android-chrome = MDT 主 logo;右下角 `sela-credit` 微標 = SELA logo(`favicon/sela.svg`)| favicon-32x32.png 已是 MDT 不是 SELA — 右下角微標**必須**改引用 sela.svg 才能保留 SELA 品牌存在 |
+| favicon/ 套組 | 9 檔:5 PNG + favicon.ico + mdt-1024.png + sela.svg + site.webmanifest | 備份 `favicon-sela-backup/` 保留原 SELA 套組,萬一需要回退 |
 | 介面色選擇(V1.8.1+) | `theme-color` 跟 `theme_color` in manifest 同步用 `#5A7A8B`(醫療型) | **不是** SELA 橘!Kit V1.8.1 起的分離鐵律;醫療型避免橘色警示聯想 |
-| SVG icon link(V1.6.0+) | `<link rel="icon" type="image/svg+xml" href="favicon/sela.svg">` 放最前 | 現代瀏覽器優先 SVG,任何大小銳利 |
-| 系統 UI logo | 右下角 fixed `<a id="sela-credit">` | 樣式 `opacity:.42`,hover 放大;不擋 UI |
+| 系統 UI logo | 右下角 fixed `<a id="sela-credit">` 引用 `favicon/sela.svg` | 樣式 `opacity:.42`,hover 放大;不擋 UI |
 | **回流通道**(V4.8.1 起) | `SELA-handoff.md` 在專案根目錄,跟 zip 一起交付 | 重大版本完成後更新內容,讓 SELA 升 Kit 用 |
 | 三位版本號逢十進位 | 同 #14 規則 | 已對齊 |
 | CLAUDE.md 必含五章 | 踩坑 / 業務對映 / 版本歷程 / 下版優先 / 一句話總結 | 已對齊 |
@@ -498,4 +499,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.8.8 對齊 SELA Starter Kit V1.15.0(從 V1.7.1 跳 8 版):**三件事**。**(1)theme-color 改北歐霧藍**:V1.8.1 起 Kit 區分「品牌色 vs 介面色」— 品牌色永遠 SELA 橘 #F36825(logo 用,不變),介面色依 app 主題(V1.15.0 §14.3 醫療型預設 `#5A7A8B`)。`<head>` 跟 `site.webmanifest` 同步改 `#F36825` → `#5A7A8B`。**(2)加 sela.svg**:從 Starter Kit `logo/svg/sela.svg` 拷貝進 `favicon/`,`<head>` 加 `<link rel="icon" type="image/svg+xml">` 放最前(現代瀏覽器優先 SVG,任何大小銳利)。favicon 從 7→8 檔。**(3)SELA-handoff 更新對齊紀錄**:Kit 版本標記從 V1.7.1 → V1.15.0,加對齊表(已對齊 3 項 + 不複製進 MDT 的 2 項,如 §14 子 app logo prompt 範本庫,需要時去 Starter Kit 取)。**logo 本身不變**(SELA 橘+白壁虎,品牌色鐵律);系統 UI 不變(MDT UI 是霧藍/灰色系,跟 SELA 橘原本就無關)。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統。
+V5.9.0 **換 MDT 主 logo — 雙軌品牌**:依 Kit V1.15.0 §14.3 範本 B(醫療專業型)為 MDT 設計專屬 logo,個管師用 Gemini 生圖完成 — **俯視圓桌 + 6 個身影圍坐 + 中心個案焦點 + MDT 字**,#5A7A8B 北歐霧藍背景。**雙軌共存 V1.15.0 §9**:favicon / apple-touch-icon / android-chrome(192/512) / favicon.ico(multi-res 16/32/48)全換 MDT logo;右下角 `sela-credit` 微標改引用 `favicon/sela.svg`(原本引用的 `favicon-32x32.png` 已被換成 MDT,要分開);`<head>` 移除 `sela.svg` icon link(避免 SVG/PNG 不一致)。產出 5 個 PNG 套組(16/32/180/192/512)+ favicon.ico + mdt-1024.png 備用。安全網:`favicon-sela-backup/` 保留原 SELA favicon 套組。設計檢核 V1.15.0 §15:13 項 11 ✓ / 1 需測試(16×16 favicon 可辨識性)/ 1 不適用 — 設計優秀。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統。

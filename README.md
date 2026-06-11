@@ -111,6 +111,33 @@
 
 ## 版本歷程
 
+### V5.9.0
+**換 MDT 主 logo — 雙軌品牌**(MDT 主身分 + SELA 平台微標)
+
+依 Starter Kit V1.15.0 §14.3 範本 B(醫療專業型)為 MDT 設計專屬 logo,個管師用 Gemini 生圖完成:**俯視圓桌 + 6 個身影圍坐 + 中心個案焦點 + MDT 字**,#5A7A8B 北歐霧藍背景。
+
+**整合範圍(V1.15.0 §9 雙軌共存規則)**:
+
+| 用途 | V5.8.x 之前 | V5.9.0 |
+|---|---|---|
+| favicon.ico / 16x16 / 32x32 | SELA 橘壁虎 | **MDT logo**(圍桌 + 個案焦點)|
+| apple-touch-icon 180px | SELA | **MDT** |
+| android-chrome 192/512 | SELA | **MDT** |
+| 右下角微標(`sela-credit`)| `favicon-32x32.png` | **改引用 `favicon/sela.svg`**(SELA 品牌仍存在)|
+| `<head>` SVG icon link | `sela.svg` | **移除**(避免 SVG/PNG 不一致;PNG 套組已足夠)|
+| theme-color | `#5A7A8B` | 不動 |
+| `mdt-1024.png` | — | **新增**(高解析備用)|
+
+**安全網**:`favicon-sela-backup/` 目錄保留原 SELA favicon 套組(萬一需要回退)。
+
+**設計理念**:
+- 主體「圍桌 + 中心焦點」直接譬喻 MDT(Multi-Disciplinary Team)精神:**個案在中心、多專科環繞**
+- 跟 SELA 主 logo「壁虎守護」的「守護一個對象」精神同源(DNA 繼承)
+- 不繼承壁虎(醫療型不適合,V1.15.0 §14.3 規定)
+- 16×16 favicon 仍可辨識「圍著一個圓」的輪廓
+
+**設計檢核**(V1.15.0 §15):13 項中 11 ✓ / 1 需測試 / 1 不適用 — 設計優秀
+
 ### V5.8.8
 **對齊 SELA Starter Kit V1.15.0**(從 V1.7.1 跳 8 個小版本):個管師交付新版 Starter Kit,主要對齊三件事。
 

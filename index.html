@@ -10,8 +10,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MDT 會議管理系統</title>
-<!-- V4.8.0: SELA logo favicon 套組 / V5.8.8: 對齊 Starter Kit V1.15.0 — 加 SVG icon、theme-color 改醫療系預設北歐霧藍 -->
-<link rel="icon" type="image/svg+xml" href="favicon/sela.svg">
+<!-- V4.8.0: favicon 套組 / V5.8.8: 對齊 Starter Kit V1.15.0 / V5.9.0: favicon 套組換成 MDT 主 logo,theme-color 維持 #5A7A8B 北歐霧藍 -->
 <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
@@ -1255,7 +1254,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.8.8';
+const VERSION='V5.9.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -8762,7 +8761,8 @@ function updateImgFolderSettingsStatus(){
 
 <!-- V4.8.0: SELA logo 右下角(對齊 SELA Starter Kit V1.6.0 品牌規範) -->
 <a href="https://github.com/Sela1227" target="_blank" rel="noopener" id="sela-credit" title="Made by SELA, with Claude" style="position:fixed;right:10px;bottom:10px;width:32px;height:32px;border-radius:6px;overflow:hidden;opacity:.42;transition:opacity .2s,transform .2s;z-index:50;cursor:pointer;text-decoration:none;line-height:0;box-shadow:0 1px 3px rgba(0,0,0,.15)" onmouseover="this.style.opacity='1';this.style.transform='scale(1.08)'" onmouseout="this.style.opacity='.42';this.style.transform=''">
-  <img src="favicon/favicon-32x32.png" alt="SELA" width="32" height="32" style="display:block">
+  <!-- V5.9.0: favicon-32x32.png 已換成 MDT logo,sela-credit 微標改引用 sela.svg 維持 SELA 品牌 -->
+  <img src="favicon/sela.svg" alt="SELA" width="32" height="32" style="display:block">
 </a>
 
 </body>
