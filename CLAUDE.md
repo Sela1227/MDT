@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.9.1 | 修 V5.9.0 出貨後 2 個 bug:(1)L609 多餘 `>` 字元(V5.8.8 編輯意外打進),(2)兩處 inline base64 SELA JPEG(L616 登入頁 + L655 sidebar)漏改 → 改引用 `favicon/android-chrome-192x192.png`。新坑 #26:換主 logo 必須 grep inline base64 跟 SVG |
 | V5.9.0 | 換 MDT 主 logo:Gemini 生圖(圍桌+6 身影+中心焦點),依 Kit V1.15.0 §14.3 範本 B 醫療專業型設計。雙軌共存:favicon/PWA = MDT,右下角微標仍 SELA(改引用 sela.svg)。產出 5 個 PNG 套組 + ico + 1024 備用 |
 | V5.8.8 | 對齊 SELA Starter Kit V1.15.0(從 V1.7.1):theme-color `#F36825`→`#5A7A8B`(品牌色 vs 介面色分離,醫療型預設北歐霧藍);加 `favicon/sela.svg` + `<head>` SVG icon link;SELA-handoff 更新對齊紀錄 |
 | V5.8.7 | 「討論要點」全系統 7 處改名「討論方向」(個案討論/醫療小組/必要事件/CSV/投影片/AI prompt 一致);CSV 匯入向後相容(舊「討論要點」欄位 fallback);DOCX 不動,仍只出 2 欄(摘要+決策)|
@@ -378,6 +379,20 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:打包前 grep `mkBlock`,如果有改動,XML 內必須有 `tblLayout="fixed"`(可用 `unzip -p docx word/document.xml | grep tblLayout` 驗)
 - 教訓 #2:**真實內容測試 vs 預覽**:V5.8.2 我自己 mock 的測試 docx 在某些 Word 版本看起來 OK(可能默認服從 DXA),但個管師端 Word 版本不同 → 仍壞。**下次 docx 改動必須請個管師打開實機產出回報,不能只看自己 mock 預覽**
 
+**#26 換主 logo 漏改 inline base64 跟內嵌 SVG(V5.9.0 → V5.9.1 才修)** ✅
+- 症狀:V5.9.0 出貨「換 MDT 主 logo」後,個管師回報「沒出現子程式的 logo」— 截圖看 sidebar 跟登入頁仍是 SELA 橘色 logo,跟瀏覽器分頁圖(已換成 MDT)不一致
+- 根因:換 logo 時我只想到 `favicon/` 目錄套組 + `<head>` 引用,**忘了 grep 整個 index.html 內的 `<img src="data:image/png;base64,...">` inline base64 圖**
+- V5.9.0 漏改兩處(L616 登入頁 56×56 + L655 sidebar 26×26),都用 inline base64 SELA JPEG 寫死
+- V5.9.1 修法:src 改 `favicon/android-chrome-192x192.png`,style 保留;附加效果檔案瘦身 ~10KB
+- 教訓:換 logo / 換品牌資產時,grep 範圍必須涵蓋:
+  - `favicon/` 目錄
+  - `<head>` 內的 `<link rel="icon">`
+  - **`src="data:image/png;base64,..."` inline base64**(整個 HTML 都要 grep)
+  - **`<svg>...</svg>` 內嵌 SVG**
+  - JS 字串內的圖片路徑(動態渲染用)
+- 預防:打包前 grep `data:image/(png|jpeg);base64` 如果有結果,逐個確認是不是該換的舊品牌資產
+- 一般原則:「**改品牌 = 改的不只 favicon**」 — 任何寫死在 HTML / JS 內的圖都要一起改
+
 ---
 
 
@@ -499,4 +514,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.9.0 **換 MDT 主 logo — 雙軌品牌**:依 Kit V1.15.0 §14.3 範本 B(醫療專業型)為 MDT 設計專屬 logo,個管師用 Gemini 生圖完成 — **俯視圓桌 + 6 個身影圍坐 + 中心個案焦點 + MDT 字**,#5A7A8B 北歐霧藍背景。**雙軌共存 V1.15.0 §9**:favicon / apple-touch-icon / android-chrome(192/512) / favicon.ico(multi-res 16/32/48)全換 MDT logo;右下角 `sela-credit` 微標改引用 `favicon/sela.svg`(原本引用的 `favicon-32x32.png` 已被換成 MDT,要分開);`<head>` 移除 `sela.svg` icon link(避免 SVG/PNG 不一致)。產出 5 個 PNG 套組(16/32/180/192/512)+ favicon.ico + mdt-1024.png 備用。安全網:`favicon-sela-backup/` 保留原 SELA favicon 套組。設計檢核 V1.15.0 §15:13 項 11 ✓ / 1 需測試(16×16 favicon 可辨識性)/ 1 不適用 — 設計優秀。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統。
+V5.9.1 修 V5.9.0 出貨後個管師回報的 2 個 bug。**Bug 1**:左上角浮出一個 `>` 字元 — L609 `</style>>` 多打了一個 `>`(V5.8.8 加 theme-color 時 str_replace 意外加進)。修法:刪除多餘 `>`。**Bug 2**:系統內 UI 還是 SELA logo — 不是 favicon 沒換,而是 UI 內**兩處 inline base64 SELA JPEG 漏改**:L616 登入頁(56×56)+ L655 sidebar(26×26)。兩處都用 `<img src="data:image/png;base64,/9j/4AAQ...">` 寫死,跟 favicon/ 無關。修法:src 改 `favicon/android-chrome-192x192.png`,style 保留。附加效果:檔案瘦身 ~10KB(2 個 5.4KB base64 拿掉)。**新增坑 #26**:換主 logo 必須 grep 整個 index.html 找出所有 inline base64 圖片跟內嵌 SVG,逐處改到 — V5.9.0 漏改造成「外面分頁圖是 MDT,但開系統還是 SELA」的不一致狀態,個管師立刻發現。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統。

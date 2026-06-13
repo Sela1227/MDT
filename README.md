@@ -111,6 +111,25 @@
 
 ## 版本歷程
 
+### V5.9.1
+**修 V5.9.0 出貨後個管師回報的 2 個 bug**
+
+**Bug 1: 頁面左上角浮出一個 `>` 字元**
+- 截圖頂端有個明顯的 `>` 飄在頁面外
+- 根因:L609 `</style>>` — `</style>` 後**多打了一個 `>`**(V5.8.8 加 `<meta name="theme-color">` 時 str_replace 編輯意外加進去)
+- 修法:`</style>>` → `</style>`
+
+**Bug 2: 系統內 UI 仍顯示 SELA logo 而非 MDT logo**
+- 個管師回報「最新版沒有出現子程式的 logo」— 截圖左上角 sidebar 還是 SELA 橘色框
+- 根因:V5.9.0 換 favicon 套組但**漏改兩處 inline base64 SELA JPEG**:
+  - L616:登入頁 `sh-login` 的 logo(56×56,margin-bottom:28px)
+  - L655:sidebar `.sb-logo` 的 logo(26×26,gap:9px)
+- 這兩處用 `<img src="data:image/png;base64,/9j/4AAQ...">` 寫死,**不引用 favicon/ 內任何檔案**,所以 V5.9.0 換 favicon 完全沒影響
+- 修法:兩處 `src` 改成 `favicon/android-chrome-192x192.png`(MDT logo PNG),style 保留(56×56 跟 26×26 不變)
+- **附加效果**:檔案瘦身 ~10KB(兩個 5.4KB base64 拿掉)
+
+**坑 #26 新增**:**換主 logo 時不能只換 favicon/ 套組**,必須 grep 整個 index.html 找出**所有 inline base64 圖片**跟 **內嵌 SVG**,逐處改到。V5.9.0 漏改這兩處,個管師看到「外面分頁圖是 MDT,但開系統還是 SELA」的不一致狀態。
+
 ### V5.9.0
 **換 MDT 主 logo — 雙軌品牌**(MDT 主身分 + SELA 平台微標)
 
