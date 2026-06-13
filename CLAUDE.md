@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.9.2 | 修 logo 白邊:Gemini 生圖 PNG 是 RGB 白底,圓角方形四角露白。用 Pillow 圓角遮罩(18%)切透明重產 favicon 套組;apple-touch-icon 特例做霧藍底滿版(iOS 自加圓角)。新坑 #27 |
 | V5.9.1 | 修 V5.9.0 出貨後 2 個 bug:(1)L609 多餘 `>` 字元(V5.8.8 編輯意外打進),(2)兩處 inline base64 SELA JPEG(L616 登入頁 + L655 sidebar)漏改 → 改引用 `favicon/android-chrome-192x192.png`。新坑 #26:換主 logo 必須 grep inline base64 跟 SVG |
 | V5.9.0 | 換 MDT 主 logo:Gemini 生圖(圍桌+6 身影+中心焦點),依 Kit V1.15.0 §14.3 範本 B 醫療專業型設計。雙軌共存:favicon/PWA = MDT,右下角微標仍 SELA(改引用 sela.svg)。產出 5 個 PNG 套組 + ico + 1024 備用 |
 | V5.8.8 | 對齊 SELA Starter Kit V1.15.0(從 V1.7.1):theme-color `#F36825`→`#5A7A8B`(品牌色 vs 介面色分離,醫療型預設北歐霧藍);加 `favicon/sela.svg` + `<head>` SVG icon link;SELA-handoff 更新對齊紀錄 |
@@ -393,6 +394,15 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:打包前 grep `data:image/(png|jpeg);base64` 如果有結果,逐個確認是不是該換的舊品牌資產
 - 一般原則:「**改品牌 = 改的不只 favicon**」 — 任何寫死在 HTML / JS 內的圖都要一起改
 
+**#27 AI 生圖 logo 是 RGB 白底,當 app icon 在深色背景露白角(V5.9.2 修)** ✅
+- 症狀:V5.9.1 換上 MDT logo 後,個管師回報 sidebar / 登入頁的 logo「圖示不是透明邊角,會有很醜的白邊」
+- 根因:Gemini(及多數 AI 生圖)輸出的 PNG 是 **RGB 模式無 alpha**,圓角方形 logo 的四個角是**白色**(生圖時的白背景填充)。深色 sidebar(#3A4550)上,方形圖四個白角露出來
+- 為什麼不能簡單去背:logo 主體(身影、桌面、MDT 字)**全是白色**,用「白色→透明」會把主體也挖掉
+- 修法:Pillow 圓角遮罩 — `ImageDraw.rounded_rectangle` 畫遮罩,`im.putalpha(mask)`,只把圓角**外**變透明,圓角**內**全保留。18% 圓角 = iOS/Android app icon 標準圓潤度
+- **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
+- 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
+- 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
 ---
 
 
@@ -514,4 +524,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.9.1 修 V5.9.0 出貨後個管師回報的 2 個 bug。**Bug 1**:左上角浮出一個 `>` 字元 — L609 `</style>>` 多打了一個 `>`(V5.8.8 加 theme-color 時 str_replace 意外加進)。修法:刪除多餘 `>`。**Bug 2**:系統內 UI 還是 SELA logo — 不是 favicon 沒換,而是 UI 內**兩處 inline base64 SELA JPEG 漏改**:L616 登入頁(56×56)+ L655 sidebar(26×26)。兩處都用 `<img src="data:image/png;base64,/9j/4AAQ...">` 寫死,跟 favicon/ 無關。修法:src 改 `favicon/android-chrome-192x192.png`,style 保留。附加效果:檔案瘦身 ~10KB(2 個 5.4KB base64 拿掉)。**新增坑 #26**:換主 logo 必須 grep 整個 index.html 找出所有 inline base64 圖片跟內嵌 SVG,逐處改到 — V5.9.0 漏改造成「外面分頁圖是 MDT,但開系統還是 SELA」的不一致狀態,個管師立刻發現。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統。
+V5.9.2 修 logo 白邊 — 個管師回報 sidebar/登入頁 MDT logo「圖示不是透明邊角,會有很醜的白邊」。根因:Gemini 生圖輸出的 PNG 是 **RGB 模式(無 alpha)**,圓角方形 logo 的**四個角是白色**(生圖白背景),在深色 sidebar 上四個白角露出來。修法:用 Pillow 圓角遮罩(18% app icon 標準)把圓角外切透明,重產 favicon 套組(16/32/192/512 + ico 都 RGBA 透明)。**apple-touch-icon 特例**:iOS 會自己加圓角遮罩,所以做成「霧藍底滿版不透明」避免 iOS 加圓角時透明區變黑。**關鍵**:不能簡單「白→透明」去背(logo 主體身影/桌面/MDT 字也是白,會被誤刪),正解是圓角遮罩只切圓角外。**新增坑 #27**:AI 生圖 logo PNG 常是 RGB 白底,當 app icon 用在深色背景會露白角,要嘛圓角遮罩切透明、要嘛生圖 prompt 就要求透明背景。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統。
