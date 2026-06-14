@@ -799,32 +799,38 @@ textarea{resize:vertical}
             </div>
             <!-- V4.6.2: 投影片配色色票條 — 放在 5 主按鈕上方,讓下方的 share link/Excel/JSON 等按鈕區保持連續 -->
             <div id="theme-strip" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:11px"></div>
-            <!-- 5-per-row grid layout -->
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
+            <!-- V5.9.3: 產出區分組分層 — 主力 4 按鈕 + 資料交換區,功能不刪只重排 -->
+            <!-- 分組標題:主力產出 -->
+            <div style="font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--textlt);margin:2px 0 7px;text-transform:uppercase">主力產出</div>
+            <!-- 主力 4 按鈕(LINE / HTML 投影片 / PPTX / DOCX) -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px">
               <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
-              <button class="btn btn-b" id="btn-share-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="shareHTMLSlides()">HTML 分享</button>
               <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
             </div>
             <div id="slide-share-link"></div>
+            <!-- 分組標題:資料交換與分享 -->
+            <div style="font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--textlt);margin:12px 0 7px;text-transform:uppercase;border-top:1px solid var(--blt);padding-top:12px">資料交換與分享</div>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
+              <button class="btn btn-b" id="btn-share-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="shareHTMLSlides()">HTML 分享</button>
               <button class="btn btn-b" id="btn-xlsx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="document.getElementById('json-import-input').click()">JSON 批次匯入</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportCaseJSON()">JSON 個案匯出</button>
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportMeetingJSON()">JSON 完整匯出</button>
             </div>
             <!-- V5.6.0: JSON 個案匯出選項 — 勾選附圖打包 zip -->
-            <div style="display:flex;gap:6px;align-items:center;margin-top:6px;padding:6px 8px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:11px">
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:6px 8px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:11px">
               <label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--text)">
                 <input type="checkbox" id="chk-json-with-images" style="width:12px;height:12px;cursor:pointer">
                 <span>JSON 個案匯出時 <b>附圖片打包 zip</b></span>
               </label>
               <span style="color:var(--textlt);margin-left:auto;font-size:10px">勾選後輸出 .zip(內含 cases.json + images/[病歷號]/)</span>
             </div>
+            <!-- 完整匯出 + AI 提示詞(較少用,收在資料區最底) -->
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;text-align:center;justify-content:center" onclick="genImportPrompt()">AI 匯入提示詞</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportMeetingJSON()">JSON 完整匯出</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genImportPrompt()">AI 匯入提示詞</button>
               <button class="btn btn-a" id="btn-ai-gen" style="padding:10px 4px;font-size:13px;background:var(--fog);display:none;text-align:center;justify-content:center" onclick="genAIInline()">AI 生成摘要</button>
             </div>
             <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
@@ -1254,7 +1260,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.9.2';
+const VERSION='V5.9.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
