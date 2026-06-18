@@ -111,6 +111,140 @@
 
 ## 版本歷程
 
+### V5.9.5
+**DOCX 會議記錄也顯示討論原因標籤**
+
+V5.9.4 加了 5 個討論原因標籤並修好 HTML 投影片顯示，但 DOCX 仍未帶。個管師確認「會議記錄也要看得到」，本版補上。
+
+**做法**：DOCX 個案標題列（深色橫條，原本是「編號 病歷號 姓名 年齡性別 VS 醫師」）尾端加討論原因標籤，用色塊文字（該標籤顏色當底色 + 白字 + 細空格模擬膠囊），配色跟 HTML / 編輯介面一致。
+
+**設計選擇**：標籤放標題列同一行（非獨立一行），因為標籤是個案身分的延伸屬性，同行語意連貫，且不增加每個個案的行高（會議記錄常有 10+ 個案）。
+
+**範圍**：HTML 投影片 + DOCX 記錄都顯示標籤。PPTX 簡報仍不帶（個管師未要求）。
+
+### V5.9.4
+**個案討論原因標籤:加 2 個 + 修 HTML 投影片沒顯示的 bug**
+
+個管師要求在原本 3 個討論原因標籤（首次討論、複雜案例、緊急）外，再加 **復發轉移** + **多重共病**，並回報「選完標籤但產生的 HTML 投影片沒出現這些 tag」。
+
+**改動 1：標籤從 3 個 → 5 個**
+- 新增「復發轉移」（紫 #8E44AD）、「多重共病」（墨綠 #2C7A6B）
+- 統一成全域 `FLAG_LIST` 陣列 + `flagColor(fl)` 函式，3 處渲染（編輯卡片徽章 / 選擇器 / 點擊 toggle）都改用，避免配色散落不一致
+
+**改動 2：修 bug — HTML 投影片沒顯示標籤**
+- 根因：投影片產出（`buildSlidesHTMLOnly`）完全沒讀 `c.flags`，所以選了標籤也不會出現在投影片
+- 修法：個案標題（病歷號 + 姓名後）加 flags 標籤渲染，實心小膠囊，配色跟編輯介面一致
+
+**注意**：DOCX 記錄、PPTX 簡報目前**仍未帶 flags**（個管師本次只要求 HTML；正式文件要不要顯示標籤待確認）。
+
+### V5.9.3
+**產出區分組分層 — 功能不刪只重排**
+
+個管師回報產出區 11 個按鈕平鋪太擠。分析後確認**每個功能都不同、沒有真正重複**,問題是「沒有分層」。改成兩組:
+
+**主力產出**(4 個常用,每場會議必用):
+LINE 通知、HTML 投影片、PPTX 簡報、DOCX 記錄
+
+**資料交換與分享**(加分組標題,預設展開,跟舊版一樣都看得到):
+HTML 分享、Excel 匯出、Excel 匯入、JSON 批次匯入、JSON 個案匯出、JSON 完整匯出、AI 匯入提示詞(收在最底,個管師少用)
+
+**重排原則**:
+- HTML 分享(需 GitHub token,進階)從主力移到資料區
+- AI 匯入提示詞(只有開發者 Sela 用)收到資料區最底
+- 11 個按鈕全保留,onclick/id 一個沒動,純視覺重排
+- 加兩個分組標題 + 一條分隔線,讓「主力」跟「資料交換」一眼分得開
+
+**按鈕用途分析**(確認非重複):
+- HTML 投影片 vs HTML 分享:下載本機 vs 上傳 GitHub 產連結(共用核心)
+- JSON 完整匯出 vs 個案匯出:整場會議備份 vs 個案臨床資料交換
+- Excel vs JSON 匯出:同資料不同格式,個管師依習慣選
+
+### V5.9.2
+**修 logo 白邊 — favicon 套組改透明圓角**
+
+個管師回報 V5.9.1 後 sidebar/登入頁的 MDT logo「圖示不是透明邊角,會有很醜的白邊」。
+
+**根因**:Gemini 生圖輸出的 PNG 是 **RGB 模式(無 alpha 透明通道)**,圓角方形 logo 的**四個角是白色**(生圖時的白背景)。在深色 sidebar 上,方形圖的四個白角露出來 = 白邊。
+
+**修法**:用 Pillow 重新產 favicon 套組,加 18%(app icon 標準)圓角遮罩,**圓角外切成透明**:
+- favicon-16x16 / 32x32 / android-chrome 192/512 → RGBA 透明圓角
+- favicon.ico(multi-res 16/32/48)→ 透明圓角
+- **apple-touch-icon 特例**:iOS 會自己加圓角遮罩,所以做成「**霧藍底滿版不透明**」(避免 iOS 加圓角時透明區變黑)
+
+**關鍵知識**:
+- 不能簡單「白色 → 透明」去背,因為 logo 主體(身影/桌面/MDT 字)也是白色,會被誤刪
+- 正解是「圓角遮罩」:只把圓角**外**變透明,圓角**內**全部內容保留
+- apple-touch-icon 用霧藍底不透明(iOS app icon 規範)
+
+**坑 #27 新增**:AI 生圖的 logo PNG 常是 RGB 白底,當 app icon 用在深色背景會露白角。要嘛用圓角遮罩切透明,要嘛在生圖 prompt 就要求透明背景。
+
+### V5.9.1
+**修 V5.9.0 出貨後個管師回報的 2 個 bug**
+
+**Bug 1: 頁面左上角浮出一個 `>` 字元**
+- 截圖頂端有個明顯的 `>` 飄在頁面外
+- 根因:L609 `</style>>` — `</style>` 後**多打了一個 `>`**(V5.8.8 加 `<meta name="theme-color">` 時 str_replace 編輯意外加進去)
+- 修法:`</style>>` → `</style>`
+
+**Bug 2: 系統內 UI 仍顯示 SELA logo 而非 MDT logo**
+- 個管師回報「最新版沒有出現子程式的 logo」— 截圖左上角 sidebar 還是 SELA 橘色框
+- 根因:V5.9.0 換 favicon 套組但**漏改兩處 inline base64 SELA JPEG**:
+  - L616:登入頁 `sh-login` 的 logo(56×56,margin-bottom:28px)
+  - L655:sidebar `.sb-logo` 的 logo(26×26,gap:9px)
+- 這兩處用 `<img src="data:image/png;base64,/9j/4AAQ...">` 寫死,**不引用 favicon/ 內任何檔案**,所以 V5.9.0 換 favicon 完全沒影響
+- 修法:兩處 `src` 改成 `favicon/android-chrome-192x192.png`(MDT logo PNG),style 保留(56×56 跟 26×26 不變)
+- **附加效果**:檔案瘦身 ~10KB(兩個 5.4KB base64 拿掉)
+
+**坑 #26 新增**:**換主 logo 時不能只換 favicon/ 套組**,必須 grep 整個 index.html 找出**所有 inline base64 圖片**跟 **內嵌 SVG**,逐處改到。V5.9.0 漏改這兩處,個管師看到「外面分頁圖是 MDT,但開系統還是 SELA」的不一致狀態。
+
+### V5.9.0
+**換 MDT 主 logo — 雙軌品牌**(MDT 主身分 + SELA 平台微標)
+
+依 Starter Kit V1.15.0 §14.3 範本 B(醫療專業型)為 MDT 設計專屬 logo,個管師用 Gemini 生圖完成:**俯視圓桌 + 6 個身影圍坐 + 中心個案焦點 + MDT 字**,#5A7A8B 北歐霧藍背景。
+
+**整合範圍(V1.15.0 §9 雙軌共存規則)**:
+
+| 用途 | V5.8.x 之前 | V5.9.0 |
+|---|---|---|
+| favicon.ico / 16x16 / 32x32 | SELA 橘壁虎 | **MDT logo**(圍桌 + 個案焦點)|
+| apple-touch-icon 180px | SELA | **MDT** |
+| android-chrome 192/512 | SELA | **MDT** |
+| 右下角微標(`sela-credit`)| `favicon-32x32.png` | **改引用 `favicon/sela.svg`**(SELA 品牌仍存在)|
+| `<head>` SVG icon link | `sela.svg` | **移除**(避免 SVG/PNG 不一致;PNG 套組已足夠)|
+| theme-color | `#5A7A8B` | 不動 |
+| `mdt-1024.png` | — | **新增**(高解析備用)|
+
+**安全網**:`favicon-sela-backup/` 目錄保留原 SELA favicon 套組(萬一需要回退)。
+
+**設計理念**:
+- 主體「圍桌 + 中心焦點」直接譬喻 MDT(Multi-Disciplinary Team)精神:**個案在中心、多專科環繞**
+- 跟 SELA 主 logo「壁虎守護」的「守護一個對象」精神同源(DNA 繼承)
+- 不繼承壁虎(醫療型不適合,V1.15.0 §14.3 規定)
+- 16×16 favicon 仍可辨識「圍著一個圓」的輪廓
+
+**設計檢核**(V1.15.0 §15):13 項中 11 ✓ / 1 需測試 / 1 不適用 — 設計優秀
+
+### V5.8.8
+**對齊 SELA Starter Kit V1.15.0**(從 V1.7.1 跳 8 個小版本):個管師交付新版 Starter Kit,主要對齊三件事。
+
+**1. theme-color 改北歐霧藍 `#5A7A8B`**(V1.8.1 起的新規範)
+- Kit V1.8.1 起區分「**品牌色**」(SELA 橘 #F36825,logo 用,不變)vs「**介面色**」(theme-color、PWA 啟動畫面,依 app 主題)
+- 醫療型 app 預設 `#5A7A8B` 北歐霧藍(V1.15.0 §14.3),避免橘色帶來的「警示/警告」聯想
+- `<head>` 的 `<meta name="theme-color">` 跟 `site.webmanifest` 的 `theme_color` 同步改
+
+**2. 加 `favicon/sela.svg` + `<head>` SVG icon link**
+- 從 Starter Kit `logo/svg/sela.svg` 拷貝進 `favicon/`
+- `<head>` 加 `<link rel="icon" type="image/svg+xml" href="favicon/sela.svg">` 放在 ico/png 之前 — 現代瀏覽器優先 SVG,任何大小都銳利
+- favicon/ 從 7 個檔案 → 8 個
+
+**3. SELA-handoff.md 更新 Kit 版本標記 + 加 V1.15.0 對齊紀錄**
+- Kit 版本標記從 V1.7.1 → V1.15.0
+- 加對齊表:已對齊的 3 項 + 不複製進 MDT 的 2 項(子 app logo prompt 範本、共通檢核清單,需要時去 Starter Kit 取)
+- 理由:MDT 的 CLAUDE.md 章法第十條「上下文密度檢查 — 不會被下次 Claude 引用的段落要砍」 → 子 app prompt 對 MDT 後續會議無用,留指引即可
+
+**logo 本身不變**(品牌色鐵律):仍是 SELA 橘 + 白壁虎。**只變介面色**。
+**系統 UI 不變**:MDT UI 是霧藍 / 灰色系(`--fog-*`),原本就跟 SELA 橘無關,改 theme-color 不會造成 UI 不一致。
+
 ### V5.8.7
 **「討論要點」全系統一律改名「討論方向」**:V5.8.6 個管師回報「醫療小組三欄(討論要點/摘要/決策)名稱容易搞混」,建議改成更明確的命名:
 

@@ -11,12 +11,52 @@
 - **專案名稱:** MDT 會議管理系統
 - **專案類型:** 純靜態網頁(單一 HTML 檔,localStorage 儲存,GitHub Pages 部署)
 - **技術棧:** HTML / 原生 JS(無 framework)/ localStorage / File System Access API(NAS 同步)
-- **規模:** 1 個 index.html(~518KB / ~8150 行)+ 文件 4 份 + favicon 套組 7 檔
-- **使用 Kit 版本:** V1.7.1(handoff 內容首版於 V4.8.1 對齊 V1.6.0 時寫成;V4.8.2 升 Kit 版本標記至 V1.7.1)
-- **完成版本:** V4.8.2(對齊 Kit V1.7.1 後的版本)
-- **完成日期:** 2026-05-07
+- **規模:** 1 個 index.html(~644KB / ~8770 行)+ 文件 4 份 + favicon 套組 9 檔(V5.9.0 換 MDT 主 logo + 保留 sela.svg)
+- **使用 Kit 版本:** V1.15.0(V5.8.8 起,從 V1.7.1 升上來;首版 handoff 內容於 V4.8.1 對齊 V1.6.0)
+- **完成版本:** V5.9.0(對齊 Kit V1.15.0 後的版本,並依 §14.3 範本 B 自製 MDT 主 logo)
+- **完成日期:** 2026-06-12
 
 **特殊背景**:這不是用 Kit 從零做的新專案,是**已存在 4.7 個版本的成熟專案接 Kit 規範**。所以反饋不是「冷啟動體驗」,是「**現有成熟專案接 Kit 的衝突點**」 — 這個視角 Kit 之前沒收過。
+
+### V5.9.0 自製 MDT 主 logo 紀錄(雙軌品牌實戰)
+
+MDT 第一個套用 Kit V1.15.0 §14.3 範本 B(醫療專業型)生圖工作流的子 app。完整流程紀錄:
+
+| 步驟 | 內容 |
+|---|---|
+| 1. 範本選 | §14.3 範本 B 醫療專業型(MDT 是癌症中心多專科會議,完全符合)|
+| 2. 主體設計 | 圍桌俯視 + 6 個身影 + 中心個案焦點(自訂,非範本 B 列舉的「path/shield/book/compass」)|
+| 3. 背景色 | #5A7A8B 北歐霧藍(範本 B 預設)|
+| 4. App 名稱 | MDT(3 字母無襯線粗體)|
+| 5. 壁虎繼承 | NO(範本 B 規定)|
+| 6. 生圖工具 | Gemini(Sela 自選)|
+| 7. 生圖結果 | 一次到位,無需 §10.6「不滿意」處理 |
+| 8. 程式整合 | favicon 套組(5 PNG + ico + 1024)+ 右下角微標改引用 sela.svg + `<head>` 移除 sela.svg icon link |
+| 9. 雙軌共存 | favicon = MDT 主身分;右下角 sela.svg = SELA 平台微標 |
+| 10. 設計檢核(§15) | 13 項 11 ✓ / 1 需測試(16×16 favicon)/ 1 不適用(DNA 2 字形呼應對 MDT 縮寫不適用)|
+
+**回流給 SELA Kit 的建議**(這次發現,可供 Kit 升 V1.16 參考):
+
+1. **§14 範本 B 可補一個 MDT/會議型範例**:Cancer Navigation / CCM Manual / Slip 都是「個體」工具,但 MDT 是「**團隊會議**」型醫療工具,主體該設計成「圍桌」這種「**多對一**」概念。範本 B 列舉的 subject 沒涵蓋這類。
+2. **§9 雙軌共存**:當 favicon-32x32.png 換成子 app logo,**`sela-credit` 微標必須改引用獨立的 SELA 圖檔**(MDT V5.9.0 改引用 `sela.svg`)。Kit §9 該明寫這個陷阱 — 若不分開,微標也會變成子 app logo,違反雙軌規則。
+3. **`<head>` SVG icon link**:V5.8.8 加的 `<link rel="icon" type="image/svg+xml" href="favicon/sela.svg">` 在 V5.9.0 必須移除(因為 favicon 已不是 SELA 而是 MDT,SVG/PNG 不一致會讓現代瀏覽器混亂)。Kit §4.1 該補充:「當你有自己的子 app logo 時,SVG icon link 該指向自己 logo 的 SVG 而非 SELA;若沒做子 app SVG,直接拿掉這 line」。
+
+### V1.15.0 對齊紀錄(V5.8.8)
+
+從 V1.7.1 → V1.15.0 跨 8 個小版本,Kit 新增了若干規範。**MDT 對齊範圍 + 不對齊範圍**:
+
+| Kit 規範 | MDT V5.9.0 對齊狀態 |
+|---|---|
+| V1.8.1 品牌色 vs 介面色分離(`theme-color` 依 app 主題,不要永遠用 SELA 橘) | ✅ 已對齊 — theme-color 從 `#F36825` 改 `#5A7A8B`(北歐霧藍,V1.15.0 §14.3 醫療型預設) |
+| V1.8.1 `site.webmanifest` 客製化 `theme_color` | ✅ 已對齊 — manifest 同步 `#5A7A8B` |
+| V1.6.0+ `<head>` 加 SVG icon link(現代瀏覽器優先) | ⚠️ V5.8.8 加,V5.9.0 拿掉(因 favicon 換成 MDT 後 SVG/PNG 不一致) |
+| V1.13.0+ §14 子 app logo prompt 範本庫(5 種類型) | ✅ V5.9.0 實戰套用範本 B 為 MDT 自製主 logo(雙軌共存 §9 規則) |
+| V1.14.0+ §15 共通檢核清單 | ✅ V5.9.0 設計檢核 13 項 11 ✓ |
+| V1.8.0 favicon 用相對路徑(坑 #39) | ✅ MDT 從 V4.8.x 就一直用相對路徑(`favicon/...` 而非 `/favicon/...`),本來就對 |
+
+**logo 雙軌**(V5.9.0 起):
+- **主 logo** = MDT 圍桌(favicon、PWA、apple-touch、android-chrome)
+- **平台微標** = SELA 壁虎(右下角 `sela-credit`,引用 `favicon/sela.svg`)
 
 ### 提案前檢查紀錄(回應 V1.7.0 加的兩個檢查)
 

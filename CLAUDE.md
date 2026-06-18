@@ -144,6 +144,13 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.9.5 | DOCX 會議記錄個案標題列尾端加討論原因標籤（色塊文字 shading,配色跟 HTML 一致）。範圍:HTML+DOCX 都顯示,PPTX 仍不帶 |
+| V5.9.4 | 個案討論原因標籤加 2 個（復發轉移/多重共病）共 5 個 + 修 bug（投影片沒讀 c.flags 所以選了不顯示）。統一 FLAG_LIST + flagColor helper,3 處渲染改用。DOCX/PPTX 暫未加 flags（待確認）|
+| V5.9.3 | 產出區分組分層:11 按鈕分「主力產出(LINE/HTML投影片/PPTX/DOCX)」+「資料交換與分享(HTML分享/Excel匯出入/JSON匯入出/AI提示詞)」兩組,加分組標題。功能不刪、onclick/id 全保留,純重排 |
+| V5.9.2 | 修 logo 白邊:Gemini 生圖 PNG 是 RGB 白底,圓角方形四角露白。用 Pillow 圓角遮罩(18%)切透明重產 favicon 套組;apple-touch-icon 特例做霧藍底滿版(iOS 自加圓角)。新坑 #27 |
+| V5.9.1 | 修 V5.9.0 出貨後 2 個 bug:(1)L609 多餘 `>` 字元(V5.8.8 編輯意外打進),(2)兩處 inline base64 SELA JPEG(L616 登入頁 + L655 sidebar)漏改 → 改引用 `favicon/android-chrome-192x192.png`。新坑 #26:換主 logo 必須 grep inline base64 跟 SVG |
+| V5.9.0 | 換 MDT 主 logo:Gemini 生圖(圍桌+6 身影+中心焦點),依 Kit V1.15.0 §14.3 範本 B 醫療專業型設計。雙軌共存:favicon/PWA = MDT,右下角微標仍 SELA(改引用 sela.svg)。產出 5 個 PNG 套組 + ico + 1024 備用 |
+| V5.8.8 | 對齊 SELA Starter Kit V1.15.0(從 V1.7.1):theme-color `#F36825`→`#5A7A8B`(品牌色 vs 介面色分離,醫療型預設北歐霧藍);加 `favicon/sela.svg` + `<head>` SVG icon link;SELA-handoff 更新對齊紀錄 |
 | V5.8.7 | 「討論要點」全系統 7 處改名「討論方向」(個案討論/醫療小組/必要事件/CSV/投影片/AI prompt 一致);CSV 匯入向後相容(舊「討論要點」欄位 fallback);DOCX 不動,仍只出 2 欄(摘要+決策)|
 | V5.8.6 | 修坑 #19(累積 10+ 版未修):followupHTML 內 L3336+L3340 五處 `upd('${cid}','cases',${i},...)` 寫死 → 改 `'${type}'`。前期追蹤改名不再污染個案討論,DOCX 名字病歷號正常出現 |
 | V5.8.5 | DOCX 治療欄樣式升級:標題行 `(date) name :` 灰底粗體、詳細內容縮排 8pt、去掉 `[i]` 編號;mkBlock 擴充 `opts.lines` 支援每行獨立樣式 |
@@ -376,6 +383,29 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 預防:打包前 grep `mkBlock`,如果有改動,XML 內必須有 `tblLayout="fixed"`(可用 `unzip -p docx word/document.xml | grep tblLayout` 驗)
 - 教訓 #2:**真實內容測試 vs 預覽**:V5.8.2 我自己 mock 的測試 docx 在某些 Word 版本看起來 OK(可能默認服從 DXA),但個管師端 Word 版本不同 → 仍壞。**下次 docx 改動必須請個管師打開實機產出回報,不能只看自己 mock 預覽**
 
+**#26 換主 logo 漏改 inline base64 跟內嵌 SVG(V5.9.0 → V5.9.1 才修)** ✅
+- 症狀:V5.9.0 出貨「換 MDT 主 logo」後,個管師回報「沒出現子程式的 logo」— 截圖看 sidebar 跟登入頁仍是 SELA 橘色 logo,跟瀏覽器分頁圖(已換成 MDT)不一致
+- 根因:換 logo 時我只想到 `favicon/` 目錄套組 + `<head>` 引用,**忘了 grep 整個 index.html 內的 `<img src="data:image/png;base64,...">` inline base64 圖**
+- V5.9.0 漏改兩處(L616 登入頁 56×56 + L655 sidebar 26×26),都用 inline base64 SELA JPEG 寫死
+- V5.9.1 修法:src 改 `favicon/android-chrome-192x192.png`,style 保留;附加效果檔案瘦身 ~10KB
+- 教訓:換 logo / 換品牌資產時,grep 範圍必須涵蓋:
+  - `favicon/` 目錄
+  - `<head>` 內的 `<link rel="icon">`
+  - **`src="data:image/png;base64,..."` inline base64**(整個 HTML 都要 grep)
+  - **`<svg>...</svg>` 內嵌 SVG**
+  - JS 字串內的圖片路徑(動態渲染用)
+- 預防:打包前 grep `data:image/(png|jpeg);base64` 如果有結果,逐個確認是不是該換的舊品牌資產
+- 一般原則:「**改品牌 = 改的不只 favicon**」 — 任何寫死在 HTML / JS 內的圖都要一起改
+
+**#27 AI 生圖 logo 是 RGB 白底,當 app icon 在深色背景露白角(V5.9.2 修)** ✅
+- 症狀:V5.9.1 換上 MDT logo 後,個管師回報 sidebar / 登入頁的 logo「圖示不是透明邊角,會有很醜的白邊」
+- 根因:Gemini(及多數 AI 生圖)輸出的 PNG 是 **RGB 模式無 alpha**,圓角方形 logo 的四個角是**白色**(生圖時的白背景填充)。深色 sidebar(#3A4550)上,方形圖四個白角露出來
+- 為什麼不能簡單去背:logo 主體(身影、桌面、MDT 字)**全是白色**,用「白色→透明」會把主體也挖掉
+- 修法:Pillow 圓角遮罩 — `ImageDraw.rounded_rectangle` 畫遮罩,`im.putalpha(mask)`,只把圓角**外**變透明,圓角**內**全保留。18% 圓角 = iOS/Android app icon 標準圓潤度
+- **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
+- 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
+- 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
 ---
 
 
@@ -456,16 +486,18 @@ if not missing:
 
 ---
 
-## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起)
+## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起;V5.8.8 升至 V1.15.0)
 
-本專案已對齊 **SELA Starter Kit V1.7.1** 的關鍵規範(原於 V4.8.0 對齊 V1.6.0,V4.8.2 升標記到 V1.7.1)。每次升版都應檢查是否仍符合:
+本專案已對齊 **SELA Starter Kit V1.15.0**(原於 V4.8.0 對齊 V1.6.0,V4.8.2 升 V1.7.1,V5.8.8 升 V1.15.0)。每次升版都應檢查是否仍符合:
 
 | 規範 | 對齊方式 | 注意 |
 |------|---------|------|
 | zip 檔名格式 | `MDT V<x.y.z>.zip`(空格,非底線) | 打包時直接用 `zip MDT\ V4.8.0.zip ...` |
 | 必含 `.gitignore` | 已加,擋 `.DS_Store` / 機密 / 暫存區 | 新加目錄時記得評估是否需要忽略 |
-| 必含 SELA 品牌資產 | `favicon/` 整套 + `<head>` 引用 + `theme-color #F36825` | 路徑用相對(GitHub Pages 子路徑相容) |
-| 系統 UI logo | 右下角 fixed `<a id="sela-credit">` | 樣式 `opacity:.42`,hover 放大;不擋 UI |
+| **雙軌品牌 logo**(V1.15.0 §9 共存規則,V5.9.0 起)| favicon / PWA / apple-touch / android-chrome = MDT 主 logo;右下角 `sela-credit` 微標 = SELA logo(`favicon/sela.svg`)| favicon-32x32.png 已是 MDT 不是 SELA — 右下角微標**必須**改引用 sela.svg 才能保留 SELA 品牌存在 |
+| favicon/ 套組 | 9 檔:5 PNG + favicon.ico + mdt-1024.png + sela.svg + site.webmanifest | 備份 `favicon-sela-backup/` 保留原 SELA 套組,萬一需要回退 |
+| 介面色選擇(V1.8.1+) | `theme-color` 跟 `theme_color` in manifest 同步用 `#5A7A8B`(醫療型) | **不是** SELA 橘!Kit V1.8.1 起的分離鐵律;醫療型避免橘色警示聯想 |
+| 系統 UI logo | 右下角 fixed `<a id="sela-credit">` 引用 `favicon/sela.svg` | 樣式 `opacity:.42`,hover 放大;不擋 UI |
 | **回流通道**(V4.8.1 起) | `SELA-handoff.md` 在專案根目錄,跟 zip 一起交付 | 重大版本完成後更新內容,讓 SELA 升 Kit 用 |
 | 三位版本號逢十進位 | 同 #14 規則 | 已對齊 |
 | CLAUDE.md 必含五章 | 踩坑 / 業務對映 / 版本歷程 / 下版優先 / 一句話總結 | 已對齊 |
@@ -485,14 +517,15 @@ if not missing:
 
 **按優先序：**
 
-1. **「(8-其他特殊複雜個案)」討論原因快速標籤系統** — 個管師有時要標個案因(如「治療中死亡」「必要提報」),用快速標籤而非每次手動打字
-2. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
-3. DOCX 微調觀察期:V5.8.5 治療欄樣式 + V5.8.7 改名後,個管師實際用幾場會議後可能還有微調(如灰底色階、縮排幅度)
-4. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
-5. 設定頁新增「同步狀態」面板:NAS 上有幾筆 tombstone、上次同步時間、衝突歷史
+1. **升級系統內建 PPTX 產出邏輯** — 個管師要求「每次按 PPTX 都變漂亮」(改 index.html 的 genPPTX JS 版型/配色/層次)。注意:JS 庫(PptxGenJS)有天花板,先確認個管師看現有產出後的具體不滿點,再定設計規格。屬 V5.10.0(y+1,新功能級)
+2. **「(8-其他特殊複雜個案)」討論原因快速標籤系統** — 個管師有時要標個案因(如「治療中死亡」「必要提報」),用快速標籤而非每次手動打字
+3. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
+4. DOCX 微調觀察期:V5.8.5 治療欄樣式 + V5.8.7 改名後,個管師實際用幾場會議後可能還有微調(如灰底色階、縮排幅度)
+5. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
+6. 設定頁新增「同步狀態」面板:NAS 上有幾筆 tombstone、上次同步時間、衝突歷史
 
 ---
 
 ## 十一、一句話總結
 
-V5.8.7 「討論要點」全系統一律改名「討論方向」:個管師回報「醫療小組三欄(討論要點/摘要/決策)名稱容易搞混」,建議改名讓三欄角色更明確 — **討論方向**(會前填,要討論的方向)+**摘要**(會後)+**決策**(會後)。改名範圍 8 處:L3325 個案討論編輯介面 / L3362 醫療小組編輯介面 + placeholder / L3376 teamViewHTML / L6208 HTML 投影片 / L6800 CSV 匯入(向後相容三層 fallback `r['討論方向']||r['討論要點']||r['討論']`)/ L6912 CSV 匯出 / L7093 AI prompt / 編輯介面 placeholder 對齊。**程式變數 `discussion` 完全不動**,只改顯示文字。**DOCX 不加 discussion 欄**(個管師決定:討論方向是會前筆記,不需出在會議記錄),醫療小組/必要事件 DOCX 仍維持兩欄(摘要+決策)。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統 + NAS 同步觀察期 + DOCX 微調(依個管師回饋)。
+V5.9.5 DOCX 會議記錄也顯示討論原因標籤。V5.9.4 加了 5 個標籤並修好 HTML 投影片顯示,但 DOCX 仍未帶;個管師確認「會議記錄也要看得到」。做法:`mkCaseHdr` 個案標題列（深色橫條）尾端加 flags,用**色塊文字**（`shading:{fill:flagColor(fl).replace('#','')}` 該顏色當底 + 白字 + `\u2009` 細空格模擬膠囊）。設計選擇放同一行（非獨立行）— 標籤是個案身分延伸屬性,同行語意連貫,且不增行高（會議記錄常 10+ 個案）。注意 docx 的 `fill` 要不帶 `#` 的 hex,所以 `flagColor(fl).replace('#','')`。XML 驗證標籤色塊 shding 數正確（1+2+3=6）。**範圍:HTML 投影片 + DOCX 記錄都顯示,PPTX 仍不帶（個管師未要求）**。下版優先:升級系統內建 PPTX 產出邏輯（V5.10.0）。
