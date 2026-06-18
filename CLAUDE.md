@@ -144,6 +144,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.9.5 | DOCX 會議記錄個案標題列尾端加討論原因標籤（色塊文字 shading,配色跟 HTML 一致）。範圍:HTML+DOCX 都顯示,PPTX 仍不帶 |
+| V5.9.4 | 個案討論原因標籤加 2 個（復發轉移/多重共病）共 5 個 + 修 bug（投影片沒讀 c.flags 所以選了不顯示）。統一 FLAG_LIST + flagColor helper,3 處渲染改用。DOCX/PPTX 暫未加 flags（待確認）|
 | V5.9.3 | 產出區分組分層:11 按鈕分「主力產出(LINE/HTML投影片/PPTX/DOCX)」+「資料交換與分享(HTML分享/Excel匯出入/JSON匯入出/AI提示詞)」兩組,加分組標題。功能不刪、onclick/id 全保留,純重排 |
 | V5.9.2 | 修 logo 白邊:Gemini 生圖 PNG 是 RGB 白底,圓角方形四角露白。用 Pillow 圓角遮罩(18%)切透明重產 favicon 套組;apple-touch-icon 特例做霧藍底滿版(iOS 自加圓角)。新坑 #27 |
 | V5.9.1 | 修 V5.9.0 出貨後 2 個 bug:(1)L609 多餘 `>` 字元(V5.8.8 編輯意外打進),(2)兩處 inline base64 SELA JPEG(L616 登入頁 + L655 sidebar)漏改 → 改引用 `favicon/android-chrome-192x192.png`。新坑 #26:換主 logo 必須 grep inline base64 跟 SVG |
@@ -526,4 +528,4 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.9.3 產出區分組分層 — 個管師回報 11 個按鈕平鋪太擠。分析後確認**每個功能都不同、沒真正重複**(HTML 投影片=下載本機 vs HTML 分享=上傳 GitHub;JSON 完整匯出=整場備份 vs 個案匯出=臨床資料交換;Excel vs JSON=同資料不同格式),問題是「沒分層」。改兩組:**主力產出**(LINE/HTML投影片/PPTX/DOCX 4 個常用)+**資料交換與分享**(HTML分享/Excel匯出入/JSON批次匯入/個案匯出/完整匯出/AI提示詞)。HTML 分享從主力移到資料區(需 GitHub token,進階);AI 匯入提示詞收資料區最底(只有 Sela 用)。**11 按鈕全保留、onclick/id 一個沒動,純視覺重排** + 加 2 個分組標題 + 分隔線。預設展開(個管師選 B,跟舊版一樣都看得到只加標題)。下版優先:**升級系統內建 PPTX 產出邏輯**(個管師要求每次按都變漂亮,改 index.html 的 genPPTX JS,V5.10.0)。
+V5.9.5 DOCX 會議記錄也顯示討論原因標籤。V5.9.4 加了 5 個標籤並修好 HTML 投影片顯示,但 DOCX 仍未帶;個管師確認「會議記錄也要看得到」。做法:`mkCaseHdr` 個案標題列（深色橫條）尾端加 flags,用**色塊文字**（`shading:{fill:flagColor(fl).replace('#','')}` 該顏色當底 + 白字 + `\u2009` 細空格模擬膠囊）。設計選擇放同一行（非獨立行）— 標籤是個案身分延伸屬性,同行語意連貫,且不增行高（會議記錄常 10+ 個案）。注意 docx 的 `fill` 要不帶 `#` 的 hex,所以 `flagColor(fl).replace('#','')`。XML 驗證標籤色塊 shding 數正確（1+2+3=6）。**範圍:HTML 投影片 + DOCX 記錄都顯示,PPTX 仍不帶（個管師未要求）**。下版優先:升級系統內建 PPTX 產出邏輯（V5.10.0）。
