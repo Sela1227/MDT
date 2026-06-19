@@ -11,12 +11,50 @@
 - **專案名稱:** MDT 會議管理系統
 - **專案類型:** 純靜態網頁(單一 HTML 檔,localStorage 儲存,GitHub Pages 部署)
 - **技術棧:** HTML / 原生 JS(無 framework)/ localStorage / File System Access API(NAS 同步)
-- **規模:** 1 個 index.html(~644KB / ~8770 行)+ 文件 4 份 + favicon 套組 9 檔(V5.9.0 換 MDT 主 logo + 保留 sela.svg)
-- **使用 Kit 版本:** V1.15.0(V5.8.8 起,從 V1.7.1 升上來;首版 handoff 內容於 V4.8.1 對齊 V1.6.0)
-- **完成版本:** V5.9.0(對齊 Kit V1.15.0 後的版本,並依 §14.3 範本 B 自製 MDT 主 logo)
-- **完成日期:** 2026-06-12
+- **規模:** 1 個 index.html(~628KB / ~8775 行)+ 文件 4 份 + favicon 套組 9 檔(V5.9.0 換 MDT 主 logo + 保留 sela.svg)
+- **使用 Kit 版本:** **V1.18.0**(V5.10.2 起,從 V1.15.0 升上來;歷程 V4.8.1→V1.6.0、V5.8.8→V1.15.0、V5.10.2→V1.18.0)
+- **完成版本:** V5.10.2(對齊 Kit V1.18.0 後的版本)
+- **完成日期:** 2026-06-19
 
 **特殊背景**:這不是用 Kit 從零做的新專案,是**已存在 4.7 個版本的成熟專案接 Kit 規範**。所以反饋不是「冷啟動體驗」,是「**現有成熟專案接 Kit 的衝突點**」 — 這個視角 Kit 之前沒收過。
+
+---
+
+## ★ V5.10.2 對齊 Kit V1.18.0 報告(從 V1.15.0 跨 3 版)
+
+依坑 #40「鐵律 🔴 / 建議 🟡 / 順便 🟢 / 不做 ✗」四級分類做選擇性對齊。**MDT 是坑 #40 列名的第一個踩過此情境的專案**。
+
+### 對齊範圍(四級分類)
+
+| Kit V1.18.0 規範 | 等級 | MDT 處理 |
+|---|---|---|
+| 鐵律 #0 handoff 評估流程(V1.8.1) | 🟡 建議 | CLAUDE.md 九之三加「handoff 評估紀律」一列;這版本身就是 Kit 對齊版,符合「Kit 對齊→產 handoff」觸發條件,故有產這份報告 |
+| 坑 #42 theme-color「N 處真相清單」(V1.15.0 補強) | 🟡 建議 | CLAUDE.md 九之三新增「N 處真相清單」表 — MDT 共 **5 處**(CSS :root、PPTX 的 JS 色票 L5228、DOCX 的 JS 色票 L5463、HTML theme-color、webmanifest)。比 Kit 範例 4 處多一處,因 PPTX/DOCX 各有獨立配色系統 |
+| 坑 #57 解壓別人 zip 不限 find 深度(V1.16.0) | 🟢 已符合 | 這次解壓 Kit zip 用 `find . -type f`(不限深度)✓ |
+| Kit 對齊紀錄版本標記 | 🟢 順便 | 九之三從「V1.15.0」更新到「V1.18.0」,對齊歷程補完整 |
+| HTML 分享子資料夾(Kit §8 寫 `Share`) | ✗ 不做 | **MDT 實際用 `slides`**(GH_SLIDES_PATH,L4391),已上線運作。改 `Share` 會讓所有已分享的舊投影片連結失效。屬坑 #40「✗ 不做 = 已成熟業務命名」級。**回流建議見下方** |
+| 醫療章 #51(NCCN vs 健保給付雙軌)、#52(健保條文版本日期) | ✗ 不適用 | **MDT 是「會議管理工具」,不涉藥物給付決策**(不像 Cancer Navigation 要標 NCCN/健保)。MDT 只管會議流程、個案討論記錄、產出文件,沒有藥物推薦/給付判斷功能。明確記錄不適用,避免未來誤對齊 |
+| main + develop 雙分支(第 0 章 #5) | ✗ 不做 | MDT 用 Git Pusher 部署單 main 已穩定運作,不需要 develop 分支;這是 MDT 部署模式的既定選擇 |
+| Kit #53/#54(Railway 部署) | ✗ 不適用 | MDT 用 GitHub Pages,非 Railway |
+
+### 升版判定
+
+依坑 #40 升版門檻表:本次**只動 2 個文件檔**(CLAUDE.md + SELA-handoff.md),不動 index.html 程式 → 「動 1-2 檔 = 純細節補強 → **c+1**」。故 V5.10.1 → V5.10.2。
+
+### ⚠️ 回流建議給 Kit(請 SELA 升 Kit 時參考)
+
+1. **§8「HTML 分享 repo」子資料夾 `Share` → 應更正為 `slides`**
+   - Kit V1.18.0 CLAUDE.md L288 寫:「HTML 分享 repo:`github.com/Sela1227/MDT-slides`(子資料夾 `Share`)」
+   - 但 MDT 系統實際用的是 **`slides`**(`const GH_SLIDES_PATH='slides'`,index.html L4391)
+   - 兩者不一致。MDT 已上線用 slides,不改(改了舊連結失效)
+   - **建議 Kit 把 §8 的 `Share` 更正為 `slides`**,以免下次別的 Claude 照 Kit 把 MDT 改成 Share 而弄壞
+
+2. **坑 #42 的「N 處真相清單」可補一個「多套 JS 色票」案例**
+   - Kit 範例是 4 處(CSS + 1 套 JS + HTML + manifest)
+   - MDT 有 **2 套 JS 色票**(PPTX 一套、DOCX 一套),所以是 5 處
+   - 「同一專案有多個產出格式、各有獨立配色系統」是個值得補進 Kit 的變體 — 提醒「JS 色票可能不只一套」
+
+
 
 ### V5.9.0 自製 MDT 主 logo 紀錄(雙軌品牌實戰)
 
