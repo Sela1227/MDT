@@ -1260,7 +1260,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.9.5';
+const VERSION='V5.10.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1445,7 +1445,9 @@ async function loadLib(pkg,globalName){
 /* ════ Utils ════ */
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const escA=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-function maskName(n){if(!n||n.length<=1)return n;if(n.length===2)return n[0]+'○';return n[0]+'○'+n[n.length-1]}
+/* V5.10.3: 遮蔽保留姓名長度 — 4 字以上不再強制壓成 3 字。
+   1字不遮 / 2字「首○」/ 3字以上「首 + (中間字數個○) + 尾」(王大明華→王○○華) */
+function maskName(n){if(!n||n.length<=1)return n;if(n.length===2)return n[0]+'○';return n[0]+'○'.repeat(n.length-2)+n[n.length-1]}
 /* V5.9.4: 個案討論原因標籤 — 統一定義(原 3 個,加「復發轉移」「多重共病」共 5 個)。
    3 處渲染(編輯卡片徽章 / 選擇器 / toggle)+ 投影片產出都用這兩個 helper,避免散落不一致。 */
 const FLAG_LIST=['首次討論','複雜案例','緊急','復發轉移','多重共病'];
@@ -5224,184 +5226,210 @@ async function genPPTX(){
   pptx.layout='LAYOUT_16x9';
   pptx.author='彰濱秀傳癌症中心';
 
-  // ── Color palette ──
-  const C={dk:'3A4550',md:'637281',lt:'9BAAB6',xlt:'C8D3DA',white:'FFFFFF',fog:'637281',
-    acc:'4A7C8E',acc2:'7A8C6E',warn:'B87D3A',bg:'EFF1F4',surface:'F7F8FA'};
+  // ── 配色系統(V5.10.0 升級)──
+  const C={primary:'3A4550',acc:'4A7C8E',acc2:'7A8C6E',bg:'F4F6F8',card:'FFFFFF',
+    ink:'2C3540',md:'637281',lt:'9BAAB6',xlt:'CDD5DC',line:'E2E7EB',
+    /* 舊鍵相容(影像頁等) */ dk:'3A4550',white:'FFFFFF',surface:'F7F8FA'};
+  const SERIF='Noto Serif TC',SANS='Noto Sans TC';
   const W=10,H=5.625;
 
-  // ── Helper: add background ──
-  const addBg=(s,color='F7F8FA')=>{s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:H,fill:{color},line:{color,pt:0}})};
-  const txt=(s,t,x,y,w,h,opt={})=>s.addText(t||'',{x,y,w,h,fontFace:'Noto Sans TC',fontSize:12,color:C.dk,wrap:true,...opt});
+  // ── Helpers ──
+  const addBg=(s,color=C.bg)=>{s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:H,fill:{color},line:{type:'none'}})};
+  const txt=(s,t,x,y,w,h,opt={})=>s.addText(t||'',{x,y,w,h,fontFace:SANS,fontSize:12,color:C.ink,wrap:true,valign:'top',...opt});
+  const rect=(s,x,y,w,h,color,opt={})=>s.addShape(pptx.ShapeType.rect,{x,y,w,h,fill:{color},line:{type:'none'},...opt});
 
-  // ── Slide 1: Title ──
+  // ── Slide 1: 標題頁(深色全幅 + 大襯線標題)──
   {const s=pptx.addSlide();
-  // Left bar
-  s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:.18,h:H,fill:{color:C.acc},line:{color:C.acc,pt:0}});
-  s.addShape(pptx.ShapeType.rect,{x:.18,y:0,w:W-.18,h:H,fill:{color:'FFFFFF'},line:{color:'FFFFFF',pt:0}});
-  // Title
-  const titleText=cids.map(id=>CFG[id]?.name||id).join('、')+'多專科團隊會議';
-  txt(s,titleText,.35,1.4,9,1.1,{fontSize:28,bold:true,color:C.acc,fontFace:'Noto Serif TC'});
-  txt(s,rocDate(m.date),.35,2.7,9,.5,{fontSize:16,color:C.md});
-  txt(s,(m.time||'')+'  '+(m.loc||''),.35,3.3,9,.4,{fontSize:13,color:C.lt});
+  addBg(s,C.primary);
+  rect(s,7.2,3.4,3.4,2.6,'434E5A');        // 同心方塊裝飾
+  rect(s,8.0,4.1,1.9,1.5,C.acc);
+  rect(s,0,0,W,.12,C.acc);                 // 頂部細條
+  const titleText=cids.map(id=>CFG[id]?.name||id).join('、')+'  多專科團隊會議';
+  txt(s,titleText,.6,1.7,8.2,1.4,{fontSize:32,bold:true,color:'FFFFFF',fontFace:SERIF,valign:'middle',lineSpacingMultiple:1.1});
+  rect(s,.62,3.05,1.6,.04,C.acc);
+  txt(s,rocDate(m.date),.6,3.3,8,.45,{fontSize:17,color:'D5DCE2'});
+  const sub=[(m.time||''),(m.loc||'')].filter(Boolean).join('   ·   ');
+  if(sub)txt(s,sub,.6,3.85,8,.4,{fontSize:12,color:'9BAAB6'});
   const members=cids.map(id=>mkStr(CFG[id]?.memberKeys)).filter(Boolean).join('  ·  ');
-  if(members)txt(s,members,.35,4.2,9,.4,{fontSize:10,color:C.lt});
-  txt(s,'彰濱秀傳癌症中心',.35,4.8,9,.4,{fontSize:9,color:C.xlt});}
+  if(members)txt(s,members,.6,4.45,8.6,.4,{fontSize:10,color:'8A97A3'});
+  txt(s,'彰濱秀傳癌症中心',.6,5.0,6,.4,{fontSize:11,color:'7A8896',bold:true});}
 
   // ── Process each cancer ──
+  let secNo=0;
   for(const cid of cids){
     const ca=CFG[cid];
     const sec=m.sections[cid]||{};
     const fups=sec.followups||[];
     const cases=sec.cases||[];
     if(!fups.length&&!cases.length)continue;
+    secNo++;
 
-    // Cancer section title slide
+    // ── 癌別章節頁(左深色塊 + 大編號 + 橄欖綠條)──
     {const s=pptx.addSlide();
-    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:H,fill:{color:C.surface},line:{color:C.surface,pt:0}});
-    s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:.18,h:H,fill:{color:C.acc2},line:{color:C.acc2,pt:0}});
-    txt(s,ca.name,.35,2.1,9,1,{fontSize:32,bold:true,color:C.dk,fontFace:'Noto Serif TC'});
-    txt(s,rocDate(m.date),.35,3.2,9,.5,{fontSize:14,color:C.md});}
+    addBg(s,C.bg);
+    rect(s,0,0,3.8,H,C.primary);
+    rect(s,3.8,0,.08,H,C.acc2);
+    txt(s,String(secNo).padStart(2,'0'),.55,.7,3,1.4,{fontSize:64,bold:true,color:'4E5965',fontFace:SERIF});
+    txt(s,ca.name,4.3,2.0,5.4,1,{fontSize:38,bold:true,color:C.primary,fontFace:SERIF});
+    rect(s,4.32,3.05,1.4,.05,C.acc2);
+    const cnt=[];if(cases.length)cnt.push('個案討論 · '+cases.length+' 案');if(fups.length)cnt.push('前期追蹤 · '+fups.length+' 案');
+    txt(s,cnt.join('   '),4.3,3.3,5.4,.5,{fontSize:14,color:C.md});
+    txt(s,rocDate(m.date),4.3,3.85,5.4,.4,{fontSize:12,color:C.lt});}
 
-    // Followups slide (if any)
+    // ── 前期追蹤頁(白卡片版型)──
     if(fups.length){
-      const s=pptx.addSlide();
-      addBg(s,'FFFFFF');
-      s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.55,fill:{color:C.dk},line:{color:C.dk,pt:0}});
-      txt(s,ca.name+' ── 前期追蹤個案',0,.07,W,.4,{fontSize:13,bold:true,color:C.white});
-      let y=.7;
-      const ROW=.3, HDR=.34, NOTE_H=.45;
+      let s=pptx.addSlide();
+      addBg(s,C.bg);
+      rect(s,0,0,W,.55,C.primary);
+      rect(s,0,0,.1,.55,C.acc);
+      txt(s,ca.name+'  ·  前期追蹤個案',.25,.12,W-.5,.32,{fontSize:14,bold:true,color:'FFFFFF',valign:'middle'});
+      let y=.75;
       fups.forEach((f,fi)=>{
-        if(y>4.5)return;
         const drs=getDoctors(f).join('、')||'—';
-        // Header bar
-        s.addShape(pptx.ShapeType.rect,{x:.18,y,w:W-.36,h:HDR,fill:{color:C.dk},line:{color:C.dk,pt:0}});
-        txt(s,(fi+1)+'. '+(f.chartNo||'')+'  '+(f.name?maskName(f.name):'')+'  VS '+drs,
-          .25,y+.06,W-.5,HDR-.08,{fontSize:12,bold:true,color:C.white,valign:'middle'});
-        y+=HDR+.04;
-        // Prev date row
+        const noteLines=f.note?Math.max(1,Math.ceil(f.note.length/56)):0;
+        const blockH=.42+(f.prevDate?.32:0)+(f.note?Math.max(.32,noteLines*.24+.12):0)+.18;
+        if(y+blockH>5.3){s=pptx.addSlide();addBg(s,C.bg);rect(s,0,0,W,.55,C.primary);rect(s,0,0,.1,.55,C.acc);txt(s,ca.name+'  ·  前期追蹤個案(續)',.25,.12,W-.5,.32,{fontSize:14,bold:true,color:'FFFFFF',valign:'middle'});y=.75;}
+        // 個案標題(白卡 + 左霧藍條)
+        rect(s,.18,y,W-.36,.4,'FFFFFF');
+        rect(s,.18,y,.06,.4,C.acc);
+        txt(s,(fi+1)+'.  '+(f.chartNo||'')+'   '+(f.name?maskName(f.name):''),.34,y+.04,5.5,.32,{fontSize:12,bold:true,color:C.ink,valign:'middle'});
+        txt(s,'VS '+drs,6,y+.04,W-6.2,.32,{fontSize:10.5,color:C.md,valign:'middle',align:'right'});
+        y+=.46;
         if(f.prevDate){
-          s.addShape(pptx.ShapeType.rect,{x:.18,y,w:1.1,h:ROW,fill:{color:C.surface},line:{color:C.blt||'DDE2E7',pt:.5}});
-          txt(s,'前次',0.2,y+.06,1.06,ROW-.08,{fontSize:9,bold:true,color:C.md,valign:'middle'});
-          s.addShape(pptx.ShapeType.rect,{x:1.28,y,w:W-1.46,h:ROW,fill:{color:'FFFFFF'},line:{color:C.blt||'DDE2E7',pt:.5}});
-          txt(s,rocDate(f.prevDate),1.32,y+.06,W-1.5,ROW-.08,{fontSize:10,color:C.dk,valign:'middle'});
-          y+=ROW;
+          txt(s,'前次多專科',.34,y,1.3,.28,{fontSize:10,bold:true,color:C.acc,valign:'middle'});
+          txt(s,rocDate(f.prevDate),1.7,y,5,.28,{fontSize:10.5,color:C.ink,valign:'middle'});
+          y+=.32;
         }
-        // Note row (allow multiple lines)
         if(f.note){
-          const noteLines=Math.max(1,Math.ceil(f.note.length/60));
-          const noteH=Math.max(ROW,noteLines*0.2+0.1);
-          s.addShape(pptx.ShapeType.rect,{x:.18,y,w:1.1,h:noteH,fill:{color:C.surface},line:{color:C.blt||'DDE2E7',pt:.5}});
-          txt(s,'說明',0.2,y+.06,1.06,noteH-.08,{fontSize:9,bold:true,color:C.md,valign:'top'});
-          s.addShape(pptx.ShapeType.rect,{x:1.28,y,w:W-1.46,h:noteH,fill:{color:'FFFFFF'},line:{color:C.blt||'DDE2E7',pt:.5}});
-          txt(s,f.note,1.32,y+.04,W-1.5,noteH-.06,{fontSize:10,color:C.dk,wrap:true,valign:'top'});
-          y+=noteH;
+          const nh=Math.max(.32,noteLines*.24+.12);
+          txt(s,'追蹤說明',.34,y,1.3,.28,{fontSize:10,bold:true,color:C.acc,valign:'top'});
+          txt(s,f.note,1.7,y,W-2,nh,{fontSize:10.5,color:C.ink,valign:'top',lineSpacingMultiple:1.1});
+          y+=nh;
         }
-        y+=.12; // gap between cases
+        y+=.22;
       });
     }
 
-    // Case slides
+    // ── 個案主頁(白卡片版型 + 討論原因標籤)──
     for(let ci=0;ci<cases.length;ci++){
       const c=cases[ci];
       const drs=getDoctors(c).join('、')||'—';
 
-      // Main case info slide
       const s=pptx.addSlide();
-      addBg(s,'FFFFFF');
-      // Header bar: single line, no diagnosis
-      s.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.52,fill:{color:C.dk},line:{color:C.dk,pt:0}});
-      txt(s,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+caseDemo(c)+'  VS '+drs,
-        .18,.11,8.4,.3,{fontSize:14,bold:true,color:C.white,valign:'middle'});
+      addBg(s,C.bg);
+      // 標題列(深色 + 左霧藍強調塊)
+      rect(s,0,0,W,.62,C.primary);
+      rect(s,0,0,.12,.62,C.acc);
+      txt(s,String(ci+1),.28,.13,.5,.36,{fontSize:18,bold:true,color:C.acc,fontFace:SERIF});
+      txt(s,(c.chartNo||'')+'   '+(c.name?maskName(c.name):'')+'    '+caseDemo(c),.78,.16,5.6,.32,{fontSize:15,bold:true,color:'FFFFFF',valign:'middle'});
+      txt(s,'VS '+drs,6.5,.16,3.3,.32,{fontSize:12,color:'B8C4CC',valign:'middle',align:'right'});
 
-      let y=.62;
-      // Slide management for overflow
+      // 討論原因標籤(標題列下方,色塊膠囊)
+      let tagX=.18;const tagY=.74;
+      (c.flags||[]).forEach(fl=>{
+        const w=fl.length*.2+.24;
+        s.addShape(pptx.ShapeType.roundRect,{x:tagX,y:tagY,w,h:.28,fill:{color:flagColor(fl).replace('#','')},line:{type:'none'},rectRadius:.14});
+        txt(s,fl,tagX,tagY+.015,w,.25,{fontSize:10,bold:true,color:'FFFFFF',align:'center',valign:'middle'});
+        tagX+=w+.12;
+      });
+
+      let y=(c.flags||[]).length?1.18:.85;
       let curSlide=s;
       const pageHdr=()=>{
         const ns=pptx.addSlide();
-        addBg(ns,'FFFFFF');
-        ns.addShape(pptx.ShapeType.rect,{x:0,y:0,w:W,h:.42,fill:{color:C.dk},line:{color:C.dk,pt:0}});
-        txt(ns,(c.chartNo||'')+'  '+(c.name?maskName(c.name):'')+'  '+caseDemo(c)+'  VS '+drs,
-          .18,.09,8.4,.26,{fontSize:12,bold:true,color:C.white,valign:'middle'});
+        addBg(ns,C.bg);
+        rect(ns,0,0,W,.5,C.primary);
+        rect(ns,0,0,.12,.5,C.acc);
+        txt(ns,(c.chartNo||'')+'   '+(c.name?maskName(c.name):'')+'    '+caseDemo(c)+'   ·   續',.2,.1,W-.4,.3,{fontSize:12,bold:true,color:'FFFFFF',valign:'middle'});
         return ns;
       };
       const addRow=(label,val,opt={})=>{
         if(!val)return;
-        const lines=String(val).split('\n').reduce((sum,l)=>sum+Math.max(1,Math.ceil(l.length/55)),0);
-        const rowH=Math.max(.34,lines*.22+.14);
-        // Start new slide if overflow
-        if(y+rowH>5.3){curSlide=pageHdr();y=.55;}
-        curSlide.addShape(pptx.ShapeType.rect,{x:.18,y,w:1.1,h:rowH,fill:{color:C.surface},line:{color:C.surface,pt:0}});
-        txt(curSlide,label,.2,y+.04,1.05,rowH-.06,{fontSize:9.5,bold:true,color:C.md,valign:'top'});
-        curSlide.addShape(pptx.ShapeType.rect,{x:1.3,y,w:W-1.48,h:rowH,fill:{color:'FFFFFF'},line:{color:'DDE2E7',pt:.5}});
-        txt(curSlide,val,1.34,y+.04,W-1.52,rowH-.06,{fontSize:10.5,color:C.dk,wrap:true,valign:'top',...opt});
-        y+=rowH+.05;
+        const lines=String(val).split('\n').reduce((sum,l)=>sum+Math.max(1,Math.ceil(l.length/50)),0);
+        const rowH=Math.max(.42,lines*.26+.16);
+        if(y+rowH>5.35){curSlide=pageHdr();y=.62;}
+        // 左標籤欄(淺色卡 + 左霧藍細條)
+        rect(curSlide,.18,y,1.15,rowH,'EEF1F4');
+        rect(curSlide,.18,y,.05,rowH,C.acc);
+        txt(curSlide,label,.32,y,1.0,rowH,{fontSize:11,bold:true,color:C.acc,valign:'middle'});
+        // 右內容欄(白卡 + 細框)
+        curSlide.addShape(pptx.ShapeType.rect,{x:1.4,y,w:W-1.58,h:rowH,fill:{color:'FFFFFF'},line:{color:C.line,pt:.75}});
+        txt(curSlide,val,1.55,y+.07,W-1.85,rowH-.14,{fontSize:11.5,color:C.ink,valign:'top',lineSpacingMultiple:1.08,...opt});
+        y+=rowH+.08;
       };
       addRow('診斷',c.diagnosis);
       addRow('現病史',c.cc);
-      // PH: phChips + free text
       const phAll=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph||''].filter(Boolean).join('  ');
       addRow('過去病史',phAll||null);
-      // Pathology (structured list)
       if((c.pathologies||[]).length){
         const pStr=(c.pathologies||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(p=>(p.date?p.date+' ':'')+p.content).join('\n');
         addRow('病理',pStr);
       } else if(c.pathology){addRow('病理',(c.pathologyDate?c.pathologyDate+' ':'')+c.pathology);}
-      // Exams (structured list)
       if((c.exams||[]).length){
         const exStr=(c.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(ex=>(ex.name||'')+(ex.date?'('+ex.date+')':'')+(ex.content?' : '+ex.content:'')).join('\n');
         addRow('檢查',exStr);
       } else if(c.exam){addRow('檢查',c.exam);}
-      // Treatments (structured list)
       if((c.treatments||[]).length){
-        const trStr=(c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(tr=>(tr.name||'')+(tr.date?'('+tr.date+')':'')+(tr.content?' : '+tr.content:'')).join('\n');
+        const trStr=(c.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(tr=>(tr.date?'('+tr.date+') ':'')+(tr.name||'')+(tr.content?'\n    '+tr.content:'')).join('\n');
         addRow('治療',trStr);
       } else if(c.treatment){addRow('治療',c.treatment);}
-      if(c.discussion)addRow('討論',c.discussion);
+      if(c.discussion)addRow('討論方向',c.discussion);
       if((c.markers||[]).length){
-        const mkStr=(c.markers||[]).map(mk=>(mk.name?mk.name+'： ':' ')+(mk.content||'')).join('\n');
-        addRow('癌指數',mkStr);
+        const mkS=(c.markers||[]).map(mk=>(mk.name?mk.name+'： ':' ')+(mk.content||'')).join('\n');
+        addRow('癌指數',mkS);
       }
 
-      // Topics chips (on current slide, near bottom)
+      // 討論議題 chips(底部)
       if((c.topics||[]).length){
-        if(y>4.8){curSlide=pageHdr();y=.55;}
-        const chipY=Math.max(y+.1,H-.45);
+        if(y>4.85){curSlide=pageHdr();y=.62;}
+        const chipY=Math.max(y+.1,H-.5);
         let tx=.18;
         c.topics.forEach(t=>{
-          curSlide.addShape(pptx.ShapeType.roundRect,{x:tx,y:chipY,w:t.length*.13+.2,h:.22,fill:{color:C.acc},line:{color:C.acc,pt:0},rectRadius:.06});
-          txt(curSlide,t,tx+.05,chipY+.02,t.length*.13+.16,.18,{fontSize:9,bold:true,color:C.white});
-          tx+=t.length*.13+.24;
+          const w=t.length*.16+.24;
+          curSlide.addShape(pptx.ShapeType.roundRect,{x:tx,y:chipY,w,h:.26,fill:{color:C.acc},line:{type:'none'},rectRadius:.08});
+          txt(curSlide,t,tx,chipY+.015,w,.23,{fontSize:9.5,bold:true,color:'FFFFFF',align:'center',valign:'middle'});
+          tx+=w+.12;
         });
       }
 
-      // Summary/Decision slide (if filled)
+      // ── 討論記錄頁(雙色卡片)──
       if(c.summary||c.decision){
         const s2=pptx.addSlide();
-        addBg(s2,'FFFFFF');
-        s2.addShape(pptx.ShapeType.rect,{x:0,y:0,w:.18,h:H,fill:{color:C.acc2},line:{color:C.acc2,pt:0}});
-        txt(s2,ca.name+' ── '+(c.name?maskName(c.name):''),.28,.15,9,.4,{fontSize:12,color:C.md});
-        txt(s2,'會議討論記錄',.28,.55,9,.45,{fontSize:20,bold:true,color:C.dk,fontFace:'Noto Serif TC'});
-        let y2=1.15;
+        addBg(s2,C.bg);
+        txt(s2,ca.name+'  ·  '+(c.name?maskName(c.name):''),.6,.45,9,.35,{fontSize:12,color:C.md});
+        txt(s2,'會議討論記錄',.6,.85,9,.6,{fontSize:24,bold:true,color:C.primary,fontFace:SERIF});
+        rect(s2,.62,1.55,1.5,.05,C.acc);
+        let y2=1.95;
         if(c.summary){
-          txt(s2,'討論摘要',.28,y2,9,.3,{fontSize:11,bold:true,color:C.acc});y2+=.32;
-          txt(s2,c.summary,.28,y2,9,1.8,{fontSize:11,color:C.dk});y2+=1.9;
+          const sumLines=Math.max(2,Math.ceil(c.summary.length/46));
+          const sumH=Math.max(1.0,sumLines*.28+.6);
+          rect(s2,.6,y2,8.8,sumH,'FFFFFF');
+          rect(s2,.6,y2,.1,sumH,C.acc);
+          txt(s2,'討論摘要',.85,y2+.15,8,.35,{fontSize:13,bold:true,color:C.acc});
+          txt(s2,c.summary,.85,y2+.55,8.3,sumH-.65,{fontSize:12,color:C.ink,lineSpacingMultiple:1.15});
+          y2+=sumH+.25;
         }
         if(c.decision){
-          txt(s2,'決策結論',.28,y2,9,.3,{fontSize:11,bold:true,color:C.acc2});y2+=.32;
-          txt(s2,c.decision,.28,y2,9,1.2,{fontSize:11,color:C.dk});
+          const decLines=Math.max(1,Math.ceil(c.decision.length/46));
+          const decH=Math.max(.9,decLines*.28+.6);
+          rect(s2,.6,y2,8.8,decH,'F0F3ED');
+          rect(s2,.6,y2,.1,decH,C.acc2);
+          txt(s2,'決策結論',.85,y2+.15,8,.35,{fontSize:13,bold:true,color:C.acc2});
+          txt(s2,c.decision,.85,y2+.55,8.3,decH-.65,{fontSize:12,color:C.ink,lineSpacingMultiple:1.15});
         }
       }
 
-      // Image slides
+      // ── 影像頁(深色底)──
       if((c.images||[]).length){
         for(let ii=0;ii<c.images.length;ii++){
           const img=c.images[ii];
           try{
             const s3=pptx.addSlide();
-            addBg(s3,'111820');
-            txt(s3,(c.name?maskName(c.name):'')+'  影像 '+(ii+1)+'/'+(c.images.length),.2,.1,9.6,.35,{fontSize:11,color:'8899AA'});
-            s3.addImage({data:img.dataUrl,x:.5,y:.55,w:9,h:4.6,sizing:{type:'contain',w:9,h:4.6}});
-            if(img.name)txt(s3,img.name,.2,5.2,9.6,.3,{fontSize:9,color:'556677'});
+            addBg(s3,'1A2129');
+            rect(s3,0,0,W,.5,'232C36');
+            txt(s3,(c.name?maskName(c.name):'')+'   ·   影像 '+(ii+1)+' / '+c.images.length,.3,.12,9.4,.3,{fontSize:11,color:'8FA0AE',valign:'middle'});
+            s3.addImage({data:img.dataUrl,x:.5,y:.7,w:9,h:4.45,sizing:{type:'contain',w:9,h:4.45}});
+            if(img.name)txt(s3,img.name,.3,5.25,9.4,.3,{fontSize:9,color:'62707C'});
           }catch(e){console.warn('Image slide error:',e);}
         }
       }
@@ -7091,6 +7119,7 @@ age：年齡（字串）
 gender："M" 或 "F"
 ecog：ECOG Performance Status，"0"~"4" 字串（0=活動正常 / 1=輕症狀可工作 / 2=臥床<50% 可自理 / 3=臥床≥50% 部分自理 / 4=完全臥床無法自理）。資料未提及則填空字串 ""
 cfs：Clinical Frailty Scale 衰弱量表，"1"~"9" 字串（1=非常健朗 / 2=健康 / 3=狀況良好 / 4=輕度脆弱 / 5=輕度衰弱 / 6=中度衰弱 / 7=重度衰弱 / 8=極重度衰弱 / 9=臨終）。資料未提及則填空字串 ""
+doctors：主治醫師陣列（最多 3 位），格式 ["王大明醫師","",""]。資料有提到主治醫師/主責醫師/收治醫師才填，沒提到填 ["","",""]。醫師姓名後習慣加「醫師」二字
 diagnosis：完整診斷（含分期）
 cc：現病史（Present Illness）
 ph：過去病史（Past History），若無請填 "Nil"
@@ -7121,6 +7150,7 @@ topics：討論議題，從以下選填一或多項：["影像討論","病理討
     * diagnosis 含 cTNM / pTNM / Stage / 分期等字樣 → 勾「分期討論」
     * treatments 陣列有內容 或 diagnosis 提及 RT/Chemo/Adjuvant/標靶/免疫等治療規劃 → 勾「治療策略討論」
   - 通常 MDT 個案 3-4 項都會勾；極少只勾 1 項
+flags：討論原因標籤，陣列。【固定輸出空陣列 []，不要推斷】可選值有「首次討論」「複雜案例」「緊急」「復發轉移」「多重共病」，但這是個管師/醫師在會議時的主觀臨床判斷，AI 不從病歷文字推斷，一律輸出 []，由個管師匯入後自行手動勾選
 
 以下是病人資料：
 
@@ -7179,6 +7209,9 @@ function exportCaseJSON(){
         gender: c.gender||'M',
         ecog: String(c.ecog||''),
         cfs: String(c.cfs||''),
+        /* V5.10.1: 補主治醫師(原本匯出漏帶,匯出再匯入會掉) */
+        doctors: Array.isArray(c.doctors)?c.doctors:['','',''],
+        doctor: c.doctor||'',
         diagnosis: c.diagnosis||'',
         cc: c.cc||'',
         ph: c.ph||'',
@@ -7191,7 +7224,12 @@ function exportCaseJSON(){
         discussion: c.discussion||'',
         topics: Array.isArray(c.topics)?c.topics:[],
         summary: c.summary||'',
-        decision: c.decision||''
+        decision: c.decision||'',
+        /* V5.10.1: 補討論原因標籤 + 次要欄位(匯入有讀,匯出原本漏帶,往返掉資料) */
+        flags: Array.isArray(c.flags)?c.flags:[],
+        pathologyImages: Array.isArray(c.pathologyImages)?c.pathologyImages:[],
+        timeline: Array.isArray(c.timeline)?c.timeline:[],
+        note: c.note||''
       };
       // Only include mammo for breast cancer
       if(cid==='breast'&&c.mammo&&typeof c.mammo==='object'){
@@ -7334,6 +7372,8 @@ function importCaseJSON(inputEl){
         discussion:d.discussion||'',
         topics:Array.isArray(d.topics)?d.topics:[],
         summary:d.summary||'',decision:d.decision||'',
+        /* V5.10.1: 補 flags 討論原因標籤(原本匯入沒讀,JSON 交換會掉標籤) */
+        flags:Array.isArray(d.flags)?d.flags:[],
         images:[],pathologyImages:Array.isArray(d.pathologyImages)?d.pathologyImages:[],timeline:Array.isArray(d.timeline)?d.timeline.slice():[],note:d.note||''
       };
       S.meeting.sections[cid].cases.push(blank);

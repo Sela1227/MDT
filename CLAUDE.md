@@ -144,6 +144,10 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.10.3 | 修姓名遮蔽 bug:maskName 舊邏輯「首+○+尾」把 4 字以上壓成 3 字(王大明華→王○華)。改「首+(中間字數個○)+尾」保留長度(王○○華)。1~3 字向後相容。影響 HTML/DOCX/PPTX 所有姓名遮蔽 |
+| V5.10.2 | 對齊 SELA Starter Kit V1.18.0(從 V1.15.0,純文件層 c+1):CLAUDE.md 加 theme-color「N 處真相清單」(依坑 #42,MDT 5 處)+ handoff 評估紀律(鐵律 #0)+ Kit 對齊紀錄升 V1.18.0;SELA-handoff 加四級分類對齊報告 + slides/Share 回流建議。HTML 分享子資料夾保持 slides(坑 #40「不做」級)。不動程式 |
+| V5.10.1 | JSON 個案匯入/匯出欄位盤點補齊:匯出補 doctors/doctor/flags/pathologyImages/timeline/note(原本漏帶往返掉資料);匯入補 flags;prompt 補 doctors(AI 可填)+flags(固定留空不推斷)。往返一致性驗證無掉資料 |
+| V5.10.0 | PPTX 簡報全面升級:完整重寫 genPPTX,新配色系統(深霧灰藍/霧藍/橄欖綠)+ 版型重做(標題頁深色全幅、章節頁大編號、個案頁白卡片、討論記錄雙色卡)+ 字級放大 + 加討論原因標籤。保留溢位換頁。順修「討論」→「討論方向」+ 治療縮排格式 |
 | V5.9.5 | DOCX 會議記錄個案標題列尾端加討論原因標籤（色塊文字 shading,配色跟 HTML 一致）。範圍:HTML+DOCX 都顯示,PPTX 仍不帶 |
 | V5.9.4 | 個案討論原因標籤加 2 個（復發轉移/多重共病）共 5 個 + 修 bug（投影片沒讀 c.flags 所以選了不顯示）。統一 FLAG_LIST + flagColor helper,3 處渲染改用。DOCX/PPTX 暫未加 flags（待確認）|
 | V5.9.3 | 產出區分組分層:11 按鈕分「主力產出(LINE/HTML投影片/PPTX/DOCX)」+「資料交換與分享(HTML分享/Excel匯出入/JSON匯入出/AI提示詞)」兩組,加分組標題。功能不刪、onclick/id 全保留,純重排 |
@@ -486,9 +490,9 @@ if not missing:
 
 ---
 
-## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起;V5.8.8 升至 V1.15.0)
+## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起;V5.10.2 升至 V1.18.0)
 
-本專案已對齊 **SELA Starter Kit V1.15.0**(原於 V4.8.0 對齊 V1.6.0,V4.8.2 升 V1.7.1,V5.8.8 升 V1.15.0)。每次升版都應檢查是否仍符合:
+本專案已對齊 **SELA Starter Kit V1.18.0**(對齊歷程:V4.8.0→V1.6.0,V4.8.2→V1.7.1,V5.8.8→V1.15.0,V5.10.2→V1.18.0)。每次升版都應檢查是否仍符合:
 
 | 規範 | 對齊方式 | 注意 |
 |------|---------|------|
@@ -499,17 +503,42 @@ if not missing:
 | 介面色選擇(V1.8.1+) | `theme-color` 跟 `theme_color` in manifest 同步用 `#5A7A8B`(醫療型) | **不是** SELA 橘!Kit V1.8.1 起的分離鐵律;醫療型避免橘色警示聯想 |
 | 系統 UI logo | 右下角 fixed `<a id="sela-credit">` 引用 `favicon/sela.svg` | 樣式 `opacity:.42`,hover 放大;不擋 UI |
 | **回流通道**(V4.8.1 起) | `SELA-handoff.md` 在專案根目錄,跟 zip 一起交付 | 重大版本完成後更新內容,讓 SELA 升 Kit 用 |
+| **鐵律 #0 handoff 評估**(V1.8.1 起) | 完成版本前走 handoff 評估:符合條件(重大版/≥3 坑/≥2 技術決策/距上次 ≥5 小版/Kit 對齊)就產出,否則最終回報明寫「本版跳過 handoff,因為 X」 | 「默默不做」= 違反鐵律 #0 |
+| HTML 分享 repo | `Sela1227/MDT-slides` 子資料夾 **`slides`**(L4389/L4391) | ⚠️ Kit V1.18.0 §8 寫子資料夾是 `Share`,但 **MDT 實際用 `slides`** — 屬坑 #40「✗ 不做」級(改 Share 會讓舊連結失效);已回流建議 Kit 更正 |
 | 三位版本號逢十進位 | 同 #14 規則 | 已對齊 |
 | CLAUDE.md 必含五章 | 踩坑 / 業務對映 / 版本歷程 / 下版優先 / 一句話總結 | 已對齊 |
 | USER_GUIDE.md 必含 | 我們有,Kit 沒明文要求(MDT 超越) | — |
 
-**Kit 內 32 條跨專案坑與 MDT 17 條坑互不衝突,可以互相印證**:
+### ⭐ 主題色「N 處真相清單」(依 Kit 坑 #42,V5.10.2 盤點)
+
+**換主題色時這 5 處要一起改**,否則會像 MapQuiz 那樣「畫面變了但投影片/DOCX 顏色沒變」:
+
+| # | 位置 | 內容 | MDT 實際位置 |
+|---|------|------|------|
+| 1 | CSS `:root` 變數 | UI 元件色 | `--fog-*` 系列(L25 附近)|
+| 2a | **JS 色票:PPTX** | 投影片填色 | `const C={primary:'3A4550',acc:'4A7C8E'...}`(genPPTX,L5228)|
+| 2b | **JS 色票:DOCX** | Word 文件填色 | `const C={title:'1E2D3D',dark:'2C3E50'...}`(genDOCX,L5463)|
+| 3 | HTML `<meta name="theme-color">` | PWA 啟動色 | `#5A7A8B`(L19)|
+| 4 | `site.webmanifest` 的 `theme_color` | PWA 安裝色 | `#5A7A8B`(favicon/site.webmanifest L16)|
+
+> MDT 比 Kit 範例多一處(2a + 2b 兩套 JS 色票),因為投影片跟 Word 各有獨立配色系統。改色時務必兩套都改。
+
+**Kit 內 58 條跨專案坑與 MDT 27 條坑互不衝突,可以互相印證**:
 - Kit #20(中文檔名亂碼) ↔ MDT 坑 #16
 - Kit #23(JS 大括號) ↔ MDT 坑 #5、#13
-- Kit #1(三方對齊) ↔ MDT 坑 #17
+- Kit #1(三方對齊) ↔ MDT 坑 #17、V5.10.1 JSON 三方對齊
 - Kit #7(打包前驗證) ↔ MDT 打包驗證腳本(節九)
+- Kit #42(theme-color N 處真相) ↔ 上方 N 處真相清單
+- Kit #57(find 不限深度) ↔ V5.10.2 對齊時解壓 Kit 用 `find -type f` 不限深度 ✓
+- Kit #26(script 邊界) ↔ MDT `'</'+'script>'` 寫法
 
-**未來新對齊項目放這裡**(例如:Kit 升 V1.7.0 時新增的規範要對應檢查)
+**MDT 不適用的 Kit 坑**(明確記錄,避免未來誤對齊):
+- Kit 醫療章 #51(NCCN vs 健保給付雙軌)、#52(健保條文版本日期) — **MDT 是會議管理工具,不涉藥物給付決策**,這兩條不適用
+- Kit #53/#54(Railway 部署) — MDT 用 GitHub Pages,不適用
+- Kit #44(Vite base) — MDT 是單檔 HTML 無 build,不適用
+
+**未來新對齊項目放這裡**(例如:Kit 升版時新增的規範要對應檢查)
+
 
 ---
 
@@ -517,8 +546,8 @@ if not missing:
 
 **按優先序：**
 
-1. **升級系統內建 PPTX 產出邏輯** — 個管師要求「每次按 PPTX 都變漂亮」(改 index.html 的 genPPTX JS 版型/配色/層次)。注意:JS 庫(PptxGenJS)有天花板,先確認個管師看現有產出後的具體不滿點,再定設計規格。屬 V5.10.0(y+1,新功能級)
-2. **「(8-其他特殊複雜個案)」討論原因快速標籤系統** — 個管師有時要標個案因(如「治療中死亡」「必要提報」),用快速標籤而非每次手動打字
+1. **「(8-其他特殊複雜個案)」討論原因快速標籤系統** — 個管師有時要標個案因(如「治療中死亡」「必要提報」),用快速標籤而非每次手動打字
+2. **PPTX 升級後個管師回饋觀察期** — V5.10.0 大改版型,個管師實際用幾場會議後可能回報微調(字級、間距、配色、某區塊版型)
 3. NAS 同步觀察期:跑 1-2 週後看是否有 tombstone 累積異常 / 衝突情境沒被想到
 4. DOCX 微調觀察期:V5.8.5 治療欄樣式 + V5.8.7 改名後,個管師實際用幾場會議後可能還有微調(如灰底色階、縮排幅度)
 5. 開會後模式:產出區顯示「今天有 N 場會議」快速入口
@@ -528,4 +557,8 @@ if not missing:
 
 ## 十一、一句話總結
 
-V5.9.5 DOCX 會議記錄也顯示討論原因標籤。V5.9.4 加了 5 個標籤並修好 HTML 投影片顯示,但 DOCX 仍未帶;個管師確認「會議記錄也要看得到」。做法:`mkCaseHdr` 個案標題列（深色橫條）尾端加 flags,用**色塊文字**（`shading:{fill:flagColor(fl).replace('#','')}` 該顏色當底 + 白字 + `\u2009` 細空格模擬膠囊）。設計選擇放同一行（非獨立行）— 標籤是個案身分延伸屬性,同行語意連貫,且不增行高（會議記錄常 10+ 個案）。注意 docx 的 `fill` 要不帶 `#` 的 hex,所以 `flagColor(fl).replace('#','')`。XML 驗證標籤色塊 shding 數正確（1+2+3=6）。**範圍:HTML 投影片 + DOCX 記錄都顯示,PPTX 仍不帶（個管師未要求）**。下版優先:升級系統內建 PPTX 產出邏輯（V5.10.0）。
+V5.10.3 修姓名遮蔽 bug — 個管師回報病人 4 個字時系統只遮中間一個字、強迫顯示成 3 字(王大明華→王○華)。根因:maskName 舊邏輯 `n[0]+'○'+n[n.length-1]` 不管幾字都壓成「首+○+尾」3 字。修法:改 `n[0]+'○'.repeat(n.length-2)+n[n.length-1]` 保留原姓名長度(王○○華、司○○○明)。1~3 字行為向後相容不變。影響所有用 maskName 的地方(HTML 投影片/DOCX/PPTX 個案標題姓名遮蔽)一次到位。屬 c+1 bug fix。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統(註:flags 標籤 V5.9.4~5.9.5 已做大部分,可重新評估) + NAS 同步觀察期。
+
+V5.10.2 對齊 SELA Starter Kit V1.18.0(從 V1.15.0 跨 3 版,純文件層 c+1)。詳讀 Kit 全部規範後依坑 #40「鐵律/建議/順便/不做」四級分類做選擇性對齊。**對齊的**:(1)CLAUDE.md 加 theme-color「N 處真相清單」(依坑 #42,MDT 共 5 處 — CSS :root、PPTX 的 JS 色票、DOCX 的 JS 色票、HTML theme-color、webmanifest;比 Kit 範例多一處因為 PPTX/DOCX 各有獨立配色系統);(2)加 handoff 評估紀律(鐵律 #0 — 完成版本前走評估,符合條件就產出否則明寫跳過理由);(3)Kit 對齊紀錄升 V1.18.0 + 記錄不適用的 Kit 坑(醫療章 #51/#52 藥物給付不適用,因 MDT 是會議管理非藥物決策)。**不做的**:HTML 分享子資料夾保持 `slides`(Kit §8 寫 Share,但 MDT 已用 slides 上線,改了舊連結失效,屬坑 #40「✗ 不做」級,回流建議 Kit 更正)。SELA-handoff 加四級分類對齊報告 + slides/Share 回流建議。**不動程式**(2 文件檔 = c+1)。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統 + NAS 同步觀察期。
+
+V5.10.1 JSON 個案匯入/匯出欄位盤點補齊 — 全面交叉比對「匯出 exportCaseJSON / 匯入 importCaseJSON / AI 提示詞 genImportPrompt」三方欄位對應,找出缺漏:**(1)flags 討論原因標籤(V5.9.4 新增)三方全缺** — 匯出沒帶、匯入沒讀、prompt 沒定義,JSON 交換掉標籤;**(2)doctors/doctor 主治醫師匯出漏帶**(匯入有讀)+ prompt 沒定義,匯出再匯入掉醫師;**(3)pathologyImages/timeline/note 匯出漏帶**(匯入有讀)往返掉資料。修法:匯出補 6 欄、匯入補 flags、prompt 補 doctors(AI 可填)+flags(**固定輸出空陣列不推斷** — 討論原因是個管師主觀臨床判斷,違反「prompt 嚴格不推斷」原則,留手動勾)。往返一致性驗證:匯出 27 個資料欄位匯入全讀,無掉資料。**教訓**:新增個案欄位(如 V5.9.4 flags)時,必須同步檢查匯出/匯入/prompt 三方,否則新欄位無法透過 JSON 交換 — 這是「單一真相 schema」要管三個地方對齊的延伸(類似 CLAUDE.md 章法二的業務對映表)。
