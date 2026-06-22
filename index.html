@@ -1260,7 +1260,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.10.3';
+const VERSION='V5.10.4';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1464,6 +1464,16 @@ function caseDemo(c){
   if(c.ecog)s+='  ECOG '+c.ecog;
   if(c.cfs)s+='  衰弱量表 '+c.cfs;
   return s;
+}
+/* V5.10.4: HTML 投影片專用 demo — 性別中文化(男性/女性)、年齡加「歲」、各段間隔拉開易讀。
+   不動 caseDemo（DOCX/PPTX 仍用簡潔的 M/74 ECOG 1 格式,投影幕空間有限）。 */
+function caseDemoHTML(c){
+  var g=c.gender==='F'?'女性':(c.gender==='M'?'男性':(c.gender||''));
+  var parts=[];
+  if(g||c.age)parts.push((g?g:'')+(g&&c.age?'，':'')+(c.age?c.age+' 歲':''));
+  if(c.ecog)parts.push('ECOG '+c.ecog);
+  if(c.cfs)parts.push('衰弱量表 '+c.cfs);
+  return parts.join('\u2003\u2003'); /* U+2003 em space ×2,段間明顯拉開 */
 }
 /* V5.0.3: AI 匯入 JSON 容錯解析 — 剝除 markdown 圍籬、容錯 BOM/前後綴文字、清理智慧引號 */
 function _parseAIJSON(raw){
@@ -6143,8 +6153,8 @@ async function genHTMLSlides(){
         +'<div class="cht">'
         +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.dataset.oc=el.style.opacity;el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=el.dataset.oc||\'\'}, 600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
         +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
-        +/* V5.9.4: 投影片個案標題顯示討論原因標籤(修 bug:選了 flags 但 HTML 投影片沒帶出來)*/((c.flags||[]).length?' '+(c.flags||[]).map(function(fl){return'<span style="display:inline-block;font-size:.5em;font-weight:700;padding:2px 9px;border-radius:9px;background:'+flagColor(fl)+';color:#fff;vertical-align:middle;margin-right:3px">'+escA(fl)+'</span>';}).join(''):'')
-        +' <span class="cd">'+escA(caseDemo(c))+'</span>'
+        +/* V5.9.4 顯示討論原因標籤;V5.10.4 標籤放大(.5em→.62em)+ padding 加大,更醒目 */((c.flags||[]).length?' '+(c.flags||[]).map(function(fl){return'<span style="display:inline-block;font-size:.62em;font-weight:700;padding:3px 12px;border-radius:11px;background:'+flagColor(fl)+';color:#fff;vertical-align:middle;margin-right:4px">'+escA(fl)+'</span>';}).join(''):'')
+        +/* V5.10.4: demo 改用 HTML 專用版（男性,74 歲 + 拉開間隔）*/' <span class="cd">'+escA(caseDemoHTML(c))+'</span>'
         +' <span class="cdr">VS '+escA(drs)+'</span>'
         +_pathoBtn
         +'<span class="cat">'+escA(getSubGroup(c)||ca.name)+'</span>'
