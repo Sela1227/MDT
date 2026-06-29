@@ -144,6 +144,9 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.10.5 | 對齊 SELA Starter Kit V1.21.0(從 V1.18.0,純文件層 c+1):坑 #14 補 V1.20.0 版號進位澄清(只有 c 逢十進位,b 可超過 9,MDT b=10 合法);坑庫加 #28(Python re.sub 注入用 str.replace,對齊 Kit #63,給維護者);九之三加 V1.19~1.21 新規範對應(#59/#60/#61/#62 已符合或不適用,references 不做)。不動程式 |
+| V5.10.4 | HTML 投影片個案標題微調:(1)新增 caseDemoHTML() 性別中文化(男性/女性)+ 年齡加「歲」+ em space 拉開間隔(只 HTML,DOCX/PPTX 仍用 caseDemo 簡潔版);(2)flags 標籤放大 .5em→.62em + padding 加大。只動主個案標題 |
+| V5.10.3 | 修姓名遮蔽 bug:maskName 舊邏輯「首+○+尾」把 4 字以上壓成 3 字(王大明華→王○華)。改「首+(中間字數個○)+尾」保留長度(王○○華)。1~3 字向後相容。影響 HTML/DOCX/PPTX 所有姓名遮蔽 |
 | V5.10.2 | 對齊 SELA Starter Kit V1.18.0(從 V1.15.0,純文件層 c+1):CLAUDE.md 加 theme-color「N 處真相清單」(依坑 #42,MDT 5 處)+ handoff 評估紀律(鐵律 #0)+ Kit 對齊紀錄升 V1.18.0;SELA-handoff 加四級分類對齊報告 + slides/Share 回流建議。HTML 分享子資料夾保持 slides(坑 #40「不做」級)。不動程式 |
 | V5.10.1 | JSON 個案匯入/匯出欄位盤點補齊:匯出補 doctors/doctor/flags/pathologyImages/timeline/note(原本漏帶往返掉資料);匯入補 flags;prompt 補 doctors(AI 可填)+flags(固定留空不推斷)。往返一致性驗證無掉資料 |
 | V5.10.0 | PPTX 簡報全面升級:完整重寫 genPPTX,新配色系統(深霧灰藍/霧藍/橄欖綠)+ 版型重做(標題頁深色全幅、章節頁大編號、個案頁白卡片、討論記錄雙色卡)+ 字級放大 + 加討論原因標籤。保留溢位換頁。順修「討論」→「討論方向」+ 治療縮排格式 |
@@ -289,7 +292,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 原因:DEV-GUIDELINES 寫了「bug fix +0.01」這種小數寫法,沒寫到「第三碼最大 9,超過要進位」。Claude 每次接手就照數字直接 +1
 - 做法:從 V4.4.0 重新開始;CLAUDE.md 第九節版本號規則表寫清楚進位邏輯
 - 教訓:版本號規則用「+0.01」這種小數寫法很容易誤導 — 41+1=42 看起來合理,但 V x.y.z 不是小數。要寫成「第幾碼最大 9」才不會被當小數累加
-- 預防:打包前看版本號,第三碼 ≥ 10 立即警告
+- 預防:打包前看版本號,第三碼(c)≥ 10 立即警告
+- **V5.10.5 對齊 Kit V1.20.0 修訂(重要澄清)**:Kit V1.20.0 明定「**只有 c(第三碼)逢十進位**,c 達 10 → b+1 歸零;**b(第二碼)可超過 9**」。所以坑 #14 的「第三碼最大 9」**只適用 c,不適用 b**。MDT 目前 V5.10.x 的 **b=10 是完全合法的**(累積夠多新功能,第二碼自然超過 9),不需要進位到 a。只有當 c 累積到 10(如 V5.10.10)才進位成 V5.11.0。a(大改版)只在技術棧切換/資料結構不相容/主流程重做時才動。**別誤把 b≥10 當成規則錯誤**(這是坑 #14 反過來要避免的過度修正)
 
 **#15 使用說明書版號脫節(V4.6.3)**
 - 症狀:`USER_GUIDE.md` 寫 V4.6.3,但 `index.html` 是 V4.6.2;使用者看說明書不確定是不是對應到當前版本
@@ -409,6 +413,14 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
 
+**#28 用 Python re.sub 注入資料會被解讀跳脫(對齊 Kit V1.21.0 坑 #63,給維護者)** ⚠️
+- 症狀:用 Python 改 index.html 時,如果用 `re.sub(pattern, 注入字串, 內容)` 且注入字串含 `\u`(中文 unicode 跳脫)、`\\`、`\1`、`\g<name>`,**repl 參數會被 re.sub 解讀**,導致中文變亂碼、跳脫字元被改寫、或整段毀損
+- 這條**不是 MDT 系統內的問題**(MDT 是純 JS,不跑 Python),而是**「我(維護者)用 Python 改 index.html 檔時」的陷阱** — MDT 的 prompt 字串、JSON 範例常含中文跟跳脫字元,拿去當 re.sub 的 repl 會壞
+- 做法:**注入資料一律用 `str.replace()`**(不解讀任何字元),不要用 `re.sub`。我這邊改 MDT 多半用 str_replace 工具(等同 str.replace,安全);若寫 Python 腳本批次改,務必用 `content.replace('佔位','資料')` 而非 `re.sub`
+- 非用 re.sub 不可時,repl 傳 lambda:`re.sub(pat, lambda m: 注入字串, s)`(lambda 回傳值不被解讀)
+- 跟坑 #16(中文檔名)、Kit #43(str_replace 大範圍移位)同源:**字串替換優先用不解讀的 str.replace,少用會解讀的 re.sub**
+- 適用範圍:任何「Python 把資料字串注入 MDT 模板」的情境 — 改 prompt、改 JSON 範例、批次替換 CSS 色票等
+
 ---
 
 
@@ -489,9 +501,9 @@ if not missing:
 
 ---
 
-## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起;V5.10.2 升至 V1.18.0)
+## 九之三、SELA Starter Kit 對齊狀態(V4.8.0 起;V5.10.5 升至 V1.21.0)
 
-本專案已對齊 **SELA Starter Kit V1.18.0**(對齊歷程:V4.8.0→V1.6.0,V4.8.2→V1.7.1,V5.8.8→V1.15.0,V5.10.2→V1.18.0)。每次升版都應檢查是否仍符合:
+本專案已對齊 **SELA Starter Kit V1.21.0**(對齊歷程:V4.8.0→V1.6.0,V4.8.2→V1.7.1,V5.8.8→V1.15.0,V5.10.2→V1.18.0,V5.10.5→V1.21.0)。每次升版都應檢查是否仍符合:
 
 | 規範 | 對齊方式 | 注意 |
 |------|---------|------|
@@ -504,6 +516,13 @@ if not missing:
 | **回流通道**(V4.8.1 起) | `SELA-handoff.md` 在專案根目錄,跟 zip 一起交付 | 重大版本完成後更新內容,讓 SELA 升 Kit 用 |
 | **鐵律 #0 handoff 評估**(V1.8.1 起) | 完成版本前走 handoff 評估:符合條件(重大版/≥3 坑/≥2 技術決策/距上次 ≥5 小版/Kit 對齊)就產出,否則最終回報明寫「本版跳過 handoff,因為 X」 | 「默默不做」= 違反鐵律 #0 |
 | HTML 分享 repo | `Sela1227/MDT-slides` 子資料夾 **`slides`**(L4389/L4391) | ⚠️ Kit V1.18.0 §8 寫子資料夾是 `Share`,但 **MDT 實際用 `slides`** — 屬坑 #40「✗ 不做」級(改 Share 會讓舊連結失效);已回流建議 Kit 更正 |
+| **版號進位(V1.20.0 修訂)** | 只有 c(第三碼)逢十進位;b 可超過 9 | MDT V5.10.x 的 b=10 合法,不進位 a。見坑 #14 的 V5.10.5 澄清 |
+| **Python re.sub 注入(V1.21.0 坑 #63)** | 改檔注入資料用 str.replace 不用 re.sub | 見坑 #28(給維護者) |
+| **inline SVG gradient id(V1.19.0 坑 #59)** | 多 SVG 共用 id 衝突 | MDT 無 SVG gradient(grep linearGradient=0),不適用 |
+| **GitHub Pages PWA(V1.19.0 坑 #60)** | blob manifest 裝不了 | MDT 用實體 site.webmanifest 檔 + 無 SW,已符合 |
+| **UI 改名只改顯示(V1.19.0 坑 #61)** | 改名不動程式變數 | MDT 已遵守(V5.8.7 討論要點→方向,變數 discussion 沒動) |
+| **拿欄位前查依賴(V1.19.0 坑 #62)** | 刪欄位前查業務邏輯 | 呼應 MDT 極度謹慎刪除原則,已符合 |
+| references/ 三參考專案 | flet/cli/static 範本 | MDT 已成熟,不需要(✗ 不做) |
 | 三位版本號逢十進位 | 同 #14 規則 | 已對齊 |
 | CLAUDE.md 必含五章 | 踩坑 / 業務對映 / 版本歷程 / 下版優先 / 一句話總結 | 已對齊 |
 | USER_GUIDE.md 必含 | 我們有,Kit 沒明文要求(MDT 超越) | — |
@@ -555,6 +574,12 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.10.5 對齊 SELA Starter Kit V1.21.0(從 V1.18.0 跨 3 版,純文件層 c+1)。詳讀 Kit 全部規範後依坑 #40 四級分類選擇性對齊。**對齊的**:(1)坑 #14 補 V1.20.0 版號進位澄清 — Kit V1.20.0 明定「只有 c 逢十進位,b 可超過 9」,所以 MDT 現在 b=10(V5.10.x)完全合法,不需進位 a,消除坑 #14「第三碼最大 9」被誤讀成「b 也最大 9」的歧義;(2)坑庫加 #28 — Python re.sub 注入資料會解讀 `\u`/`\1` 跳脫(對齊 Kit V1.21.0 坑 #63),改檔注入一律用 str.replace,這是給維護者(我)的陷阱非系統內問題;(3)九之三加 V1.19~1.21 新規範對應。**已符合/不適用的**:坑 #59 inline SVG gradient(MDT 無 gradient)、#60 PWA blob manifest(MDT 用實體 manifest+無 SW)、#61 UI 改名不動變數(V5.8.7 已遵守)、#62 刪欄位查依賴(呼應謹慎刪除)、references 三參考專案(MDT 已成熟不需要)。**不動程式**(CLAUDE.md 1 檔=c+1)。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統(flags V5.9.4~5.9.5 已做大部分,可重評) + NAS 同步觀察期。
+
+V5.10.4 HTML 投影片個案標題微調 — 個管師回報易讀性兩點:(1)`M/74 ECOG 1` 改「男性，74 歲　　ECOG 1」(性別中文化 + 年齡加歲 + em space U+2003 ×2 拉開段間);(2)flags 討論原因標籤放大(.5em→.62em + padding 2px9px→3px12px + 圓角加大)。**關鍵**:新增 HTML 專用 `caseDemoHTML(c)`,**不動 caseDemo**(DOCX/PPTX 投影幕/文件空間有限,仍用簡潔 M/74 ECOG 1)。只改主個案標題(L6146-6147),前期追蹤標題/DOCX/PPTX 不受影響。屬 c+1。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統(flags V5.9.4~5.9.5 已做大部分,可重評) + NAS 同步觀察期。
+
+V5.10.3 修姓名遮蔽 bug — 個管師回報病人 4 個字時系統只遮中間一個字、強迫顯示成 3 字(王大明華→王○華)。根因:maskName 舊邏輯 `n[0]+'○'+n[n.length-1]` 不管幾字都壓成「首+○+尾」3 字。修法:改 `n[0]+'○'.repeat(n.length-2)+n[n.length-1]` 保留原姓名長度(王○○華、司○○○明)。1~3 字行為向後相容不變。影響所有用 maskName 的地方(HTML 投影片/DOCX/PPTX 個案標題姓名遮蔽)一次到位。屬 c+1 bug fix。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統(註:flags 標籤 V5.9.4~5.9.5 已做大部分,可重新評估) + NAS 同步觀察期。
 
 V5.10.2 對齊 SELA Starter Kit V1.18.0(從 V1.15.0 跨 3 版,純文件層 c+1)。詳讀 Kit 全部規範後依坑 #40「鐵律/建議/順便/不做」四級分類做選擇性對齊。**對齊的**:(1)CLAUDE.md 加 theme-color「N 處真相清單」(依坑 #42,MDT 共 5 處 — CSS :root、PPTX 的 JS 色票、DOCX 的 JS 色票、HTML theme-color、webmanifest;比 Kit 範例多一處因為 PPTX/DOCX 各有獨立配色系統);(2)加 handoff 評估紀律(鐵律 #0 — 完成版本前走評估,符合條件就產出否則明寫跳過理由);(3)Kit 對齊紀錄升 V1.18.0 + 記錄不適用的 Kit 坑(醫療章 #51/#52 藥物給付不適用,因 MDT 是會議管理非藥物決策)。**不做的**:HTML 分享子資料夾保持 `slides`(Kit §8 寫 Share,但 MDT 已用 slides 上線,改了舊連結失效,屬坑 #40「✗ 不做」級,回流建議 Kit 更正)。SELA-handoff 加四級分類對齊報告 + slides/Share 回流建議。**不動程式**(2 文件檔 = c+1)。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統 + NAS 同步觀察期。
 
