@@ -12,11 +12,39 @@
 - **專案類型:** 純靜態網頁(單一 HTML 檔,localStorage 儲存,GitHub Pages 部署)
 - **技術棧:** HTML / 原生 JS(無 framework)/ localStorage / File System Access API(NAS 同步)
 - **規模:** 1 個 index.html(~628KB / ~8775 行)+ 文件 4 份 + favicon 套組 9 檔(V5.9.0 換 MDT 主 logo + 保留 sela.svg)
-- **使用 Kit 版本:** **V1.18.0**(V5.10.2 起,從 V1.15.0 升上來;歷程 V4.8.1→V1.6.0、V5.8.8→V1.15.0、V5.10.2→V1.18.0)
-- **完成版本:** V5.10.2(對齊 Kit V1.18.0 後的版本)
-- **完成日期:** 2026-06-19
+- **使用 Kit 版本:** **V1.21.0**(V5.10.5 起;歷程 V4.8.1→V1.6.0、V5.8.8→V1.15.0、V5.10.2→V1.18.0、V5.10.5→V1.21.0)
+- **完成版本:** V5.10.5(對齊 Kit V1.21.0 後的版本)
+- **完成日期:** 2026-06-22
 
 **特殊背景**:這不是用 Kit 從零做的新專案,是**已存在 4.7 個版本的成熟專案接 Kit 規範**。所以反饋不是「冷啟動體驗」,是「**現有成熟專案接 Kit 的衝突點**」 — 這個視角 Kit 之前沒收過。
+
+---
+
+## ★ V5.10.5 對齊 Kit V1.21.0 報告(從 V1.18.0 跨 3 版)
+
+依坑 #40 四級分類選擇性對齊。Kit V1.19.0~V1.21.0 新增坑 #59~#63 + V1.20.0 版號進位修訂 + references/ 三參考專案。
+
+### 對齊範圍
+
+| Kit V1.21.0 新規範 | 等級 | MDT 處理 |
+|---|---|---|
+| V1.20.0 版號進位修訂(只有 c 逢十進位,b 可超過 9) | 🟡 建議 | 坑 #14 補澄清:MDT b=10(V5.10.x)合法,不進位 a。消除「第三碼最大 9」被誤讀成「b 也最大 9」歧義 |
+| 坑 #63 Python re.sub 注入(用 str.replace) | 🟡 建議 | 坑庫加 #28(給維護者:改 MDT 檔注入資料用 str.replace,不用會解讀 `\u`/`\1` 的 re.sub) |
+| 坑 #59 inline SVG gradient id 衝突 | 🟢 不適用 | MDT grep linearGradient=0,無 SVG gradient |
+| 坑 #60 GitHub Pages PWA blob manifest | 🟢 已符合 | MDT 用實體 site.webmanifest 檔 + 無 service worker |
+| 坑 #61 UI 改名只改顯示文字 | 🟢 已符合 | V5.8.7 討論要點→方向,程式變數 discussion 沒動 |
+| 坑 #62 拿欄位前查業務依賴 | 🟢 已符合 | 呼應 MDT「極度謹慎刪除」原則 |
+| references/ 三參考專案範本 | ✗ 不做 | MDT 已成熟(V5.10.x),不需要從範本起步 |
+
+### 升版判定
+只動 CLAUDE.md(坑 #14 澄清 + 坑 #28 + 九之三對應表)+ SELA-handoff,不動 index.html → c+1。V5.10.4 → V5.10.5。
+
+### 回流建議給 Kit(沿用 V1.18.0 報告的 2 條,持續有效)
+1. §8 HTML 分享子資料夾 `Share` → 應更正為 `slides`(MDT 實際用 slides)
+2. 坑 #42 N 處真相清單可補「多套 JS 色票」案例(MDT 有 PPTX+DOCX 兩套,共 5 處)
+
+**V5.10.5 新增第 3 條回流建議**:
+3. 坑 #63(re.sub 注入)可在「做法」補一句「**用 str_replace 編輯工具改檔時等同 str.replace,本身安全;風險在自己寫 Python 腳本批次替換時誤用 re.sub**」— 釐清工具 vs 手寫腳本的差異,避免維護者以為用了 str_replace 工具還要擔心 re.sub 問題。
 
 ---
 

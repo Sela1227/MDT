@@ -803,11 +803,13 @@ textarea{resize:vertical}
             <!-- 分組標題:主力產出 -->
             <div style="font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--textlt);margin:2px 0 7px;text-transform:uppercase">主力產出</div>
             <!-- 主力 4 按鈕(LINE / HTML 投影片 / PPTX / DOCX) -->
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
               <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
               <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
+              <!-- V5.11.0: 會議小抄(可列印 A4 / 存 PDF,一頁 8 案,現場手寫用) -->
+              <button class="btn btn-b" id="btn-sheet" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPrintSheet()">會議小抄</button>
             </div>
             <div id="slide-share-link"></div>
             <!-- 分組標題:資料交換與分享 -->
@@ -1260,7 +1262,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.10.4';
+const VERSION='V5.11.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -7201,6 +7203,91 @@ function exportMeetingJSON(){
   document.body.appendChild(a);a.click();
   setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
   showSaveToast('會議 JSON 已匯出（可用備份還原功能匯入）');
+}
+/* V5.11.0: 會議小抄 — 可列印 A4(一頁 8 案)。個管師開會時手寫筆記用:標題資料已印好不用抄,
+   下面留橫線格。走瀏覽器列印(列印對話框可「另存為 PDF」),不用 jsPDF —
+   中文 PDF 在 jsPDF 要嵌中文字型(檔案暴增數 MB / 易變豆腐字),瀏覽器列印無此問題。
+   版面(V5.11.1 調整):A4 直印一頁 5 案,每案 52mm(標題 7mm + 討論摘要左 60% / 決策結論右 40% 各 5 條橫線)。
+   V5.11.0 原設 8 案/頁,個管師實用回報太擠 → 改 5 案/頁,多出來的空間拿去加行數(3→5 條)+ 加行高(7→7.5mm)。
+   兩區左右並排是為了用到 A4 寬度。頁面計算:277mm 可用 - 12mm 頁首 = 265mm,5×52=260mm 有餘裕不溢頁。 */
+function genPrintSheet(){
+  readForm();
+  const m=S.meeting;
+  if(!m){alert('請先開啟會議');return;}
+  const cid=getOutputCid()||S.cids[0];
+  const ca=CFG[cid]||{};
+  const cases=((m.sections[cid]||{}).cases)||[];
+  if(!cases.length){alert('本區沒有個案討論,無法產生小抄');return;}
+  const esc=function(v){return escA(v||'');};
+  const shortDemo=function(c){
+    const g=c.gender==='F'?'女':(c.gender==='M'?'男':'');
+    const a=c.age?c.age+' 歲':'';
+    return (g&&a)?(g+' / '+a):(g||a||'');
+  };
+  let rows='';
+  cases.forEach(function(c,i){
+    const drs=getDoctors(c).join('、')||'—';
+    const fg=(c.flags||[]).map(function(fl){
+      return '<span class="fg" style="background:'+flagColor(fl)+'">'+esc(fl)+'</span>';
+    }).join('');
+    rows+='<div class="row">'
+      +'<div class="hd">'
+      +'<span class="no">'+(i+1)+'</span>'
+      +'<span class="ch">'+esc(c.chartNo)+'</span>'
+      +'<span class="nm">'+esc(c.name?maskName(c.name):'')+'</span>'
+      +'<span class="dm">'+esc(shortDemo(c))+'</span>'
+      +fg
+      +'<span class="dr">VS '+esc(drs)+'</span>'
+      +'</div>'
+      +'<div class="bx">'
+      +'<div class="bl"><div class="lb">討論摘要</div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div></div>'
+      +'<div class="br"><div class="lb">決策結論</div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div></div>'
+      +'</div>'
+      +'</div>';
+  });
+  const title=(ca.name||'')+' 多專科團隊會議';
+  const css='@page{size:A4 portrait;margin:10mm}'
+    +'*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    +'body{margin:0;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;color:#2C3540}'
+    +'.top{display:flex;align-items:baseline;gap:6mm;border-bottom:.6mm solid #3A4550;padding-bottom:2mm;margin-bottom:3mm}'
+    +'.top h1{font-size:12pt;margin:0;font-weight:700}'
+    +'.top .dt{font-size:9pt;color:#637281}'
+    +'.top .ct{font-size:8pt;color:#9BAAB6;margin-left:auto}'
+    +'.row{height:52mm;page-break-inside:avoid;break-inside:avoid;padding-bottom:3mm}'
+    +'.hd{height:7mm;display:flex;align-items:center;gap:2.5mm;border-bottom:.3mm solid #CDD5DC}'
+    +'.no{font-size:9pt;font-weight:700;color:#4A7C8E;min-width:5mm}'
+    +'.ch{font-size:11pt;font-weight:700;letter-spacing:.02em}'
+    +'.nm{font-size:11pt;font-weight:700}'
+    +'.dm{font-size:8.5pt;color:#637281}'
+    +'.fg{font-size:7pt;font-weight:700;color:#fff;padding:.3mm 1.6mm;border-radius:2mm}'
+    +'.dr{font-size:8.5pt;color:#637281;margin-left:auto}'
+    +'.bx{display:flex;gap:3mm;height:41mm;margin-top:1mm}'
+    +'.bl{width:60%}.br{width:40%}'
+    +'.lb{font-size:7.5pt;color:#9BAAB6;font-weight:700;letter-spacing:.1em;height:3.5mm}'
+    +'.ln{height:7.5mm;border-bottom:.25mm dotted #B8C2CA}'
+    +'@media screen{body{background:#F4F6F8;padding:10mm}.sheet{background:#fff;max-width:190mm;margin:0 auto;padding:10mm;box-shadow:0 1px 6px rgba(0,0,0,.15)}}';
+  const html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">'
+    +'<title>'+esc(title)+' 小抄 '+esc(m.date||'')+'</title>'
+    +'<style>'+css+'</style></head><body><div class="sheet">'
+    +'<div class="top"><h1>'+esc(title)+'</h1><span class="dt">'+esc(m.date||'')+'</span>'
+    +'<span class="ct">會議小抄 · 共 '+cases.length+' 案</span></div>'
+    +rows
+    +'</div><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},350);};</scr'+'ipt>'
+    +'</body></html>';
+  const win=window.open('','_blank');
+  if(win){
+    win.document.open();win.document.write(html);win.document.close();
+    showSaveToast('小抄已開啟 — 列印對話框可選「另存為 PDF」');
+  }else{
+    /* 彈窗被擋:退回下載 HTML,個管師自己開啟後 Ctrl+P */
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=(ca.name||'MDT')+'_'+(m.date||'')+'_會議小抄.html';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+    showSaveToast('彈窗被瀏覽器擋下,已改為下載 HTML — 開啟後按 Ctrl+P 列印/存 PDF');
+  }
 }
 function exportCaseJSON(){
   readForm();
