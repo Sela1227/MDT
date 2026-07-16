@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.11.2 | 修 bug(新坑 #29):特殊議程有圖但 HTML 投影片完全不產出。根因 buildSlidesHTMLOnly 的圖片預載迴圈寫死只跑 cases,special 的圖沒進 _pathImgCache → src 空 → 圖被濾掉 → 整張投影片 continue 掉。_needsFolder 也只檢查 cases 導致連授權都不問。修法:載圖抽 _loadImgsToCache() 共用函式 + 迴圈加跑 special + 授權檢查加 special |
 | V5.11.1 | 會議小抄改一頁 5 案(V5.11.0 的 8 案個管師回報太擠):每案 33→52mm、標題列 6→7mm、每區書寫 3→5 條線、行高 7→7.5mm。頁面計算 277-12=265mm,5×52=260mm 不溢頁 |
 | V5.11.0 | 新功能「會議小抄」genPrintSheet():可列印 A4 一頁 8 案(標題精簡 + 討論摘要左60%/決策結論右40% 各 3 條虛線格,每案 33mm 不跨頁)。走瀏覽器列印(window.open + 自動 print,可另存 PDF),不用 jsPDF 避免中文字型問題;彈窗被擋自動退回下載 HTML。主力產出加第 5 顆按鈕(grid 4→5 欄) |
 | V5.10.5 | 對齊 SELA Starter Kit V1.21.0(從 V1.18.0,純文件層 c+1):坑 #14 補 V1.20.0 版號進位澄清(只有 c 逢十進位,b 可超過 9,MDT b=10 合法);坑庫加 #28(Python re.sub 注入用 str.replace,對齊 Kit #63,給維護者);九之三加 V1.19~1.21 新規範對應(#59/#60/#61/#62 已符合或不適用,references 不做)。不動程式 |
@@ -415,6 +416,22 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
 
+**#29 新資料區塊沒同步加進「圖片預載迴圈」→ HTML 投影片整張不產出(V5.11.2 修)** ✅
+- 症狀:個管師輸入了「特殊議程」(含影像),按 HTML 投影片產出後**完全不顯示特殊議程**,連錯誤訊息都沒有
+- 根因:`buildSlidesHTMLOnly` 的資料夾圖片預載迴圈**寫死只跑 `cases`**:
+  `for(const c of (m.sections[cid]?.cases||[]))` — 載 `c.pathologyImages/surgicalImages/images/mammo.images`
+  但特殊議程存在 `sections[cid].special`,**不在 cases 裡** → `sp.images` 從沒進 `_pathImgCache`
+- 連鎖失效(這是最難查的部分,失敗是**無聲的**):
+  1. `src=img.dataUrl||_pathImgCache[key]||''` → 空字串
+  2. `if(!src)return''` → 該圖被丟掉
+  3. `.filter(Boolean)` → 圖陣列變空
+  4. `if(!_sImgH.length)continue` → **整張投影片直接不產出**(不是產出空白,是根本沒有)
+- 而且 `_needsFolder`(判斷要不要跳「授權資料夾」對話框)**也只檢查 cases** → 若只有特殊議程有圖,**連授權都不會問**,cache 必空
+- 做法:(1)載圖邏輯抽成 `_loadImgsToCache(imgs)` 共用函式;(2)迴圈改成 cases 跑完再跑 `_sec.special`;(3)`_needsFolder` 加 `_hasFolderImg(sp.images)` 檢查
+- 教訓:**「加了新資料區塊」時,要 grep 所有「按區塊迭代」的地方**,不能只加渲染邏輯。這次特殊議程的**渲染**程式碼(L6316/6362/6425/6514)一直都在,壞的是**上游的資料預載** — 渲染再完整,資料沒進來就是不產出
+- 跟坑 #19(followupHTML 寫死 'cases')同源:**寫死區塊名稱**是這個專案的慣性錯誤。凡是 `sections[cid].xxx` 的迭代,都要問「這裡該不該也跑 special / team / events / followups?」
+- 預防:改圖片相關邏輯後,測試**「只有特殊議程有圖」**的情境(不是只測個案討論有圖)
+
 **#28 用 Python re.sub 注入資料會被解讀跳脫(對齊 Kit V1.21.0 坑 #63,給維護者)** ⚠️
 - 症狀:用 Python 改 index.html 時,如果用 `re.sub(pattern, 注入字串, 內容)` 且注入字串含 `\u`(中文 unicode 跳脫)、`\\`、`\1`、`\g<name>`,**repl 參數會被 re.sub 解讀**,導致中文變亂碼、跳脫字元被改寫、或整段毀損
 - 這條**不是 MDT 系統內的問題**(MDT 是純 JS,不跑 Python),而是**「我(維護者)用 Python 改 index.html 檔時」的陷阱** — MDT 的 prompt 字串、JSON 範例常含中文跟跳脫字元,拿去當 re.sub 的 repl 會壞
@@ -576,6 +593,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.11.2 修 bug:特殊議程輸入了但 HTML 產出不顯示(新坑 #29)。根因不在渲染 — 特殊議程的渲染程式碼(L6316/6362/6425/6514)一直都在,壞的是**上游資料預載**:`buildSlidesHTMLOnly` 的資料夾圖片預載迴圈**寫死只跑 `cases`**,特殊議程存在 `sections[cid].special` 不在 cases 裡 → `sp.images` 從沒進 `_pathImgCache` → `src=img.dataUrl||_pathImgCache[key]||''` 空 → `if(!src)return''` 丟掉 → `filter(Boolean)` 變空 → `if(!_sImgH.length)continue` → **整張投影片不產出且無聲失敗**。而且 `_needsFolder`(要不要跳授權資料夾)**也只檢查 cases**,只有特殊議程有圖時連授權都不會問。修法:(1)載圖抽 `_loadImgsToCache()` 共用函式;(2)迴圈 cases 跑完再跑 `_sec.special`;(3)`_needsFolder` 加 special 檢查。**教訓**:跟坑 #19(followupHTML 寫死 'cases')同源 — **寫死區塊名稱**是本專案慣性錯誤,凡 `sections[cid].xxx` 迭代都要問「該不該也跑 special/team/events/followups?」。加新資料區塊時要 grep 所有「按區塊迭代」處,不能只加渲染。屬 c+1。下版優先:個管師實測特殊議程 HTML 產出 + NAS 同步觀察期。
 
 V5.11.1 會議小抄改一頁 5 案 — 個管師實用 V5.11.0 後回報「一頁 8 個太多」。改 5 案/頁,**多出的空間全拿去加大書寫區**(不是只把行拉長留白):每案 33→52mm、標題列 6→7mm(病歷號/姓名 10→11pt)、**每區書寫 3→5 條線**、行高 7→7.5mm,兩區合計從 6 行變 **10 行**。頁面計算:A4 277mm 可用 − 頁首 12mm = 265mm,5×52=260mm 留 5mm 餘裕不溢頁;`page-break-inside:avoid` 保留,個案不跨頁。8 案時會自動分成 2 頁(5+3)。屬 c+1(既有功能的版面調整)。**教訓**:紙本產出的「一頁幾個」很難用算的定案,要個管師實際印出來手寫過才知道 — V5.11.0 我算過 33mm 理論可行,但實用就是擠。下版優先:個管師再次實印回饋 + NAS 同步觀察期。
 

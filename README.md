@@ -111,6 +111,35 @@
 
 ## 版本歷程
 
+### V5.11.2
+**修 bug:特殊議程有輸入,但 HTML 投影片完全不顯示**
+
+個管師回報:輸入了「特殊議程」(如「115年品質指標選定」含 5 張影像),按 HTML 投影片產出後**完全沒有特殊議程**,而且沒有任何錯誤訊息。
+
+**根因(不在渲染,在上游資料預載)**:
+特殊議程的**渲染程式碼一直都在**。壞的是資料夾圖片的**預載迴圈寫死只跑 `cases`**:
+
+```js
+for(const c of (m.sections[cid]?.cases||[])){   // ← 只有個案討論
+```
+
+但特殊議程存在 `sections[cid].special`,不在 `cases` 裡 → `sp.images` 從沒被載進 `_pathImgCache`。
+
+**無聲失敗的連鎖**(這是最難查的地方):
+1. `src = img.dataUrl || _pathImgCache[key] || ''` → 空字串
+2. `if(!src) return ''` → 該圖被丟掉
+3. `.filter(Boolean)` → 圖陣列變空
+4. `if(!_sImgH.length) continue` → **整張投影片根本不產出**(不是空白頁,是沒有這頁)
+
+另外 `_needsFolder`(判斷要不要跳「授權資料夾」對話框)**也只檢查 cases** → 若只有特殊議程有資料夾圖片,**連授權都不會問**,cache 必定是空的。
+
+**修法**:
+1. 載圖邏輯抽成 `_loadImgsToCache(imgs)` 共用函式
+2. 預載迴圈 `cases` 跑完,再跑 `_sec.special`
+3. `_needsFolder` 加上 `_hasFolderImg(sp.images)` 檢查
+
+**新增坑 #29**:跟坑 #19(followupHTML 寫死 `'cases'`)同源 — **寫死區塊名稱**是本專案的慣性錯誤。凡是 `sections[cid].xxx` 的迭代,都要問「這裡該不該也跑 special / team / events / followups?」。加新資料區塊時要 grep 所有「按區塊迭代」的地方,不能只加渲染邏輯。
+
 ### V5.11.1
 **會議小抄改一頁 5 案(原 8 案太擠)**
 

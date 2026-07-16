@@ -1262,7 +1262,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.11.1';
+const VERSION='V5.11.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5993,12 +5993,16 @@ async function genHTMLSlides(){
   const _pathoData={};
   // Check if any folder-based images exist without dataUrl
   // Check if any folder-based images need re-authorization
-  const _needsFolder=S.cids.some(function(cid){return(m.sections[cid]?.cases||[]).some(function(c){
-    return(c.pathologyImages||[]).some(function(i){return i.fromFolder&&!i.dataUrl;})
-      ||(c.surgicalImages||[]).some(function(i){return i.fromFolder&&!i.dataUrl;})
-      ||(c.images||[]).some(function(i){return i.fromFolder&&!i.dataUrl;})
-      ||(c.mammo&&(c.mammo.images||[]).some(function(i){return i.fromFolder&&!i.dataUrl;}));
-  });});
+  /* V5.11.2 修坑 #29: 原本只檢查 cases,漏了特殊議程(special)→ 若只有特殊議程有資料夾圖,
+     連「要不要授權資料夾」都不會問,圖自然載不到 */
+  const _hasFolderImg=function(arr){return(arr||[]).some(function(i){return i.fromFolder&&!i.dataUrl;});};
+  const _needsFolder=S.cids.some(function(cid){
+    const _sec=m.sections[cid]||{};
+    return(_sec.cases||[]).some(function(c){
+      return _hasFolderImg(c.pathologyImages)||_hasFolderImg(c.surgicalImages)||_hasFolderImg(c.images)
+        ||(c.mammo&&_hasFolderImg(c.mammo.images));
+    })||(_sec.special||[]).some(function(sp){return _hasFolderImg(sp.images);});
+  });
   if(_needsFolder&&!imgFolderHandle){
     if(confirm('此次會議包含來自資料夾的影像，需要授權資料夾才能嵌入投影片。\n\n點確認選擇資料夾，點取消略過（圖片將不顯示）')){
       try{const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}catch(e){}
@@ -6009,30 +6013,39 @@ async function genHTMLSlides(){
   /* V5.3.0: cache key 改用 subFolder/name,避免不同子資料夾同名檔(HE.jpg)覆蓋 */
   function _pathCacheKey(img){return(img.subFolder?img.subFolder+'/':'')+(img.name||'');}
   if(imgFolderHandle){
+    /* V5.11.2 修坑 #29: 載圖邏輯抽成共用函式 — 原本寫死在 cases 迴圈裡,
+       導致特殊議程(special)的資料夾圖片從沒被載進 cache → src 空 → 圖被濾掉 → 整張投影片不產出 */
+    const _loadImgsToCache=async function(_allImgs){
+      for(const img of (_allImgs||[])){
+        const _ck=_pathCacheKey(img);
+        if(img.fromFolder&&!img.dataUrl&&!_pathImgCache[_ck]){
+          try{
+            /* V5.3.0: 有 subFolder 走子資料夾,否則平面 */
+            let _scan=imgFolderHandle;
+            if(img.subFolder){
+              try{_scan=await imgFolderHandle.getDirectoryHandle(img.subFolder,{create:false});}catch(_e){_scan=imgFolderHandle;}
+            }
+            const fh=await _scan.getFileHandle(img.name);
+            const file=await fh.getFile();
+            _pathImgCache[_ck]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
+          }catch(e){console.warn('無法讀取影像:',_ck,e);}
+        }
+      }
+    };
     for(const cid of cids){
-      for(const c of (m.sections[cid]?.cases||[])){
-        // Load all fromFolder images into cache: pathology, surgical, related, mammo
-        const _allImgs=[
+      const _sec=m.sections[cid]||{};
+      // Load all fromFolder images into cache: pathology, surgical, related, mammo
+      for(const c of (_sec.cases||[])){
+        await _loadImgsToCache([
           ...(c.pathologyImages||[]),
           ...(c.surgicalImages||[]),
           ...(c.images||[]),
           ...((c.mammo&&c.mammo.images)||[])
-        ];
-        for(const img of _allImgs){
-          const _ck=_pathCacheKey(img);
-          if(img.fromFolder&&!img.dataUrl&&!_pathImgCache[_ck]){
-            try{
-              /* V5.3.0: 有 subFolder 走子資料夾,否則平面 */
-              let _scan=imgFolderHandle;
-              if(img.subFolder){
-                try{_scan=await imgFolderHandle.getDirectoryHandle(img.subFolder,{create:false});}catch(_e){_scan=imgFolderHandle;}
-              }
-              const fh=await _scan.getFileHandle(img.name);
-              const file=await fh.getFile();
-              _pathImgCache[_ck]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
-            }catch(e){console.warn('無法讀取影像:',_ck,e);}
-          }
-        }
+        ]);
+      }
+      /* V5.11.2 修 bug: 特殊議程的圖片也要載入(這行就是本版修的漏洞) */
+      for(const sp of (_sec.special||[])){
+        await _loadImgsToCache(sp.images);
       }
     }
   }
