@@ -144,6 +144,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.11.3 | 修 bug(新坑 #30):做肝膽胰癌 HTML,HCC 診斷含「adrenal(腎上腺)」被 getSubGroup 的 /renal/ 誤判成腎臟癌標籤。根因 getSubGroup 沒限癌別(對所有癌別跑泌尿子群猜測)+ renal regex 太寬含 adrenal。修法:限 cid==='urology' 才啟用 + renal 排除 adrenal(腎(?!上腺))。regex 實測 adrenal 不誤判、真腎癌仍命中 |
 | V5.11.2 | 修 bug(新坑 #29):特殊議程有圖但 HTML 投影片完全不產出。根因 buildSlidesHTMLOnly 的圖片預載迴圈寫死只跑 cases,special 的圖沒進 _pathImgCache → src 空 → 圖被濾掉 → 整張投影片 continue 掉。_needsFolder 也只檢查 cases 導致連授權都不問。修法:載圖抽 _loadImgsToCache() 共用函式 + 迴圈加跑 special + 授權檢查加 special |
 | V5.11.1 | 會議小抄改一頁 5 案(V5.11.0 的 8 案個管師回報太擠):每案 33→52mm、標題列 6→7mm、每區書寫 3→5 條線、行高 7→7.5mm。頁面計算 277-12=265mm,5×52=260mm 不溢頁 |
 | V5.11.0 | 新功能「會議小抄」genPrintSheet():可列印 A4 一頁 8 案(標題精簡 + 討論摘要左60%/決策結論右40% 各 3 條虛線格,每案 33mm 不跨頁)。走瀏覽器列印(window.open + 自動 print,可另存 PDF),不用 jsPDF 避免中文字型問題;彈窗被擋自動退回下載 HTML。主力產出加第 5 顆按鈕(grid 4→5 欄) |
@@ -416,6 +417,18 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
 
+**#30 從診斷文字猜癌別子群沒限定癌別 + regex 太寬(adrenal 含 renal)→ 標籤誤判(V5.11.3 修)** ✅
+- 症狀:做**肝膽胰癌** HTML 投影片,個案診斷是 HCC(肝細胞癌),但投影片右上角癌別標籤顯示**「腎臟癌」**
+- 根因(兩個疊加):
+  1. `getSubGroup(c)` 是給**泌尿道癌**分子群(膀胱/攝護腺/腎臟/輸尿管/睪丸)用的,但**沒限定癌別,對所有癌別都跑** → 肝膽胰癌也被拿去猜泌尿子群
+  2. `/renal/` regex 太寬 → 診斷含 `right ad**renal** metastasis`(右腎上腺轉移),**adrenal(腎上腺)含 renal 字串** → 命中「腎臟癌」。腎上腺是內分泌器官,不是腎臟
+  3. L6175 標籤用 `getSubGroup(c)||ca.name` → 猜到腎臟癌就蓋掉真癌別名(肝膽胰癌)。**即使 useSubGroups=false 不啟用分組頁,這個標籤仍單獨呼叫 getSubGroup** → 顯示錯
+- 修法(兩層防護):(1)`getSubGroup` 開頭加 `if(cid!=='urology')return null` — 非泌尿道癌根本不猜;(2)regex 改 `/(^|[^d])renal|.../ ` + `腎(?!上腺)` 排除 adrenal / 腎上腺
+- L7610 的 genImportPrompt 子群判斷**本來就包在 `caId==='urology'` 分支內是安全的**,但順手把 renal 也改一致(雙保險)
+- 教訓:**「從自由文字猜結構化欄位」很危險** — 醫學縮寫互相包含(adrenal⊃renal、rec⊃...),regex 要加邊界;而且這種猜測要**限定在相關範圍才跑**(只有泌尿道癌才需要猜泌尿子群)
+- 呼應 JSON 匯入的鐵律「absent 欄位留空、不推斷」— 能不猜就不猜,要猜就限定範圍 + 嚴格邊界
+- 預防:regex 判斷醫學名詞時,測試「包含子字串的更長詞」(adrenal/renal、hepatic/hepatocellular)
+
 **#29 新資料區塊沒同步加進「圖片預載迴圈」→ HTML 投影片整張不產出(V5.11.2 修)** ✅
 - 症狀:個管師輸入了「特殊議程」(含影像),按 HTML 投影片產出後**完全不顯示特殊議程**,連錯誤訊息都沒有
 - 根因:`buildSlidesHTMLOnly` 的資料夾圖片預載迴圈**寫死只跑 `cases`**:
@@ -593,6 +606,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.11.3 修 bug:做肝膽胰癌 HTML,HCC 個案的癌別標籤卻顯示「腎臟癌」(新坑 #30)。根因兩個疊加:(1)`getSubGroup(c)`(泌尿道癌分子群用)**沒限定癌別、對所有癌別都跑**;(2)診斷 `right adrenal metastasis`(右腎上腺轉移)的 **adrenal 含 renal 字串**,被 `/renal/` 命中判成腎臟癌;(3)L6175 標籤 `getSubGroup(c)||ca.name` 猜到就蓋掉真癌別名,且即使 useSubGroups=false 不啟用分組頁,標籤仍單獨呼叫 getSubGroup。修法兩層防護:`getSubGroup` 開頭 `if(cid!=='urology')return null`(非泌尿道癌不猜)+ regex 排除 adrenal(`(^|[^d])renal` 且 `腎(?!上腺)`)。node 實測:right adrenal metastasis→null ✓、真 Renal cell carcinoma/kidney→仍腎臟癌 ✓。教訓:從自由文字猜結構化欄位很危險,醫學縮寫互相包含(adrenal⊃renal),regex 要加邊界且限定範圍才跑。屬 c+1。下版優先:個管師實測各癌別 HTML 標籤正確 + NAS 同步觀察期。
 
 V5.11.2 修 bug:特殊議程輸入了但 HTML 產出不顯示(新坑 #29)。根因不在渲染 — 特殊議程的渲染程式碼(L6316/6362/6425/6514)一直都在,壞的是**上游資料預載**:`buildSlidesHTMLOnly` 的資料夾圖片預載迴圈**寫死只跑 `cases`**,特殊議程存在 `sections[cid].special` 不在 cases 裡 → `sp.images` 從沒進 `_pathImgCache` → `src=img.dataUrl||_pathImgCache[key]||''` 空 → `if(!src)return''` 丟掉 → `filter(Boolean)` 變空 → `if(!_sImgH.length)continue` → **整張投影片不產出且無聲失敗**。而且 `_needsFolder`(要不要跳授權資料夾)**也只檢查 cases**,只有特殊議程有圖時連授權都不會問。修法:(1)載圖抽 `_loadImgsToCache()` 共用函式;(2)迴圈 cases 跑完再跑 `_sec.special`;(3)`_needsFolder` 加 special 檢查。**教訓**:跟坑 #19(followupHTML 寫死 'cases')同源 — **寫死區塊名稱**是本專案慣性錯誤,凡 `sections[cid].xxx` 迭代都要問「該不該也跑 special/team/events/followups?」。加新資料區塊時要 grep 所有「按區塊迭代」處,不能只加渲染。屬 c+1。下版優先:個管師實測特殊議程 HTML 產出 + NAS 同步觀察期。
 
