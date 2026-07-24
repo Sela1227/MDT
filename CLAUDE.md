@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.13.2 | Word 簡報再修兩點:(1)日期標籤底色從 paragraph shading 改 run shading — 只包住文字像膠囊,不再撐滿整行(個管師回報「日期項目的長度太長」);(2)mkBlock 的 TableRow 加 cantSplit,欄位區塊不跨頁 — 原本長欄位跨頁時第二頁沒有左側標籤,看起來像「被截斷顯示不完全」 |
 | V5.13.1 | Word 簡報格式優化:(1)mkBlock 的 lines 擴充 fill/gap/color,病理·檢查·治療的日期標題行改「深色底白字 + 組間留白 4pt」讓不同日期一眼可辨(原 shaded 的 F5F7F8 太淡);(2)病理從純文字 \n 串接改成日期分組格式;(3)欄位重排 診斷→現病史→過去病史→病理→癌指數→檢查→治療→討論方向(討論方向殿後、癌指數移到病理與檢查之間)。record 模式外觀完全不動 |
 | V5.13.0 | 長官習慣 Word 不用 PPTX → 「PPTX 簡報」按鈕改「Word 簡報」。做法:genDOCX 加 mode 參數('record' 預設 / 'deck' 新增),共用 mkBlock/mkCaseHdr 等 helper 避免複製 200 行。deck = 會前個案簡報(一案一頁 pageBreakBefore,完整臨床欄位 診斷/現病史/過去病史/病理/檢查/治療/討論方向/癌指數,不出會後的討論摘要/決策結論)。genPPTX 保留但無 UI 入口。順修按鈕文字還原不一致 |
 | V5.12.0 | 新功能:整合錄音切割台(AudioSplitter V3.3.0)。用 iframe 彈窗載入 AudioSplitter.html(因 VERSION 全域 + 12 個通用 CSS class 撞名,直接內嵌會壞);lamejs CDN 由 cdnjs 改 jsdelivr(對齊 MDT,院內確認可用);主力產出加第 6 顆「錄音切割」按鈕,grid 改 auto-fit 防窄螢幕擠爆;src 延遲載入。**打包規則改六檔**(多帶 AudioSplitter.html) |
@@ -637,6 +638,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.13.2 Word 簡報再修個管師回報的兩點。**(1)「病理被截斷顯示不完全」** — 先查證病理 struct 只有 `date`/`content` 兩欄,渲染沒漏欄位,所以**不是資料問題是排版問題**:長欄位(病理/檢查)跨頁時,Word 把表格列切成兩頁,**第二頁只剩內容、左側標籤欄不會重複** → 看起來就像被截斷。修法:`mkBlock` 的 `TableRow` 加 **`cantSplit:true`**,區塊放不下就整塊移到下一頁,標籤與內容永遠在一起(單一區塊若本身超過一整頁,Word 仍會自動切,不會卡死)。**(2)「日期項目的長度太長」** — V5.13.1 的日期底色用 **paragraph shading**,而 paragraph shading **一定是整行寬**,深色長條視覺太重。修法:`ln.fill` 改成套在 **run 層**(`mkRun` 的 `shading`),底色只包住日期文字像膠囊標籤;`ln.shaded`(無 fill)維持 paragraph 層淺灰,**不動 record 模式治療欄的原外觀**。**驗證**:docx 實跑 — run 層日期底色 7 個、paragraph 層 0 個(確認不再整行寬)、cantSplit 14 個。**教訓**:Word 的 paragraph shading 無法只包文字,要做「膠囊標籤」必須用 run 層 shading(跟 V5.9.5 的 DOCX flags 色塊同一個技巧);表格跨頁時標籤欄不重複是 Word 預設行為,長內容區塊要 cantSplit。屬 c+1。下版優先:長官看新版 Word 簡報回饋 + 錄音切割院內網路測試。
 
 V5.13.1 Word 簡報格式優化(個管師看過 V5.13.0 實際產出後的兩點回饋)。**(1)不同日期一眼可辨**:原本 `lines` 的 `shaded` 用 `C.bg=F5F7F8` 太淡,多筆檢查擠在一起分不出組;而**病理更慘 — 是純文字用 `\n` 串接**,完全沒有分組。修法:擴充 `mkBlock` 的 `lines` 支援 `fill`(自訂底色)/`gap`(組間留白 pt)/`color`(文字色),日期標題行統一改 `_DATEHDR = {fill:C.mid, color:'FFFFFF', bold}` 深色底白字 + 非首筆 `gap:4`;病理也改成同樣的日期分組格式(日期當標題行、內容縮排 8pt)。三個欄位(病理/檢查/治療)視覺統一。**(2)欄位重排**:診斷→現病史→過去病史→**病理→癌指數→檢查**→治療→**討論方向**(討論方向殿後當結尾、癌指數移到病理與檢查之間)。**風險控制**:`_TRHDR` 讓治療只在 deck 模式用深色底,**record 模式維持原淺灰**,不動長官已習慣的會議記錄外觀;`lines` 的 `color` 改成「未指定就不設」(原本我一度寫成預設 `C.dark`,會讓現有記錄的治療欄文字從黑變深藍灰 — 自己抓到並修掉)。**驗證**:docx 實跑 — 深色日期標題 7 個、組間留白 2 個、欄位順序 `診斷→現病史→過去病史→病理→癌指數→檢查→治療→討論方向` 完全正確。屬 c+1。下版優先:長官看過新版 Word 簡報的回饋 + 錄音切割院內網路測試。
 

@@ -1266,7 +1266,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.13.1';
+const VERSION='V5.13.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5576,7 +5576,11 @@ async function genDOCX(mode){
                right:{style:BorderStyle.SINGLE,size:4,color:C.divider},
                insideH:{style:BorderStyle.SINGLE,size:4,color:C.divider},
                insideV:{style:BorderStyle.SINGLE,size:4,color:C.divider}},
-      rows:[new TableRow({children:[
+      /* V5.13.2: cantSplit — 一個欄位區塊不允許被切成兩頁。
+         原本長欄位(病理/檢查)跨頁時,第二頁只剩內容沒有左側標籤,看起來像「被截斷顯示不完全」。
+         加了之後放不下就整塊移到下一頁,標籤與內容永遠在一起。
+         (若單一區塊本身就超過一整頁,Word 仍會自動切,不會卡死) */
+      rows:[new TableRow({cantSplit:true,children:[
         new TableCell({
           width:{size:_MKB_L,type:WidthType.DXA},
           shading:{type:ShadingType.CLEAR,fill:labelBg},
@@ -5601,9 +5605,13 @@ async function genDOCX(mode){
             ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:0,after:0}})]
             :(opts.lines
               ?opts.lines.map(ln=>new Paragraph({
+                  /* V5.13.2: ln.fill 改成套在 run(只包住文字,像膠囊標籤),不再用 paragraph shading 撐滿整行。
+                     個管師回報「日期項目的長度太長」— paragraph shading 一定是整行寬,視覺太重。
+                     ln.shaded(無 fill)維持 paragraph 層淺灰,不動 record 模式治療欄原外觀。 */
                   children:[mkRun(ln.text||'',{bold:!!ln.bold,size:sz(contentSize),
-                    ...(ln.color?{color:ln.color}:{}),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
-                  shading:(ln.fill||ln.shaded)?{type:ShadingType.CLEAR,fill:ln.fill||C.bg}:undefined,
+                    ...(ln.color?{color:ln.color}:{}),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4',
+                    ...(ln.fill?{shading:{type:ShadingType.CLEAR,fill:ln.fill}}:{})})],
+                  shading:(ln.shaded&&!ln.fill)?{type:ShadingType.CLEAR,fill:C.bg}:undefined,
                   indent:ln.indent?{left:pt(ln.indent)}:undefined,
                   spacing:{before:ln.gap?pt(ln.gap):0,after:0}
                 }))
