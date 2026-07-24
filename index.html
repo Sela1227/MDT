@@ -1266,7 +1266,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.13.0';
+const VERSION='V5.13.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5593,15 +5593,19 @@ async function genDOCX(mode){
           margins:{top:pt(3),bottom:isEmpty?pt(20):pt(3),left:pt(6),right:pt(4)},
           /* V5.8.4: 垂直置中(短內容居中,長內容自然從頂部展開) */
           verticalAlign:VerticalAlign.CENTER,
-          /* V5.8.5: 加 opts.lines 支援 — array of {text, shaded, bold, indent},每行可指定獨立樣式(治療欄用) */
+          /* V5.8.5: 加 opts.lines 支援 — array of {text, shaded, bold, indent},每行可指定獨立樣式(治療欄用)
+             V5.13.1: 再加 fill(自訂底色,蓋過 shaded 的預設淺灰)/ color(文字色)/ gap(該行之前留白 pt)。
+             用途:病理·檢查·治療的「日期標題行」用深色底白字 + 組間留白,讓不同日期一眼可辨
+             (原本 shaded 的 F5F7F8 太淡,多組資料擠在一起分不出來) */
           children:isEmpty
             ?[new Paragraph({children:[mkRun('',{size:sz(11)})],spacing:{before:0,after:0}})]
             :(opts.lines
               ?opts.lines.map(ln=>new Paragraph({
-                  children:[mkRun(ln.text||'',{bold:!!ln.bold,size:sz(contentSize),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
-                  shading:ln.shaded?{type:ShadingType.CLEAR,fill:C.bg}:undefined,
+                  children:[mkRun(ln.text||'',{bold:!!ln.bold,size:sz(contentSize),
+                    ...(ln.color?{color:ln.color}:{}),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
+                  shading:(ln.fill||ln.shaded)?{type:ShadingType.CLEAR,fill:ln.fill||C.bg}:undefined,
                   indent:ln.indent?{left:pt(ln.indent)}:undefined,
-                  spacing:{before:0,after:0}
+                  spacing:{before:ln.gap?pt(ln.gap):0,after:0}
                 }))
               :(content||'').split('\n').map(line=>new Paragraph({
                   children:[mkRun(line,{size:sz(contentSize),font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
@@ -5700,20 +5704,36 @@ async function genDOCX(mode){
           if(c.diagnosis){
             children.push(mkBlock('\u8a3a\u65b7',c.diagnosis,false));
           }
-          /* V5.13.0: 簡報模式補上完整臨床欄位(對齊原 PPTX 個案頁的內容與順序) */
+          /* V5.13.0: 簡報模式補上完整臨床欄位
+             V5.13.1: 欄位順序改為 診斷→現病史→過去病史→病理→癌指數→檢查→治療→討論方向
+             (個管師要求:討論方向放最後當結尾、癌指數移到病理與檢查之間);
+             病理/檢查的日期標題行改用 _DATEHDR 深色底白字 + 組間留白,一眼分辨不同日期 */
           if(isDeck){
+            /* 日期分組標題行的統一樣式:深藍灰底 + 白字 + 上方留白 4pt */
+            const _DATEHDR={shaded:true,bold:true,fill:C.mid,color:'FFFFFF'};
             if(c.cc)children.push(mkBlock('\u73fe\u75c5\u53f2',c.cc,false));
             const _phAll=[(c.phChips||[]).map(function(x){return x+'(+)';}).join(' '),c.ph||''].filter(Boolean).join('  ');
             if(_phAll)children.push(mkBlock('\u904e\u53bb\u75c5\u53f2',_phAll,false));
+            /* V5.13.1: 病理原本是純文字用 \n 串接,多筆日期擠成一段分不出來 → 改日期分組格式 */
             if((c.pathologies||[]).length){
-              const _pStr=(c.pathologies||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
-                .map(function(pa){return(pa.date?pa.date+' ':'')+(pa.content||'');}).join('\n');
-              if(_pStr.trim())children.push(mkBlock('\u75c5\u7406',_pStr,false,{contentSize:10}));
+              const _pLines=[];
+              (c.pathologies||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}).forEach(function(pa,pi){
+                if(!(pa.content||'').trim()&&!(pa.date||'').trim())return;
+                _pLines.push(Object.assign({text:'\u2009'+(pa.date||'\u672a\u8a3b\u65e5\u671f')+'\u2009',gap:pi?4:0},_DATEHDR));
+                if(pa.content)_pLines.push({text:pa.content,indent:8});
+              });
+              if(_pLines.length)children.push(mkBlock('\u75c5\u7406','',false,{contentSize:10,lines:_pLines}));
+            }
+            /* V5.13.1: 癌指數移到「病理之後、檢查之前」(個管師要求) */
+            if((c.markers||[]).length){
+              const _mkS=(c.markers||[]).map(function(mk){return(mk.name?mk.name+'\uff1a ':' ')+(mk.content||'');}).join('\n');
+              if(_mkS.trim())children.push(mkBlock('\u764c\u6307\u6578',_mkS,false,{contentSize:10}));
             }
             if((c.exams||[]).length){
               const _exLines=[];
-              (c.exams||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}).forEach(function(ex){
-                _exLines.push({text:(ex.name||'')+(ex.date?'('+ex.date+')':''),shaded:true,bold:true});
+              (c.exams||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}).forEach(function(ex,xi){
+                /* V5.13.1: 日期標題行改深色底白字 + 組間留白,不同檢查日期一眼可辨 */
+                _exLines.push(Object.assign({text:'\u2009'+(ex.name||'')+(ex.date?'\uff08'+ex.date+'\uff09':'')+'\u2009',gap:xi?4:0},_DATEHDR));
                 if(ex.content)_exLines.push({text:ex.content,indent:8});
               });
               if(_exLines.length)children.push(mkBlock('\u6aa2\u67e5','',false,{contentSize:10,lines:_exLines}));
@@ -5727,10 +5747,13 @@ async function genDOCX(mode){
             :[];
           if(trs.length){
             var trLines=[];
-            trs.forEach(function(tr){
-              var date=tr.date?'('+tr.date+') ':'';
+            /* V5.13.1: 簡報模式的治療也用深色底日期標題(跟病理/檢查視覺一致);
+               記錄模式維持原本淺灰樣式不動(不影響長官已習慣的會議記錄外觀) */
+            const _TRHDR=isDeck?{shaded:true,bold:true,fill:C.mid,color:'FFFFFF'}:{shaded:true,bold:true};
+            trs.forEach(function(tr,ti){
+              var date=tr.date?(isDeck?'\uff08'+tr.date+'\uff09':'('+tr.date+') '):'';
               var name=tr.name||'';
-              trLines.push({text:date+name+(tr.content?' :':''),shaded:true,bold:true});
+              trLines.push(Object.assign({text:(isDeck?'\u2009':'')+date+name+(tr.content?' :':'')+(isDeck?'\u2009':''),gap:(isDeck&&ti)?4:0},_TRHDR));
               if(tr.content)trLines.push({text:tr.content,indent:8});
             });
             children.push(mkBlock('\u6cbb\u7642','',false,{contentSize:10,lines:trLines}));
@@ -5742,11 +5765,8 @@ async function genDOCX(mode){
           /* V5.13.0: 簡報模式(會前資料)不出「討論摘要/決策結論」— 那是會後才填的;
              改出「討論方向」與「癌指數」,對齊原 PPTX 個案頁 */
           if(isDeck){
+            /* V5.13.1: 討論方向放最後(癌指數已移到病理與檢查之間) */
             if(c.discussion)children.push(mkBlock('\u8a0e\u8ad6\u65b9\u5411',c.discussion,false));
-            if((c.markers||[]).length){
-              const _mkS=(c.markers||[]).map(function(mk){return(mk.name?mk.name+'\uff1a ':' ')+(mk.content||'');}).join('\n');
-              if(_mkS.trim())children.push(mkBlock('\u764c\u6307\u6578',_mkS,false,{contentSize:10}));
-            }
             children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
             return;
           }
