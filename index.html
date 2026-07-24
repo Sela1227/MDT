@@ -803,13 +803,16 @@ textarea{resize:vertical}
             <!-- 分組標題:主力產出 -->
             <div style="font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--textlt);margin:2px 0 7px;text-transform:uppercase">主力產出</div>
             <!-- 主力 4 按鈕(LINE / HTML 投影片 / PPTX / DOCX) -->
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
+            <!-- V5.12.0: 主力產出增為 6 顆,改 auto-fit 讓窄螢幕自動換行(固定 6 欄在小視窗會擠爆按鈕文字) -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
               <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
               <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPPTX()">PPTX 簡報</button>
               <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
               <!-- V5.11.0: 會議小抄(可列印 A4 / 存 PDF,一頁 8 案,現場手寫用) -->
               <button class="btn btn-b" id="btn-sheet" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPrintSheet()">會議小抄</button>
+              <!-- V5.12.0: 錄音切割台(iframe 彈窗載入 AudioSplitter.html) -->
+              <button class="btn btn-b" id="btn-audio" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="openAudioSplitter()">錄音切割</button>
             </div>
             <div id="slide-share-link"></div>
             <!-- 分組標題:資料交換與分享 -->
@@ -1262,7 +1265,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.11.3';
+const VERSION='V5.12.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6015,6 +6018,18 @@ async function genHTMLSlides(){
   if(imgFolderHandle){
     /* V5.11.2 修坑 #29: 載圖邏輯抽成共用函式 — 原本寫死在 cases 迴圈裡,
        導致特殊議程(special)的資料夾圖片從沒被載進 cache → src 空 → 圖被濾掉 → 整張投影片不產出 */
+    /* V5.11.4 修坑 #31: getFileHandle(name) 對含括號等特殊字元的檔名(如 CT(20250401).jpg)
+       可能直接比對失敗 → 圖讀不到破圖。加退回機制:失敗時列舉資料夾逐一比對 entry.name,繞過直接比對 */
+    const _getFileByEnum=async function(dirHandle,fname){
+      try{const fh=await dirHandle.getFileHandle(fname);return await fh.getFile();}catch(_e){}
+      /* 退回:列舉資料夾找同名檔(對含特殊字元檔名較穩) */
+      try{
+        for await(const ent of dirHandle.values()){
+          if(ent.kind==='file'&&ent.name===fname){return await ent.getFile();}
+        }
+      }catch(_e2){}
+      return null;
+    };
     const _loadImgsToCache=async function(_allImgs){
       for(const img of (_allImgs||[])){
         const _ck=_pathCacheKey(img);
@@ -6025,8 +6040,8 @@ async function genHTMLSlides(){
             if(img.subFolder){
               try{_scan=await imgFolderHandle.getDirectoryHandle(img.subFolder,{create:false});}catch(_e){_scan=imgFolderHandle;}
             }
-            const fh=await _scan.getFileHandle(img.name);
-            const file=await fh.getFile();
+            const file=await _getFileByEnum(_scan,img.name);
+            if(!file){console.warn('無法讀取影像(檔名可能含特殊字元或不存在):',_ck);continue;}
             _pathImgCache[_ck]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
           }catch(e){console.warn('無法讀取影像:',_ck,e);}
         }
@@ -6203,7 +6218,7 @@ async function genHTMLSlides(){
           var _gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_cols+',1fr);grid-template-rows:repeat('+_rows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
           var _wSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
           var _iSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
-          var _h=_grp.map(function(img){return '<div style="'+_wSt+'"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+(img.caption||'')+'" style="'+_iSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          var _h=_grp.map(function(img){return '<div style="'+_wSt+'"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+escA(img.caption||'')+'" style="'+_iSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
           slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
             +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
             +'<div style="'+_gSt+'">'+_h+'</div>'
@@ -6212,7 +6227,7 @@ async function genHTMLSlides(){
       }
       // Mammo slide (breast only, 4:6 layout)
       if(cid==='breast'&&c.mammo&&(c.mammo.report||(c.mammo.images&&c.mammo.images.length))){
-        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
+        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+escA(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
         const mDate=c.mammo.date?'<div style="font-size:.85em;opacity:.65;margin-bottom:.6vh">'+escA(c.mammo.date)+'</div>':'';
         const mRep=escA(c.mammo.report||'').replace(/\n/g,'<br>');
         slides.push('<section class="slide img-slide mammo-slide" style="--ca:'+caColor+';">'
@@ -6254,7 +6269,7 @@ async function genHTMLSlides(){
           var _swSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
           var _siSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
           var _sCap=_sgrp.length===1?escA(_sgrp[0].caption||_sgrp[0].name||'手術照片'):'';
-          var _sh=_sgrp.map(function(img){return '<div style="'+_swSt+'"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+(img.caption||'')+'" style="'+_siSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
+          var _sh=_sgrp.map(function(img){return '<div style="'+_swSt+'"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+escA(img.caption||'')+'" style="'+_siSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
           slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
             +'<div class="ch"><div class="cht"><span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.style.opacity=\'.4\';setTimeout(function(){el.style.opacity=\'\'},600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
             +(_sCap?'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+_sCap+'</span>':'')
@@ -7229,6 +7244,21 @@ function exportMeetingJSON(){
    版面(V5.11.1 調整):A4 直印一頁 5 案,每案 52mm(標題 7mm + 討論摘要左 60% / 決策結論右 40% 各 5 條橫線)。
    V5.11.0 原設 8 案/頁,個管師實用回報太擠 → 改 5 案/頁,多出來的空間拿去加行數(3→5 條)+ 加行高(7→7.5mm)。
    兩區左右並排是為了用到 A4 寬度。頁面計算:277mm 可用 - 12mm 頁首 = 265mm,5×52=260mm 有餘裕不溢頁。 */
+/* V5.12.0: 錄音切割台開關 — src 延遲載入(第一次開才設),之後保留不清空,
+   讓個管師關掉再開時,已載入的錄音與切點還在。不做 ESC/點背景關閉:避免作業中誤觸。 */
+function openAudioSplitter(){
+  var md=document.getElementById('audio-splitter-modal');
+  var fr=document.getElementById('audio-splitter-frame');
+  if(!md||!fr)return;
+  if(!fr.getAttribute('src'))fr.setAttribute('src','AudioSplitter.html');
+  md.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeAudioSplitter(){
+  var md=document.getElementById('audio-splitter-modal');
+  if(md)md.style.display='none';
+  document.body.style.overflow='';
+}
 function genPrintSheet(){
   readForm();
   const m=S.meeting;
@@ -8457,9 +8487,14 @@ document.addEventListener('click',function(e){
     const dataUrl=(previewrelatedimg.dataset.dataurl||'').trim();
     if(dataUrl){viewImg(dataUrl);return;}
     if(name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
-        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(e){alert('無法載入影像：'+e.message);});
+      /* V5.11.4 修坑 #31: 含括號檔名 getFileHandle 會失敗,退回列舉比對 */
+      (async function(){
+        let file=null;
+        try{const fh=await imgFolderHandle.getFileHandle(name);file=await fh.getFile();}catch(_e){}
+        if(!file){try{for await(const ent of imgFolderHandle.values()){if(ent.kind==='file'&&ent.name===name){file=await ent.getFile();break;}}}catch(_e2){}}
+        if(file){const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);}
+        else{alert('無法載入影像：找不到檔案 '+name);}
+      })();
     }
     return;
   }
@@ -8939,6 +8974,20 @@ function updateImgFolderSettingsStatus(){
 </div>
 
 <!-- V4.8.0: SELA logo 右下角(對齊 SELA Starter Kit V1.6.0 品牌規範) -->
+<!-- V5.12.0: 錄音切割台 iframe 彈窗 —
+     用 iframe 而非直接內嵌,因為 AudioSplitter 有 const VERSION 與 12 個通用 CSS class(row/meta/primary...)
+     會跟 MDT 撞名。iframe 是同源沙盒:功能不受限(檔案上傳/AudioContext/下載都正常),但變數與樣式完全隔離,
+     AudioSplitter 可獨立升版不用改一行。src 延遲到第一次開啟才設,避免拖慢 MDT 啟動。 -->
+<div id="audio-splitter-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:center;justify-content:center;padding:2vh 2vw">
+  <div style="background:#fff;border-radius:8px;width:min(1240px,96vw);height:min(92vh,960px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.32)">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--blt);flex-shrink:0;background:var(--surface)">
+      <span style="font-weight:700;font-size:14px;color:var(--text)">錄音切割台</span>
+      <span style="font-size:11px;color:var(--textlt)">會議錄音切成小段,方便做逐字稿</span>
+      <button class="btn btn-b" style="margin-left:auto;font-size:12px;padding:3px 14px" onclick="closeAudioSplitter()">關閉</button>
+    </div>
+    <iframe id="audio-splitter-frame" title="錄音切割台" style="flex:1;width:100%;border:0;display:block"></iframe>
+  </div>
+</div>
 <a href="https://github.com/Sela1227" target="_blank" rel="noopener" id="sela-credit" title="Made by SELA, with Claude" style="position:fixed;right:10px;bottom:10px;width:32px;height:32px;border-radius:6px;overflow:hidden;opacity:.42;transition:opacity .2s,transform .2s;z-index:50;cursor:pointer;text-decoration:none;line-height:0;box-shadow:0 1px 3px rgba(0,0,0,.15)" onmouseover="this.style.opacity='1';this.style.transform='scale(1.08)'" onmouseout="this.style.opacity='.42';this.style.transform=''">
   <!-- V5.9.0: favicon-32x32.png 已換成 MDT logo,sela-credit 微標改引用 sela.svg 維持 SELA 品牌 -->
   <img src="favicon/sela.svg" alt="SELA" width="32" height="32" style="display:block">

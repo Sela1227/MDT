@@ -24,6 +24,24 @@
 
 **打包檢查**:每次 `zip` 之前確認 4 份檔都在,缺一份就是任務沒完成。
 
+### ⚠️ V5.12.0 起:`AudioSplitter.html` 是必帶的伴隨檔
+
+錄音切割台用 **iframe 整合**(`<iframe src="AudioSplitter.html">`),所以 `AudioSplitter.html` **必須跟 index.html 放在同一層目錄**,否則「錄音切割」按鈕會開出空白。
+
+打包指令(六檔 + favicon):
+```bash
+zip -q "MDT V<x>.zip" index.html AudioSplitter.html README.md CLAUDE.md USER_GUIDE.md SELA-handoff.md .gitignore favicon/ favicon/*
+```
+
+**為什麼用 iframe 不直接內嵌**(整合時的衝突盤點):
+| 項目 | 衝突 |
+|---|---|
+| 全域 `VERSION` | 🔴 AudioSplitter 有 `const VERSION="V3.3.0"`,直接內嵌會蓋掉 MDT 版號 |
+| CSS class | ⚠️ 12 個撞名,且是 `row`/`meta`/`primary`/`left`/`bar` 這種通用名 → 樣式互相污染 |
+| 函式名 / HTML id / localStorage | ✅ 0 撞名 |
+
+iframe 是**同源沙盒**:變數與樣式完全隔離,但功能不受限(檔案上傳 / AudioContext / 下載都正常),而且 AudioSplitter 可獨立升版不用改一行。
+
 ---
 
 ## 一、系統是什麼
@@ -144,6 +162,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.12.0 | 新功能:整合錄音切割台(AudioSplitter V3.3.0)。用 iframe 彈窗載入 AudioSplitter.html(因 VERSION 全域 + 12 個通用 CSS class 撞名,直接內嵌會壞);lamejs CDN 由 cdnjs 改 jsdelivr(對齊 MDT,院內確認可用);主力產出加第 6 顆「錄音切割」按鈕,grid 改 auto-fit 防窄螢幕擠爆;src 延遲載入。**打包規則改六檔**(多帶 AudioSplitter.html) |
+| V5.11.4 | 修 bug(新坑 #31):檔名含括號(CT(20250401).jpg)時 getFileHandle 找不到檔 → HTML 影像頁破圖。加 _getFileByEnum() 退回機制:getFileHandle 失敗改列舉資料夾比對 ent.name。預載 + 預覽兩處都修;順手 3 處 alt 加 escA |
 | V5.11.3 | 修 bug(新坑 #30):做肝膽胰癌 HTML,HCC 診斷含「adrenal(腎上腺)」被 getSubGroup 的 /renal/ 誤判成腎臟癌標籤。根因 getSubGroup 沒限癌別(對所有癌別跑泌尿子群猜測)+ renal regex 太寬含 adrenal。修法:限 cid==='urology' 才啟用 + renal 排除 adrenal(腎(?!上腺))。regex 實測 adrenal 不誤判、真腎癌仍命中 |
 | V5.11.2 | 修 bug(新坑 #29):特殊議程有圖但 HTML 投影片完全不產出。根因 buildSlidesHTMLOnly 的圖片預載迴圈寫死只跑 cases,special 的圖沒進 _pathImgCache → src 空 → 圖被濾掉 → 整張投影片 continue 掉。_needsFolder 也只檢查 cases 導致連授權都不問。修法:載圖抽 _loadImgsToCache() 共用函式 + 迴圈加跑 special + 授權檢查加 special |
 | V5.11.1 | 會議小抄改一頁 5 案(V5.11.0 的 8 案個管師回報太擠):每案 33→52mm、標題列 6→7mm、每區書寫 3→5 條線、行高 7→7.5mm。頁面計算 277-12=265mm,5×52=260mm 不溢頁 |
@@ -417,6 +437,15 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
 
+**#31 檔名含括號等特殊字元 → getFileHandle 找不到檔 → HTML 影像破圖(V5.11.4 修)** ✅
+- 症狀:HTML 投影片影像頁**破圖**(只顯示破圖 icon + alt 文字如 `CT(20250401)`),個管師實測**把檔名括號拿掉就正常**
+- 根因:`_scan.getFileHandle(img.name)` 對含 `(` `)` 等特殊字元的檔名(`CT(20250401).jpg`)可能直接比對失敗(不同瀏覽器/OS 對檔名正規化不一致)→ 讀不到檔 → `_pathImgCache` 沒值 → `src=img.dataUrl||_pathImgCache[key]||''` 得到空字串 → 破圖
+- 做法:加**退回機制** `_getFileByEnum(dirHandle,fname)` — 先試 `getFileHandle`,失敗就**列舉資料夾** `for await(const ent of dirHandle.values())` 逐一比對 `ent.name===fname`,繞過直接比對
+- 兩處都要修:(1)`_loadImgsToCache`(產投影片的預載);(2)`previewrelatedimg`(編輯畫面的「預覽」按鈕,原本也是直接 getFileHandle)
+- 順手:3 處 `alt="'+(img.caption||'')+'"` 改用 `escA()`(caption 若含引號會破壞 HTML 屬性)
+- 教訓:**File System Access API 的 `getFileHandle(name)` 不是萬能** — 檔名含特殊字元時要有列舉退回。個管師的檔名習慣(日期加括號)是完全合理的,不該要求他們改檔名遷就程式
+- 預防:測試檔名含 `()` `[]` 空格 `&` 的情境
+
 **#30 從診斷文字猜癌別子群沒限定癌別 + regex 太寬(adrenal 含 renal)→ 標籤誤判(V5.11.3 修)** ✅
 - 症狀:做**肝膽胰癌** HTML 投影片,個案診斷是 HCC(肝細胞癌),但投影片右上角癌別標籤顯示**「腎臟癌」**
 - 根因(兩個疊加):
@@ -606,6 +635,10 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.12.0 整合錄音切割台 — 個管師錄下 MDT 會議後要切成小段做逐字稿(檔案太大不能一次上傳),把獨立的 AudioSplitter V3.3.0(1891 行 / 84KB)整合進來。**整合方式選 iframe 彈窗而非直接內嵌**,因為整合前的衝突盤點發現:(1)🔴 AudioSplitter 有 `const VERSION="V3.3.0"`,直接內嵌會**蓋掉 MDT 版號**;(2)⚠️ 12 個 CSS class 撞名且都是 `row`/`meta`/`primary`/`left`/`bar` 這種通用名 → 樣式互相污染;(3)✅ 函式名 / HTML id / localStorage 都 0 撞名。iframe 是**同源沙盒**:變數與樣式完全隔離、功能不受限(檔案上傳/AudioContext/下載都正常)、AudioSplitter 可獨立升版不用改一行。**順手修 CDN 風險**:AudioSplitter 原用 `cdnjs.cloudflare.com` 載 lamejs,但 MDT 檔頭註明「CDN:jsdelivr(院內確認可用)」— 表示院內只驗證過 jsdelivr,cdnjs 不一定通。改成 `cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js`(路徑用 npm pack 驗證過,套件內確實是 `package/lame.min.js`)。**UI**:主力產出加第 6 顆「錄音切割」,grid 從固定 5 欄改 `auto-fit minmax(112px,1fr)` — 固定 6 欄在小視窗會把按鈕文字擠爆。**iframe src 延遲到第一次開啟才設**,避免拖慢 MDT 啟動;關閉不清空 src,讓個管師關掉再開時已載入的錄音與切點還在;不做 ESC/點背景關閉,避免作業中誤觸。**打包規則五檔→六檔**:`AudioSplitter.html` 必須跟 index.html 同層,否則按鈕開出空白。屬 b+1。下版優先:個管師實測錄音切割(院內網路能否載到 jsdelivr 的 lamejs)+ NAS 同步觀察期。
+
+V5.11.4 修 bug:HTML 投影片影像頁破圖(新坑 #31)。個管師實測關鍵線索「**把檔名括號拿掉就正常**」→ 根因是 `getFileHandle(img.name)` 對含 `(` `)` 的檔名(`CT(20250401).jpg`)比對失敗(瀏覽器/OS 檔名正規化差異),讀不到檔 → `_pathImgCache` 空 → `src` 空字串 → 破圖(alt 文字仍在,所以看得到 `CT(20250401)` 但沒圖)。修法:加 `_getFileByEnum(dirHandle,fname)` 退回機制 — 先試 `getFileHandle`,失敗就**列舉資料夾** `dirHandle.values()` 逐一比對 `ent.name===fname`。**兩處都修**:`_loadImgsToCache`(產投影片預載)+ `previewrelatedimg`(編輯畫面預覽按鈕,原本也是直接 getFileHandle)。順手把 3 處 `alt` 改用 `escA()`(caption 含引號會破壞屬性)。**教訓**:File System Access API 的 `getFileHandle` 不是萬能,檔名含特殊字元要有列舉退回;個管師用日期加括號命名完全合理,不該要求他們改檔名遷就程式。屬 c+1。下版優先:錄音切割工具整合(AudioSplitter)+ NAS 同步觀察期。
 
 V5.11.3 修 bug:做肝膽胰癌 HTML,HCC 個案的癌別標籤卻顯示「腎臟癌」(新坑 #30)。根因兩個疊加:(1)`getSubGroup(c)`(泌尿道癌分子群用)**沒限定癌別、對所有癌別都跑**;(2)診斷 `right adrenal metastasis`(右腎上腺轉移)的 **adrenal 含 renal 字串**,被 `/renal/` 命中判成腎臟癌;(3)L6175 標籤 `getSubGroup(c)||ca.name` 猜到就蓋掉真癌別名,且即使 useSubGroups=false 不啟用分組頁,標籤仍單獨呼叫 getSubGroup。修法兩層防護:`getSubGroup` 開頭 `if(cid!=='urology')return null`(非泌尿道癌不猜)+ regex 排除 adrenal(`(^|[^d])renal` 且 `腎(?!上腺)`)。node 實測:right adrenal metastasis→null ✓、真 Renal cell carcinoma/kidney→仍腎臟癌 ✓。教訓:從自由文字猜結構化欄位很危險,醫學縮寫互相包含(adrenal⊃renal),regex 要加邊界且限定範圍才跑。屬 c+1。下版優先:個管師實測各癌別 HTML 標籤正確 + NAS 同步觀察期。
 

@@ -111,6 +111,52 @@
 
 ## 版本歷程
 
+### V5.12.0
+**新功能:整合錄音切割台(AudioSplitter V3.3.0)**
+
+個管師錄下 MDT 會議後,要把錄音切成小段才能做逐字稿(檔案太大不能一次上傳)。本版把原本獨立的 AudioSplitter(1891 行 / 84KB)整合進 MDT,產出區「主力產出」加第 6 顆**「錄音切割」**按鈕,點了在 MDT 裡開彈窗使用。
+
+**整合方式:iframe 彈窗(不是直接內嵌)**
+
+整合前做了衝突盤點,發現直接內嵌會出事:
+
+| 項目 | 衝突 |
+|---|---|
+| 全域 `VERSION` | 🔴 AudioSplitter 有 `const VERSION="V3.3.0"` — 直接內嵌會**蓋掉 MDT 版號** |
+| CSS class | ⚠️ 12 個撞名,且是 `row`/`meta`/`primary`/`left`/`bar` 這種通用名 → 樣式互相污染 |
+| 函式名 / HTML id / localStorage | ✅ 0 撞名 |
+
+改用 iframe 後:**同源沙盒 → 變數與樣式完全隔離,但功能不受限**(檔案上傳、AudioContext、下載都正常),而且 AudioSplitter 未來可獨立升版,不用改一行。
+
+**順手修掉一個 CDN 風險**:AudioSplitter 原本用 `cdnjs.cloudflare.com` 載 lamejs(MP3 編碼)。但 MDT 檔頭註明「CDN:jsdelivr(院內確認可用)」— 表示院內只驗證過 jsdelivr,**cdnjs 不一定通得過**。已改成 `cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js`(路徑用 `npm pack` 驗證過套件內確實是 `package/lame.min.js`)。
+
+**其他實作細節**:
+- 主力產出 grid 從固定 5 欄改 `auto-fit minmax(112px,1fr)` — 固定 6 欄在小視窗會把按鈕文字擠爆
+- iframe `src` **延遲到第一次開啟才設**,避免拖慢 MDT 啟動
+- 關閉時**不清空 src** → 關掉再開,已載入的錄音與切點還在
+- 不做 ESC / 點背景關閉 → 避免作業中誤觸
+
+**⚠️ 打包規則改為六檔**:`AudioSplitter.html` 必須跟 `index.html` 放同一層,否則按鈕會開出空白頁。
+
+### V5.11.4
+**修 bug:檔名含括號時 HTML 影像頁破圖**
+
+個管師回報 HTML 投影片的影像頁**破圖**(只看到破圖 icon 和 `CT(20250401)` 這種文字),並實測發現**把檔名的括號拿掉就正常**。
+
+**根因**:讀取資料夾影像用的 `getFileHandle(檔名)`,對含 `(` `)` 等特殊字元的檔名(如 `CT(20250401).jpg`)可能直接比對失敗(瀏覽器/作業系統對檔名正規化的處理不一致)→ 檔案讀不到 → 圖片 `src` 變空字串 → 破圖(但 `alt` 文字還在,所以看得到檔名文字)。
+
+**修法**:加**退回機制** `_getFileByEnum()`:
+1. 先試 `getFileHandle(檔名)`(快)
+2. 失敗就**列舉整個資料夾**,逐一比對 `ent.name === 檔名`(穩)
+
+**兩處都修**:
+- `_loadImgsToCache`(產投影片時的影像預載)
+- `previewrelatedimg`(編輯畫面的「預覽」按鈕,原本也是直接 `getFileHandle`)
+
+順手把 3 處 `alt="..."` 改用 `escA()` 轉義(caption 若含引號會破壞 HTML 屬性)。
+
+**新增坑 #31**:File System Access API 的 `getFileHandle` 不是萬能,檔名含特殊字元要有列舉退回。個管師用「日期加括號」命名影像完全合理,不該要求他們改檔名遷就程式。
+
 ### V5.11.3
 **修 bug:肝膽胰癌 HCC 個案的癌別標籤被誤標成「腎臟癌」**
 
