@@ -1266,7 +1266,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.13.2';
+const VERSION='V5.13.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5715,10 +5715,12 @@ async function genDOCX(mode){
           /* V5.13.0: 簡報模式補上完整臨床欄位
              V5.13.1: 欄位順序改為 診斷→現病史→過去病史→病理→癌指數→檢查→治療→討論方向
              (個管師要求:討論方向放最後當結尾、癌指數移到病理與檢查之間);
-             病理/檢查的日期標題行改用 _DATEHDR 深色底白字 + 組間留白,一眼分辨不同日期 */
+             病理/檢查的日期標題行改用 _GRPHDR 深色底白字 + 組間留白,一眼分辨不同日期 */
           if(isDeck){
-            /* 日期分組標題行的統一樣式:深藍灰底 + 白字 + 上方留白 4pt */
-            const _DATEHDR={shaded:true,bold:true,fill:C.mid,color:'FFFFFF'};
+            /* 分組標題行的統一樣式:深藍灰底 + 白字 + 上方留白 4pt
+               V5.13.3: 原名 _GRPHDR,因為現在病理/檢查用「日期」、癌指數用「指數名稱」當標題,
+               改名 _GRPHDR(group header)語意才準確 */
+            const _GRPHDR={shaded:true,bold:true,fill:C.mid,color:'FFFFFF'};
             if(c.cc)children.push(mkBlock('\u73fe\u75c5\u53f2',c.cc,false));
             const _phAll=[(c.phChips||[]).map(function(x){return x+'(+)';}).join(' '),c.ph||''].filter(Boolean).join('  ');
             if(_phAll)children.push(mkBlock('\u904e\u53bb\u75c5\u53f2',_phAll,false));
@@ -5727,21 +5729,28 @@ async function genDOCX(mode){
               const _pLines=[];
               (c.pathologies||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}).forEach(function(pa,pi){
                 if(!(pa.content||'').trim()&&!(pa.date||'').trim())return;
-                _pLines.push(Object.assign({text:'\u2009'+(pa.date||'\u672a\u8a3b\u65e5\u671f')+'\u2009',gap:pi?4:0},_DATEHDR));
+                _pLines.push(Object.assign({text:'\u2009'+(pa.date||'\u672a\u8a3b\u65e5\u671f')+'\u2009',gap:pi?4:0},_GRPHDR));
                 if(pa.content)_pLines.push({text:pa.content,indent:8});
               });
               if(_pLines.length)children.push(mkBlock('\u75c5\u7406','',false,{contentSize:10,lines:_pLines}));
             }
-            /* V5.13.1: 癌指數移到「病理之後、檢查之前」(個管師要求) */
+            /* V5.13.1: 癌指數移到「病理之後、檢查之前」(個管師要求)
+               V5.13.3: 改分組格式 — 原本 AFP / PIVKA-II 等各自的數值串很長會換行,
+               純文字擠在一起分不出哪行屬於哪個指數;改成「指數名稱當標籤 + 數值縮排」 */
             if((c.markers||[]).length){
-              const _mkS=(c.markers||[]).map(function(mk){return(mk.name?mk.name+'\uff1a ':' ')+(mk.content||'');}).join('\n');
-              if(_mkS.trim())children.push(mkBlock('\u764c\u6307\u6578',_mkS,false,{contentSize:10}));
+              const _mkLines=[];
+              (c.markers||[]).forEach(function(mk,mi){
+                if(!(mk.name||'').trim()&&!(mk.content||'').trim())return;
+                _mkLines.push(Object.assign({text:'\u2009'+(mk.name||'\u672a\u547d\u540d')+'\u2009',gap:mi?4:0},_GRPHDR));
+                if(mk.content)_mkLines.push({text:mk.content,indent:8});
+              });
+              if(_mkLines.length)children.push(mkBlock('\u764c\u6307\u6578','',false,{contentSize:10,lines:_mkLines}));
             }
             if((c.exams||[]).length){
               const _exLines=[];
               (c.exams||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}).forEach(function(ex,xi){
                 /* V5.13.1: 日期標題行改深色底白字 + 組間留白,不同檢查日期一眼可辨 */
-                _exLines.push(Object.assign({text:'\u2009'+(ex.name||'')+(ex.date?'\uff08'+ex.date+'\uff09':'')+'\u2009',gap:xi?4:0},_DATEHDR));
+                _exLines.push(Object.assign({text:'\u2009'+(ex.name||'')+(ex.date?'\uff08'+ex.date+'\uff09':'')+'\u2009',gap:xi?4:0},_GRPHDR));
                 if(ex.content)_exLines.push({text:ex.content,indent:8});
               });
               if(_exLines.length)children.push(mkBlock('\u6aa2\u67e5','',false,{contentSize:10,lines:_exLines}));
