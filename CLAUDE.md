@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.13.0 | 長官習慣 Word 不用 PPTX → 「PPTX 簡報」按鈕改「Word 簡報」。做法:genDOCX 加 mode 參數('record' 預設 / 'deck' 新增),共用 mkBlock/mkCaseHdr 等 helper 避免複製 200 行。deck = 會前個案簡報(一案一頁 pageBreakBefore,完整臨床欄位 診斷/現病史/過去病史/病理/檢查/治療/討論方向/癌指數,不出會後的討論摘要/決策結論)。genPPTX 保留但無 UI 入口。順修按鈕文字還原不一致 |
 | V5.12.0 | 新功能:整合錄音切割台(AudioSplitter V3.3.0)。用 iframe 彈窗載入 AudioSplitter.html(因 VERSION 全域 + 12 個通用 CSS class 撞名,直接內嵌會壞);lamejs CDN 由 cdnjs 改 jsdelivr(對齊 MDT,院內確認可用);主力產出加第 6 顆「錄音切割」按鈕,grid 改 auto-fit 防窄螢幕擠爆;src 延遲載入。**打包規則改六檔**(多帶 AudioSplitter.html) |
 | V5.11.4 | 修 bug(新坑 #31):檔名含括號(CT(20250401).jpg)時 getFileHandle 找不到檔 → HTML 影像頁破圖。加 _getFileByEnum() 退回機制:getFileHandle 失敗改列舉資料夾比對 ent.name。預載 + 預覽兩處都修;順手 3 處 alt 加 escA |
 | V5.11.3 | 修 bug(新坑 #30):做肝膽胰癌 HTML,HCC 診斷含「adrenal(腎上腺)」被 getSubGroup 的 /renal/ 誤判成腎臟癌標籤。根因 getSubGroup 沒限癌別(對所有癌別跑泌尿子群猜測)+ renal regex 太寬含 adrenal。修法:限 cid==='urology' 才啟用 + renal 排除 adrenal(腎(?!上腺))。regex 實測 adrenal 不誤判、真腎癌仍命中 |
@@ -635,6 +636,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.13.0 長官習慣 Word 不用 PPTX,「PPTX 簡報」按鈕改為「**Word 簡報**」。**關鍵設計決定**:不另寫新函式,而是 **genDOCX 加 `mode` 參數**(`'record'` 預設 = 原 DOCX 記錄 / `'deck'` = 新 Word 簡報),兩者共用 `mkBlock`/`mkCaseHdr`/`mkSecHdr` 等視覺 helper — 避免複製 200 行 helper 造成雙份維護,以後改 Word 樣式只要改一處兩種產出自動一致。`genDOCX()` 無參數呼叫行為完全不變(現有 DOCX 記錄按鈕零風險)。**兩種 Word 的分工**:記錄 = 會後正式文件(診斷/治療/**討論摘要/決策結論**);簡報 = 會前個案資料(**一案一頁** `pageBreakBefore`,完整臨床欄位 診斷/現病史/過去病史/病理/檢查/治療/討論方向/癌指數,**不出**會後才填的摘要決策)。欄位與順序照抄原 PPTX 個案頁,確保長官拿到的內容跟以前一樣只是換格式。**genPPTX 保留程式碼但移除 UI 入口**(依「極度謹慎刪除」原則,加 ⚠️ 停用註記說明可回復;因無人呼叫,PptxGenJS 不會載入無啟動成本)。**順修**:舊版 `btn.textContent='DOCX 會議記錄'` 跟 HTML 上的「DOCX 記錄」不一致 → 產一次後按鈕文字就變了,改用 `_btnLabel` 還原正確文字。**驗證**:用 docx 7.8.2 實跑產出 — `<w:pageBreakBefore/>` 2 案出現 1 次 ✓、8 個欄位全在 ✓、無討論摘要/決策結論 ✓、flags 色塊 3 個 ✓。屬 b+1。下版優先:長官實際看 Word 簡報後的版型回饋 + 錄音切割院內網路測試。
 
 V5.12.0 整合錄音切割台 — 個管師錄下 MDT 會議後要切成小段做逐字稿(檔案太大不能一次上傳),把獨立的 AudioSplitter V3.3.0(1891 行 / 84KB)整合進來。**整合方式選 iframe 彈窗而非直接內嵌**,因為整合前的衝突盤點發現:(1)🔴 AudioSplitter 有 `const VERSION="V3.3.0"`,直接內嵌會**蓋掉 MDT 版號**;(2)⚠️ 12 個 CSS class 撞名且都是 `row`/`meta`/`primary`/`left`/`bar` 這種通用名 → 樣式互相污染;(3)✅ 函式名 / HTML id / localStorage 都 0 撞名。iframe 是**同源沙盒**:變數與樣式完全隔離、功能不受限(檔案上傳/AudioContext/下載都正常)、AudioSplitter 可獨立升版不用改一行。**順手修 CDN 風險**:AudioSplitter 原用 `cdnjs.cloudflare.com` 載 lamejs,但 MDT 檔頭註明「CDN:jsdelivr(院內確認可用)」— 表示院內只驗證過 jsdelivr,cdnjs 不一定通。改成 `cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js`(路徑用 npm pack 驗證過,套件內確實是 `package/lame.min.js`)。**UI**:主力產出加第 6 顆「錄音切割」,grid 從固定 5 欄改 `auto-fit minmax(112px,1fr)` — 固定 6 欄在小視窗會把按鈕文字擠爆。**iframe src 延遲到第一次開啟才設**,避免拖慢 MDT 啟動;關閉不清空 src,讓個管師關掉再開時已載入的錄音與切點還在;不做 ESC/點背景關閉,避免作業中誤觸。**打包規則五檔→六檔**:`AudioSplitter.html` 必須跟 index.html 同層,否則按鈕開出空白。屬 b+1。下版優先:個管師實測錄音切割(院內網路能否載到 jsdelivr 的 lamejs)+ NAS 同步觀察期。
 

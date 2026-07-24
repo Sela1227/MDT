@@ -807,7 +807,8 @@ textarea{resize:vertical}
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
               <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);})">HTML 投影片</button>
-              <button class="btn btn-b" id="btn-pptx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPPTX()">PPTX 簡報</button>
+              <!-- V5.13.0: 長官習慣 Word 不用 PPTX → 本顆由「PPTX 簡報」改為「Word 簡報」(genDOCX('deck'));genPPTX 函式保留但已無 UI 入口 -->
+              <button class="btn btn-b" id="btn-worddeck" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX('deck')">Word 簡報</button>
               <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
               <!-- V5.11.0: 會議小抄(可列印 A4 / 存 PDF,一頁 8 案,現場手寫用) -->
               <button class="btn btn-b" id="btn-sheet" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPrintSheet()">會議小抄</button>
@@ -1265,7 +1266,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.12.0';
+const VERSION='V5.13.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5230,6 +5231,10 @@ async function saveMeeting(opts){
 }
 
 /* ════ PPTX ════ */
+/* ⚠️ V5.13.0 起已無 UI 入口(停用,未刪除)
+   原因:長官習慣 Word 不用 PPTX,原「PPTX 簡報」按鈕已改為「Word 簡報」genDOCX('deck')。
+   保留程式碼是為了可回復(依專案「極度謹慎刪除」原則);若確定不再需要,下次大改版可整段移除。
+   注意:本函式仍會 loadLib PptxGenJS,但因無人呼叫,不會產生任何啟動成本。 */
 async function genPPTX(){
   if(!S.meeting?.version){setLibStatus('請先儲存再產出 PPTX','var(--err)');return}
   readForm();
@@ -5463,12 +5468,22 @@ async function genPPTX(){
   }).catch(e=>{setLibStatus('PPTX 失敗：'+e.message,'var(--err)');btn.disabled=false;btn.textContent='PPTX 簡報';});
 }
 
-async function genDOCX(){
-  if(!S.meeting?.version){setLibStatus('請先儲存再產出 DOCX','var(--err)');return}
+/* V5.13.0: 加 mode 參數 — 同一套 helper 產兩種 Word。
+   mode='record'(預設,原「DOCX 記錄」):會後正式記錄,含討論摘要/決策結論
+   mode='deck'  (新「Word 簡報」,取代 PPTX):會前個案資料簡報,一案一頁,完整臨床欄位
+   刻意重用 genDOCX 而非另寫函式:mkBlock/mkCaseHdr/mkSecHdr 等視覺 helper 共用,
+   以後改 Word 樣式只要改一處,兩種產出自動一致(避免複製 200 行 helper 造成雙份維護) */
+async function genDOCX(mode){
+  mode=mode||'record';
+  const isDeck=(mode==='deck');
+  const _btnId=isDeck?'btn-worddeck':'btn-docx';
+  const _btnLabel=isDeck?'Word 簡報':'DOCX 記錄';
+  const _kind=isDeck?'Word 簡報':'DOCX';
+  if(!S.meeting?.version){setLibStatus('請先儲存再產出 '+_kind,'var(--err)');return}
   readForm();
   const ok=await loadLib('docx@7.8.2/build/index.js','docx');
   if(!ok)return;
-  const btn=document.getElementById('btn-docx');btn.disabled=true;btn.textContent='產生中...';
+  const btn=document.getElementById(_btnId);btn.disabled=true;btn.textContent='產生中...';
   try{
     const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
     const{Document,Paragraph,TextRun,HeadingLevel,Packer,
@@ -5676,12 +5691,33 @@ async function genDOCX(){
         children.push(mkSecHdr('\u500b\u6848\u8a0e\u8ad6'));
         cases.filter(function(c){return c.chartNo||c.name;}).forEach(function(c,i){
           const drs=getDoctorStr(c);
+          /* V5.13.0: 簡報模式一案一頁(第 1 案不用分頁,避免開頭空白頁) */
+          if(isDeck&&i>0)children.push(new Paragraph({children:[],pageBreakBefore:true}));
           // Case header (blue bg)
           children.push(mkCaseHdr(i+1,c,drs));
           // Diagnosis
           /* V5.8.1: 診斷改用 mkBlock,跟其他欄位視覺一致(有外框 + 左欄「診斷」標籤);刪除原本下方那條多餘的細線 */
           if(c.diagnosis){
             children.push(mkBlock('\u8a3a\u65b7',c.diagnosis,false));
+          }
+          /* V5.13.0: 簡報模式補上完整臨床欄位(對齊原 PPTX 個案頁的內容與順序) */
+          if(isDeck){
+            if(c.cc)children.push(mkBlock('\u73fe\u75c5\u53f2',c.cc,false));
+            const _phAll=[(c.phChips||[]).map(function(x){return x+'(+)';}).join(' '),c.ph||''].filter(Boolean).join('  ');
+            if(_phAll)children.push(mkBlock('\u904e\u53bb\u75c5\u53f2',_phAll,false));
+            if((c.pathologies||[]).length){
+              const _pStr=(c.pathologies||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
+                .map(function(pa){return(pa.date?pa.date+' ':'')+(pa.content||'');}).join('\n');
+              if(_pStr.trim())children.push(mkBlock('\u75c5\u7406',_pStr,false,{contentSize:10}));
+            }
+            if((c.exams||[]).length){
+              const _exLines=[];
+              (c.exams||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}).forEach(function(ex){
+                _exLines.push({text:(ex.name||'')+(ex.date?'('+ex.date+')':''),shaded:true,bold:true});
+                if(ex.content)_exLines.push({text:ex.content,indent:8});
+              });
+              if(_exLines.length)children.push(mkBlock('\u6aa2\u67e5','',false,{contentSize:10,lines:_exLines}));
+            }
           }
           // Treatment
           /* V5.8.0: 治療每項加編號 + 日期前置(date)name : content
@@ -5703,6 +5739,17 @@ async function genDOCX(){
             children.push(mkBlock('\u6cbb\u7642',c.treatment,false,{contentSize:10}));
           }
 
+          /* V5.13.0: 簡報模式(會前資料)不出「討論摘要/決策結論」— 那是會後才填的;
+             改出「討論方向」與「癌指數」,對齊原 PPTX 個案頁 */
+          if(isDeck){
+            if(c.discussion)children.push(mkBlock('\u8a0e\u8ad6\u65b9\u5411',c.discussion,false));
+            if((c.markers||[]).length){
+              const _mkS=(c.markers||[]).map(function(mk){return(mk.name?mk.name+'\uff1a ':' ')+(mk.content||'');}).join('\n');
+              if(_mkS.trim())children.push(mkBlock('\u764c\u6307\u6578',_mkS,false,{contentSize:10}));
+            }
+            children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
+            return;
+          }
           // Summary & Decision - hide label if completely empty
           if(c.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',c.summary,false));}
           else{children.push(new Paragraph({children:[mkRun('\u8a0e\u8ad6\u6458\u8981\uff1a',{size:sz(10),color:C.xlt,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],spacing:{before:pt(2),after:pt(2)}}));}
@@ -5791,10 +5838,11 @@ async function genDOCX(){
       }]
     });
     const blob=await Packer.toBlob(doc);
-    download(blob,S.cids.map(function(id){return CFG[id]?.name;}).join('_')+'_'+m.date+'_MDT\u6703\u8b70\u8a18\u9304.docx');
-    setLibStatus('DOCX \u5df2\u4e0b\u8f09','var(--ok)');setTimeout(function(){setLibStatus('');},3000);
-  }catch(e){setLibStatus('DOCX \u7522\u751f\u932f\u8aa4\uff1a'+e.message,'var(--err)');console.error(e);}
-  btn.disabled=false;btn.textContent='DOCX \u6703\u8b70\u8a18\u9304';
+    download(blob,S.cids.map(function(id){return CFG[id]?.name;}).join('_')+'_'+m.date+(isDeck?'_MDT\u500b\u6848\u7c21\u5831':'_MDT\u6703\u8b70\u8a18\u9304')+'.docx');
+    setLibStatus(_kind+' \u5df2\u4e0b\u8f09','var(--ok)');setTimeout(function(){setLibStatus('');},3000);
+  }catch(e){setLibStatus(_kind+' \u7522\u751f\u932f\u8aa4\uff1a'+e.message,'var(--err)');console.error(e);}
+  /* V5.13.0: 還原成按鈕原本的文字(舊版寫死 'DOCX 會議記錄',跟 HTML 上的「DOCX 記錄」不一致,產一次後按鈕文字就變了) */
+  btn.disabled=false;btn.textContent=_btnLabel;
 }
 
 /* ════ Generators ════ */
