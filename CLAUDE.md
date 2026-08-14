@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.13.6 | 審稿 P1 批三項:(坑#34)UTC 日期→台灣日期,建 todayTaipei() 用 en-CA locale 輸出 ISO 格式,5 處替換(早上開會日期錯一天/被擋);(坑#35)3 處預設會議室與 DEFAULT_LOCS 不一致(雙空格+名稱不符)→ select 存空值;(坑#36)CANCER_EN_CODES 用舊癌別 ID 導致英文檔名 fallback → 更新 5 個。加 _assertConfigConsistency() 啟動自動檢查代碼與會議室一致性 |
 | V5.13.5 | 審稿 P0 批(會弄丟/謊報資料):(坑#32)clearTestData 用 cids?.length 判斷把真實會議當測試刪光 + 清空整個 idx → 改成只認 isTestData 標記、逐筆移除、正式會議>0 據實告知不誤刪;(坑#33)NAS writeMtgToNAS/backupToNAS 錯誤被 catch 吞掉謊報成功 → 改回傳真實成敗,失敗不標記今日完成、有失敗顯示警告。node 實測 clearTestData 精準只刪測試 |
 | V5.13.4 | 全資料庫備份可靠性補強(大升級前的保命索):(1)補齊 4 個遺漏偏好進 export/import(mdt_ai/mdt_cr_template/mdt_html_theme_*/mdt_html_fname_lang_*,後兩者 per-user 要掃前綴);(2)還原前智慧後悔藥 — 只在「這台已有資料」時才問要不要先備份現狀,空機器直接還原;(3)匯出前完整性檢查,偵測 idx 有列但 mdt_m_ 遺失的孤兒。往返實測從「8 一致 4 遺失」→「13 全一致 0 遺失」。不碰 section 結構(分機作業天然規避撞 key) |
 | V5.13.3 | 癌指數也改分組標籤格式(AFP/PIVKA-II 等指數名稱當深色小標籤 + 數值縮排),原本純文字長串換行後分不出哪行屬哪個指數。順便把 _DATEHDR 更名 _GRPHDR(現在日期與指數名稱共用此樣式)。病理/癌指數/檢查/治療四欄視覺完全統一 |
@@ -443,6 +444,26 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
 
+**#34 用 UTC 日期當「今天」→ 台灣早上會錯一天(V5.13.6 修,審稿 P1)** ✅
+- 症狀:MDT 早上 7:30 開會時,新建會議的預設日期變成**昨天**;而且「只能建今天或未來」的檢查會把今天的會議**擋掉**;行事曆「今天」高亮也標錯格
+- 根因:`new Date().toISOString().slice(0,10)` 取的是 **UTC 日期**。台灣 00:00~07:59 對應 UTC 前一天 16:00~23:59 → 算出前一天。MDT 早上 07:30-08:30 那幾場**正好落在錯誤區間**,不是理論問題
+- 做法:建 `todayTaipei(){return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'});}` — **en-CA locale 剛好輸出 ISO 格式 YYYY-MM-DD**,可直接跟會議 date 字串比較(不能用 zh-TW,那會輸出 `2026/8/13` 破壞字串比較);5 處全部替換
+- 實測:台灣 8/13 07:30 → 舊寫法 `2026-08-12`(錯)、新寫法 `2026-08-13`(對)
+- 教訓:**跨時區的「今天」必須明確指定時區**。`toISOString()` 永遠是 UTC,只要使用者在 UTC+N 且早上使用,就會錯一天。系統其他地方(NAS)早就用 Asia/Taipei,只有這幾處漏掉 — **同一個概念要有單一函式**,不要各處自己算
+
+**#35 預設值與選項清單不一致 → select 找不到 option 存成空值(V5.13.6 修,審稿 P1)** ✅
+- 症狀:某些癌別新建會議時,地點欄位是空的(明明有預設值)
+- 根因:`DEFAULT_C` 的 `loc` 預設值與 `DEFAULT_LOCS` 選項清單**字串不完全相同** — 消化道/肝膽胰寫 `彰濱-1F  人文會議室`(**雙空格 + 名稱不同**),泌尿寫 `彰濱-7F  愛書人會議室`(雙空格)。`<select>` 是 exact match,對不上就沒有選中的 option → 存空值
+- 有趣的是:系統早就有 migration 表 `{'彰濱-1F  人文會議室':'彰濱-1F 人文藝術館會議室'}` 要修正舊資料,但 **`DEFAULT_C` 的預設值本身沒跟著改** — 修了資料沒修來源
+- 做法:3 處 loc 改成與 DEFAULT_LOCS 完全一致;並加 `_assertConfigConsistency()` 啟動時檢查(每個癌別的 loc 都要在 DEFAULT_LOCS 中)
+- 教訓:**改資料的 migration 時,要同時檢查「產生這些資料的預設值」有沒有一起改**,否則新資料會繼續產生舊問題。這跟坑 #29/#31 同源:改一處沒 grep 全部相關處
+
+**#36 對照表與實際 ID 脫節 → 靜默 fallback(V5.13.6 修,審稿 P1)** ✅
+- 症狀:部分癌別的英文檔名變成完整中文 ID(如 `digestive` 而非 `GI`)
+- 根因:`CANCER_EN_CODES` 還用**舊癌別 ID**(`blood_lymph`/`chest`/`gi`/`hbp`/`gu`),但實際 ID 早已改為 `lymphoma`/`thoracic`/`digestive`/`hepatobiliary`/`urology`。查表 `CANCER_EN_CODES[id]||id` 查不到就 **fallback 成 id 本身,不報錯**
+- 做法:更新 5 個舊 ID;加 `_assertConfigConsistency()` 檢查「DEFAULT_C 每個 id 都要有英文代碼」,啟動時 console 警告
+- 教訓:**`x[k]||fallback` 這種寫法會讓「表過期」變成靜默降級**,沒人發現。凡是「ID 對照表」都該有自動一致性檢查 — 這是審稿建議中最划算的一項(一個函式擋住未來所有同類問題)
+
 **#32 clearTestData 用「有無 cids」判斷測試資料 → 幾乎刪光全部會議(V5.13.5 修,審稿 P0)** ✅
 - 症狀:「清除測試資料」按鈕寫著「真實資料不受影響」,實際上 `idx.filter(m=>m.cids?.length)` 把**所有有癌別的會議**都當測試資料,而真實會議本來就有 cids → 等於刪光;更慘的是接著 `removeItem('mdt_idx')` 直接清空整個索引
 - 根因:沒有真正區分 test/production。程式碼註解自己都寫 `fallback: clear all meetings` — 這是「還沒實作標記,先全刪」的半成品,卻掛在正式功能上
@@ -655,6 +676,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.13.6 審稿 P1 批三項(P0 的資料安全修完後,處理「會出錯但不會弄丟資料」這層)。**(坑#34)UTC 日期**:`new Date().toISOString().slice(0,10)` 取的是 UTC 日期,台灣 00:00~07:59 會算成前一天 — 而 MDT 早上 07:30-08:30 那幾場**正好落在錯誤區間**,後果是新建會議預設日期變昨天、「只能建今天或未來」把今天擋掉、行事曆今天標錯格。修:建 `todayTaipei()` 用 **en-CA locale**(剛好輸出 ISO 格式 YYYY-MM-DD,可直接跟會議 date 比較;zh-TW 會輸出 `2026/8/13` 破壞字串比較),5 處全換。實測台灣 8/13 07:30 → 舊 `2026-08-12` 錯、新 `2026-08-13` 對。**(坑#35)預設會議室不一致**:消化道/肝膽胰的 loc 寫 `彰濱-1F  人文會議室`(雙空格+名稱不同)、泌尿寫 `彰濱-7F  愛書人會議室`(雙空格),都不在 DEFAULT_LOCS 中 → `<select>` exact match 找不到 option → 存空值。有趣的是系統早有 migration 要把舊值改成「人文藝術館會議室」,但 DEFAULT_C 的預設值沒跟著改(修了資料沒修來源)。個管師確認就是「彰濱-1F 人文藝術館會議室」,3 處改成與清單完全一致。**(坑#36)癌別英文代碼過期**:CANCER_EN_CODES 還用舊 ID(blood_lymph/chest/gi/hbp/gu),實際已是 lymphoma/thoracic/digestive/hepatobiliary/urology → `CANCER_EN_CODES[id]||id` 查不到就靜默 fallback 成中文 ID。更新 5 個。**加自動一致性檢查** `_assertConfigConsistency()`(審稿建議中最划算的一項):啟動時檢查「每個癌別都要有英文代碼」+「每個預設 loc 都要在 DEFAULT_LOCS 中」,console 警告不阻斷 — 一個函式擋住未來所有同類脫節。屬 c+1。下版優先:審稿中期批(versioned migration、輕量版並行編輯衝突偵測)+ 錄音切割院內網路測試。
 
 V5.13.5 審稿 P0 批(備份確認可靠後,先修「會真的弄丟或謊報資料」的兩個最危險項)。**(坑#32)clearTestData 嚴重資料遺失**:「清除測試資料」按鈕寫「真實資料不受影響」,但 `idx.filter(m=>m.cids?.length)` 把所有有癌別的會議都當測試(真實會議本來就有 cids)→ 全刪,還 `removeItem('mdt_idx')` 清空索引。修:generateTestData 打 `isTestData:true` 標記、saveLocal 的 idx entry 帶標記、clearTestData 只刪標記為測試的 + 逐筆移除不清空 idx + 「X 測試/Y 正式、沒測試就不刪」第二道保護。node 實測:2 測試 2 正式 → 只刪 2 測試,正式完整保留。**(坑#33)NAS 謊報成功**:writeMtgToNAS/backupToNAS 的 catch 吞掉錯誤照常 resolve,呼叫端 pushed++ / _markNasBackupToday() 不管真假 → 個管師看到「同步成功」但沒寫進 NAS、每日備份失敗仍標記今日完成(當天不再試)。修:writeMtgToNAS 回 {ok}、backupToNAS 回 boolean,呼叫端只在真成功才計數/標記,失敗記 results.failed 並 showSaveToast 警告。**教訓**:破壞性操作不能用間接特徵猜要刪什麼(要明確標記);錯誤被 catch 但不回傳 = 靜默謊報成功(async 成敗要沿呼叫鏈往上傳)。屬 c+1。下版優先:審稿 P1 批(UTC→Taipei 日期、預設會議室不一致、癌別 en code 過期)+ 錄音切割院內網路測試。
 

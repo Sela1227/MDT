@@ -1255,9 +1255,9 @@ const DEFAULT_C={
   lymphoma:{id:'lymphoma',name:'血液淋巴癌',defaultDept:'血液腫瘤科',partner:'head_neck',role:'second',weekday:4,weeknum:3,defaultSlot:'12:30-13:30',color:'#5B8FA8',slot:'13:00-13:30',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'血液淋巴癌召集人',conv:'血液腫瘤科::劉大智醫師',memberKeys:[mk('血液腫瘤科','張正雄醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','林伯儒醫師')]},
   thoracic:{id:'thoracic',name:'胸腔癌',partner:null,defaultDept:'胸腔外科',weekday:4,weeknum:3,color:'#6B7FA0',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6007',pwd:'7813888',url:'https://zoom.us/j/7256166007?pwd=oHlSANba92wzDrbbYs6NFVRFBT8O2x.1'},convTitle:'肺癌召集人',conv:'胸腔內科::張竣期醫師',memberKeys:[mk('胸腔外科','黃榆涵醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','劉奕祥醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
   breast:{id:'breast',name:'乳癌',partner:null,defaultDept:'一般外科',weekday:4,weeknum:3,defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6003',pwd:'6222131',url:'https://zoom.us/j/7256166003?pwd=4gN5lhkzdIfh8WylCq7bYPl194bFI6.1'},convTitle:'乳癌召集人',conv:'一般外科::李岳聰醫師',memberKeys:[mk('一般外科','吳鴻昇醫師'),mk('一般外科','林建華醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','熊敬業醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  digestive:{id:'digestive',name:'消化道癌',defaultDept:'一般外科',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
-  hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',defaultDept:'一般外科',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F  人文會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
-  urology:{id:'urology',name:'泌尿道癌',partner:null,defaultDept:'泌尿科',weekday:3,weeknum:2,color:'#7A6E8A',defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-7F  愛書人會議室',zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=6Ir1uPjOzDjA25ARbf88rOOq1X80rn.1'},convTitle:'泌尿道癌召集人',conv:'泌尿科::楊哲學醫師',memberKeys:[mk('泌尿科','吳其翔醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
+  digestive:{id:'digestive',name:'消化道癌',defaultDept:'一般外科',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F 人文藝術館會議室'/* V5.13.6 修:原為「彰濱-1F  人文會議室」(雙空格+名稱不符),不在 DEFAULT_LOCS 中 → select 找不到 option 會存成空值 */,zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',defaultDept:'一般外科',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F 人文藝術館會議室'/* V5.13.6 修:原為「彰濱-1F  人文會議室」(雙空格+名稱不符),不在 DEFAULT_LOCS 中 → select 找不到 option 會存成空值 */,zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  urology:{id:'urology',name:'泌尿道癌',partner:null,defaultDept:'泌尿科',weekday:3,weeknum:2,color:'#7A6E8A',defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-7F 愛書人會議室'/* V5.13.6 修:原為雙空格,與 DEFAULT_LOCS 不符 */,zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=6Ir1uPjOzDjA25ARbf88rOOq1X80rn.1'},convTitle:'泌尿道癌召集人',conv:'泌尿科::楊哲學醫師',memberKeys:[mk('泌尿科','吳其翔醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
   gynecology:{id:'gynecology',name:'婦癌',partner:null,defaultDept:'婦產科',weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'2609926',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦產科::吳宏明醫師',memberKeys:[mk('婦產科','林坤沂醫師'),mk('婦產科','吳宏明醫師'),mk('婦產科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
 };
 const USERS=[
@@ -1266,7 +1266,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.13.5';
+const VERSION='V5.13.6';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1289,16 +1289,35 @@ function getHtmlTheme(){
 }
 
 /* V5.5.0: HTML 投影片檔名語言偏好(中文/英文) — 每個個管師獨立記憶 */
+/* V5.13.6 修審稿 P1:原表用舊癌別 ID(blood_lymph/chest/gi/hbp/gu),
+   但實際 ID 早已改為 lymphoma/thoracic/digestive/hepatobiliary/urology
+   → CANCER_EN_CODES[id] 查不到,英文檔名 fallback 成完整中文 ID。
+   下方 _assertCancerCodes() 會在啟動時檢查「每個癌別都要有英文代碼」,避免再度脫節。 */
 const CANCER_EN_CODES={
   head_neck:'HeadNeck',
-  blood_lymph:'BloodLymph',
-  chest:'Chest',
+  lymphoma:'BloodLymph',
+  thoracic:'Chest',
   breast:'Breast',
-  gi:'GI',
-  hbp:'HBP',
-  gu:'GU',
+  digestive:'GI',
+  hepatobiliary:'HBP',
+  urology:'GU',
   gynecology:'Gyn'
 };
+/* V5.13.6: 自動一致性檢查(審稿建議)— DEFAULT_C 的每個癌別 id 都必須有對應英文代碼;
+   同理檢查每個癌別的預設 loc 都要存在於 DEFAULT_LOCS(避免 select 找不到 option 存成空值)。
+   有問題只在 console 警告,不阻斷啟動。 */
+function _assertConfigConsistency(){
+  try{
+    var missCode=Object.keys(DEFAULT_C).filter(function(id){return !CANCER_EN_CODES[id];});
+    if(missCode.length)console.warn('[設定檢查] 這些癌別缺英文代碼(檔名會 fallback):',missCode);
+    var missLoc=Object.keys(DEFAULT_C).filter(function(id){
+      var l=DEFAULT_C[id].loc;return l&&DEFAULT_LOCS.indexOf(l)<0;
+    });
+    if(missLoc.length)console.warn('[設定檢查] 這些癌別的預設會議室不在 DEFAULT_LOCS(select 會找不到 option):',
+      missLoc.map(function(id){return id+' → 「'+DEFAULT_C[id].loc+'」';}));
+    if(!missCode.length&&!missLoc.length)console.log('[設定檢查] 癌別英文代碼與預設會議室皆一致 ✓');
+  }catch(e){console.warn('_assertConfigConsistency:',e);}
+}
 function getHtmlFnameLang(){
   if(!S.user)return 'zh';
   return localStorage.getItem('mdt_html_fname_lang_'+S.user.id)||'zh';
@@ -1515,6 +1534,10 @@ function mtgTitle(cids){return cids.map(id=>CFG[id]?.name||id).join('、')+'多�
 function greet(){const h=new Date().getHours();return h<12?'早安':h<18?'午安':'晚安'}
 function pairIds(cid){const ca=CFG[cid];if(!ca?.partner)return[cid];return ca.role==='first'?[cid,ca.partner]:[ca.partner,cid]}
 function getPartnerUser(pid){return USERS.find(u=>u.cancers.includes(pid))}
+/* V5.13.6 修審稿 P1:原本多處用 UTC 日期取「今天」— 台灣 00:00~07:59 會算成前一天。
+   後果:MDT 早上開會時,新會議預設日期變昨天 / 「只能建今天或未來」把今天擋掉 / 行事曆今天標錯。
+   統一改 todayTaipei() 取台灣時區 YYYY-MM-DD(en-CA locale 輸出 ISO 格式,可直接跟會議 date 比較) */
+function todayTaipei(){return new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Taipei'});}
 function download(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 
 /* ════ Storage ════ */
@@ -1856,7 +1879,7 @@ function renderCalendar(){
   const allIdx=getIdx();
   const monthStr=y+'-'+String(mo+1).padStart(2,'0');
   const monthMtgs=allIdx.filter(m=>m.date&&m.date.startsWith(monthStr));
-  const today=new Date().toISOString().slice(0,10);
+  const today=todayTaipei();
   const firstDay=new Date(y,mo,1).getDay();
   const daysInMonth=new Date(y,mo+1,0).getDate();
   const daysInPrev=new Date(y,mo,0).getDate();
@@ -1939,7 +1962,7 @@ function renderCalendar(){
     const dateStr=cell.dataset.date;
     if(!dateStr)return;
     // Only allow creating for today or future
-    const today=new Date().toISOString().slice(0,10);
+    const today=todayTaipei();
     if(dateStr<today)return;
     // Ask which cancer, or if only one show confirm directly
     askCreateMtg(dateStr);
@@ -2613,7 +2636,7 @@ function resetCfg(){if(!confirm('確定還原？'))return;localStorage.removeIte
 
 /* ════ Meeting ════ */
 function newMeetingObj(userId,cids){
-  const user=USERS.find(u=>u.id===userId),p=CFG[cids[0]],today=new Date().toISOString().slice(0,10);
+  const user=USERS.find(u=>u.id===userId),p=CFG[cids[0]],today=todayTaipei();
   const t0=CFG[cids[0]].slot.split('-')[0],t1=CFG[cids[cids.length-1]].slot.split('-')[1];
   const sections={};cids.forEach(id=>{sections[id]={followups:[],cases:[],special:[]}});
   const owners=[];
@@ -5945,7 +5968,7 @@ function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
   });
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const count=idx.length;
-  download(blob,'MDT備份_'+new Date().toISOString().slice(0,10)+'_'+count+'場.json');
+  download(blob,'MDT備份_'+todayTaipei()+'_'+count+'場.json');
   showSaveToast('已匯出 '+count+' 場會議記錄');
   const el=document.getElementById('backup-msg');
   if(el)el.textContent='已匯出 '+count+' 場，含影像與偏好設定，檔案較大請稍候。';
@@ -5978,7 +6001,7 @@ function importAllJSON(input){
               (m.cids||[]).forEach(cid=>{const sk='mdt_sec_'+cid+'_'+m.date;const sd=localStorage.getItem(sk);if(sd)_cur.meetings[sk]=sd;});
             });
             download(new Blob([JSON.stringify(_cur,null,2)],{type:'application/json'}),
-              'MDT還原前備份_'+new Date().toISOString().slice(0,10)+'_'+_curCount+'場.json');
+              'MDT還原前備份_'+todayTaipei()+'_'+_curCount+'場.json');
           }catch(_e){if(!confirm('還原前備份失敗（'+_e.message+'）。仍要繼續還原嗎？'))return;}
         }
       }
@@ -9004,7 +9027,7 @@ document.addEventListener('change',function(e){
 });
 
 /* ════ Init ════ */
-loadAll();loadAICfg();renderLogin();
+loadAll();loadAICfg();_assertConfigConsistency();/* V5.13.6: 啟動時檢查癌別代碼與預設會議室一致性(只在 console 警告,不阻斷) */renderLogin();
 // Show version on login page
 const lgVer=document.getElementById('lg-ver');
 if(lgVer)lgVer.textContent=VERSION;
