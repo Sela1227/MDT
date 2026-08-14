@@ -1266,7 +1266,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.13.3';
+const VERSION='V5.13.4';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5883,7 +5883,32 @@ async function genDOCX(mode){
 }
 
 /* ════ Generators ════ */
+/* V5.13.4: 偏好 key 前綴清單 — 這些是「使用者個人化設定」,不是病人資料,但要進完整備份。
+   mdt_ai(AI提示詞)/mdt_cr_template(CR範本)是固定 key;
+   mdt_html_theme_* / mdt_html_fname_lang_* 是 per-user(後綴 S.user.id),要掃前綴 */
+const _PREF_FIXED=['mdt_ai','mdt_cr_template'];
+const _PREF_PREFIX=['mdt_html_theme_','mdt_html_fname_lang_'];
+function _collectPrefs(){
+  const prefs={};
+  _PREF_FIXED.forEach(k=>{const v=localStorage.getItem(k);if(v!=null)prefs[k]=v;});
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(_PREF_PREFIX.some(px=>k.startsWith(px))){prefs[k]=localStorage.getItem(k);}
+  }
+  return prefs;
+}
+/* V5.13.4: 匯出前完整性自我檢查 — 找出 idx 有列、但 mdt_m_ 找不到的孤兒會議 */
+function _checkBackupIntegrity(){
+  const idx=getIdx();
+  const orphans=idx.filter(m=>!localStorage.getItem('mdt_m_'+m.id)).map(m=>m.id);
+  return{orphans};
+}
 function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
+  /* V5.13.4: 匯出前先檢查孤兒(idx 有列但本體不見),提醒個管師這幾場救不回 */
+  const _chk=_checkBackupIntegrity();
+  if(_chk.orphans.length){
+    if(!confirm('注意：偵測到 '+_chk.orphans.length+' 場會議在索引中有記錄，但實際資料已遺失（無法備份）：\n'+_chk.orphans.join('、')+'\n\n這幾場無法救回。是否仍要繼續備份其餘正常的會議？'))return;
+  }
   const backup={
     version:VERSION,
     exportedAt:new Date().toISOString(),
@@ -5891,6 +5916,7 @@ function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
     locs:localStorage.getItem('mdt_locs'),
     drs:localStorage.getItem('mdt_drs'),
     exam_types:localStorage.getItem('mdt_exam_types'),
+    prefs:_collectPrefs(),/* V5.13.4: 個人化偏好(AI提示詞/CR範本/HTML主題/檔名語言)*/
     idx:localStorage.getItem('mdt_idx'),
     meetings:{}
   };
@@ -5911,7 +5937,7 @@ function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
   download(blob,'MDT備份_'+new Date().toISOString().slice(0,10)+'_'+count+'場.json');
   showSaveToast('已匯出 '+count+' 場會議記錄');
   const el=document.getElementById('backup-msg');
-  if(el)el.textContent='已匯出 '+count+' 場，含影像資料，檔案較大請稍候。';
+  if(el)el.textContent='已匯出 '+count+' 場，含影像與偏好設定，檔案較大請稍候。';
 }
 
 function importAllJSON(input){
@@ -5926,11 +5952,34 @@ function importAllJSON(input){
       // Ask before overwrite
       const count=Object.keys(backup.meetings).filter(k=>k.startsWith('mdt_m_')).length;
       if(!confirm('即將匯入 '+count+' 場會議記錄。\n現有的同名記錄將被覆蓋，其他記錄保留。\n確定繼續？'))return;
+      /* V5.13.4: 智慧後悔藥 — 只在「這台已有資料」時才問要不要先備份現狀。
+         空機器(新機/重灌)不問,避免產生無意義的空備份檔;有現狀才攔一下(這種情況才可能誤刪) */
+      const _curCount=getIdx().length;
+      if(_curCount>0){
+        if(confirm('這台目前已有 '+_curCount+' 場會議。\n還原前要先把「現在的狀態」備份下來嗎？\n\n（強烈建議：萬一還原結果不如預期，可用它倒回來）\n\n確定 = 先下載現狀備份再還原\n取消 = 直接還原不備份')){
+          try{
+            const _cur={version:VERSION,exportedAt:new Date().toISOString(),
+              cfg:localStorage.getItem('mdt_cfg'),locs:localStorage.getItem('mdt_locs'),
+              drs:localStorage.getItem('mdt_drs'),exam_types:localStorage.getItem('mdt_exam_types'),
+              prefs:_collectPrefs(),idx:localStorage.getItem('mdt_idx'),meetings:{}};
+            getIdx().forEach(m=>{
+              const d=localStorage.getItem('mdt_m_'+m.id);if(d)_cur.meetings['mdt_m_'+m.id]=d;
+              (m.cids||[]).forEach(cid=>{const sk='mdt_sec_'+cid+'_'+m.date;const sd=localStorage.getItem(sk);if(sd)_cur.meetings[sk]=sd;});
+            });
+            download(new Blob([JSON.stringify(_cur,null,2)],{type:'application/json'}),
+              'MDT還原前備份_'+new Date().toISOString().slice(0,10)+'_'+_curCount+'場.json');
+          }catch(_e){if(!confirm('還原前備份失敗（'+_e.message+'）。仍要繼續還原嗎？'))return;}
+        }
+      }
       // Restore settings (only if present)
       if(backup.cfg)localStorage.setItem('mdt_cfg',backup.cfg);
       if(backup.locs)localStorage.setItem('mdt_locs',backup.locs);
       if(backup.drs)localStorage.setItem('mdt_drs',backup.drs);
       if(backup.exam_types)localStorage.setItem('mdt_exam_types',backup.exam_types);
+      /* V5.13.4: 讀回個人化偏好(舊備份檔沒有 prefs 欄位就跳過,向後相容)*/
+      if(backup.prefs&&typeof backup.prefs==='object'){
+        Object.entries(backup.prefs).forEach(([k,v])=>{if(v!=null)localStorage.setItem(k,v);});
+      }
       // Restore meetings
       Object.entries(backup.meetings).forEach(([k,v])=>localStorage.setItem(k,v));
       // Merge index
