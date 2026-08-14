@@ -1266,7 +1266,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.13.4';
+const VERSION='V5.13.5';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1521,7 +1521,10 @@ function download(blob,filename){const url=URL.createObjectURL(blob);const a=doc
 function saveLocal(m){try{
   localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));
   const idx=getIdx(),ei=idx.findIndex(i=>i.id===m.id);
+  /* V5.13.5: idx entry 帶 isTestData 旗標,讓 clearTestData 能精準只刪測試資料
+     (一般會議沒有這欄 = undefined,不會被誤判為測試) */
   const e={id:m.id,title:m.title,date:m.date,cids:m.cids};
+  if(m.isTestData)e.isTestData=true;
   if(ei>=0)idx[ei]=e;else idx.unshift(e);
   const newIdx=idx.slice(0,100);
   localStorage.setItem('mdt_idx',JSON.stringify(newIdx));
@@ -1576,7 +1579,7 @@ function renderLogin(){
     _autoLoginTimer=setTimeout(function(){_cancelAutoLogin();pickUser(lastUser.id);},1500);
   }
 }
-function pickUser(uid_){_cancelAutoLogin();S.user=USERS.find(u=>u.id===uid_);if(S.user)try{localStorage.setItem('mdt_last_user',uid_);}catch(e){}showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步:新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(){_markNasBackupToday();}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+function pickUser(uid_){_cancelAutoLogin();S.user=USERS.find(u=>u.id===uid_);if(S.user)try{localStorage.setItem('mdt_last_user',uid_);}catch(e){}showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步:新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');}/* V5.13.5: 有寫入失敗就明確警告,不再靜默謊報成功 */if(r.failed){showSaveToast('⚠ NAS 同步有 '+r.failed+' 筆寫入失敗,請檢查 NAS 連線後重試');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(_ok){if(_ok)_markNasBackupToday();/* V5.13.5: 只有真成功才標記今日完成,失敗當天會再試 */}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){
@@ -3847,11 +3850,13 @@ async function backupToNAS(){
     var elLast=document.getElementById('nas-last-backup');
     if(elLast)elLast.textContent='最後備份：'+lastStr;
     if(smEl)smEl.innerHTML+=' <span style="font-size:11px;color:var(--ok)">✓ NAS 完成</span>';
+    return true;/* V5.13.5: 真正完成才回傳 true */
 
   }catch(e){
     console.warn('NAS backup failed:',e);
     var smEl2=document.getElementById('save-msg');
     if(smEl2)smEl2.innerHTML+=' <span style="font-size:11px;color:var(--err)">NAS 失敗</span>';
+    return false;/* V5.13.5 修審稿 P0:失敗要回傳 false,否則呼叫端會誤標「今日備份完成」→ 當天不再重試 */
   }
 }
 
@@ -4097,14 +4102,18 @@ async function _getNasSyncDir(){
   catch(e){console.warn('_getNasSyncDir:',e);return null;}
 }
 
+/* V5.13.5 修審稿 P0:原本 catch 把錯誤吞掉、照常 return(等於謊報成功),
+   呼叫端 results.pushed++ 不管真假 → 個管師看到「同步成功」但其實沒寫進去。
+   改成回傳 {ok:boolean}:成功 ok:true,失敗 ok:false(附 error),讓呼叫端據實計數。 */
 async function writeMtgToNAS(m){
-  const dir=await _getNasSyncDir();if(!dir)return;
+  const dir=await _getNasSyncDir();if(!dir)return{ok:false,error:'NAS 資料夾未授權'};
   try{
     var fh=await dir.getFileHandle('mdt_m_'+m.id+'.json',{create:true});
     var w=await fh.createWritable();
     await w.write(JSON.stringify(m));
     await w.close();
-  }catch(e){console.warn('writeMtgToNAS:',e);}
+    return{ok:true};
+  }catch(e){console.warn('writeMtgToNAS:',e);return{ok:false,error:e.message};}
 }
 
 /* V4.3.44: 權限檢查 — 沒 createdBy（舊資料）視為可刪；S.user 不存在保守拒絕 */
@@ -4134,8 +4143,8 @@ async function writeTombstoneToNAS(id,origMtg){
 }
 
 async function syncWithNAS(){
-  var dir=await _getNasSyncDir();if(!dir)return {added:0,updated:0,pushed:0,deleted:0};
-  var results={added:0,updated:0,pushed:0,deleted:0};
+  var dir=await _getNasSyncDir();if(!dir)return {added:0,updated:0,pushed:0,deleted:0,failed:0};
+  var results={added:0,updated:0,pushed:0,deleted:0,failed:0};/* V5.13.5: failed 記錄寫入失敗數 */
   // Read all files from NAS sync/
   var entries=await _folderEntries(dir);
   var nasMtgs={};
@@ -4179,12 +4188,14 @@ async function syncWithNAS(){
     /* V4.3.44: 不要把 NAS tombstone「升級」回成正常會議 — 唯有 local version 真的較新才推 */
     if(nasMtg2&&nasMtg2.deleted){
       if((localMtg.version||0)>(nasMtg2.version||0)){
-        await writeMtgToNAS(localMtg);results.pushed++;
+        /* V5.13.5: 只在真正寫入成功才計數,失敗記到 results.failed */
+        {const _r=await writeMtgToNAS(localMtg);if(_r&&_r.ok)results.pushed++;else{results.failed=(results.failed||0)+1;}}
       }
       continue;
     }
     if(!nasMtg2||(localMtg.version||0)>(nasMtg2.version||0)){
-      await writeMtgToNAS(localMtg);results.pushed++;
+      /* V5.13.5: 同上,據實計數 */
+      {const _r=await writeMtgToNAS(localMtg);if(_r&&_r.ok)results.pushed++;else{results.failed=(results.failed||0)+1;}}
     }
   }
   /* V4.3.44: 清理超過 90 天的 tombstone — 不阻擋同步主流程 */
@@ -8037,14 +8048,33 @@ function confirmBatchDelete(){
   renderSbRecent();renderHistory();
   showSaveToast('已刪除 '+checked.length+' 場會議記錄');
 }
+/* V5.13.5 重寫(修審稿 P0 嚴重資料遺失風險):
+   舊版 idx.filter(m=>m.cids?.length) 把「所有有癌別的會議」都當測試資料 —— 真實會議本來就有 cids,
+   等於刪掉全部;而且 removeItem('mdt_idx') 直接清空整個索引。畫面卻寫「真實資料不受影響」。
+   新版:(1)只刪 isTestData===true 的;(2)逐筆從 idx 移除(不動整個 idx);
+   (3)第二道保護 —— 明確顯示「X 場測試、Y 場正式」,只要有正式會議就據實告知(不會誤刪);
+   (4)一場測試都沒有時直接提示,不做任何刪除 */
 function clearTestData(){
-  if(!confirm('確定清除所有測試資料？（真實資料不受影響）'))return;
   const idx=getIdx();
-  const testIds=idx.filter(m=>m.cids?.length).map(m=>m.id);
-  // We mark test data by a flag; fallback: clear all meetings (since this is the test section)
-  testIds.forEach(id=>localStorage.removeItem('mdt_m_'+id));
-  localStorage.removeItem('mdt_idx');
-  renderSbRecent();showSaveToast('測試資料已清除');
+  const testEntries=idx.filter(m=>m.isTestData===true);
+  const realCount=idx.length-testEntries.length;
+  if(testEntries.length===0){
+    alert('目前沒有任何測試資料可清除。\n（正式會議 '+realCount+' 場不受影響）');
+    return;
+  }
+  if(!confirm('將清除 '+testEntries.length+' 場測試會議，保留 '+realCount+' 場正式會議。\n\n確定只清測試資料？'))return;
+  const testIds=new Set(testEntries.map(m=>m.id));
+  /* 只移除標記為測試的會議本體 */
+  testIds.forEach(id=>{
+    localStorage.removeItem('mdt_m_'+id);
+    /* 一併清該會議的 section(合併會議的各癌別資料)*/
+    const entry=idx.find(m=>m.id===id);
+    if(entry)(entry.cids||[]).forEach(cid=>localStorage.removeItem('mdt_sec_'+cid+'_'+entry.date));
+  });
+  /* 逐筆從 idx 移除測試會議,保留正式會議(不清空整個 idx)*/
+  const kept=idx.filter(m=>!testIds.has(m.id));
+  localStorage.setItem('mdt_idx',JSON.stringify(kept));
+  renderSbRecent();showSaveToast('已清除 '+testEntries.length+' 場測試會議，正式會議保留');
 }
 function generateTestData(){
   if(!confirm('生成三位個管師各癌別共18場測試會議，是否繼續？'))return;
@@ -8219,6 +8249,7 @@ function generateTestData(){
     g.dates.forEach(function(date,di){
       const m=newMeetingObj(g.user,g.cids);
       m.date=date;m.version=di+1;m.savedBy=userName;
+      m.isTestData=true;/* V5.13.5: 標記為測試資料,clearTestData 只會刪這些 */
       m.savedAt=new Date(date+'T09:00:00+08:00').toISOString();
       g.cids.forEach(function(cid){
         const pool=TC[cid]||[];

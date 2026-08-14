@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.13.5 | 審稿 P0 批(會弄丟/謊報資料):(坑#32)clearTestData 用 cids?.length 判斷把真實會議當測試刪光 + 清空整個 idx → 改成只認 isTestData 標記、逐筆移除、正式會議>0 據實告知不誤刪;(坑#33)NAS writeMtgToNAS/backupToNAS 錯誤被 catch 吞掉謊報成功 → 改回傳真實成敗,失敗不標記今日完成、有失敗顯示警告。node 實測 clearTestData 精準只刪測試 |
 | V5.13.4 | 全資料庫備份可靠性補強(大升級前的保命索):(1)補齊 4 個遺漏偏好進 export/import(mdt_ai/mdt_cr_template/mdt_html_theme_*/mdt_html_fname_lang_*,後兩者 per-user 要掃前綴);(2)還原前智慧後悔藥 — 只在「這台已有資料」時才問要不要先備份現狀,空機器直接還原;(3)匯出前完整性檢查,偵測 idx 有列但 mdt_m_ 遺失的孤兒。往返實測從「8 一致 4 遺失」→「13 全一致 0 遺失」。不碰 section 結構(分機作業天然規避撞 key) |
 | V5.13.3 | 癌指數也改分組標籤格式(AFP/PIVKA-II 等指數名稱當深色小標籤 + 數值縮排),原本純文字長串換行後分不出哪行屬哪個指數。順便把 _DATEHDR 更名 _GRPHDR(現在日期與指數名稱共用此樣式)。病理/癌指數/檢查/治療四欄視覺完全統一 |
 | V5.13.2 | Word 簡報再修兩點:(1)日期標籤底色從 paragraph shading 改 run shading — 只包住文字像膠囊,不再撐滿整行(個管師回報「日期項目的長度太長」);(2)mkBlock 的 TableRow 加 cantSplit,欄位區塊不跨頁 — 原本長欄位跨頁時第二頁沒有左側標籤,看起來像「被截斷顯示不完全」 |
@@ -442,6 +443,20 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
 
+**#32 clearTestData 用「有無 cids」判斷測試資料 → 幾乎刪光全部會議(V5.13.5 修,審稿 P0)** ✅
+- 症狀:「清除測試資料」按鈕寫著「真實資料不受影響」,實際上 `idx.filter(m=>m.cids?.length)` 把**所有有癌別的會議**都當測試資料,而真實會議本來就有 cids → 等於刪光;更慘的是接著 `removeItem('mdt_idx')` 直接清空整個索引
+- 根因:沒有真正區分 test/production。程式碼註解自己都寫 `fallback: clear all meetings` — 這是「還沒實作標記,先全刪」的半成品,卻掛在正式功能上
+- 做法:(1)`generateTestData` 生成時打 `m.isTestData=true`;(2)`saveLocal` 的 idx entry 帶 `isTestData`(一般會議沒這欄=undefined);(3)`clearTestData` 只刪 `isTestData===true`、逐筆從 idx 移除(不清空整個 idx)、加第二道保護「顯示 X 測試/Y 正式,沒測試就不刪」
+- 教訓:**破壞性操作(刪除)絕不能用「間接特徵」猜測要刪什麼**(這裡是拿「有無 cids」猜測試/正式)。要有明確標記。「fallback 先全刪」這種半成品不該進正式功能 — 寧可不做也不要做成會誤刪
+- 呼應專案「極度謹慎刪除」原則:刪除前要能明確回答「我要刪的是哪幾筆、為什麼」,並顯示給使用者確認
+
+**#33 NAS 寫入/備份失敗被 catch 吞掉、謊報成功(V5.13.5 修,審稿 P0)** ✅
+- 症狀:`writeMtgToNAS` 的 `catch(e){console.warn(e)}` 把錯誤吞掉照常 return,呼叫端 `results.pushed++` 不管真假 → 個管師看到「同步成功」但 NAS 其實沒寫進去。`backupToNAS` 同理:失敗也 resolve → 呼叫端 `_markNasBackupToday()` 照標記「今日完成」→ 當天不再重試
+- 根因:async 函式把錯誤 catch 掉但**不回傳成敗**,呼叫端無從得知真實結果,只能假設成功
+- 做法:(1)`writeMtgToNAS` 回傳 `{ok:boolean,error}`,呼叫端只在 ok 才 `pushed++`,失敗記 `results.failed`;(2)`backupToNAS` 回傳 boolean,呼叫端只在 true 才 `_markNasBackupToday`;(3)`syncWithNAS` 的 results 加 failed 計數,有失敗就 showSaveToast 警告
+- 教訓:**「錯誤被 catch 但不回傳」= 靜默謊報成功**,在資料備份場景是資料可靠度問題(比沒功能更危險,因為給假的安全感)。async 操作的成敗必須沿呼叫鏈往上傳,不能在中途吞掉
+- 這是坑 #29(無聲失敗)的變體:一個是「條件沒涵蓋 → 無聲不產出」,一個是「錯誤被吞 → 無聲謊報成功」,都是狀態沒誠實回報
+
 **#31 檔名含括號等特殊字元 → getFileHandle 找不到檔 → HTML 影像破圖(V5.11.4 修)** ✅
 - 症狀:HTML 投影片影像頁**破圖**(只顯示破圖 icon + alt 文字如 `CT(20250401)`),個管師實測**把檔名括號拿掉就正常**
 - 根因:`_scan.getFileHandle(img.name)` 對含 `(` `)` 等特殊字元的檔名(`CT(20250401).jpg`)可能直接比對失敗(不同瀏覽器/OS 對檔名正規化不一致)→ 讀不到檔 → `_pathImgCache` 沒值 → `src=img.dataUrl||_pathImgCache[key]||''` 得到空字串 → 破圖
@@ -640,6 +655,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.13.5 審稿 P0 批(備份確認可靠後,先修「會真的弄丟或謊報資料」的兩個最危險項)。**(坑#32)clearTestData 嚴重資料遺失**:「清除測試資料」按鈕寫「真實資料不受影響」,但 `idx.filter(m=>m.cids?.length)` 把所有有癌別的會議都當測試(真實會議本來就有 cids)→ 全刪,還 `removeItem('mdt_idx')` 清空索引。修:generateTestData 打 `isTestData:true` 標記、saveLocal 的 idx entry 帶標記、clearTestData 只刪標記為測試的 + 逐筆移除不清空 idx + 「X 測試/Y 正式、沒測試就不刪」第二道保護。node 實測:2 測試 2 正式 → 只刪 2 測試,正式完整保留。**(坑#33)NAS 謊報成功**:writeMtgToNAS/backupToNAS 的 catch 吞掉錯誤照常 resolve,呼叫端 pushed++ / _markNasBackupToday() 不管真假 → 個管師看到「同步成功」但沒寫進 NAS、每日備份失敗仍標記今日完成(當天不再試)。修:writeMtgToNAS 回 {ok}、backupToNAS 回 boolean,呼叫端只在真成功才計數/標記,失敗記 results.failed 並 showSaveToast 警告。**教訓**:破壞性操作不能用間接特徵猜要刪什麼(要明確標記);錯誤被 catch 但不回傳 = 靜默謊報成功(async 成敗要沿呼叫鏈往上傳)。屬 c+1。下版優先:審稿 P1 批(UTC→Taipei 日期、預設會議室不一致、癌別 en code 過期)+ 錄音切割院內網路測試。
 
 V5.13.4 全資料庫「完整匯出→完全還原」可靠性補強 — 大升級前要有能 100% 救回的備份,所以先確保備份本身完整。**做這版前先做了體檢**:讀 exportAllJSON/importAllJSON + node 往返實測,結論是「核心會議資料(mdt_idx/mdt_m_*/mdt_sec_*/mdt_cfg/mdt_locs/mdt_drs/mdt_exam_types)8 項逐 byte 一致、可靠」,但發現 **4 個偏好 key 沒被備份**(mdt_ai AI提示詞/mdt_cr_template CR範本/mdt_html_theme_* 主題/mdt_html_fname_lang_* 檔名語言;後兩者後綴是 S.user.id per-user)。**三項補強**:(1)export 加 prefs 物件(_collectPrefs 掃固定 key + 前綴 key),import 讀回(舊備份檔無 prefs 欄位就跳過,向後相容);(2)還原前「智慧後悔藥」— 只在 getIdx().length>0(這台已有資料)時才問要不要先下載現狀備份,空機器/新機/重灌不問,避免產生無意義空備份檔;(3)匯出前 _checkBackupIntegrity 偵測孤兒(idx 有列但 mdt_m_ 找不到),警告救不回。**往返實測**:V5.13.3 是「8 一致 + 4 遺失」→ V5.13.4 是「13 全一致 + 0 遺失」。**這版刻意不碰的**:section key 改結構(個管師確認同日不同癌別是分機作業,單機不會有同日同癌別兩場 → key 撞的隱患天然規避,不需大改);idx 合併/slice 上限(屬合併語意,這版只做「完全還原到新機器」不做合併);審稿其他項(clearTestData/NAS 謊報/UTC 日期等)等備份確認可靠後再排。屬 c+1。下版優先:審稿 P0 批(clearTestData 改 isTestData 標記 + NAS 謊報成功修正)+ 錄音切割院內網路測試。
 
