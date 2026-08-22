@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.24.0';
+const VERSION='V5.24.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -7503,9 +7503,19 @@ window.__caseImgs=`+JSON.stringify(_imgWinData)+`;
 /* V5.15.0: 原 openPathoWindow 通用化 — 病理/手術/影像共用同一個檢視器(含放大鏡與導覽),
    key 為 'ci-N::type';標題與分類標籤改由資料帶入 */
 window.openImgWindow=function(caseId){
-  var data=window.__caseImgs[caseId];if(!data)return;
-  var w=window.open('','_blank');
-  if(!w){alert('瀏覽器擋下了新分頁,請允許彈出視窗後再試');return;}
+  /* V5.24.1: 原本 if(!data)return 是**無聲失敗** —— 按鈕有顯示張數卻點了沒反應時,
+     使用者完全不知道發生什麼事(同坑 #29/#33/#43 的無聲失敗家族)。改成明確回報。 */
+  if(!window.__caseImgs){alert('影像資料未載入(__caseImgs 不存在)。\\n請重新產生一次 HTML 投影片。');return;}
+  var data=window.__caseImgs[caseId];
+  if(!data){
+    var keys=Object.keys(window.__caseImgs||{});
+    alert('找不到這組影像的資料。\\n\\n索引鍵:'+caseId+'\\n目前可用:'+(keys.length?keys.join('、'):'(空)')
+      +'\\n\\n請把這段訊息回報給開發者。');
+    return;
+  }
+  var w;
+  try{w=window.open('','_blank');}catch(e){w=null;}
+  if(!w){alert('瀏覽器擋下了新分頁,請允許本頁的彈出視窗後再試一次。');return;}
   var caC=data.caColor||'#4A7C8E';
   /* V5.15.1: 有 report(乳攝)時,報告文字當第一頁,圖片接在後面。
      _esc 在此就地處理(檢視器是獨立產生的 HTML,不能直接用主程式的 escA) */
@@ -7515,7 +7525,7 @@ window.openImgWindow=function(caseId){
     _pages.push('<section class="ps on">'
       +'<div class="ph"><span class="pci">'+data.chartNo+'</span> <span class="pcn">'+data.name+'</span>'
       +'<span class="ptitle">報告</span><span class="pcat">'+(data.catLabel||'影像')+'</span></div>'
-      +'<div class="pbody prep">'+_esc(data.report).replace(/\n/g,'<br>')+'</div>'
+      +'<div class="pbody prep">'+_esc(data.report).replace(/\\n/g,'<br>')+'</div>'
       +'</section>');
   }
   /* V5.18.0: 依 brk(分頁點)把圖分組 —— 第一張永遠開新頁,之後遇到 brk 就開新頁。
