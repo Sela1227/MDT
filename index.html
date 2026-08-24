@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.26.1';
+const VERSION='V5.26.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6948,6 +6948,20 @@ async function genHTMLSlides(opts){
       var _nPatho=_pushImgWin('ci-'+caseIndex,'patho','病理影像','病理染色',_imgMeta,c.pathologyImages);
       var _nSurg =_pushImgWin('ci-'+caseIndex,'surg','手術照片','手術照片',_imgMeta,c.surgicalImages);
       var _nRel  =_pushImgWin('ci-'+caseIndex,'related','影像','影像',_imgMeta,c.images);
+      /* V5.26.2 修:此段原本寫在 slides.push() **之後** —— 但按鈕是在 push 之前組裝的,
+         導致組按鈕時 _nTl 還是 undefined(var 提升),時序圖按鈕根本不會出現。
+         必須跟四種影像的 _pushImgWin 一樣,在組按鈕**之前**算好。
+         (V5.15.0 曾為同樣理由寫過「先累積再組按鈕」的註解,這次改時序圖時漏掉了) */
+      var _nTl=0;
+      if(c.showTimeline&&(c.timeline||[]).length){
+        _tlWinData['ci-'+caseIndex]={chartNo:_imgMeta.chartNo,name:_imgMeta.name,
+          caName:_imgMeta.caName,caColor:caColor,
+          events:c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
+            .map(function(e){return{date:e.date,type:e.type,label:e.label,
+              pivot:!!(e._ai&&e._ai.pivot),resp:(e._ai&&e._ai.response)||'',
+              basis:(e._ai&&e._ai.basis)||''};})};
+        _nTl=c.timeline.length;
+      }
       /* V5.15.1: 乳攝也改同一模式(原本是獨立投影片:左報告右圖)。
          報告文字帶進檢視器當第一頁(個管師選擇 B:個案頁不動);限乳癌且有報告或圖才建立 */
       var _mammoRep=(cid==='breast'&&c.mammo)?((c.mammo.date?c.mammo.date+'\n':'')+(c.mammo.report||'')).trim():'';
@@ -6990,18 +7004,7 @@ async function genHTMLSlides(opts){
 
 
 
-      /* V5.25.0: 病程時序圖不再產獨立投影片,改成個案標題列按鈕 + 新分頁檢視
-         (與四種影像同一模式);且只有個管師勾選 showTimeline 的個案才產出 */
-      var _nTl=0;
-      if(c.showTimeline&&(c.timeline||[]).length){
-        _tlWinData['ci-'+caseIndex]={chartNo:_imgMeta.chartNo,name:_imgMeta.name,
-          caName:_imgMeta.caName,caColor:caColor,
-          events:c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
-            .map(function(e){return{date:e.date,type:e.type,label:e.label,
-              pivot:!!(e._ai&&e._ai.pivot),resp:(e._ai&&e._ai.response)||'',
-              basis:(e._ai&&e._ai.basis)||''};})};/* V5.25.0: 帶出 AI 判讀 */
-        _nTl=c.timeline.length;
-      }
+
 
     }); // end cases.forEach
 
