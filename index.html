@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.26.2';
+const VERSION='V5.26.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3527,7 +3527,7 @@ function caseHTML(cid,i,d){
   const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
   return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
-<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag sec-tag-case">個案討論</span>${d._aiImported?`<span class="ai-badge" data-action="confirmai" data-cid="${cid}" data-idx="${i}" title="逐欄確認後點此清除標記">AI 匯入待確認 ✓</span>`:''}${(d.flags||[]).map(function(fl){const c2=flagColor(fl);return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1)" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1)" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
+<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag sec-tag-case">個案討論</span>${(d.flags||[]).map(function(fl){const c2=flagColor(fl);return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}${d._aiImported?`<span class="ai-badge" data-action="confirmai" data-cid="${cid}" data-idx="${i}" title="逐欄確認後點此清除標記">AI 匯入待確認 ✓</span>`:''}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1)" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1)" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 
   <div class="fg full" style="padding-bottom:2px">
@@ -7572,6 +7572,21 @@ window.openTimelineWindow=function(caseId){
     return Math.round(x+((t-t0-acc)/flowSpan)*usableW);
   };
 
+  /* V5.26.3: SVG text 不會自動換行。長標籤(如完整病理描述)要手動斷成 2 行,
+     第 2 行超出才截斷加「…」,並用 <title> 讓滑鼠移過去看全文。
+     以字元寬估算(中文≈1、英數≈0.55),不精準但足夠決定斷點。 */
+  var wUnit=function(ch){return /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(ch)?1:0.55;};
+  var wrap2=function(txt,maxU){
+    txt=String(txt||'');
+    var l1='',l2='',u=0,i2=0;
+    for(;i2<txt.length;i2++){var c2=txt[i2],cu=wUnit(c2);if(u+cu>maxU)break;l1+=c2;u+=cu;}
+    if(i2>=txt.length)return[l1,'',false];
+    u=0;
+    for(;i2<txt.length;i2++){var c3=txt[i2],cu3=wUnit(c3);if(u+cu3>maxU)break;l2+=c3;u+=cu3;}
+    var cut=(i2<txt.length);
+    if(cut)l2=l2.replace(/.$/,'')+'…';
+    return[l1,l2,cut];
+  };
   /* 標籤避讓:node 不動,只算 label 要放第幾層(0=最近,1=更遠…)
      只有真的會碰撞才錯開(審稿:交錯是 collision handling,不是 index 的固定樣式) */
   var LBL_W=150;
@@ -7594,7 +7609,10 @@ window.openTimelineWindow=function(caseId){
   };
 
   /* ── 版面 ── */
-  var DZ_TOP=headH+30,DZ_H=126;
+  var _dzCount=evs.filter(function(e){return bandOf(e.type)===0;}).length;
+  /* V5.26.3: 疾病軸沒有事件時仍保留(不隱藏)—— 隱藏會讓「該填卻沒填」靜靜消失,
+     而個管師需要知道要補「診斷確立」。但大幅縮小高度,不讓空的東西佔最大空間。 */
+  var DZ_TOP=headH+30,DZ_H=(_dzCount?126:72);
   var laneH=118,axisH=70,noteH=20;/* V5.26.0: 正式版移除底部說明區,只留少量下邊距 */
   var used={};evs.forEach(function(e){used[bandOf(e.type)]=true;});
   var lanes=[];for(var i=0;i<TB.length;i++){if(TB[i].key!=='disease'&&used[i])lanes.push({i:i,def:TB[i]});}
@@ -7617,8 +7635,14 @@ window.openTimelineWindow=function(caseId){
     svg+='<text x="'+((ga+gb)/2)+'" y="'+(dzY+26)+'" text-anchor="middle" font-size="15" fill="#8296a6">'+mo+' 個月</text>';
     prev=gb;
   });
-  svg+='<line x1="'+prev+'" y1="'+dzY+'" x2="'+(lx1+40)+'" y2="'+dzY+'" stroke="'+DZC+'" stroke-width="5.5" stroke-linecap="round"/>';
-  svg+='<path d="M '+(lx1+40)+' '+(dzY-10)+' L '+(lx1+66)+' '+dzY+' L '+(lx1+40)+' '+(dzY+10)+' Z" fill="'+DZC+'"/>';
+  if(_dzCount){
+    svg+='<line x1="'+prev+'" y1="'+dzY+'" x2="'+(lx1+40)+'" y2="'+dzY+'" stroke="'+DZC+'" stroke-width="5.5" stroke-linecap="round"/>';
+    svg+='<path d="M '+(lx1+40)+' '+(dzY-10)+' L '+(lx1+66)+' '+dzY+' L '+(lx1+40)+' '+(dzY+10)+' Z" fill="'+DZC+'"/>';
+  }else{
+    /* 無疾病事件:淡虛線 + 明確提示(不畫箭頭,空軸畫箭頭很奇怪) */
+    svg+='<line x1="'+padL+'" y1="'+dzY+'" x2="'+(W-padR)+'" y2="'+dzY+'" stroke="#3a4854" stroke-width="2" stroke-dasharray="8 8"/>';
+    svg+='<text x="'+((padL+W-padR)/2)+'" y="'+(dzY-14)+'" text-anchor="middle" font-size="16" fill="#6d8190">尚無疾病事件記錄（建議補上「診斷確立」等事件）</text>';
+  }
   var dzT=tierOf(dzPl);
   dzPl.forEach(function(q,qi){
     var e=q.o,x=q.x,tr=dzT[qi];
@@ -7627,8 +7651,12 @@ window.openTimelineWindow=function(caseId){
     svg+='<circle cx="'+x+'" cy="'+dzY+'" r="18" fill="'+DZC+'" opacity=".26"/>';
     svg+='<circle cx="'+x+'" cy="'+dzY+'" r="12" fill="'+DZC+'" stroke="#0f161c" stroke-width="3.5"/>';
     svg+='<circle cx="'+x+'" cy="'+dzY+'" r="5" fill="#fff"/>';
-    svg+='<text x="'+x+'" y="'+ly+'" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff">'+esc(e.label||cfgOf(e.type).label)+'</text>';
-    svg+='<text x="'+x+'" y="'+(ly+20)+'" text-anchor="middle" font-size="15" fill="'+DZC+'">'+esc(md(e.date))+'</text>';
+    var dlab=e.label||cfgOf(e.type).label,dwp=wrap2(dlab,15);
+    var dxp=Math.max(x,padL+52);
+    var dt2=(dwp[1]?'<tspan x="'+dxp+'" dy="24">'+esc(dwp[1])+'</tspan>':'');
+    svg+='<text x="'+dxp+'" y="'+ly+'" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff">'
+      +'<title>'+esc(dlab)+'</title>'+esc(dwp[0])+dt2+'</text>';
+    svg+='<text x="'+dxp+'" y="'+(ly+(dwp[1]?44:20))+'" text-anchor="middle" font-size="15" fill="'+DZC+'">'+esc(md(e.date))+'</text>';
   });
 
   /* ══ supporting lanes:共用同一時間座標,但不另建 timeline(無自身 baseline)══ */
@@ -7648,8 +7676,13 @@ window.openTimelineWindow=function(caseId){
       /* 引線:節點在真實日期,標籤往上錯開時用細線連回來 */
       svg+='<line x1="'+x+'" y1="'+(y-11)+'" x2="'+x+'" y2="'+(ly+7)+'" stroke="'+cfg.color+'" stroke-width="1.2" opacity=".45"/>';
       svg+='<circle cx="'+x+'" cy="'+y+'" r="9.5" fill="'+cfg.color+'"/>';
-      svg+='<text x="'+x+'" y="'+ly+'" text-anchor="middle" font-size="17" font-weight="600" fill="#d6e2ec">'+esc(e.label||cfg.label)+'</text>';
-      svg+='<text x="'+x+'" y="'+(ly+17)+'" text-anchor="middle" font-size="13" fill="#7d92a2">'+esc(md(e.date))+'</text>';
+      /* V5.26.3: 標籤 x 加下限,避免 text-anchor=middle 往左延伸壓到軌名區 */
+      var lxp=Math.max(x,padL+52);
+      var lab=e.label||cfg.label,wp=wrap2(lab,17);
+      var t2=(wp[1]?'<tspan x="'+lxp+'" dy="19">'+esc(wp[1])+'</tspan>':'');
+      svg+='<text x="'+lxp+'" y="'+ly+'" text-anchor="middle" font-size="17" font-weight="600" fill="#d6e2ec">'
+        +'<title>'+esc(lab)+'</title>'+esc(wp[0])+t2+'</text>';
+      svg+='<text x="'+lxp+'" y="'+(ly+(wp[1]?36:17))+'" text-anchor="middle" font-size="13" fill="#7d92a2">'+esc(md(e.date))+'</text>';
       if(e.resp){
         var RM={better:{s:'↑ 有效',c:'#27AE60'},stable:{s:'→ 穩定',c:'#C8A93A'},worse:{s:'↓ 惡化',c:'#E74C3C'},na:{s:'— 無法評估',c:'#7F8C8D'}};
         var rm=RM[e.resp]||RM.na;
@@ -7663,14 +7696,23 @@ window.openTimelineWindow=function(caseId){
   var ay=LANE_TOP+lanes.length*laneH+30;
   svg+='<line x1="'+padL+'" y1="'+ay+'" x2="'+(W-padR/2)+'" y2="'+ay+'" stroke="#2a3742" stroke-width="1.5"/>';
   var MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  /* V5.26.3: 跨度短(≤2 個月)時只有 1-2 個月刻度,軸線顯得空。
+     改成依跨度決定:短跨度用「月/日」逐事件標,長跨度用月份 */
+  var spanMon=(t1-t0)/DAY/30;
   var ticks={};
-  evs.forEach(function(e){var t=ms(e.date);if(t===null)return;var dd=new Date(t);
-    ticks[dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')]={t:t,y:dd.getFullYear(),m:dd.getMonth()};});
+  if(spanMon<=2){
+    evs.forEach(function(e){var t=ms(e.date);if(t===null)return;var dd=new Date(t);
+      ticks[e.date]={t:t,y:dd.getFullYear(),m:dd.getMonth(),d:dd.getDate(),day:true};});
+  }else{
+    evs.forEach(function(e){var t=ms(e.date);if(t===null)return;var dd=new Date(t);
+      ticks[dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')]={t:t,y:dd.getFullYear(),m:dd.getMonth()};});
+  }
   var keys=Object.keys(ticks).sort(),lastY=null,yearMarks=[];
   keys.forEach(function(k){
     var o=ticks[k],x=xOf(o.t);
     svg+='<line x1="'+x+'" y1="'+(ay-6)+'" x2="'+x+'" y2="'+(ay+6)+'" stroke="#3a4854" stroke-width="1.5"/>';
-    svg+='<text x="'+x+'" y="'+(ay+26)+'" text-anchor="middle" font-size="15" fill="#8ca0b0">'+MON[o.m]+'</text>';
+    svg+='<text x="'+x+'" y="'+(ay+26)+'" text-anchor="middle" font-size="15" fill="#8ca0b0">'
+      +(o.day?(MON[o.m]+' '+o.d):MON[o.m])+'</text>';
     if(o.y!==lastY){yearMarks.push({x:x,y:o.y});lastY=o.y;}
   });
   /* 年份分組:只在該年第一個月份上方標一次(取代原本 2025-10 + OCT 的重複) */
