@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.26.0';
+const VERSION='V5.26.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3604,7 +3604,7 @@ function caseHTML(cid,i,d){
       <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" style="font-size:12px;padding:5px 8px">
     </div>
     <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
-    <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像（最多2張）</div>
+    <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像</div>
     <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${buildMammoImgArea(cid,i,d)}</div>
   </div>`:''}  <div class="fg full"><div class="field-hdr"><label>癌指數</label>${addBtn('markers')}</div>
     <div id="marklist-${cid}-${i}">${markerRows}</div>
@@ -7723,7 +7723,11 @@ window.openImgWindow=function(caseId){
      _esc 在此就地處理(檢視器是獨立產生的 HTML,不能直接用主程式的 escA) */
   var _esc=function(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
   var _pages=[];
-  if(data.report){
+  /* V5.26.1 修:V5.15.1 把乳攝報告獨立成第一頁,但個管師反映「報告和 2 張圖本來就該在同一頁」
+     (改版前的乳攝投影片就是左報告右圖)。改成:有報告時與**第一組圖同頁**左右分欄(4:6),
+     只有「完全沒有圖」時報告才單獨成頁。 */
+  var _repHtml=data.report?('<div class="prepcol">'+_esc(data.report).replace(/\\n/g,'<br>')+'</div>'):'';
+  if(data.report&&!(data.images||[]).length){
     _pages.push('<section class="ps on">'
       +'<div class="ph"><span class="pci">'+data.chartNo+'</span> <span class="pcn">'+data.name+'</span>'
       +'<span class="ptitle">報告</span><span class="pcat">'+(data.catLabel||'影像')+'</span></div>'
@@ -7746,12 +7750,27 @@ window.openImgWindow=function(caseId){
     var c=Math.ceil(Math.sqrt(n));return[c,Math.ceil(n/c)];
   };
   _groups.forEach(function(grp,gi){
-    var isFirst=(!data.report&&gi===0);
+    /* V5.26.1: 報告現在跟第一組圖同頁,所以第一組圖就是第一頁 */
+    var isFirst=(gi===0);
+    var withRep=(gi===0&&!!data.report);
     var g=_grid(grp.length),cols=g[0],rows=g[1];
-    var title=grp.length===1?(grp[0].caption||data.typeLabel||'影像')
-              :((data.typeLabel||'影像')+'（'+grp.length+' 張）');
+    var title=withRep
+      ?('報告 ・ '+(data.typeLabel||'影像')+'（'+grp.length+' 張）')
+      :(grp.length===1?(grp[0].caption||data.typeLabel||'影像')
+              :((data.typeLabel||'影像')+'（'+grp.length+' 張）'));
     var body;
-    if(grp.length===1){
+    if(withRep){
+      /* V5.26.1(個管師指定):三欄 2:4:4 —— 報告 2、兩張圖各 4,圖片**橫向並排**。
+         乳攝 MLO/CC 是直式影像,並排比上下排更能利用高度。
+         超過 2 張時,圖片區內部再自動分格,整體仍維持「報告 2 : 圖區 8」。 */
+      var imgCells=grp.map(function(im){
+        return'<div class="pcell"><img src="'+im.src+'" alt="">'
+          +(im.caption?'<div class="pcap">'+_esc(im.caption)+'</div>':'')+'</div>';
+      }).join('');
+      body='<div class="pbody psplit">'+_repHtml
+        +'<div class="pimgcol" style="grid-template-columns:repeat('+Math.min(grp.length,2)+',1fr)">'
+        +imgCells+'</div></div>';
+    }else if(grp.length===1){
       body='<div class="pbody"><img src="'+grp[0].src+'" alt="'+(data.typeLabel||'影像')+'"></div>';
     }else{
       body='<div class="pbody pgrid" style="grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows+',1fr)">'
@@ -7773,6 +7792,12 @@ window.openImgWindow=function(caseId){
     +'*{margin:0;padding:0;box-sizing:border-box}'
     +'html,body{width:100%;height:100%;background:#111;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;color:#fff;overflow:hidden}'
     /* V5.15.1: 報告文字頁(乳攝)—— 可捲動、字級適中、左對齊易讀 */
+    +'.pbody.psplit{display:flex;gap:2.5vw;align-items:stretch;padding:2.5vh 3vw calc(2vh + clamp(48px,7vh,78px))}'
+    +'.prepcol{flex:2;overflow:auto;font-size:clamp(13px,1.35vw,21px);line-height:1.7;color:#e8edf1;text-align:left;padding-right:.5vw;min-width:0;'
+    /* V5.26.1: 報告欄只佔 2,長句與長英文字(spiculated/microcalcifications)會被撐爆或擠成直條,
+       改成自然換行:允許在任意處斷字、不強制對齊,寧可多幾行也不要擠 */
+    +'white-space:normal;word-break:break-word;overflow-wrap:anywhere;hyphens:auto;text-align:left}'
+    +'.pimgcol{flex:8;display:grid;gap:1.4vw;align-items:stretch;justify-items:stretch;min-width:0;overflow:hidden}'
     +'.pbody.prep{display:block;overflow:auto;padding:4vh 6vw calc(4vh + clamp(48px,7vh,78px));font-size:clamp(16px,1.9vw,30px);line-height:1.75;color:#e8edf1;text-align:left;white-space:normal}'
     +'.ps{position:absolute;inset:0;display:none;flex-direction:column;background:#111}'
     +'.ps.on{display:flex}'
