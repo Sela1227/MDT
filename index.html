@@ -100,7 +100,9 @@ h1,h2,h3{font-family:'Noto Sans TC',system-ui,sans-serif;font-weight:700;line-he
 .c-title{font-family:'Noto Sans TC',system-ui,sans-serif;font-weight:700;font-size:19px;font-weight:600;color:var(--fog-dk)}
 .c-sub{font-size:12px;color:var(--textlt);margin-top:1px}
 .c-sp{flex:1}
-.wrap{max-width:820px;padding:22px 26px}
+/* V5.24.0 UI 尺度重整①:主工作區 820→980。個管師用 20 吋(1440~1600 寬),
+       扣掉 sidebar 248px 後 980 舒適且不擠;刻意不衝 1024 以免 1440 寬機器邊界太緊 */
+    .wrap{max-width:980px;padding:24px 28px 36px}
 
 
 
@@ -113,7 +115,8 @@ h1,h2,h3{font-family:'Noto Sans TC',system-ui,sans-serif;font-weight:700;line-he
 .sec-foot{padding:11px 20px;border-top:1px solid var(--blt);background:var(--surface);display:flex;align-items:center;gap:8px}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fg{display:flex;flex-direction:column;gap:4px}.fg.full{grid-column:1/-1}
-label{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--textlt)}
+/* V5.24.0③:label 10→12px。text-transform:uppercase 對中文無作用,而 .09em 字距讓中文顯得細碎 */
+    label{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--textmd)}
 input,select,textarea{padding:8px 10px;border:1px solid var(--border);border-radius:2px;font-size:13px;font-family:'Noto Sans TC',sans-serif;color:var(--text);background:var(--white);width:100%;transition:border-color .15s}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--fog)}
 input::placeholder{color:var(--fog-xlt);font-style:italic}
@@ -130,7 +133,28 @@ textarea{resize:vertical}
 .sh-track-dot{width:5px;height:5px;border-radius:50%;background:var(--fog-lt);flex-shrink:0}
 .sh-empty{font-size:12px;color:var(--textlt);font-style:italic;padding:4px 0}
 .rule{border:none;border-top:1px solid var(--blt);margin:14px 0}
-.casecard{border:1px solid var(--blt);border-left:3px solid var(--cream-dk);border-radius:2px;padding:11px 13px;margin-bottom:6px;background:var(--surface);transition:border-color .15s}.field-hdr{display:flex;align-items:center;gap:8px;margin-bottom:4px;}.field-hdr label{margin-bottom:0;}.fsec{grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--fog);padding:8px 0 4px;border-bottom:1px solid var(--blt);margin-bottom:2px}
+/* V5.22.0: 三種卡片的識別標籤 —— 個管師反映「個案討論與醫療小組長得太像分不出來」。
+   不改版型,只在標題列加色標籤(產出文件也會帶) */
+.sec-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;color:#fff;margin-left:6px;vertical-align:middle;letter-spacing:.04em}
+/* V5.23.0: 匯入後缺漏欄位高亮 —— 淡黃底提示「這格空的,要補」。
+   只在該欄真的空白時套用,填了就自動消失(靠 :placeholder-shown 與 .fg-gap 類) */
+    /* V5.24.0⑥ 修 V5.23.0 的問題:.fg-gap 一直存在,所以填完後 label 仍是警告色,
+       看起來像永遠沒補。警告只留在「空白輸入框底色」與「待補」badge,label 回歸正常 */
+    .fg-gap textarea:placeholder-shown,.fg-gap input:placeholder-shown{background:#FFFBEF;border-color:#E5CE9E}
+    .sec-tag-case{background:#3A4550}
+    /* V5.23.0: AI 匯入待確認徽章(可點,點了清除標記) */
+    .ai-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:9px;margin-left:6px;vertical-align:middle;background:#8A5A1F;color:#fff;cursor:pointer}
+    .ai-badge:hover{background:#A06A25}
+    /* V5.23.0: AI 匯入後仍空白的關鍵欄位標示 */
+    .fld-gap{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:7px;background:#F4EDE0;color:#8A5A1F;margin-left:4px;vertical-align:middle}
+    .sec-tag-fu{background:#5B8FA8}
+.sec-tag-team{background:#7A8C6E}
+.sec-tag-date{display:inline-block;font-size:10px;color:var(--textlt);margin-left:6px;vertical-align:middle}
+/* 唯讀顯示框(上次決議:系統帶入不可改) */
+.ro-box{font-size:13px;line-height:1.6;padding:6px 8px;background:var(--surface);border:1px solid var(--blt);border-left:3px solid #5B8FA8;border-radius:2px;color:var(--textmd);white-space:normal}
+.casecard{border:1px solid var(--blt);border-left:3px solid var(--cream-dk);border-radius:2px;padding:11px 13px;margin-bottom:6px;background:var(--surface);transition:border-color .15s}.field-hdr{display:flex;align-items:center;gap:8px;margin-bottom:4px;}.field-hdr label{margin-bottom:0;}/* V5.24.0④:.fsec 是長卡片裡的定位 landmark(基本資料/病情摘要/臨床資料…),
+       原本只有 10px 比內文還小,升到 13px 並加大上下留白,眼睛才有停頓點 */
+    .fsec{grid-column:1/-1;font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--fog-dk);padding:16px 0 7px;border-bottom:1px solid var(--blt);margin-bottom:4px}
 .casecard.cc-collapsed>.cg2,.casecard.cc-collapsed>.fg,.casecard.cc-collapsed>.struct-row{display:none!important}
 .cc-toggle-icon{margin-left:0;margin-right:6px;font-size:10px;opacity:.5;display:inline-block;transition:transform .15s;flex-shrink:0}
 .casecard:hover{border-color:var(--border);border-left-color:var(--fog-lt)}
@@ -140,7 +164,8 @@ textarea{resize:vertical}
 .cnm{font-size:13px;font-weight:600}.cmsk{font-size:11px;color:var(--textlt);font-style:italic}
 .delbtn{margin-left:auto;background:none;border:none;color:var(--fog-xlt);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;transition:color .15s;flex-shrink:0;font-family:monospace}
 .delbtn:hover{color:var(--err)}
-.cg2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.cg2 .full{grid-column:1/-1}.cg2 input{font-size:12px;padding:5px 8px}
+.cg2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}/* V5.24.0⑤ */.cg2 .full{grid-column:1/-1}/* V5.24.0②:主要輸入從 12→14px。原本 body 是 14px,但每天工作的輸入框反而小兩級 */
+    .cg2 input{font-size:14px;padding:7px 9px;line-height:1.55}
 .trow{display:flex;flex-wrap:wrap;gap:4px}
 .tchip{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;border:1px solid var(--border);padding:3px 9px;border-radius:2px;transition:background .15s,border-color .15s;user-select:none;background:var(--white);color:var(--fog)}
 .tchip:hover{border-color:var(--fog);color:var(--fog-dk)}.tchip input[type=checkbox]{width:auto;margin:0;accent-color:var(--fog-dk)}
@@ -286,10 +311,12 @@ textarea{resize:vertical}
 .case-img-wrap img:hover{opacity:.85}
 .case-img-del{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
 .case-img-add{width:80px;height:80px;border:2px dashed var(--border);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--textlt);font-size:10px;gap:4px;flex-shrink:0;transition:all .15s;background:var(--white)}
-.struct-row{margin-bottom:5px}
+/* V5.24.0⑦:病理/檢查/治療多筆時,原本只靠 5px margin 分隔,容易看錯哪個日期配哪段文字。
+       加淡背景與細框讓「日期+內容是一組」一眼可辨(不加陰影,維持低彩度視覺語言) */
+    .struct-row{margin-bottom:6px;padding:9px 10px;background:#FAFBFC;border:1px solid var(--blt);border-radius:4px}
 .struct-fields{display:grid;grid-template-columns:120px 140px 1fr 28px;gap:6px;align-items:start;margin-bottom:2px}
 .struct-fields.path-row{grid-template-columns:140px 1fr 28px}
-.struct-fields input,.struct-fields select,.struct-fields textarea{font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;width:100%;box-sizing:border-box;background:var(--white)}
+.struct-fields input,.struct-fields select,.struct-fields textarea{font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;width:100%;box-sizing:border-box;background:var(--white)}
 .struct-fields input[type=date]{min-width:0;padding:5px 6px}
 .struct-row{background:var(--surface);border:1px solid var(--blt);border-radius:3px;padding:6px 8px;margin-bottom:5px}
 .struct-row:hover{border-color:var(--fog-xlt)}
@@ -1266,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.13.6';
+const VERSION='V5.26.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1785,7 +1812,7 @@ function addStruct(cid,i,field){
       const tmp=document.createElement('div');
       const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'">'+t.label+'</option>';}).join('');
       tmp.innerHTML='<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-        +'<select data-action="updstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="type" style="width:108px;font-size:12px;padding:4px 6px">'+opts+'</select>'
+        +'<select data-action="updstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="type" style="width:108px;font-size:13px;padding:5px 7px">'+opts+'</select>'
         +'<input type="date" value="" data-action="updstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="date" style="width:148px">'
         +'<input placeholder="自訂說明（空白用預設）" value="" data-action="updstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
         +'<button class="delbtn" data-action="delstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" style="margin-left:auto">×</button>'
@@ -1812,7 +1839,7 @@ function addStruct(cid,i,field){
         <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
     </div>`;
   } else if(field==='treatments'){
     div.innerHTML=`<div class="struct-row" style="position:relative">
@@ -1821,7 +1848,7 @@ function addStruct(cid,i,field){
         <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
     </div>`;
   } else if(field==='markers'){
     div.innerHTML=`<div class="struct-row" style="position:relative">
@@ -1830,7 +1857,7 @@ function addStruct(cid,i,field){
         <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="數值或趨勢" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+      <textarea placeholder="數值或趨勢" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
     </div>`;
   }
   if(div.firstElementChild)container.appendChild(div.firstElementChild);
@@ -2306,6 +2333,7 @@ async function openMtgRecord(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
   if(m.cids.length>1)m.cids.forEach(cid=>{const s=loadSec(cid,m.date);if(s)m.sections[cid]=s});
+  m._loadedDate=m.date;/* V5.19.1: 記住載入當下的日期,儲存時才知道使用者有沒有改過日期 */
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
   renderEditor();restoreImgFolderHandle();showView('meeting');
 }
@@ -2868,13 +2896,174 @@ function getDoctors(d){
 function getDoctorStr(d){return getDoctors(d).join('、')||'—'}
 /* ── Image handling ── */
 
-function delImg(cid,i,j){
+/* ════ V5.16.0 圖片操作統一註冊表 ════
+   背景:系統 5 種圖片(病理/手術/相關影像/乳攝/特殊議程)的 del、clear、caption 各有一套實作,
+   約 95 行近乎相同的程式碼。實際差異只有下表 6 個變數,其餘邏輯 100% 相同
+   (ensureSec → 找物件 → 改陣列 → markDirty → 重繪)。
+   坑 #37 已證明「複製 N 份」的代價:修 bug 只修到其中一份。收斂後改一處全部生效。
+
+   保留的真實差異(不為統一而抹平行為):
+   - mammo 是巢狀 c.mammo.images,取用前要確保 c.mammo 存在
+   - special 掛在 sections[cid].special(非 cases),重繪用 innerHTML(其他用 replaceWith)
+   - clear 的確認訊息各自不同;special 原本就沒有 confirm(已知不一致,重構時原樣保留) */
+const IMG_KINDS={
+  path:   {label:'病理影像',  dom:'pathimgs-',          holder:'cases',   mode:'replace',
+           clearMsg:'清除所有病理影像？',
+           build:function(cid,i,o){return buildPathImgArea(cid,i,o);},
+           get:function(o){if(!Array.isArray(o.pathologyImages))o.pathologyImages=[];return o.pathologyImages;}},
+  surg:   {label:'手術照片',  dom:'surgimgs-',          holder:'cases',   mode:'replace',
+           clearMsg:'清除所有手術照片？',
+           build:function(cid,i,o){return buildSurgicalImgArea(cid,i,o);},
+           get:function(o){if(!Array.isArray(o.surgicalImages))o.surgicalImages=[];return o.surgicalImages;}},
+  related:{label:'相關影像',  dom:'imgs-',              holder:'cases',   mode:'replace',
+           clearMsg:'清除所有相關影像？',
+           build:function(cid,i,o){return buildImgArea(cid,i,o);},
+           get:function(o){if(!Array.isArray(o.images))o.images=[];return o.images;}},
+  mammo:  {label:'乳攝影像',  dom:'mammo-imgs-',        holder:'cases',   mode:'replace',
+           clearMsg:'清除乳攝影像？',
+           build:function(cid,i,o){return buildMammoImgArea(cid,i,o);},
+           get:function(o){if(!o.mammo)o.mammo={date:'',report:'',images:[]};
+                           if(!Array.isArray(o.mammo.images))o.mammo.images=[];return o.mammo.images;}},
+  special:{label:'投影片影像',dom:'special-img-area-',  holder:'special', mode:'inner',
+           clearMsg:'清除所有投影片影像？',/* V5.17.0: 補上確認(V5.16.0 發現原本缺這道保護) */
+           build:function(cid,i,o){return buildSpecialImgArea(cid,i,o||{});},
+           get:function(o){if(!Array.isArray(o.images))o.images=[];return o.images;}}
+};
+/* 取得「擁有這組圖片的物件」(cases[i] 或 special[i]) */
+function _imgOwner(kind,cid,i){
+  const K=IMG_KINDS[kind];if(!K)return null;
   ensureSec(cid);
-  const item=S.meeting.sections[cid].cases[i];if(!item||!item.images)return;
-  item.images.splice(j,1);markDirty();
-  const el=document.getElementById('imgs-'+cid+'-'+i);
-  if(el){const tmp=document.createElement('div');tmp.innerHTML=buildImgArea(cid,i,item);el.replaceWith(tmp.firstElementChild)}
+  const sec=S.meeting.sections[cid];if(!sec)return null;
+  const arr=sec[K.holder];if(!arr)return null;
+  return arr[i]||null;
 }
+/* 重繪該圖片區塊(依註冊表決定 replaceWith 或 innerHTML) */
+function _imgRedraw(kind,cid,i,owner){
+  const K=IMG_KINDS[kind];if(!K)return;
+  const el=document.getElementById(K.dom+cid+'-'+i);if(!el)return;
+  const html=K.build(cid,i,owner);
+  if(K.mode==='inner'){el.innerHTML=html;return;}
+  const tmp=document.createElement('div');tmp.innerHTML=html;
+  if(tmp.firstElementChild)el.replaceWith(tmp.firstElementChild);
+}
+/* 刪一張 */
+function imgDel(kind,cid,i,j){
+  const owner=_imgOwner(kind,cid,i);if(!owner)return;
+  const list=IMG_KINDS[kind].get(owner);
+  if(!list||!list[j])return;
+  list.splice(j,1);markDirty();
+  _imgRedraw(kind,cid,i,owner);
+}
+/* 清空該類全部(clearMsg 為空字串代表不詢問,維持原行為) */
+function imgClear(kind,cid,i){
+  const K=IMG_KINDS[kind];if(!K)return;
+  if(K.clearMsg&&!confirm(K.clearMsg))return;
+  const owner=_imgOwner(kind,cid,i);if(!owner)return;
+  const list=K.get(owner);
+  list.length=0;markDirty();
+  _imgRedraw(kind,cid,i,owner);
+}
+/* 改題字(不重繪,避免打斷輸入焦點 — 與原行為一致) */
+function imgSetCaption(kind,cid,i,j,val){
+  const owner=_imgOwner(kind,cid,i);if(!owner)return;
+  const list=IMG_KINDS[kind].get(owner);
+  if(list&&list[j]){list[j].caption=val;markDirty();}
+}
+/* V5.17.0: 手動排序 — 把第 j 張往 dir(-1 前 / +1 後)移一格。
+   越界不動作;移完重繪(索引與 ◀▶ 的 disabled 狀態都要跟著更新) */
+/* V5.18.1 修審稿 P1/P3:分頁線(pageBreak)原本存在「圖片物件」上,排序時會跟著圖片跑,
+   導致「拖一張圖,整個版面結構跟著變」。分頁線的語意其實是**版面結構**(這頁 2 張、下頁 4 張),
+   拖曳的語意是**換內容** —— 兩者不該綁在一起。
+   改法不動 schema:排序前記下所有分頁線的「位置」,排序後把分頁線套回相同位置。
+   → 換的是圖片,分頁線留在原位;順帶自動解決 P3(套回時跳過 index 0)。 */
+function _snapBreaks(list){
+  const idx=[];(list||[]).forEach(function(im,j){if(im&&im.pageBreak)idx.push(j);});return idx;
+}
+function _applyBreaks(list,idxs){
+  (list||[]).forEach(function(im){if(im)im.pageBreak=false;});
+  (idxs||[]).forEach(function(j){if(j>0&&j<list.length&&list[j])list[j].pageBreak=true;});
+}
+/* V5.20.0 重構③:原本 imgMove 用 swap(交換兩個元素)、imgReorder 用 splice(整段搬移),
+   同一件事兩套演算法。移一格時兩者結果相同(所以不是 bug),但概念不一致,
+   且若未來要「拖曳跨多格」swap 就會錯。統一成單一 moveArrayItem。 */
+function moveArrayItem(arr,from,to){
+  if(!arr||from===to||from<0||to<0||from>=arr.length||to>=arr.length)return false;
+  const [item]=arr.splice(from,1);
+  arr.splice(to,0,item);
+  return true;
+}
+/* 搬移圖片的共同核心:分頁線跟位置走(見坑 #39),搬完重繪 */
+function _moveImage(kind,cid,i,from,to){
+  const owner=_imgOwner(kind,cid,i);if(!owner)return;
+  const list=IMG_KINDS[kind].get(owner);if(!list)return;
+  const brks=_snapBreaks(list);
+  if(!moveArrayItem(list,from,to))return;
+  _applyBreaks(list,brks);/* 分頁線留原位置,不跟著圖片走 */
+  markDirty();
+  _imgRedraw(kind,cid,i,owner);
+}
+function imgMove(kind,cid,i,j,dir){_moveImage(kind,cid,i,j,j+dir);}
+/* V5.18.0: 圖片拖曳排序 —— 把第 from 張移到第 to 張的位置(整段搬移,非交換) */
+function imgReorder(kind,cid,i,from,to){_moveImage(kind,cid,i,from,to);}/* V5.20.0: 與 imgMove 共用核心 */
+var _imgDragSrc=null;
+document.addEventListener('dragstart',function(e){
+  const card=e.target.closest?e.target.closest('.img-card'):null;
+  if(!card)return;
+  _imgDragSrc={cid:card.dataset.cid,idx:card.dataset.idx,si:card.dataset.si,
+               imgtype:card.dataset.imgtype,j:parseInt(card.dataset.imgidx)};
+  card.style.opacity='.4';
+  try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','img');}catch(_e){}
+});
+document.addEventListener('dragend',function(e){
+  const card=e.target.closest?e.target.closest('.img-card'):null;
+  if(card)card.style.opacity='';
+  _imgDragSrc=null;
+});
+document.addEventListener('dragover',function(e){
+  if(!_imgDragSrc)return;
+  const card=e.target.closest?e.target.closest('.img-card'):null;
+  if(!card)return;
+  e.preventDefault();/* 允許 drop */
+  try{e.dataTransfer.dropEffect='move';}catch(_e){}
+});
+document.addEventListener('drop',function(e){
+  if(!_imgDragSrc)return;
+  const card=e.target.closest?e.target.closest('.img-card'):null;
+  if(!card)return;
+  e.preventDefault();
+  const src=_imgDragSrc;_imgDragSrc=null;
+  /* 只允許同一組圖片內排序(不同個案/不同類型不互搬) */
+  if(card.dataset.cid!==src.cid||card.dataset.imgtype!==src.imgtype
+     ||card.dataset.idx!==src.idx||card.dataset.si!==src.si)return;
+  const _k=_imgKindByField(src.imgtype)||(src.si!==undefined?'special':null);
+  if(!_k)return;
+  const _i=parseInt(_k==='special'?src.si:src.idx);
+  imgReorder(_k,src.cid,_i,src.j,parseInt(card.dataset.imgidx));
+});
+/* V5.18.0: 切換分頁點(第 0 張永遠是新頁,不允許設) */
+function imgToggleBrk(kind,cid,i,j){
+  const owner=_imgOwner(kind,cid,i);if(!owner)return;
+  const list=IMG_KINDS[kind].get(owner);
+  if(!list||!list[j]||j===0)return;
+  list[j].pageBreak=!list[j].pageBreak;
+  markDirty();_imgRedraw(kind,cid,i,owner);
+}
+/* V5.18.0: 一鍵套用「每頁 n 張」—— 依序每 n 張設一個分頁點,設完仍可手動微調 */
+function imgApplyLayout(kind,cid,i,n){
+  const owner=_imgOwner(kind,cid,i);if(!owner)return;
+  const list=IMG_KINDS[kind].get(owner);
+  if(!list||!list.length||!n||n<1)return;
+  list.forEach(function(img,j){img.pageBreak=(j>0&&j%n===0);});
+  markDirty();_imgRedraw(kind,cid,i,owner);
+}
+/* HTML 的 data-imgtype 帶的是資料欄位名(pathologyImages / surgicalImages / images / mammo),
+   對應到註冊表的 kind。找不到就回 null,呼叫端不動作(比原本靜默寫進錯陣列安全) */
+function _imgKindByField(f){
+  return{pathologyImages:'path',surgicalImages:'surg',images:'related',mammo:'mammo',
+         path:'path',surg:'surg',related:'related',special:'special'}[f]||null;
+}
+/* V5.16.0: 保留原函式名(HTML 有直接呼叫),內部改走統一核心 */
+function delImg(cid,i,j){imgDel('related',cid,i,j);}
 
 function updMammo(cid,i,key,val){
   ensureSec(cid);
@@ -2882,41 +3071,17 @@ function updMammo(cid,i,key,val){
   if(!c.mammo)c.mammo={date:'',report:'',images:[]};
   c.mammo[key]=val;markDirty();
 }
+/* V5.18.1 修審稿 P1:乳攝原本是唯一沒走 buildGenericImgArea 的舊 renderer ——
+   底層 IMG_KINDS.mammo 早就備妥,但 UI 沒 render 出新功能入口,
+   等於乳攝拿不到 V5.17/V5.18 的排序 ◀▶、拖曳、⏎ 分頁點、一鍵排版、已選 N/上限、清除顯示張數。
+   這正是坑 #37「四種一起改、乳攝忘了」的重演。收斂進共用 renderer,只保留乳攝自己的
+   maxImgs=6 與 c.mammo.images 資料路徑(由 IMG_KINDS.mammo.get 處理)。 */
 function buildMammoImgArea(cid,i,d){
-  const imgs=(d.mammo&&d.mammo.images)||[];
-  const folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
-  let h='<div style="display:flex;flex-direction:column;gap:8px">';
-  if(imgs.length){
-    h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
-    imgs.forEach(function(img,j){
-      const cap=escA(img.caption||img.name||'');
-      const shortCap=escA((img.caption||img.name||'').replace(/\.[^.]+$/,''));
-      if(img.dataUrl){
-        const safe=escA(img.dataUrl);
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
-          +'<div style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0" data-action="viewimg" data-src="'+safe+'">'
-          +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="mammo" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      } else {
-        h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">'
-          +'<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">'
-          +'<span style="font-size:20px">🖼</span>'
-          +'</div>'
-          +'<input value="'+cap+'" placeholder="說明" data-action="updimgcaption" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'" data-imgtype="mammo" style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
-          +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="delmammoimg" data-cid="'+cid+'" data-idx="'+i+'" data-imgidx="'+j+'">×</button>'
-          +'</div>';
-      }
-    });
-    h+='</div>';
-  }
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;">';
-  h+='<button class="btn btn-b btn-sm" data-action="pickimgfolder" data-cid="'+cid+'" data-idx="'+i+'" data-type="mammo" data-max="2" style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
-  if(imgs.length) h+='<button class="btn btn-b btn-sm" data-action="clearmammoimgs" data-cid="'+cid+'" data-idx="'+i+'" style="color:var(--err)">✕ 清除</button>';
-  h+='</div>';
-  h+='</div>';
-  return h;
+  if(!d.mammo)d.mammo={date:'',report:'',images:[]};
+  return buildGenericImgArea({cid:cid,idx:i,imgs:d.mammo.images||[],
+    containerId:'mammo-imgs-'+cid+'-'+i,
+    pickAction:'pickimgfolder',delAction:'delmammoimg',capAction:'updimgcaption',clearAction:'clearmammoimgs',
+    imgtype:'mammo',maxImgs:6,placeholderIcon:'📸'});
 }
 
 function compressImage(dataUrl,maxW,maxH,quality,cb){
@@ -2956,13 +3121,31 @@ function buildGenericImgArea(cfg){
   var folderName=imgFolderHandle?escA(imgFolderHandle.name):'';
   var secAttr='data-'+idxKey+'="'+idx+'"';
   var h='<div id="'+containerId+'" data-cid="'+cid+'" '+secAttr+' style="display:flex;flex-direction:column;gap:8px">';
+  /* V5.18.1 修審稿 P2:>6 張仍會自動塞格,數學上放得下但投影時難判讀。
+     採 soft guardrail —— 不阻擋,只在該頁超過 6 張時顯示淡黃提示 */
+  var _brkPages=[];
+  imgs.forEach(function(im,j){if(j===0||im.pageBreak)_brkPages.push(0);_brkPages[_brkPages.length-1]++;});
+  var _over=_brkPages.filter(function(n){return n>6;}).length;
+  /* V5.17.0: 顯示「已選 N / 上限」— 原本使用者不知道還能加幾張,加滿了也只是靜靜不動作 */
+  if(imgs.length){
+    h+='<div style="font-size:11px;color:var(--textlt)">已選 <b style="color:'+(imgs.length>=maxImgs?'var(--err)':'var(--acc)')+'">'+imgs.length+'</b> / '+maxImgs+' 張'
+      +(imgs.length>=maxImgs?'（已達上限）':'')
+      +(_brkPages.length>1?'　共 '+_brkPages.length+' 頁（'+_brkPages.join('+')+'）':'')+'</div>';
+    if(_over){
+      h+='<div style="font-size:11px;color:#8A5A1F;background:#F4EDE0;border-radius:3px;padding:3px 8px">'
+        +'提醒：有 '+_over+' 頁超過 6 張影像，投影時可能不易辨識（不影響產出）</div>';
+    }
+  }
   if(imgs.length){
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
     imgs.forEach(function(img,j){
       var cap=escA(img.caption||img.name||'');
       var safe=img.dataUrl?escA(img.dataUrl):'';
       var imgtypeAttr=imgtype?' data-imgtype="'+imgtype+'"':'';
-      h+='<div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px">';
+      /* V5.18.0: 拖曳排序 —— 圖多時比按 ◀▶ 快。dragstart 記來源索引,drop 時搬移。
+         題字 input 設 draggable=false(否則選字會觸發拖曳) */
+      h+='<div class="img-card" draggable="true" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'"'+imgtypeAttr
+        +' style="position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:90px;cursor:grab">';
       if(safe){
         h+='<div data-action="viewimg" data-src="'+safe+'" style="width:90px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;background:#f0f0f0">'
           +'<img src="'+safe+'" style="width:100%;height:100%;object-fit:cover"></div>';
@@ -2970,7 +3153,18 @@ function buildGenericImgArea(cfg){
         h+='<div style="width:90px;height:70px;border-radius:4px;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center">'
           +'<span style="font-size:20px">'+icon+'</span></div>';
       }
-      h+='<input value="'+cap+'" placeholder="說明" data-action="'+capAction+'" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'"'+imgtypeAttr+' style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
+      h+='<input draggable="false" value="'+cap+'" placeholder="說明" data-action="'+capAction+'" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'"'+imgtypeAttr+' style="width:82px;font-size:9px;border:1px solid var(--blt);border-radius:2px;background:rgba(255,255,255,.85);text-align:center;color:var(--textmd);padding:2px 4px;outline:none;cursor:text">'
+        /* V5.17.0: 手動排序 — ◀ ▶ 移動一格(第一張沒 ◀、最後一張沒 ▶,用 disabled 保留版面不跳動) */
+        /* V5.18.0: 分頁點 —— 勾了代表「從這張開始新的一頁」。第 0 張永遠是新頁,不給按 */
+        +(j===0?'<div style="font-size:9px;color:var(--textlt);line-height:14px">第 1 頁起</div>'
+               :'<button class="btn btn-b btn-sm" data-action="imgbrk" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'"'+imgtypeAttr
+                +' title="從這張開始新的一頁" style="font-size:9px;padding:0 6px;line-height:14px;'
+                +(img.pageBreak?'background:var(--acc);color:#fff;border-color:var(--acc)':'opacity:.55')+'">'
+                +(img.pageBreak?'⏎ 換頁':'⏎ 同頁')+'</button>')
+        +'<div style="display:flex;gap:2px">'
+        +'<button class="btn btn-b btn-sm" data-action="imgmove" data-dir="-1" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'"'+imgtypeAttr+(j===0?' disabled':'')+' title="往前移" style="font-size:10px;padding:0 6px;line-height:16px;'+(j===0?'opacity:.25;cursor:default':'')+'">◀</button>'
+        +'<button class="btn btn-b btn-sm" data-action="imgmove" data-dir="1" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'"'+imgtypeAttr+(j===imgs.length-1?' disabled':'')+' title="往後移" style="font-size:10px;padding:0 6px;line-height:16px;'+(j===imgs.length-1?'opacity:.25;cursor:default':'')+'">▶</button>'
+        +'</div>'
         +'<button class="case-img-del" style="position:absolute;top:2px;right:2px" data-action="'+delAction+'" data-cid="'+cid+'" '+secAttr+' data-imgidx="'+j+'">×</button>'
         +'</div>';
     });
@@ -2981,8 +3175,16 @@ function buildGenericImgArea(cfg){
   if(imgs.length<maxImgs){
     h+='<button class="btn btn-b btn-sm" data-action="'+pickAction+'" data-cid="'+cid+'" '+secAttr+pickExtras+' style="color:var(--acc)">📂 '+(folderName?folderName+' 選取':'選擇資料夾')+'</button>';
   }
+  /* V5.18.0: 一鍵套用排版 —— 自動設好所有分頁點,不用一張張點;設完仍可手動微調 */
+  if(imgs.length>1&&imgtype){
+    h+='<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt)">每頁'
+      +[1,2,4].map(function(n){
+        return '<button class="btn btn-b btn-sm" data-action="imglayout" data-n="'+n+'" data-cid="'+cid+'" '+secAttr+' data-imgtype="'+imgtype+'" style="font-size:11px;padding:1px 8px">'+n+' 張</button>';
+      }).join('')
+      +'</span>';
+  }
   if(imgs.length&&clearAction){
-    h+='<button class="btn btn-b btn-sm" data-action="'+clearAction+'" data-cid="'+cid+'" '+secAttr+' style="color:var(--err)">✕ 清除全部</button>';
+    h+='<button class="btn btn-b btn-sm" data-action="'+clearAction+'" data-cid="'+cid+'" '+secAttr+' style="color:var(--err)">✕ 清除全部（'+imgs.length+' 張）</button>';
   }
   h+='</div></div>';
   return h;
@@ -2992,9 +3194,55 @@ function buildImgArea(cid,i,d){
   return buildGenericImgArea({cid:cid,idx:i,imgs:d.images||[],
     containerId:'imgs-'+cid+'-'+i,
     pickAction:'pickimgfolder',delAction:'delimg',capAction:'updimgcaption',clearAction:'clearimgs',
-    imgtype:'images',maxImgs:5,placeholderIcon:'🖼'});
+    imgtype:'images',maxImgs:20,placeholderIcon:'🖼'});/* V5.17.0: 5→20 */
 }
 
+/* ════ V5.14.0 圖片統一底層 ════
+   背景:系統有 5 種圖片(病理 pathologyImages / 手術 surgicalImages / 相關影像 images /
+   乳攝 mammo.images / 特殊議程 special.images),原本各有一套 preview/del/clear 實作(23 個 action),
+   同一個 bug 要修 5 次 —— 坑 #31(含括號檔名 getFileHandle 失敗)當時只修到 previewrelatedimg 一處,
+   其餘 4 處到 V5.14.0 才一併修好。而且 5 處預覽全都沒處理 subFolder(子資料夾的圖必定預覽失敗)。
+   本版把「找檔 + 預覽」收斂成單一核心,以後改一處全部生效。 */
+
+/* 統一找檔:先試 getFileHandle(快),失敗改列舉資料夾比對(對含括號等特殊字元檔名較穩);
+   支援 subFolder(子資料夾),找不到回傳 null 由呼叫端決定訊息 */
+async function _imgGetFile(name,subFolder){
+  if(!name||!imgFolderHandle)return null;
+  var scan=imgFolderHandle;
+  if(subFolder){
+    try{scan=await imgFolderHandle.getDirectoryHandle(subFolder,{create:false});}catch(_e){scan=imgFolderHandle;}
+  }
+  try{var fh=await scan.getFileHandle(name);return await fh.getFile();}catch(_e){}
+  /* 退回:列舉比對(修坑 #31 —— 檔名含 () 等字元時 getFileHandle 可能比對失敗) */
+  try{
+    for await(const ent of scan.values()){
+      if(ent.kind==='file'&&ent.name===name)return await ent.getFile();
+    }
+  }catch(_e2){}
+  return null;
+}
+/* V5.20.0 重構①:File → DataURL 的共用小工具(原本預覽端與產出端各寫一份 FileReader) */
+function _fileToDataUrl(file){
+  return new Promise(function(res,rej){
+    const r=new FileReader();
+    r.onload=function(e){res(e.target.result);};
+    r.onerror=function(){rej(new Error('讀取檔案失敗'));};
+    r.readAsDataURL(file);
+  });
+}
+/* 統一預覽:img 可為 {name,dataUrl,subFolder};label 用於錯誤訊息 */
+async function _imgPreview(img,label){
+  label=label||'影像';
+  if(!img)return;
+  var dataUrl=(img.dataUrl||'').trim();
+  if(dataUrl){viewImg(dataUrl);return;}
+  var name=(img.name||'').trim();
+  if(!name){alert('無法預覽此'+label);return;}
+  if(!imgFolderHandle){alert('請先選擇影像資料夾,才能預覽'+label);return;}
+  var file=await _imgGetFile(name,(img.subFolder||'').trim());
+  if(!file){alert('無法載入'+label+'：找不到檔案 '+name);return;}
+  viewImg(await _fileToDataUrl(file));/* V5.20.0: 共用 _fileToDataUrl */
+}
 function viewImg(dataUrl){
   const m=document.getElementById('img-modal');
   document.getElementById('img-modal-img').src=dataUrl;
@@ -3016,8 +3264,8 @@ function drSelDept(cid,type,i,val,idx){
   const drOpts=`<option value="">— 醫師 —</option>`+(selDept?getDrsByDept(selDept):[]).map(n=>`<option ${n===val?'selected':''}>${escA(n)}</option>`).join('');
   const uid_str=`dr_${cid}_${type}_${i}_${idx}`;
   return`<div style="display:flex;gap:4px">
-    <select id="${uid_str}_d" onchange="onDrDeptChange('${uid_str}','${cid}','${type}',${i},${idx})" style="font-size:12px;padding:4px 6px;flex:1">${deptOpts}</select>
-    <select id="${uid_str}_n" onchange="updDr('${cid}','${type}',${i},${idx},this.value)" style="font-size:12px;padding:4px 6px;flex:1">${drOpts}</select>
+    <select id="${uid_str}_d" onchange="onDrDeptChange('${uid_str}','${cid}','${type}',${i},${idx})" style="font-size:13px;padding:5px 7px;flex:1">${deptOpts}</select>
+    <select id="${uid_str}_n" onchange="updDr('${cid}','${type}',${i},${idx},this.value)" style="font-size:13px;padding:5px 7px;flex:1">${drOpts}</select>
   </div>`;
 }
 function onDrDeptChange(uid_str,cid,type,i,idx){
@@ -3092,7 +3340,7 @@ ${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gen
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
 <div class="vc-body" style="display:none">
-${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:#2a3540;font-weight:700">'+escA(p.date)+'：</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(d.pathologyImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">病理影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.pathologyImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewpathimg" data-name="${escA(img.name||'')} " data-dataurl="${escA(img.dataUrl||'')} " style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${row('現病史',d.cc)}${(()=>{const chips=(d.phChips||[]).map(c=>c+'(+)');const phStr=[...chips,d.ph||''].filter(Boolean).join('  ');return row('過去病史',phStr||'')})()}${(cid==='breast'||cid==='gynecology')&&d.familyHistory?row('家族史',d.familyHistory):''}${(()=>{const pp=(d.pathologies||[]);if(!pp.length&&d.pathology)return row('病理',(d.pathologyDate?d.pathologyDate+' ':'')+d.pathology);return pp.map(p=>{var d=p.date?'<span style="color:#2a3540;font-weight:700">'+escA(p.date)+'：</span> ':'';return '<div class="vc-r"><span class="vc-l">病理</span><span class="vc-v">'+d+escA(p.content||'')+'</span></div>';}).join('');})()}${(d.pathologyImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">病理影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.pathologyImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewpathimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" data-subfolder="${escA(img.subFolder||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 ${(()=>{
   const mkArr=(d.markers||[]);
   if(!mkArr.length)return '';
@@ -3103,15 +3351,15 @@ ${(()=>{
   const exArr=(d.exams||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const exStr=exArr.map(ex=>[(ex.name||''),(ex.date?'('+ex.date+')':''),' ',(ex.content||'')].join('').trim()).filter(Boolean).join('\n');
   return row('檢查', exStr||d.exam||'');
-})()}${cid==='breast'&&d.mammo&&(d.mammo.report||d.mammo.images?.length)?`<div class="vc-r"><span class="vc-l" style="align-self:flex-start">乳攝</span><span class="vc-v">${d.mammo.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(d.mammo.date)+'</span> ':''}<br>${escA(d.mammo.report||'')}${(d.mammo.images||[]).map((img,j)=>'<button data-action="previewmammoimg" data-name="'+escA(img.name||'')+'" data-dataurl="'+escA(img.dataUrl||'')+'" style="margin-left:8px;font-size:10px;padding:1px 7px;border:1px solid var(--border);border-radius:2px;cursor:pointer">影像 '+(j+1)+'</button>').join('')}</span></div>`:''}${(()=>{
+})()}${cid==='breast'&&d.mammo&&(d.mammo.report||d.mammo.images?.length)?`<div class="vc-r"><span class="vc-l" style="align-self:flex-start">乳攝</span><span class="vc-v">${d.mammo.date?'<span style="color:var(--fog-md);font-size:.9em">'+escA(d.mammo.date)+'</span> ':''}<br>${escA(d.mammo.report||'')}${(d.mammo.images||[]).map((img,j)=>'<button data-action="previewmammoimg" data-name="'+escA(img.name||'')+'" data-dataurl="'+escA(img.dataUrl||'')+'" data-subfolder="'+escA(img.subFolder||'')+'" style="margin-left:8px;font-size:10px;padding:1px 7px;border:1px solid var(--border);border-radius:2px;cursor:pointer">影像 '+(j+1)+'</button>').join('')}</span></div>`:''}${(()=>{
   const trArr=(d.treatments||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
   const trStr=trArr.map(tr=>[(tr.name||''),(tr.date?'('+tr.date+')':''),' ',(tr.content||'')].join('').trim()).filter(Boolean).join('\n');
   return row('治療', trStr||d.treatment||'');
 })()}${row('討論',d.discussion)}
 ${chips}
 ${hasRec?`<div class="vc-rec">${row('摘要',d.summary)}${row('結論',d.decision)}</div>`:''}
-${(d.surgicalImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">手術照片</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.surgicalImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'照片'+(j+1))}</span><button data-action="previewsurgimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
-${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewrelatedimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${(d.surgicalImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">手術照片</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.surgicalImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'照片'+(j+1))}</span><button data-action="previewsurgimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" data-subfolder="${escA(img.subFolder||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
+${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewrelatedimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" data-subfolder="${escA(img.subFolder||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 ${(d.timeline&&d.timeline.length)?'<div class=\"vc-r\" style=\"background:var(--surface)\"><span class=\"vc-l\" style=\"align-self:flex-start;padding-top:2px\">事件軸</span><div class=\"vc-v\">'+renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view')+'</div></div>':''}
 </div></div>`;
 }
@@ -3218,7 +3466,7 @@ function casesPane(cid){
 
 function caseHTML(cid,i,d){
   const inp=(f,v,ph='')=>`<input value="${escA(v||'')}" oninput="upd('${cid}','cases',${i},'${f}',this.value)" placeholder="${ph}" style="font-size:12px;padding:5px 8px">`;
-  const ta=(f,v,rows,ph='')=>`<textarea rows="${rows}" oninput="upd('${cid}','cases',${i},'${f}',this.value)" placeholder="${ph}" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(v||'')}</textarea>`;
+  const ta=(f,v,rows,ph='')=>`<textarea rows="${rows}" oninput="upd('${cid}','cases',${i},'${f}',this.value)" placeholder="${ph}" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(v||'')}</textarea>`;
   const addBtn=(field,label='+ 新增')=>`<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="${field}" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">${label}</button>`;
 
   // PH chips
@@ -3247,7 +3495,7 @@ function caseHTML(cid,i,d){
         <input type="date" value="${escA(ex.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(ex.content||'')}</textarea>
+      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(ex.content||'')}</textarea>
     </div>`).join('');
 
   // Markers
@@ -3259,7 +3507,7 @@ function caseHTML(cid,i,d){
         <input type="date" value="${escA(mk.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="數值或趨勢（如：5.21→8.53→13.7）" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(mk.content||'')}</textarea>
+      <textarea placeholder="數值或趨勢（如：5.21→8.53→13.7）" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(mk.content||'')}</textarea>
     </div>`).join('');
 
   // Treatments
@@ -3271,7 +3519,7 @@ function caseHTML(cid,i,d){
         <input type="date" value="${escA(tr.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(tr.content||'')}</textarea>
+      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(tr.content||'')}</textarea>
     </div>`).join('');
 
   // Topics
@@ -3279,7 +3527,7 @@ function caseHTML(cid,i,d){
   const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
   return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
-<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span>${(d.flags||[]).map(function(fl){const c2=flagColor(fl);return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1)" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1)" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
+<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag sec-tag-case">個案討論</span>${d._aiImported?`<span class="ai-badge" data-action="confirmai" data-cid="${cid}" data-idx="${i}" title="逐欄確認後點此清除標記">AI 匯入待確認 ✓</span>`:''}${(d.flags||[]).map(function(fl){const c2=flagColor(fl);return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1)" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1)" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
 <div class="cg2">
 
   <div class="fg full" style="padding-bottom:2px">
@@ -3330,14 +3578,14 @@ function caseHTML(cid,i,d){
   </div>
 
   <div class="fsec">病情摘要</div>
-  <div class="fg full"><label>診斷</label>${ta('diagnosis',d.diagnosis,3,'診斷（含分期，如：SCC tonsillar T3N1M0 Stage III）')}</div>
-  <div class="fg full"><label>現病史</label>${ta('cc',d.cc,3,'現病史（病程、主要症狀、就醫經過）')}</div>
+  <div class="fg full fg-gap"><label>診斷${d._aiImported&&!(d.diagnosis||"").trim()?' <span class="fld-gap">待補</span>':''}</label>${ta('diagnosis',d.diagnosis,3,'診斷（含分期，如：SCC tonsillar T3N1M0 Stage III）')}</div>
+  <div class="fg full fg-gap"><label>現病史${d._aiImported&&!(d.cc||"").trim()?' <span class="fld-gap">待補</span>':''}</label>${ta('cc',d.cc,3,'現病史（病程、主要症狀、就醫經過）')}</div>
   <div class="fg full"><label>過去病史</label>
     <div style="font-size:10px;color:var(--textlt);margin-bottom:4px">慢性病勾選</div>
     <div class="trow" style="margin-bottom:8px">${chips2}</div>
     <input value="${escA(d.ph||'')}" oninput="upd('${cid}','cases',${i},'ph',this.value)" placeholder="其他病史（如手術史、藥物史）" style="font-size:12px;padding:5px 8px;width:100%">
   </div>
-  ${(cid==='breast'||cid==='gynecology')?`<div class="fg full"><label>家族史</label><textarea rows="2" oninput="upd('${cid}','cases',${i},'familyHistory',this.value)" placeholder="如：乳癌（母親）、婦癌（姊）" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>`:''}
+  ${(cid==='breast'||cid==='gynecology')?`<div class="fg full"><label>家族史</label><textarea rows="2" oninput="upd('${cid}','cases',${i},'familyHistory',this.value)" placeholder="如：乳癌（母親）、婦癌（姊）" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>`:''}
 
   <div class="fsec">臨床資料</div>
   <div class="fg full"><div class="field-hdr"><label>病理</label>${addBtn('pathologies')}</div>
@@ -3355,7 +3603,7 @@ function caseHTML(cid,i,d){
       <span style="font-size:11px;color:var(--textlt)">日期</span>
       <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" style="font-size:12px;padding:5px 8px">
     </div>
-    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
+    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
     <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像（最多2張）</div>
     <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${buildMammoImgArea(cid,i,d)}</div>
   </div>`:''}  <div class="fg full"><div class="field-hdr"><label>癌指數</label>${addBtn('markers')}</div>
@@ -3364,14 +3612,14 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','cases',${i},'surgImgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.surgImgsPerSlide||1)===1?' selected':''}>1 張</option><option value="2"${(d.surgImgsPerSlide||1)===2?' selected':''}>2 張</option><option value="4"${(d.surgImgsPerSlide||1)===4?' selected':''}>4 張</option></select></span></div>
+  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label><!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
     ${buildSurgicalImgArea(cid,i,d)}
   </div>
-  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>相關影像</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','cases',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div>
+  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>相關影像</label><!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
     ${buildImgArea(cid,i,d)}
   </div>
 
-  <div class="fsec">治療事件軸</div>
+  <div class="fsec">治療事件軸<label style="float:right;font-weight:600;font-size:11px;letter-spacing:normal;color:var(--textmd);cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="checkbox" data-action="updtlshow" data-cid="${cid}" data-caseidx="${i}"${d.showTimeline?' checked':''} style="width:14px;height:14px;cursor:pointer">產出時包含病程時序圖</label><button class="btn btn-b btn-sm" data-action="tlaiopen" data-cid="${cid}" data-caseidx="${i}" style="float:right;margin-right:10px;font-size:11px;padding:2px 10px;color:var(--acc)" title="匯出臨床資料給 AI 判讀病程轉折與治療反應">🤖 AI 判讀</button></div>
   <div class="fg full">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
       <button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="timeline" style="display:inline-block;width:auto;font-size:11px;padding:3px 10px">＋ 新增事件</button>
@@ -3382,7 +3630,7 @@ function caseHTML(cid,i,d){
   </div>
 
   <div class="fsec">討論</div>
-  <div class="fg full"><label>討論方向</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
+  <div class="fg full fg-gap"><label>討論方向${d._aiImported&&!(d.discussion||"").trim()?' <span class="fld-gap">待補</span>':''}</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
   <div class="fg full"><label>討論項目</label><div class="trow">${topicChips}</div></div>
 
   <div class="fsec" style="color:var(--fog)">會議記錄（開會後填入）</div>
@@ -3393,16 +3641,16 @@ function caseHTML(cid,i,d){
 }
 
 
-function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag sec-tag-fu">前期追蹤</span>${d.prevDate?`<span class="sec-tag-date">上次 ${escA(d.prevDate)}</span>`:''}<button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div><div class="fg full"><label>追蹤說明</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤重點或結論" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
+</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div>${d.prevDecision?`<div class="fg full"><label>上次決議</label><div class="ro-box">${escA(d.prevDecision).replace(/\n/g,'<br>')}</div></div>`:''}<div class="fg full"><label>本次追蹤重點</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'followFocus',this.value)" placeholder="這次要確認什麼（例：手術是否已安排？病理報告出來了嗎？）" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.followFocus||'')}</textarea></div><div class="fg full"><label>目前結果</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤結果或本次結論" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.note||'')}</textarea></div></div></div>`}
 /* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論方向、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
 function teamHTML(cid,i,d,type='team',collapsed=false){
   const _cardId='cc-'+cid+'-'+type+'-'+i;
   const lbl=type==='team'?'醫療小組成員':'必要事件';
-  return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此${lbl}？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2">
+  return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag sec-tag-team">醫療小組</span><button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此${lbl}？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2">
 <div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)" style="font-size:12px;padding:5px 8px"></div>
 <div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)" style="font-size:12px;padding:5px 8px"></div>
 <div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>年齡 / 性別</label>
@@ -3416,12 +3664,12 @@ function teamHTML(cid,i,d,type='team',collapsed=false){
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
 </div></div>
-<div class="fg full"><label>診斷</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'diagnosis',this.value)" placeholder="癌別、分期、組織型態" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.diagnosis||'')}</textarea></div>
-<div class="fg full"><label>現病史</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'cc',this.value)" placeholder="目前狀況、就醫經過" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.cc||'')}</textarea></div>
-<div class="fg full"><label>家族史（選填）</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'familyHistory',this.value)" placeholder="家族癌症史或重要遺傳病史（沒填則不顯示）" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>
-<div class="fg full"><label>討論方向</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="本次MDT要討論的方向" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.discussion||'')}</textarea></div>
-<div class="fg full"><label>摘要</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'summary',this.value)" placeholder="會議結論摘要" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.summary||'')}</textarea></div>
-<div class="fg full"><label>決策</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'decision',this.value)" placeholder="下一步處置 / 治療方向" style="font-size:12px;padding:5px 8px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.decision||'')}</textarea></div>
+<div class="fg full"><label>診斷</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'diagnosis',this.value)" placeholder="癌別、分期、組織型態" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.diagnosis||'')}</textarea></div>
+<div class="fg full"><label>之前現病史</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'cc',this.value)" placeholder="當時臨床狀況、已完成與待完成的檢查" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.cc||'')}</textarea></div>
+<div class="fg full"><label>家族史（選填）</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'familyHistory',this.value)" placeholder="家族癌症史或重要遺傳病史（沒填則不顯示）" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.familyHistory||'')}</textarea></div>
+<div class="fg full"><label>多專科建議</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="各科建議及已執行之治療" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.discussion||'')}</textarea></div>
+<div class="fg full"><label>最新情況</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'summary',this.value)" placeholder="目前檢查結果、治療反應" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.summary||'')}</textarea></div>
+<div class="fg full"><label>治療決策</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'decision',this.value)" placeholder="維持原方向 / 調整（說明）" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6">${escA(d.decision||'')}</textarea></div>
 </div></div>`;
 }
 /* V5.0.0: teamViewHTML — 閱覽模式,只顯示有填的欄位 */
@@ -3453,7 +3701,7 @@ function specialHTML(cid,i,d){
 <div class="casetop"><span class="cnm">${escA(d.topicType||d.title||'特殊議程')}</span><button class="delbtn" onclick="delItem('${cid}','special',${i})">×</button></div>
 <div class="fg full"><label>類別</label><div class="trow" style="margin-bottom:6px">${typeChips}</div></div>
 <div class="fg full"><label>標題</label><input value="${escA(d.title||'')}" oninput="upd('${cid}','special',${i},'title',this.value)" placeholder="例：114年1-12月品質指標審查" style="font-size:13px;padding:6px 8px;width:100%"></div>
-<div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:13px;padding:6px 8px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
+<div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>投影片影像</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','special',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div><div id="special-img-area-${cid}-${i}">${buildSpecialImgArea(cid,i,d)}</div></div>
 </div></div>`;
 }
@@ -3465,7 +3713,7 @@ const RATE_CFG={
 };
 
 function rateUpdRow(cid,si,ri,key,val){
-  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.rows)return;
+  var d=getSectionItem(cid,'special',si);if(!d||!d.rows)return;/* V5.21.0 accessor */
   if(!d.rows[ri])d.rows[ri]={};
   d.rows[ri][key]=val;markDirty();
   var rate=rateCalcRow(d.rows[ri],d);
@@ -3483,8 +3731,8 @@ function rateCalcRow(row,d){
   return{text:pct,color:pass?'#2e7d32':'#c62828'};
 }
 function rateAddRow(cid,si){
-  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;
-  if(!d.rows)d.rows=[];
+  var d=getSectionItem(cid,'special',si);if(!d)return;/* V5.21.0 accessor */
+  ensureArray(d,'rows');
   d.rows.push({label:'',numerator:'',denominator:'',totalCases:'',deaths:''});
   markDirty();
   var cont=document.getElementById('rate-rows-'+cid+'-'+si);
@@ -3495,7 +3743,7 @@ function rateAddRow(cid,si){
   cont.appendChild(div.firstElementChild);
 }
 function rateDelRow(cid,si,ri){
-  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.rows)return;
+  var d=getSectionItem(cid,'special',si);if(!d||!d.rows)return;/* V5.21.0 accessor */
   d.rows.splice(ri,1);markDirty();
   var cont=document.getElementById('rate-rows-'+cid+'-'+si);
   if(!cont)return;
@@ -3517,7 +3765,7 @@ function rateRowHTML(cid,si,ri,row,d){
 function specialRateHTML(cid,i,d){
   var cfg=RATE_CFG[d.topicType]||{threshold:'',dir:'>',cols:[],colLabels:[],defText:''};
   if(!d.definition)d.definition=cfg.defText;
-  if(!d.rows)d.rows=[];
+  ensureArray(d,'rows');
   if(!d.threshold)d.threshold=cfg.threshold;
   var rows=(d.rows||[]).map(function(r,ri){return rateRowHTML(cid,i,ri,r,d);}).join('');
   var colHdrs=cfg.colLabels.map(function(l){return '<span style="width:70px">'+escA(l)+'</span>';}).join('');
@@ -3530,8 +3778,8 @@ function specialRateHTML(cid,i,d){
     +'<div class="cg2">'
     +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
     +'<div class="fg full"><div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">'
-    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:2px">\u671f\u9593</div><input value="'+escA(d.period||'')+'" oninput="upd(\''+cid+'\',\'special\','+i+',\'period\',this.value)" placeholder="114\u5e7401-12\u6708" style="width:130px;font-size:12px;padding:4px 6px"></div>'
-    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:2px">\u95be\u5024</div><input value="'+escA(d.threshold||cfg.threshold)+'" oninput="upd(\''+cid+'\',\'special\','+i+',\'threshold\',this.value)" style="width:80px;font-size:12px;padding:4px 6px"></div>'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:2px">\u671f\u9593</div><input value="'+escA(d.period||'')+'" oninput="upd(\''+cid+'\',\'special\','+i+',\'period\',this.value)" placeholder="114\u5e7401-12\u6708" style="width:130px;font-size:13px;padding:5px 7px"></div>'
+    +'<div><div style="font-size:10px;color:var(--textlt);margin-bottom:2px">\u95be\u5024</div><input value="'+escA(d.threshold||cfg.threshold)+'" oninput="upd(\''+cid+'\',\'special\','+i+',\'threshold\',this.value)" style="width:80px;font-size:13px;padding:5px 7px"></div>'
     +'</div>'
     +'<div style="border:1px solid var(--blt);border-radius:4px;overflow:hidden">'
     +'<div style="display:flex;align-items:center;gap:6px;background:var(--fog-dk);color:#fff;padding:5px 8px;font-size:11px;font-weight:700">'
@@ -3559,10 +3807,10 @@ function specialRateHTML(cid,i,d){
 const CR_DEF_DEFAULT='分子：分母中，已完成治療計畫書所預定治療之個案數\n分母：新診斷（Class 1~2）在本院進行治療性治療（手術/化療/放療/賀爾蒙服用半年）之個案數，（總收案人數－治療療程未完成）';
 function crGetDef(){try{return localStorage.getItem('mdt_cr_template')||CR_DEF_DEFAULT;}catch{return CR_DEF_DEFAULT;}}
 function crSaveDef(txt){try{localStorage.setItem('mdt_cr_template',txt);showSaveToast('指標定義已儲存為預設');}catch(e){}}
-function crUpdPatient(cid,si,pi,key,val){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;if(!d.patients)d.patients=[];if(!d.patients[pi])d.patients[pi]={};d.patients[pi][key]=val;markDirty();}
-function crAddPatient(cid,si){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;if(!d.patients)d.patients=[];d.patients.push({chartNo:'',name:'',doctor:'',note:'',images:[]});markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;var pi=d.patients.length-1;var div=document.createElement('div');div.innerHTML=crPatientRow(cid,si,pi,d.patients[pi]);cont.appendChild(div.firstElementChild);}
-function crDelPatient(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients)return;if(!confirm('確定刪除此病人？'))return;d.patients.splice(pi,1);markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;cont.innerHTML=((d.patients||[]).map(function(p,i2){return crPatientRow(cid,si,i2,p);}).join(''));}
-function crPickImages(cid,si,pi){ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d||!d.patients||!d.patients[pi])return;var p=d.patients[pi];if(!p.images)p.images=[];(async function(){try{if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
+function crUpdPatient(cid,si,pi,key,val){var d=getSectionItem(cid,'special',si);if(!d)return;ensureArray(d,'patients');if(!d.patients[pi])d.patients[pi]={};d.patients[pi][key]=val;markDirty();}
+function crAddPatient(cid,si){var d=getSectionItem(cid,'special',si);if(!d)return;ensureArray(d,'patients');d.patients.push({chartNo:'',name:'',doctor:'',note:'',images:[]});markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;var pi=d.patients.length-1;var div=document.createElement('div');div.innerHTML=crPatientRow(cid,si,pi,d.patients[pi]);cont.appendChild(div.firstElementChild);}
+function crDelPatient(cid,si,pi){var d=getSectionItem(cid,'special',si);if(!d||!d.patients)return;if(!confirm('確定刪除此病人？'))return;d.patients.splice(pi,1);markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;cont.innerHTML=((d.patients||[]).map(function(p,i2){return crPatientRow(cid,si,i2,p);}).join(''));}
+function crPickImages(cid,si,pi){var d=getSectionItem(cid,'special',si);if(!d||!d.patients||!d.patients[pi])return;var p=d.patients[pi];if(!p.images)p.images=[];(async function(){try{if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
   /* V5.3.0: 失聯率病人佐證圖 — 先試 p.chartNo 子資料夾,再試 _特殊議程,最後退根目錄 */
   var _sub=await _resolveSubFolder(imgFolderHandle,p.chartNo);
   if(!_sub)_sub=await _resolveSubFolder(imgFolderHandle,'_特殊議程');
@@ -3574,9 +3822,9 @@ function crPatientRow(cid,si,pi,p){
   var cidE=escA(cid);
   return'<div class="struct-row" style="background:var(--surface);border-radius:4px;padding:10px;margin-bottom:8px;position:relative">'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start">'
-    +'<input value="'+escA(p.chartNo||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="chartNo" placeholder="病歷號" style="width:100px;font-size:12px;padding:4px 6px">'
-    +'<input value="'+escA(p.name||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="name" placeholder="姓名" style="width:80px;font-size:12px;padding:4px 6px">'
-    +'<input value="'+escA(p.doctor||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="doctor" placeholder="主治醫師" style="width:90px;font-size:12px;padding:4px 6px">'
+    +'<input value="'+escA(p.chartNo||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="chartNo" placeholder="病歷號" style="width:100px;font-size:13px;padding:5px 7px">'
+    +'<input value="'+escA(p.name||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="name" placeholder="姓名" style="width:80px;font-size:13px;padding:5px 7px">'
+    +'<input value="'+escA(p.doctor||'')+'" data-action="updcrpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" data-key="doctor" placeholder="主治醫師" style="width:90px;font-size:13px;padding:5px 7px">'
     +'<button class="btn btn-b btn-sm" data-action="crpickimg" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" style="font-size:11px">📂 圖片</button>'
     +'<span id="cr-img-list-'+cidE+'-'+si+'-'+pi+'" style="font-size:11px;color:var(--textlt);align-self:center">'+escA(imgLabel)+'</span>'
     +'<button class="delbtn" data-action="crdelpatient" data-cid="'+cidE+'" data-si="'+si+'" data-pi="'+pi+'" style="margin-left:auto">×</button>'
@@ -3586,7 +3834,7 @@ function crPatientRow(cid,si,pi,p){
 }
 function specialCRHTML(cid,i,d){
   if(!d.definition)d.definition=crGetDef();
-  if(!d.patients)d.patients=[];
+  ensureArray(d,'patients');
   var n=d.numerator||0,m=d.denominator||0;
   var rate=m>0?((n/m)*100).toFixed(1)+'%':'\u2014';
   var thNum=parseFloat((d.threshold||'>80%').replace(/[^0-9.]/g,''))||80;
@@ -3601,7 +3849,7 @@ function specialCRHTML(cid,i,d){
     return '<div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">'+label+'</div>'
       +'<input type="'+t+'" value="'+escA(String(val||''))+'"'
       +' data-action="updspecial" data-cid="'+cid+'" data-idx="'+i+'" data-key="'+key+'"'
-      +' style="width:'+w+';font-size:12px;padding:4px 6px"></div>';
+      +' style="width:'+w+';font-size:13px;padding:5px 7px"></div>';
   }
   return '<div class="casecard" id="cc-'+cid+'-special-'+i+'">'
     +'<div class="casetop">'
@@ -3646,7 +3894,7 @@ function buildSpecialImgArea(cid,si,d){
 }
 
 function pickSpecialImgs(cid,si){
-  ensureSec(cid);var d=S.meeting.sections[cid].special[si];if(!d)return;
+  var d=getSectionItem(cid,'special',si);if(!d)return;/* V5.21.0 accessor */
   if(!d.images)d.images=[];
   (async function(){
     try{
@@ -3921,11 +4169,11 @@ function openPostMtgPanel(){
       +'</div>'
       +'<div style="margin-bottom:8px">'
       +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
-      +'<textarea data-action="postteam-summary" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="3" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.summary||'')+'</textarea>'
+      +'<textarea data-action="postteam-summary" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="3" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.summary||'')+'</textarea>'
       +'</div>'
       +'<div>'
       +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
-      +'<textarea data-action="postteam-decision" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.decision||'')+'</textarea>'
+      +'<textarea data-action="postteam-decision" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.decision||'')+'</textarea>'
       +'</div>';
     return card;
   }
@@ -3966,11 +4214,11 @@ function openPostMtgPanel(){
           /* V5.7.0: 前期追蹤加摘要+決策 */
           +'<div style="margin-bottom:8px">'
           +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
-          +'<textarea data-action="postfup-summary" data-cid="'+escA(cid)+'" data-fi="'+fi+'" rows="2" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(f.summary||'')+'</textarea>'
+          +'<textarea data-action="postfup-summary" data-cid="'+escA(cid)+'" data-fi="'+fi+'" rows="2" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(f.summary||'')+'</textarea>'
           +'</div>'
           +'<div>'
           +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
-          +'<textarea data-action="postfup-decision" data-cid="'+escA(cid)+'" data-fi="'+fi+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(f.decision||'')+'</textarea>'
+          +'<textarea data-action="postfup-decision" data-cid="'+escA(cid)+'" data-fi="'+fi+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(f.decision||'')+'</textarea>'
           +'</div>';
         body.appendChild(card);
       });
@@ -3994,11 +4242,11 @@ function openPostMtgPanel(){
           +'</div>'
           +'<div style="margin-bottom:8px">'
           +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
-          +'<textarea data-action="postcase-summary" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="3" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.summary||'')+'</textarea>'
+          +'<textarea data-action="postcase-summary" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="3" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.summary||'')+'</textarea>'
           +'</div>'
           +'<div style="margin-bottom:10px">'
           +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
-          +'<textarea data-action="postcase-decision" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.decision||'')+'</textarea>'
+          +'<textarea data-action="postcase-decision" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.decision||'')+'</textarea>'
           +'</div>'
           +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--textlt);cursor:pointer">'
           +'<input type="checkbox" data-action="postcase-nofollow" data-cid="'+escA(cid)+'" data-ci="'+ci+'"'+(noFollow?' checked':'')+' style="width:14px;height:14px">'
@@ -4384,7 +4632,123 @@ function renderThemeStrip(){
   });
 }
 
-function addItem(cid,type){ensureSec(cid);const blank=type==='cases'?(()=>{const dd=CFG[cid]?.defaultDept||'';const dg=(cid==='breast'||cid==='gynecology')?'F':'M';return{id:uid(),chartNo:'',name:'',age:'',gender:dg,ecog:'',cfs:'',doctors:[dd?dd+'::':'','',''],doctor:'',diagnosis:'',cc:'',ph:'',phChips:[],pathology:'',pathologyDate:'',pathologies:[],exams:[],treatments:[],discussion:'',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:'',images:[],pathologyImages:[],surgicalImages:[],markers:[],flags:[],timeline:[],note:''};})():type==='followups'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:''}:type==='team'||type==='events'?{id:uid(),chartNo:'',name:'',doctors:['',''],doctor:'',prevDate:'',note:'',diagnosis:'',cc:'',discussion:'',summary:'',decision:''}/* V5.0.0: 加 5 個討論欄位 */:{id:uid(),title:'',topicType:'',note:'',images:[],imgsPerSlide:4};S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
+/* ════ V5.21.0 資料層共用工廠 ════
+   背景:case 物件原本在多處各自用物件字面量建立(手動新增、JSON 匯入…),schema 沒有單一真相。
+   實測發現 **JSON 匯入建立的 case 缺 flags / pathologyImages / surgicalImages 三個欄位**
+   —— 而 V5.10.1 的紀錄寫「匯入補 flags」,表示當時只補了讀取端沒補建立端。
+   這不是架構潔癖,是已經造成資料不一致的真實問題(外部審稿原則:
+   「不是看到重複就抽;是看到重複已經造成資料不一致才優先抽」)。
+   本工廠同時負責 default 與 normalize:給空物件得到完整空白 case,給匯入資料則補齊缺漏欄位。 */
+/* V5.21.0 ② section accessor —— 系統有 57 處直接寫 S.meeting.sections[cid]…,
+   但**刻意不全部替換**(依外部審稿的修正意見):
+   getSection() 內含 ensureSec(),若把「唯讀渲染」或「存在性檢查 / migration」
+   也換成 accessor,會**意外建立原本不存在的 section**,改變語意。
+   因此只替換 mutation / CRUD path,渲染與 migration 維持原樣。 */
+function getSection(cid){
+  ensureSec(cid);
+  return S.meeting.sections[cid];
+}
+function getSectionList(cid,type){
+  const sec=getSection(cid);
+  if(!Array.isArray(sec[type]))sec[type]=[];
+  return sec[type];
+}
+function getSectionItem(cid,type,i){
+  return getSectionList(cid,type)[i]||null;
+}
+function ensureArray(obj,key){
+  if(!obj)return[];
+  if(!Array.isArray(obj[key]))obj[key]=[];
+  return obj[key];
+}
+const _arr=function(v){return Array.isArray(v)?v:[];};
+const DEFAULT_TOPICS=['影像討論','分期討論','治療策略討論'];
+/* opts.withDeptDefault:手動新增時帶入癌別預設科別;匯入時不帶(保留各入口原本行為) */
+function createCase(cid,data,opts){
+  data=data||{};opts=opts||{};
+  const dd=CFG[cid]?.defaultDept||'';
+  const dg=(cid==='breast'||cid==='gynecology')?'F':'M';
+  return{
+    id:data.id||uid(),
+    chartNo:data.chartNo||'',
+    name:data.name||'',
+    age:data.age!=null?String(data.age):'',
+    gender:data.gender||dg,
+    ecog:data.ecog!=null?String(data.ecog):'',
+    cfs:data.cfs!=null?String(data.cfs):'',
+    doctors:Array.isArray(data.doctors)?data.doctors
+      :(opts.withDeptDefault?[dd?dd+'::':'','','']:['','','']),
+    doctor:data.doctor||'',
+    diagnosis:data.diagnosis||'',
+    cc:data.cc||'',
+    ph:data.ph||'',
+    phChips:_arr(data.phChips),
+    pathology:data.pathology||'',
+    pathologyDate:data.pathologyDate||'',
+    pathologies:_arr(data.pathologies),
+    exams:_arr(data.exams),
+    treatments:_arr(data.treatments),
+    markers:_arr(data.markers),
+    familyHistory:data.familyHistory||'',
+    mammo:(data.mammo&&typeof data.mammo==='object')
+      ?{date:data.mammo.date||'',report:data.mammo.report||'',images:_arr(data.mammo.images)}
+      :{date:'',report:'',images:[]},
+    discussion:data.discussion||'',
+    topics:Array.isArray(data.topics)?data.topics:DEFAULT_TOPICS.slice(),
+    summary:data.summary||'',
+    decision:data.decision||'',
+    images:_arr(data.images),
+    pathologyImages:_arr(data.pathologyImages),/* ← 匯入原本缺 */
+    surgicalImages:_arr(data.surgicalImages),  /* ← 匯入原本缺 */
+    flags:_arr(data.flags),                     /* ← 匯入原本缺 */
+    timeline:_arr(data.timeline),
+    showTimeline:!!data.showTimeline,/* V5.25.0: 逐案決定是否產病程時序圖 */
+    note:data.note||''
+  };
+}
+/* V5.22.0: 前期追蹤改三段 —— 上次決議(自動帶、唯讀)/ 本次追蹤重點 / 目前結果。
+   原本只有一格「追蹤說明」(note),個管師看到名單卻不知道「為什麼要追」,
+   得回去翻上一場會議記錄 —— 而系統其實已經有上次的 decision,只是自動帶入時丟掉了。
+   prevDecision 為新欄位;既有 note 不搬動,對應到「目前結果」(見 followupHTML)。 */
+function createFollowup(data){data=data||{};
+  return{id:data.id||uid(),chartNo:data.chartNo||'',name:data.name||'',
+    doctors:Array.isArray(data.doctors)?data.doctors:['',''],doctor:data.doctor||'',
+    prevDate:data.prevDate||'',
+    prevDecision:data.prevDecision||'',/* V5.22.0: 上次決議(自動帶入,唯讀顯示) */
+    followFocus:data.followFocus||'',  /* V5.22.0: 本次追蹤重點 */
+    note:data.note||''};               /* 目前結果(沿用舊欄位,舊資料不搬動) */
+}
+function createTeamItem(data){data=data||{};
+  return{id:data.id||uid(),chartNo:data.chartNo||'',name:data.name||'',
+    doctors:Array.isArray(data.doctors)?data.doctors:['',''],doctor:data.doctor||'',
+    prevDate:data.prevDate||'',note:data.note||'',
+    /* V5.0.0: team/events 也有 5 個討論欄位 */
+    diagnosis:data.diagnosis||'',cc:data.cc||'',discussion:data.discussion||'',
+    summary:data.summary||'',decision:data.decision||''};
+}
+function createSpecial(data){data=data||{};
+  return{id:data.id||uid(),title:data.title||'',topicType:data.topicType||'',
+    note:data.note||'',images:_arr(data.images),
+    imgsPerSlide:data.imgsPerSlide||4};
+}
+/* 單一入口:所有新物件都應該從這裡出來 */
+function createItem(cid,type,data,opts){
+  switch(type){
+    case'cases':return createCase(cid,data,opts);
+    case'followups':return createFollowup(data);
+    case'team':case'events':return createTeamItem(data);
+    default:return createSpecial(data);
+  }
+}
+/* V5.21.0: schema 自我檢查 —— 匯入等路徑用,缺欄位就 console 警告。
+   把「靠人記得補欄位」變成「程式自己發現」(同 _assertConfigConsistency 的思路) */
+const _CASE_SCHEMA_KEYS=Object.keys(createCase('__probe__',{}));
+function assertCaseSchema(c){
+  if(!c||typeof c!=='object')return _CASE_SCHEMA_KEYS.slice();
+  return _CASE_SCHEMA_KEYS.filter(function(k){return !(k in c);});
+}
+function addItem(cid,type){ensureSec(cid);/* V5.21.0: 改走單一工廠。withDeptDefault 保留手動新增原本會帶癌別預設科別的行為 */
+  const blank=createItem(cid,type,{},{withDeptDefault:true});S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
     type==='team'||type==='events'?teamHTML(cid,i,blank,type,false):/* V5.0.0: team/events 用 teamHTML */
     type==='followups'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
@@ -5024,16 +5388,17 @@ function autoImportPrevFollowups(cids){
     sources.forEach(function(c){
       if(!c.chartNo&&!c.name)return;
       if(c.chartNo&&existing.has(c.chartNo))return;
-      fups.push({
-        id:uid(),
+      /* V5.22.0: 帶入上次決議 —— 原本只帶姓名/醫師/日期,note 留空,
+         等於「系統知道這人要追蹤,卻不告訴個管為什麼」。decision 優先,沒有才退 summary */
+      fups.push(createFollowup({
         chartNo:c.chartNo||'',
         name:c.name||'',
         doctors:Array.isArray(c.doctors)?c.doctors.slice(0,2):[(c.doctor||''),''],
         doctor:c.doctor||'',
         prevDate:prev.date||'',
-        note:'',
-        _autoImported:true
-      });
+        prevDecision:(c.decision||c.summary||'').trim()
+      }));
+      fups[fups.length-1]._autoImported=true;
       if(c.chartNo)existing.add(c.chartNo);
     });
     // ongoing 前期追蹤也帶入
@@ -5229,12 +5594,51 @@ async function saveMeeting(opts){
   });
   const time=await getNetworkTime();
   S.meeting.version=(S.meeting.version||0)+1;S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
-  // Update per-section keys for merged meetings (so loadMergedSections gets fresh data on reload)
+  /* ════ V5.19.1: 改會議日期的防護 ════
+     背景:合併會議的 section 存在 `mdt_sec_{癌別}_{日期}`,key 裡沒有會議 ID。
+     所以把 A 會議的日期改成「已有另一場同癌別會議」的日期時,儲存會**直接覆蓋掉那場的 section**
+     —— 這是唯一會真正弄丟資料的路徑(單癌別會議不受影響,它的 sections 跟著 mdt_m_ 走)。
+     不改 key 結構(那要 migration、風險高),改成:
+     (1) 儲存前偵測衝突,明確警告讓使用者決定;
+     (2) 確認新 key 寫入成功後,才清掉舊日期留下的孤兒 key(順序不可反)。 */
   if(S.cids.length>1){
     const d=S.meeting.date||'';
+    const _oldD=S.meeting._loadedDate||'';
+    /* (1) 日期被改過 → 檢查新日期是否已有同癌別的「別場」會議 */
+    if(_oldD&&d&&_oldD!==d){
+      const _clash=getIdx().filter(function(e){
+        return e.id!==S.meeting.id && e.date===d && (e.cids||[]).some(function(c){return S.cids.indexOf(c)>=0;});
+      });
+      if(_clash.length){
+        const _names=_clash.map(function(e){
+          return (e.cids||[]).map(function(c){return CFG[c]?.name||c;}).join('+');
+        }).join('、');
+        if(!confirm('注意：'+d+' 已經有另一場會議（'+_names+'），使用到相同的癌別。\n\n'
+          +'本系統的分區資料是以「癌別＋日期」儲存，若繼續儲存，\n'
+          +'那一場的個案資料會被這場覆蓋。\n\n'
+          +'建議：改用其他日期，或先處理掉那一場會議。\n\n'
+          +'仍要繼續儲存嗎？')){
+          showSaveToast('已取消儲存（日期衝突）');
+          return;
+        }
+      }
+    }
     S.cids.forEach(function(cid){
       const sec=S.meeting.sections[cid];if(sec)saveSec(cid,d,sec);
     });
+    /* (2) 新 key 都寫入成功後,才清掉舊日期的孤兒(順序不可反,否則失敗會兩邊都沒有) */
+    if(_oldD&&d&&_oldD!==d){
+      const _allOk=S.cids.every(function(cid){
+        return !S.meeting.sections[cid] || loadSec(cid,d)!==null;
+      });
+      if(_allOk){
+        S.cids.forEach(function(cid){try{delSec(cid,_oldD);}catch(e){}});
+        console.log('[V5.19.1] 會議日期由 '+_oldD+' 改為 '+d+'，已清除舊日期的分區資料');
+      }else{
+        console.warn('[V5.19.1] 新日期分區資料寫入未完全成功，保留舊日期資料 '+_oldD+' 以免遺失');
+      }
+    }
+    S.meeting._loadedDate=d;/* 更新基準,避免同一次編輯重複觸發 */
   }
   const lok=saveLocal(S.meeting),sok=await saveShared(S.meeting);
   // NAS sync: push this meeting (non-blocking)
@@ -6068,6 +6472,130 @@ function closeImportCase(){
   document.getElementById('import-case-modal').style.display = 'none';
   _importCaseCid = null;
 }
+/* ════ V5.23.0 匯入資料清理 ════
+   個管師回報:AI 產出的 JSON,exams/markers 的 content 常常又把日期寫進去,
+   而渲染格式本來就是「name（date）」+ content → 畫面上日期出現兩次。
+   prompt 已加規則,但院內 AI 不一定遵守 —— 所以匯入時再做一層保底清理。
+   **只清「與 date 欄完全相同」的日期**,而且只清開頭/結尾/括號內的,
+   不動 content 中間有意義的日期(例如「compared with 2025-11-18 study」)。 */
+function _stripDupDate(content,date){
+  if(!content||!date)return content||'';
+  var t=String(content).trim();
+  var d=String(date).trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return t;
+  /* 同一天的常見寫法:2026-04-01 / 2026/04/01 / 20260401 */
+  var alts=[d,d.replace(/-/g,'/'),d.replace(/-/g,'')];
+  alts.forEach(function(a){
+    var e=a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    /* 開頭:「2026-04-01 內容」「2026-04-01: 內容」「(2026-04-01) 內容」 */
+    t=t.replace(new RegExp('^[（(\\[]?'+e+'[)）\\]]?\\s*[:：,、\\-–—]?\\s*'),'');
+    /* 結尾:「內容 (2026-04-01)」「內容 2026-04-01」 */
+    t=t.replace(new RegExp('\\s*[（(\\[]?'+e+'[)）\\]]?\\s*$'),'');
+  });
+  return t.trim();
+}
+/* 檢查:content 若以 name 開頭也一併去掉(渲染已顯示 name) */
+function _stripDupName(content,name){
+  if(!content||!name)return content||'';
+  var t=String(content).trim(),n=String(name).trim();
+  if(!n)return t;
+  var e=n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return t.replace(new RegExp('^'+e+'\\s*[:：,、\\-–—]?\\s*','i'),'').trim();
+}
+/* 對一筆匯入的 case 做清理,回傳清掉幾處(供匯入報告顯示) */
+function _cleanImportedCase(c){
+  var n=0;
+  ['exams','pathologies','treatments'].forEach(function(f){
+    (c[f]||[]).forEach(function(row){
+      if(!row||!row.content)return;
+      var before=row.content;
+      /* V5.23.0 修:順序問題 —— 「CT 2026-04-01：xxx」若先清日期,name 還擋在前面清不到;
+         先清 name 再清 date,而且要跑兩輪(清完 name 後日期才變成開頭) */
+      if(f==='exams'||f==='treatments')row.content=_stripDupName(row.content,row.name);
+      row.content=_stripDupDate(row.content,row.date);
+      if(f==='exams'||f==='treatments')row.content=_stripDupName(row.content,row.name);
+      row.content=_stripDupDate(row.content,row.date);
+      if(row.content!==before)n++;
+    });
+  });
+  /* markers:content 是「值(日期)→值(日期)」趨勢字串。
+     若是序列(含→)則 date 欄多餘,清掉;單筆才保留 date */
+  (c.markers||[]).forEach(function(mk){
+    if(!mk)return;
+    if(mk.content&&mk.content.indexOf('\u2192')>=0&&mk.date){mk.date='';n++;}
+    if(mk.content){
+      var b=mk.content;
+      mk.content=_stripDupName(mk.content,mk.name);
+      if(mk.content!==b)n++;
+    }
+  });
+  return n;
+}
+/* V5.23.0 匯入完整度檢查:列出這筆缺哪些「MDT 討論需要」的資料 */
+function _importGaps(c){
+  var g=[];
+  if(!(c.diagnosis||'').trim())g.push('診斷');
+  if(!(c.cc||'').trim())g.push('現病史');
+  if(!(c.pathologies||[]).length)g.push('病理');
+  if(!(c.exams||[]).length)g.push('檢查');
+  if(!(c.treatments||[]).length)g.push('治療');
+  if(!(c.discussion||'').trim())g.push('討論方向');
+  return g;
+}
+/* ════ V5.23.0 匯入強化 ════
+   個管師的主要輸入方式是「院內 AI 整理 → JSON → 匯入 → 逐欄查看修改」,
+   所以匯入流程的品質直接決定工作效率。三項強化:
+   (1) 自動清理日期重複 —— 最常見的問題:JSON 的 content 已含日期,date 欄又填一次,
+       渲染成「CT（2026-04-01）/ CT 2026-04-01：...」重複兩次。
+       光靠 prompt 不夠(院內 AI 不一定遵守),所以匯入時保底清理。
+       **只清「與 date 欄完全相同」且位於開頭/結尾/括號內的日期**,
+       中間的比較敘述(如 compared with 2025-11-18)一律保留。
+   (2) 匯入報告 —— 列出每筆缺什麼,不用逐張卡片翻。
+   (3) AI 匯入待確認標記 —— 逐欄看完可按「已確認」。 */
+function _cleanImportDates(item,dateKey,nameKey){
+  const d=(item[dateKey]||'').trim();
+  let c=(item.content||'').trim();
+  if(!c)return item;
+  const nm=(nameKey?(item[nameKey]||''):'').trim();
+  /* 日期的常見寫法:2026-04-01 / 2026/04/01 */
+  const variants=[];
+  if(/^\d{4}-\d{2}-\d{2}$/.test(d)){
+    variants.push(d, d.replace(/-/g,'/'));
+  }
+  variants.forEach(function(dv){
+    if(!dv)return;
+    const e=dv.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    /* 開頭:「CT 2026-04-01：」「2026-04-01 」「(2026-04-01)」等 */
+    c=c.replace(new RegExp('^\\s*[\\(（]?'+e+'[\\)）]?\\s*[:：\\-–—]?\\s*'),'');
+    /* 結尾 */
+    c=c.replace(new RegExp('\\s*[\\(（]?'+e+'[\\)）]?\\s*$'),'');
+  });
+  /* 開頭若重複檢查/治療名稱,也一併去掉(name 已顯示在標籤上) */
+  if(nm){
+    const en=nm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    c=c.replace(new RegExp('^\\s*'+en+'\\s*[:：\\-–—]?\\s*','i'),'');
+    /* 名稱後緊跟日期的情況:「CT 2026-04-01：」 */
+    variants.forEach(function(dv){
+      if(!dv)return;
+      const e=dv.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      c=c.replace(new RegExp('^\\s*'+en+'\\s*[\\(（]?'+e+'[\\)）]?\\s*[:：\\-–—]?\\s*','i'),'');
+    });
+  }
+  item.content=c.trim();
+  return item;
+}
+/* 逐筆檢查缺什麼(給匯入報告用) */
+function _caseImportIssues(c){
+  const miss=[];
+  if(!(c.chartNo||'').trim())miss.push('病歷號');
+  if(!(c.name||'').trim())miss.push('姓名');
+  if(!(c.diagnosis||'').trim())miss.push('診斷');
+  if(!(c.cc||'').trim())miss.push('現病史');
+  if(!(c.pathologies||[]).length)miss.push('病理');
+  if(!(c.exams||[]).length)miss.push('檢查');
+  if(!(c.discussion||'').trim())miss.push('討論方向');
+  return miss;
+}
 function doImportCase(){
   const raw = document.getElementById('import-case-json').value.trim();
   const errEl = document.getElementById('import-case-err');
@@ -6079,33 +6607,57 @@ function doImportCase(){
   const cases = Array.isArray(data) ? data : [data];
   const cid = _importCaseCid;
   ensureSec(cid);
+  const _report=[];/* V5.23.0: 收集每筆的清理與缺漏狀況,匯入後一次回報 */
   cases.forEach(d=>{
-    const blank = {
-      id:uid(), chartNo:d.chartNo||'', name:d.name||'',
-      age:String(d.age||''), gender:d.gender||'M',
-      ecog:String(d.ecog||''), cfs:String(d.cfs||''),
-      doctors: Array.isArray(d.doctors)?d.doctors:['','',''],
-      doctor: d.doctor||'',
-      diagnosis: d.diagnosis||'',
-      cc: d.cc||'', ph: d.ph||'',
-      phChips: Array.isArray(d.phChips)?d.phChips:[],
-      pathology: d.pathology||'', pathologyDate: d.pathologyDate||'',
-      pathologies: Array.isArray(d.pathologies)?d.pathologies:[],
-      exams: Array.isArray(d.exams)?d.exams:[],
-      treatments: Array.isArray(d.treatments)?d.treatments:[],
-      markers: (()=>{const raw=Array.isArray(d.markers)?d.markers:[];const seen={};return raw.filter(function(mk){const k=(mk.name||'').trim().toLowerCase();if(!k)return true;if(seen[k])return false;seen[k]=true;return true;});})(),
-      familyHistory: d.familyHistory||'',
-      mammo: d.mammo&&typeof d.mammo==='object'?d.mammo:{date:'',report:'',images:[]},
-      discussion: d.discussion||'',
-      topics: Array.isArray(d.topics)?d.topics:['影像討論','分期討論','治療策略討論'],
-      summary: d.summary||'', decision: d.decision||'',
-      images: [], timeline: Array.isArray(d.timeline)?d.timeline.slice():[], note: d.note||''
-    };
+    /* V5.21.0 修 schema 不一致:原本這裡自己寫一份物件字面量,
+       缺 flags / pathologyImages / surgicalImages 三個欄位(V5.10.1 只補了讀取端)。
+       改走 createCase 工廠,一次補齊且未來加欄位不會再漏。
+       不帶 withDeptDefault —— 保留匯入原本「doctors 不填科別預設」的行為。 */
+    const blank = createCase(cid, d);
+    /* markers 去重(匯入專屬的清理,工廠不做業務邏輯) */
+    if(blank.markers.length){
+      const seen={};
+      blank.markers=blank.markers.filter(function(mk){
+        const k=(mk.name||'').trim().toLowerCase();
+        if(!k)return true;
+        if(seen[k])return false;seen[k]=1;return true;
+      });
+    }
+    /* schema 自我檢查:缺欄位就警告(把「靠人記得」變成「程式發現」) */
+    const _missing=assertCaseSchema(blank);
+    if(_missing.length)console.warn('[匯入] case schema 缺欄位:',_missing);
+    /* V5.23.0: 清掉 content 內與 date/name 重複的部分(渲染已顯示,避免畫面重複) */
+    const _cleaned=_cleanImportedCase(blank);
+    /* V5.23.0: 重複病歷號偵測(同一病人不小心匯入兩次) */
+    const _dup=blank.chartNo&&S.meeting.sections[cid].cases.some(function(x){return x.chartNo===blank.chartNo;});
+    blank._aiImported=true;/* V5.23.0: AI 匯入待確認標記,逐欄看完可按「已確認」清除 */
+    _report.push({chartNo:blank.chartNo||'(無病歷號)',
+      name:blank.name?maskName(blank.name):'(無姓名)',
+      gaps:_importGaps(blank),cleaned:_cleaned,dup:_dup});
     S.meeting.sections[cid].cases.push(blank);
   });
   closeImportCase();
   markDirty();
-  showSaveToast('已匯入 ' + cases.length + ' 筆個案資料');
+  /* ════ V5.23.0 匯入報告 ════
+     AI 產出的資料常有缺(病歷本身不全、或 AI 漏抓),原本只顯示「已匯入 N 筆」,
+     個管師要逐張打開才知道哪筆缺什麼。改成匯入後直接攤開,對應「匯入後逐欄查看修改」的工作流。 */
+  const _bad=_report.filter(function(r){return r.gaps.length||r.dup;});
+  if(_bad.length){
+    let msg='已匯入 '+cases.length+' 筆，其中 '+_bad.length+' 筆需要注意：\n\n';
+    _report.forEach(function(r){
+      if(!r.gaps.length&&!r.dup)return;
+      msg+='● '+r.chartNo+' '+r.name+'\n';
+      if(r.dup)msg+='    ⚠ 病歷號與現有個案重複\n';
+      if(r.gaps.length)msg+='    缺少：'+r.gaps.join('、')+'\n';
+    });
+    const _okN=cases.length-_bad.length;
+    if(_okN>0)msg+='\n其餘 '+_okN+' 筆資料完整。';
+    msg+='\n\n（卡片上缺少的欄位已用黃底標示，可直接補填）';
+    setTimeout(function(){alert(msg);},300);
+  }
+  const _totalClean=_report.reduce(function(a,r){return a+r.cleaned;},0);
+  showSaveToast('已匯入 ' + cases.length + ' 筆個案資料'
+    +(_totalClean?'（已自動清理 '+_totalClean+' 處重複日期/名稱）':''));
   // Directly update DOM without renderCasesInner (avoid loadMergedSections overwriting new cases)
   const cont=document.getElementById('div-cases-'+cid);
   if(cont){
@@ -6144,24 +6696,62 @@ async function buildSlidesHTML(){
   await genHTMLSlides();
   return _lastSlidesHTML;
 }
+/* V5.20.0 重構⑥:原本為了「只產生不下載」而 monkey patch document.body.appendChild
+   去攔截下載用的 <a>,是很容易產生 side effect 的做法(而且 patch 期間任何其他
+   appendChild 都會經過那層)。改成把「產生」與「下載」用參數分開,不再動 DOM。 */
 async function buildSlidesHTMLOnly(){
-  // Generate slides without downloading - temporarily override download
-  const origAppend=document.body.appendChild.bind(document.body);
-  let captured=null;
-  document.body.appendChild=function(el){if(el.tagName==='A'&&el.download){el.click=function(){};captured=true;}return origAppend(el);};
-  await genHTMLSlides();
-  document.body.appendChild=origAppend;
-  return _lastSlidesHTML;
+  return await genHTMLSlides({download:false,silent:true});
 }
 
 let _lastSlidesHTML=null;
-async function genHTMLSlides(){
+/* V5.20.0 重構⑥:opts.download=false 只回傳 HTML 不下載;opts.silent=true 跳過 QA 預檢對話框
+   (HTML 分享等自動流程用)。無參數呼叫維持原行為(下載 + 顯示預檢),既有按鈕零影響。 */
+async function genHTMLSlides(opts){
+  opts=opts||{};
+  const _doDownload=(opts.download!==false);
+  const _silent=!!opts.silent;
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   readForm();
   const m=S.meeting,cids=[getOutputCid()||S.cids[0]];
   const slides=[];
-  /* V5.2.1: 病理影像改按鈕+新分頁 — 累積每個個案的病理影像 */
-  const _pathoData={};
+  /* V5.2.1: 病理影像改按鈕+新分頁 — 累積每個個案的病理影像
+     V5.15.0: 擴充為通用 — 相關影像、手術照片也改成「標題列按鈕 + 新分頁檢視」,
+     不再各自產獨立投影片排在個案後面(個管師要求:三種圖片行為一致、個案不被圖片頁隔開)。
+     key 格式 'ci-N::type',type = patho / surg / related */
+  const _imgWinData={};
+  const _tlWinData={};/* V5.25.0: 病程時序圖資料(逐案,勾選才有) */
+  /* ════ V5.19.0 #7 產出 QA 預檢 ════
+     背景:原本讀不到的圖片直接 `if(!src)return''` 靜默略過 —— 使用者不會知道少了一張,
+     這跟坑 #29(無聲不產出)、坑 #33(謊報成功)是同一類「無聲失敗」。
+     改法:全程累計「應該有幾張 / 實際載到幾張」,產出前把落差與其他風險一次攤開讓使用者決定。 */
+  const _qa={expectImgs:0,loadedImgs:0,missing:[],noDiscussion:[],bigPages:[],longText:[]};
+  /* V5.19.0 #2 Case Navigator:產 slides 時順手記錄「這一頁是誰」,產出的 HTML 內建目錄可直接跳頁 */
+  const _slideMeta=[];
+  const _qaCountImgs=function(imgs,who){
+    (imgs||[]).forEach(function(img){
+      _qa.expectImgs++;
+      const src=img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'';
+      if(src)_qa.loadedImgs++;
+      else _qa.missing.push((who||'')+'：'+(img.caption||img.name||'未命名影像'));
+    });
+  };
+  /* 把一組圖累積進檢視器資料;src 空的(讀不到檔)自動略過 */
+  const _pushImgWin=function(caseKey,type,typeLabel,catLabel,meta,imgs,report){
+    _qaCountImgs(imgs,(meta&&meta.chartNo?meta.chartNo+' ':'')+typeLabel);/* V5.19.0 #7 */
+    /* V5.18.0: 帶出 pageBreak(分頁點)—— 檢視器據此把圖分組,一頁可放多張,
+       且每頁張數可以不同(個管師要求「第一頁 2 張、第二頁 4 張」) */
+    var list=(imgs||[]).map(function(img){
+      return{caption:img.caption||img.name||typeLabel,
+             src:img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'',
+             brk:!!img.pageBreak};
+    }).filter(function(x){return !!x.src;});
+    /* V5.15.1: report 為選填(乳攝用)—— 有報告文字時,即使一張圖都載不到也要開得起來(報告本身有價值) */
+    if(!list.length&&!report)return 0;
+    _imgWinData[caseKey+'::'+type]={chartNo:meta.chartNo,name:meta.name,caName:meta.caName,
+      caColor:meta.caColor,typeLabel:typeLabel,catLabel:catLabel,images:list,
+      report:report||''};
+    return list.length;
+  };
   // Check if any folder-based images exist without dataUrl
   // Check if any folder-based images need re-authorization
   /* V5.11.2 修坑 #29: 原本只檢查 cases,漏了特殊議程(special)→ 若只有特殊議程有資料夾圖,
@@ -6188,29 +6778,18 @@ async function genHTMLSlides(){
        導致特殊議程(special)的資料夾圖片從沒被載進 cache → src 空 → 圖被濾掉 → 整張投影片不產出 */
     /* V5.11.4 修坑 #31: getFileHandle(name) 對含括號等特殊字元的檔名(如 CT(20250401).jpg)
        可能直接比對失敗 → 圖讀不到破圖。加退回機制:失敗時列舉資料夾逐一比對 entry.name,繞過直接比對 */
-    const _getFileByEnum=async function(dirHandle,fname){
-      try{const fh=await dirHandle.getFileHandle(fname);return await fh.getFile();}catch(_e){}
-      /* 退回:列舉資料夾找同名檔(對含特殊字元檔名較穩) */
-      try{
-        for await(const ent of dirHandle.values()){
-          if(ent.kind==='file'&&ent.name===fname){return await ent.getFile();}
-        }
-      }catch(_e2){}
-      return null;
-    };
+    /* V5.20.0 重構①:原本這裡有一份 _getFileByEnum + 自行處理 subFolder,
+       跟全域的 _imgGetFile() 邏輯完全等價 —— 等於「編輯畫面預覽」與「HTML 產出」
+       走兩條不同的 code path。坑 #31 就是這樣來的(修了預覽、沒修產出)。
+       現在統一走 _imgGetFile(),這裡只保留「寫進 cache」的部分。 */
     const _loadImgsToCache=async function(_allImgs){
       for(const img of (_allImgs||[])){
         const _ck=_pathCacheKey(img);
         if(img.fromFolder&&!img.dataUrl&&!_pathImgCache[_ck]){
           try{
-            /* V5.3.0: 有 subFolder 走子資料夾,否則平面 */
-            let _scan=imgFolderHandle;
-            if(img.subFolder){
-              try{_scan=await imgFolderHandle.getDirectoryHandle(img.subFolder,{create:false});}catch(_e){_scan=imgFolderHandle;}
-            }
-            const file=await _getFileByEnum(_scan,img.name);
+            const file=await _imgGetFile(img.name,(img.subFolder||'').trim());
             if(!file){console.warn('無法讀取影像(檔名可能含特殊字元或不存在):',_ck);continue;}
-            _pathImgCache[_ck]=await new Promise(function(res){const r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
+            _pathImgCache[_ck]=await _fileToDataUrl(file);
           }catch(e){console.warn('無法讀取影像:',_ck,e);}
         }
       }
@@ -6349,9 +6928,42 @@ async function genHTMLSlides(){
       }
       caseIndex++;
       var dxLine=c.diagnosis?('<div class="cdx">'+escA(c.diagnosis).replace(/\n/g,'<br>')+'</div>'):'';
-      /* V5.2.1: 病理影像改按鈕+新分頁 */
-      var _pathoCount=(c.pathologyImages||[]).length;
-      var _pathoBtn=_pathoCount>0?(' <button class="patho-btn" onclick="openPathoWindow(\'ci-'+caseIndex+'\')" title="開新分頁查看病理影像">🔬 病理影像('+_pathoCount+')</button>'):'';
+      /* V5.15.0: 個案標題列三顆影像按鈕(有圖才顯示)。
+         _imgMeta 供 _pushImgWin 帶入病歷號/姓名/癌別色;三種圖片共用同一份 meta。
+         注意:按鈕要顯示「實際載得到的張數」,所以先累積資料(下方 _pushImgWin 回傳張數)再組按鈕 —
+         若圖片讀不到檔(src 空),_pushImgWin 會濾掉,按鈕就不會顯示假的數字 */
+      var _imgMeta={chartNo:c.chartNo||'',name:c.name?maskName(c.name):'',caName:ca.name,caColor:caColor};
+      /* V5.19.0 #7: 個案層級的預檢 —— 沒填討論方向、內文可能超頁 */
+      if(!(c.discussion||'').trim())_qa.noDiscussion.push((c.chartNo||'')+' '+(c.name?maskName(c.name):''));
+      var _txtLen=[(c.cc||''),(c.ph||''),(c.diagnosis||''),
+        (c.pathologies||[]).map(function(x){return x.content||'';}).join(''),
+        (c.exams||[]).map(function(x){return x.content||'';}).join(''),
+        (c.treatments||[]).map(function(x){return x.content||'';}).join('')].join('').length;
+      if(_txtLen>1400)_qa.longText.push((c.chartNo||'')+' '+(c.name?maskName(c.name):'')+'（約 '+_txtLen+' 字）');
+      /* V5.19.0 #2: 記錄這個個案在第幾頁,供 Case Navigator 跳頁 */
+      _slideMeta.push({idx:slides.length,type:'case',cancer:ca.name,
+        chartNo:c.chartNo||'',name:c.name?maskName(c.name):'',
+        dx:(c.diagnosis||'').slice(0,40)});
+      /* 先累積三種圖片(回傳實際載得到的張數),再據此組按鈕 */
+      var _nPatho=_pushImgWin('ci-'+caseIndex,'patho','病理影像','病理染色',_imgMeta,c.pathologyImages);
+      var _nSurg =_pushImgWin('ci-'+caseIndex,'surg','手術照片','手術照片',_imgMeta,c.surgicalImages);
+      var _nRel  =_pushImgWin('ci-'+caseIndex,'related','影像','影像',_imgMeta,c.images);
+      /* V5.15.1: 乳攝也改同一模式(原本是獨立投影片:左報告右圖)。
+         報告文字帶進檢視器當第一頁(個管師選擇 B:個案頁不動);限乳癌且有報告或圖才建立 */
+      var _mammoRep=(cid==='breast'&&c.mammo)?((c.mammo.date?c.mammo.date+'\n':'')+(c.mammo.report||'')).trim():'';
+      var _nMammo=(cid==='breast'&&c.mammo)
+        ?_pushImgWin('ci-'+caseIndex,'mammo','乳房攝影','乳房攝影',_imgMeta,c.mammo.images,_mammoRep)
+        :0;
+      /* 按鈕要顯示的數量:有報告但沒圖時也要能點開,所以用「圖數 or (有報告則 1)」 */
+      var _mammoBtnN=_nMammo||(_mammoRep?1:0);
+      var _mkImgBtn=function(type,icon,label,n){
+        return n>0?(' <button class="patho-btn" onclick="openImgWindow(\'ci-'+caseIndex+'::'+type+'\')" title="開新分頁查看'+label+'">'+icon+' '+label+'('+n+')</button>'):'';
+      };
+      var _pathoBtn=_mkImgBtn('patho','🔬','病理影像',_nPatho)
+                   +_mkImgBtn('surg','📷','手術照片',_nSurg)
+                   +_mkImgBtn('related','🖼','影像',_nRel)
+                   +_mkImgBtn('mammo','📸','乳房攝影',_mammoBtnN)/* V5.15.1 */
+                   +(_nTl>0?(' <button class="patho-btn" onclick="openTimelineWindow(\'ci-'+caseIndex+'\')" title="開新分頁查看病程時序圖">📈 病程時序('+_nTl+')</button>'):'');/* V5.25.0 */
       slides.push('<section class="slide case" style="--ca:'+caColor+';">'
         +'<div class="ch">'
         +'<div class="cht">'
@@ -6375,88 +6987,20 @@ async function genHTMLSlides(){
         +(chips?'<div class="ct">'+chips+'</div>':'')
         +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
         +'</section>');
-      // Images - separate slide after case slide
-      // Related images: auto-fill grid by imgsPerSlide
-      if((c.images||[]).length){
-        var _ips=c.imgsPerSlide||4;
-        var _imgs=c.images||[];
-        for(var _ii=0;_ii<_imgs.length;_ii+=_ips){
-          var _grp=_imgs.slice(_ii,_ii+_ips);
-          var _cols=_ips===1?1:2;var _rows=_ips===4?2:1;
-          var _gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_cols+',1fr);grid-template-rows:repeat('+_rows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
-          var _wSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
-          var _iSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
-          var _h=_grp.map(function(img){return '<div style="'+_wSt+'"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+escA(img.caption||'')+'" style="'+_iSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
-          slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
-            +'<div class="ch"><div class="cht"><span class="ci">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span><span class="cat">影像</span></div></div>'
-            +'<div style="'+_gSt+'">'+_h+'</div>'
-            +'</section>');
-        }
-      }
-      // Mammo slide (breast only, 4:6 layout)
-      if(cid==='breast'&&c.mammo&&(c.mammo.report||(c.mammo.images&&c.mammo.images.length))){
-        const mImgHtml=(c.mammo.images||[]).slice(0,2).map(function(img){return '<div class="mammo-img-wrap"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+escA(img.caption||'')+'" style="width:100%;height:100%;object-fit:contain;border-radius:4px;display:block"></div>';}).join('');
-        const mDate=c.mammo.date?'<div style="font-size:.85em;opacity:.65;margin-bottom:.6vh">'+escA(c.mammo.date)+'</div>':'';
-        const mRep=escA(c.mammo.report||'').replace(/\n/g,'<br>');
-        slides.push('<section class="slide img-slide mammo-slide" style="--ca:'+caColor+';">'
-          +'<div class="ch"><div class="cht">'
-          +'<span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.dataset.oc=el.style.opacity;el.style.opacity=\'0.4\';setTimeout(function(){el.style.opacity=el.dataset.oc||\'\'}, 600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span>'
-          +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
-          +'<span class="cat">乳房攝影</span></div></div>'
-          +'<div class="mammo-body">'
-          +'<div class="mammo-report">'+mDate+mRep+'</div>'
-          +'<div class="mammo-imgs">'+mImgHtml+'</div>'
-          +'</div>'
-          +'</section>');
-      }
 
-      // V5.2.1: 病理影像不再產獨立投影片,改累積到 _pathoData(按鈕點了在新分頁打開)
-      if((c.pathologyImages||[]).length){
-        _pathoData['ci-'+caseIndex]={
-          chartNo:c.chartNo||'',
-          name:c.name?maskName(c.name):'',
-          caName:ca.name,
-          caColor:caColor,
-          images:(c.pathologyImages||[]).map(function(img){
-            return{
-              caption:img.caption||img.name||'病理影像',
-              src:img.dataUrl||_pathImgCache[_pathCacheKey(img)]||''
-            };
-          })
-        };
-      }
 
-      // Surgical photo slides: auto-fill grid by surgImgsPerSlide
-      if((c.surgicalImages||[]).length){
-        var _sps=c.surgImgsPerSlide||1;
-        var _surgs=c.surgicalImages||[];
-        for(var _si=0;_si<_surgs.length;_si+=_sps){
-          var _sgrp=_surgs.slice(_si,_si+_sps);
-          var _scols=_sps===1?1:2;var _srows=_sps===4?2:1;
-          var _sgSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_scols+',1fr);grid-template-rows:repeat('+_srows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
-          var _swSt='overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0;';
-          var _siSt='flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px;';
-          var _sCap=_sgrp.length===1?escA(_sgrp[0].caption||_sgrp[0].name||'手術照片'):'';
-          var _sh=_sgrp.map(function(img){return '<div style="'+_swSt+'"><img src="'+(img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'')+'" alt="'+escA(img.caption||'')+'" style="'+_siSt+'">'+(img.caption?'<div class="img-cap">'+escA(img.caption)+'</div>':'')+'</div>';}).join('');
-          slides.push('<section class="slide img-slide" style="--ca:'+caColor+';">'
-            +'<div class="ch"><div class="cht"><span class="ci" onclick="var el=this;navigator.clipboard.writeText(\''+escA(c.chartNo||'')+'\').then(function(){el.style.opacity=\'.4\';setTimeout(function(){el.style.opacity=\'\'},600);})" title="點擊複製病歷號">'+escA(c.chartNo||'')+'</span> <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
-            +(_sCap?'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9);">'+_sCap+'</span>':'')
-            +'<span class="cat">手術照片</span></div></div>'
-            +'<div style="'+_sgSt+'">'+_sh+'</div>'
-            +'</section>');
-        }
-      }
 
-      // Timeline slide (if events exist, placed last per case)
-      if((c.timeline||[]).length){
-        var tlSvg=renderTimelineSVG(c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');}),caColor,'slide');
-        slides.push('<section class="slide" style="--ca:'+caColor+';background:#1a2530;display:flex;flex-direction:column">'
-          +'<div class="ch" style="border-bottom:5px solid '+caColor+';"><div class="cht">'
-          +'<span class="ci" style="cursor:default">'+escA(c.chartNo||'')+'</span>'
-          +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
-          +'<span class="cat">治療事件軸</span></div></div>'
-          +'<div style="flex:1;padding:3vh 4vw;display:flex;align-items:center;overflow:auto">'+tlSvg+'</div>'
-          +'</section>');
+      /* V5.25.0: 病程時序圖不再產獨立投影片,改成個案標題列按鈕 + 新分頁檢視
+         (與四種影像同一模式);且只有個管師勾選 showTimeline 的個案才產出 */
+      var _nTl=0;
+      if(c.showTimeline&&(c.timeline||[]).length){
+        _tlWinData['ci-'+caseIndex]={chartNo:_imgMeta.chartNo,name:_imgMeta.name,
+          caName:_imgMeta.caName,caColor:caColor,
+          events:c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
+            .map(function(e){return{date:e.date,type:e.type,label:e.label,
+              pivot:!!(e._ai&&e._ai.pivot),resp:(e._ai&&e._ai.response)||'',
+              basis:(e._ai&&e._ai.basis)||''};})};/* V5.25.0: 帶出 AI 判讀 */
+        _nTl=c.timeline.length;
       }
 
     }); // end cases.forEach
@@ -6699,10 +7243,23 @@ async function genHTMLSlides(){
         // Other special types: generate image slide if images exist
         var spImgs=sp.images||[];
         if(spImgs.length){
-          var _ips=sp.imgsPerSlide||4;
-          for(var _sii=0;_sii<spImgs.length;_sii+=_ips){
-            var _sgrp=spImgs.slice(_sii,_sii+_ips);
-            var _scols=_ips===1?1:2,_srows=_ips===4?2:1;
+          /* V5.18.1 修審稿 P2:原本用 sp.imgsPerSlide(固定每頁 N 張),但編輯端早已改成
+             pageBreak 分頁點 → 形成「畫面設定 A、輸出卻照 B」的雙真相來源。
+             統一成 pageBreak(它是 imgsPerSlide 的超集合:能表達 2+4、1+2+4,不只 4+4+4)。
+             舊資料若只有 imgsPerSlide 沒有 pageBreak,自動依舊值換算成等效分頁線,不破壞既有排版。 */
+          var _spHasBrk=spImgs.some(function(im){return im.pageBreak;});
+          if(!_spHasBrk&&sp.imgsPerSlide){
+            var _n=sp.imgsPerSlide;
+            spImgs.forEach(function(im,j){im.pageBreak=(j>0&&j%_n===0);});
+          }
+          _qaCountImgs(spImgs,'特殊議程「'+(sp.title||sp.topicType||'')+'」');/* V5.19.0 #7 */
+          var _spGroups=[];
+          spImgs.forEach(function(im,j){if(j===0||im.pageBreak)_spGroups.push([]);_spGroups[_spGroups.length-1].push(im);});
+          _spGroups.forEach(function(g){if(g.length>6)_qa.bigPages.push('特殊議程「'+(sp.title||sp.topicType||'')+'」有一頁 '+g.length+' 張');});
+          for(var _sgi=0;_sgi<_spGroups.length;_sgi++){
+            var _sgrp=_spGroups[_sgi];
+            var _sn=_sgrp.length;
+            var _scols=_sn<=1?1:(_sn<=4?2:3),_srows=_sn<=2?1:(_sn<=6?2:Math.ceil(_sn/3));
             var _sgSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+_scols+',1fr);grid-template-rows:repeat('+_srows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
             var _sImgH=_sgrp.map(function(img){
               var src=img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'';if(!src)return'';
@@ -6801,6 +7358,23 @@ async function genHTMLSlides(){
     +'td{padding:1.2vh 1.8vw;border-bottom:1px solid #eee;font-size:clamp(14px,1.45vw,20px);line-height:1.6;vertical-align:top;}'
     +'tr:nth-child(even) td{background:#f9fafc;}'
     +'.bar{position:fixed;top:0;left:0;height:4px;background:var(--acc);transition:width .25s;z-index:200;}'
+    /* V5.19.0 #9: 導覽列在滑鼠靜止數秒後淡出,移動時再現(更像簡報模式,也不會擋住右下內容) */
+    +'.nav-pill{transition:opacity .45s}'
+    +'.nav-pill.idle{opacity:.18}'
+    /* V5.19.0 #2: 會議目錄抽屜 */
+    +'.navdrawer{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none}'
+    +'.navdrawer.on{display:block}'
+    +'.navdrawer-in{position:absolute;top:0;right:0;height:100%;width:min(420px,88vw);background:#1b242e;color:#e8eef3;display:flex;flex-direction:column;box-shadow:-4px 0 24px rgba(0,0,0,.5)}'
+    +'.navdrawer-h{padding:2vh 3vw;font-size:clamp(15px,1.6vw,22px);font-weight:700;border-bottom:1px solid rgba(255,255,255,.14);display:flex;align-items:center}'
+    +'.navdrawer-x{margin-left:auto;background:none;border:0;color:#e8eef3;font-size:26px;cursor:pointer;line-height:1}'
+    +'.navdrawer-b{flex:1;overflow:auto;padding:1vh 0}'
+    +'.nvg{padding:1.2vh 3vw .6vh;font-size:clamp(11px,1vw,14px);letter-spacing:.1em;color:#8fa3b3}'
+    +'.nvi{padding:1.3vh 3vw;cursor:pointer;border-left:4px solid transparent;display:flex;gap:1vw;align-items:baseline}'
+    +'.nvi:hover{background:rgba(255,255,255,.07)}'
+    +'.nvi.cur{background:rgba(255,255,255,.12);border-left-color:#7fb2d6}'
+    +'.nvi-n{color:#7fa8c4;font-size:clamp(11px,1vw,14px);min-width:2.2em}'
+    +'.nvi-t{flex:1;font-size:clamp(13px,1.3vw,18px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    +'.nvi-d{color:#95a7b5;font-size:clamp(10px,.95vw,13px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40%}'
     +'.nav-pill{position:fixed;bottom:2.5vh;right:2.5vw;display:flex;align-items:center;gap:.8vw;z-index:100;background:rgba(20,30,40,.72);backdrop-filter:blur(8px);padding:.8vh 1.6vw;border-radius:30px;}'
     +'.nb{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;width:clamp(40px,3vw,46px);height:clamp(40px,3vw,46px);border-radius:50%;cursor:pointer;font-size:clamp(14px,1.3vw,19px);display:flex;align-items:center;justify-content:center;transition:all .15s;touch-action:manipulation;}'
     +'.nb:hover:not(:disabled){background:rgba(255,255,255,.38);border-color:rgba(255,255,255,.78);}'
@@ -6819,6 +7393,38 @@ async function genHTMLSlides(){
     +'.patho-btn:hover{background:rgba(255,255,255,.32);}';
 
   const js='var c=0,n='+N+';'
+    /* V5.19.0 #2: 目錄資料(產出時就知道每頁是誰) */
+    +'var SM='+JSON.stringify(_slideMeta)+';'
+    +'function buildNav(){'
+    +'var b=document.getElementById("navdrawer-b");if(!b)return;'
+    +'var h="",lastCa="";'
+    +'SM.forEach(function(m,k){'
+    +'if(m.cancer!==lastCa){h+=\'<div class="nvg">\'+m.cancer+\'</div>\';lastCa=m.cancer;}'
+    +'h+=\'<div class="nvi" data-go="\'+m.idx+\'">\''
+    +'+\'<span class="nvi-n">\'+String(k+1).padStart(2,"0")+\'</span>\''
+    +'+\'<span class="nvi-t">\'+m.chartNo+" "+m.name+\'</span>\''
+    +'+(m.dx?\'<span class="nvi-d">\'+m.dx+\'</span>\':"")+\'</div>\';});'
+    +'b.innerHTML=h||\'<div class="nvg">本場沒有個案討論</div>\';'
+    +'b.querySelectorAll(".nvi").forEach(function(el){el.onclick=function(){go(parseInt(el.dataset.go));toggleNav(0);};});'
+    +'}'
+    +'function markNavCur(){'
+    +'var b=document.getElementById("navdrawer-b");if(!b)return;'
+    +'var best=-1;SM.forEach(function(m,k){if(m.idx<=c)best=k;});'
+    +'b.querySelectorAll(".nvi").forEach(function(el,k){el.classList.toggle("cur",k===best);});'
+    +'}'
+    +'function toggleNav(on){'
+    +'var d=document.getElementById("navdrawer");if(!d)return;'
+    +'if(on){buildNav();markNavCur();d.classList.add("on");}else{d.classList.remove("on");}'
+    +'}'
+    /* V5.19.0 #9: 導覽列閒置淡出 */
+    +'var _idleT=null;'
+    +'function _navWake(){var p=document.getElementById("navpill");if(!p)return;'
+    +'p.classList.remove("idle");clearTimeout(_idleT);'
+    +'_idleT=setTimeout(function(){p.classList.add("idle");},3000);}'
+    +'document.addEventListener("mousemove",_navWake);'
+    +'document.addEventListener("keydown",_navWake);'
+    +'document.addEventListener("touchstart",_navWake);'
+    +'_navWake();'
     +'function go(i){'
     +'var slides=document.querySelectorAll(".slide"),dots=document.querySelectorAll(".dot");'
     +'slides[c].classList.remove("on");if(dots[c])dots[c].classList.remove("on");'
@@ -6826,6 +7432,7 @@ async function genHTMLSlides(){
     +'slides[c].classList.add("on");if(dots[c])dots[c].classList.add("on");'
     +'document.getElementById("ni").innerHTML=(c+1)+"<br>/"+n;'
     +'document.getElementById("bar").style.width=((c+1)/n*100)+"%";'
+    +'if(typeof markNavCur==="function")markNavCur();'/* V5.19.0 #2 */
     +'document.getElementById("nb-prev").style.opacity=c===0?".3":"1";'
     +'document.getElementById("nb-next").style.opacity=c===n-1?".3":"1";}'
     +'document.addEventListener("keydown",function(e){'
@@ -6869,7 +7476,7 @@ function hlClear(){
 var _magMode=false,_magCv=null;
 function _initMag(){if(_magCv)return;_magCv=document.createElement('canvas');_magCv.style.cssText='position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;';document.body.appendChild(_magCv);}
 function _toggleMag(){_initMag();_magMode=!_magMode;var btn=document.getElementById('nb-mag');if(btn)btn.style.color=_magMode?'#7FE87F':'';if(!_magMode)_magCv.style.display='none';}
-document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=(function(){var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;return(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');}());if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rendW=natW*scale,rendH=natH*scale;var offX=(rect.width-rendW)/2,offY=(rect.height-rendH)/2;var cx=mx-offX,cy=my-offY;if(cx<0||cy<0||cx>rendW||cy>rendH){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);var sx=(cx/rendW)*natW,sy=(cy/rendH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
+document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=(function(){var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;return(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');}());if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rendW=natW*scale,rendH=natH*scale;var offX=(rect.width-rendW)/2,offY=(rect.height-rendH)/2;var cx=mx-offX,cy=my-offY;if(cx<0||cy<0||cx>rendW||cy>rendH){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';/* V5.15.0: 放大時用高品質插值,減少模糊 */var sx=(cx/rendW)*natW,sy=(cy/rendH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
 document.addEventListener('mouseleave',function(){if(_magCv)_magCv.style.display='none';});
 document.addEventListener('keydown',function(e){if(e.key==='l'||e.key==='L')_toggleMag();});
 var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0,_zoomTarget=null;
@@ -6896,23 +7503,277 @@ document.addEventListener('touchend',function(e){
 var _t0=null;document.addEventListener('touchstart',function(e){if(e.touches.length===2)_t0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
 document.addEventListener('touchmove',function(e){if(e.touches.length===2&&_t0){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide')){_zoom=Math.max(1,Math.min(8,_zoom*(d/_t0)));_t0=d;_zoomImg();}e.preventDefault();}},{passive:false});
 /* V5.2.1: 病理影像資料 + 新分頁開啟函數 */
-window.__casePathos=`+JSON.stringify(_pathoData)+`;
-window.openPathoWindow=function(caseId){
-  var data=window.__casePathos[caseId];if(!data)return;
-  var w=window.open('','_blank');
-  if(!w){alert('瀏覽器擋下了新分頁,請允許彈出視窗後再試');return;}
+window.__caseImgs=`+JSON.stringify(_imgWinData)+`;
+window.__caseTL=`+JSON.stringify(_tlWinData)+`;
+/* ════ V5.25.0 病程時序圖檢視器(Event-band Timeline)════
+   設計原則(重要,寫死在這裡以免日後違反):
+   **只用結構化資料(date/type)決定視覺結構,絕不從 label 自由文字推論
+     疾病狀態、因果、治療反應或重要性。** —— 這條是為了防止坑 #30 換形式重演。
+   五個 clinical band 的分法與順序是刻意的:疾病→證據→全身治療→局部治療→其他,
+   不是照資料庫 type 順序排。recurrence/metastasis 屬「疾病事件」不可與 follow 混軌。 */
+window.TL_BANDS=[
+  {key:'disease',label:'疾病事件',sub:'診斷 / 復發 / 轉移',types:['dx','recurrence','metastasis']},
+  {key:'evidence',label:'檢查證據',sub:'影像 / 病理',types:['biopsy','imaging']},
+  {key:'systemic',label:'全身治療',sub:'系統性治療',types:['chemo']},
+  {key:'local',   label:'局部治療',sub:'手術 / 放療 / 介入',types:['surgery','rt']},
+  {key:'other',   label:'追蹤 / 其他',sub:'追蹤 / 其他事件',types:['follow','other']}
+];
+window.TL_TYPES=`+JSON.stringify(TL_TYPES)+`;
+/* V5.15.0: 原 openPathoWindow 通用化 — 病理/手術/影像共用同一個檢視器(含放大鏡與導覽),
+   key 為 'ci-N::type';標題與分類標籤改由資料帶入 */
+window.openTimelineWindow=function(caseId){
+  var d=window.__caseTL&&window.__caseTL[caseId];
+  if(!d){alert('找不到這個個案的病程時序資料。');return;}
+  var w;try{w=window.open('','_blank');}catch(e){w=null;}
+  if(!w){alert('瀏覽器擋下了新分頁,請允許本頁的彈出視窗後再試一次。');return;}
+  var caC=d.caColor||'#4A7C8E';
+  var evs=(d.events||[]).slice();
+  var TB=window.TL_BANDS,TT=window.TL_TYPES;
+  var cfgOf=function(t){for(var i=0;i<TT.length;i++){if(TT[i].id===t)return TT[i];}return TT[TT.length-1];};
+  var bandOf=function(t){for(var i=0;i<TB.length;i++){if(TB[i].types.indexOf(t)>=0)return i;}return TB.length-1;};
+  var esc=function(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
+  var ms=function(x){var t=new Date(x||'');return isNaN(t.getTime())?null:t.getTime();};
+  var md=function(x){var v=String(x||'');return v.length>=10?v.slice(5).replace('-','/'):v;};
+  var DAY=86400000;
+
+  /* ════════════════════════════════════════════════════════════════
+     V5.26.0 核心原則(外部審稿指出我前一版違反了自己定的規則):
+     **節點永遠忠於真正日期,文字可以避讓,節點不能避讓。**
+     前一版用 layout() 強制節點間隔 240px,導致「圖上的水平距離不再代表時間距離」
+     —— 這比標籤重疊嚴重得多,是 timeline 的根本錯誤。
+     本版改成:node 用真實日期座標;只移動 label,並以引線(leader line)連回節點。
+     另外移除「全身治療相鄰事件自動箭頭」—— 資料只有 date 沒有 endDate,
+     那個箭頭是視覺憑空生出的語意(會被讀成「持續到」或「後線銜接」),屬臨床誤導。
+     ════════════════════════════════════════════════════════════════ */
+
+  /* 時間壓縮:只有真正長空窗才壓(審稿建議 45→90 天,避免畫面破碎) */
+  var GAP_DAYS=90,GAP_W=110;
+  var pts=evs.map(function(e){return ms(e.date);}).filter(function(t){return t!==null;}).sort(function(a,b){return a-b;});
+  var segs=[];
+  for(var i=1;i<pts.length;i++){
+    if((pts[i]-pts[i-1])/DAY>GAP_DAYS)segs.push({a:pts[i-1],b:pts[i],days:Math.round((pts[i]-pts[i-1])/DAY)});
+  }
+  var t0=pts.length?pts[0]:0,t1=pts.length?pts[pts.length-1]:1;
+  var realSpan=(t1-t0)||1;
+  var compressed=segs.reduce(function(a,g){return a+(g.b-g.a);},0);
+  var flowSpan=(realSpan-compressed)||1;
+  var W=1680,padL=200,padR=140,headH=104;
+  var usableW=W-padL-padR-segs.length*GAP_W;
+  var xOf=function(t){
+    if(t===null)return padL;
+    var x=padL,acc=0;
+    for(var i=0;i<segs.length;i++){
+      if(t>=segs[i].b){acc+=(segs[i].b-segs[i].a);x+=GAP_W;}
+      else if(t>segs[i].a){return Math.round(x+((segs[i].a-t0-acc)/flowSpan)*usableW+GAP_W*((t-segs[i].a)/(segs[i].b-segs[i].a)));}
+    }
+    return Math.round(x+((t-t0-acc)/flowSpan)*usableW);
+  };
+
+  /* 標籤避讓:node 不動,只算 label 要放第幾層(0=最近,1=更遠…)
+     只有真的會碰撞才錯開(審稿:交錯是 collision handling,不是 index 的固定樣式) */
+  var LBL_W=150;
+  var tierOf=function(list){
+    var tiers=[],occupied=[];
+    list.forEach(function(o,k){
+      var x=o.x,t=0;
+      while(true){
+        var hit=false;
+        for(var q=0;q<occupied.length;q++){
+          if(occupied[q].t===t&&Math.abs(occupied[q].x-x)<LBL_W){hit=true;break;}
+        }
+        if(!hit)break;
+        t++;
+        if(t>3){t=0;break;}
+      }
+      occupied.push({x:x,t:t});tiers.push(t);
+    });
+    return tiers;
+  };
+
+  /* ── 版面 ── */
+  var DZ_TOP=headH+30,DZ_H=126;
+  var laneH=118,axisH=70,noteH=20;/* V5.26.0: 正式版移除底部說明區,只留少量下邊距 */
+  var used={};evs.forEach(function(e){used[bandOf(e.type)]=true;});
+  var lanes=[];for(var i=0;i<TB.length;i++){if(TB[i].key!=='disease'&&used[i])lanes.push({i:i,def:TB[i]});}
+  var LANE_TOP=DZ_TOP+DZ_H;
+  var H=headH+30+DZ_H+lanes.length*laneH+axisH+noteH;
+  var svg='<rect width="'+W+'" height="'+H+'" fill="#0f161c"/>';
+
+  /* ══ 疾病軸:全圖唯一真正的 timeline(不用背景色塊,靠線本身建立權重)══ */
+  var dzEvs=evs.filter(function(e){return bandOf(e.type)===0;});
+  var dzY=DZ_TOP+DZ_H/2+16,DZC='#E74C3C';
+  svg+='<text x="34" y="'+(DZ_TOP+30)+'" font-size="22" font-weight="700" fill="#e8eff5">疾病軸</text>';
+  var dzPl=dzEvs.map(function(e){return{o:e,x:xOf(ms(e.date))};});
+  var lx0=dzPl.length?dzPl[0].x:padL,lx1=dzPl.length?dzPl[dzPl.length-1].x:(W-padR);
+  var prev=lx0;
+  segs.forEach(function(g){
+    var ga=xOf(g.a),gb=xOf(g.b);
+    if(ga>prev)svg+='<line x1="'+prev+'" y1="'+dzY+'" x2="'+ga+'" y2="'+dzY+'" stroke="'+DZC+'" stroke-width="5.5" stroke-linecap="round"/>';
+    svg+='<line x1="'+ga+'" y1="'+dzY+'" x2="'+gb+'" y2="'+dzY+'" stroke="#5d6e7b" stroke-width="3" stroke-dasharray="9 8"/>';
+    var mo=Math.max(1,Math.round(g.days/30));
+    svg+='<text x="'+((ga+gb)/2)+'" y="'+(dzY+26)+'" text-anchor="middle" font-size="15" fill="#8296a6">'+mo+' 個月</text>';
+    prev=gb;
+  });
+  svg+='<line x1="'+prev+'" y1="'+dzY+'" x2="'+(lx1+40)+'" y2="'+dzY+'" stroke="'+DZC+'" stroke-width="5.5" stroke-linecap="round"/>';
+  svg+='<path d="M '+(lx1+40)+' '+(dzY-10)+' L '+(lx1+66)+' '+dzY+' L '+(lx1+40)+' '+(dzY+10)+' Z" fill="'+DZC+'"/>';
+  var dzT=tierOf(dzPl);
+  dzPl.forEach(function(q,qi){
+    var e=q.o,x=q.x,tr=dzT[qi];
+    var ly=dzY-46-tr*40;
+    if(tr>0)svg+='<line x1="'+x+'" y1="'+(dzY-20)+'" x2="'+x+'" y2="'+(ly+8)+'" stroke="'+DZC+'" stroke-width="1.2" opacity=".5"/>';
+    svg+='<circle cx="'+x+'" cy="'+dzY+'" r="18" fill="'+DZC+'" opacity=".26"/>';
+    svg+='<circle cx="'+x+'" cy="'+dzY+'" r="12" fill="'+DZC+'" stroke="#0f161c" stroke-width="3.5"/>';
+    svg+='<circle cx="'+x+'" cy="'+dzY+'" r="5" fill="#fff"/>';
+    svg+='<text x="'+x+'" y="'+ly+'" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff">'+esc(e.label||cfgOf(e.type).label)+'</text>';
+    svg+='<text x="'+x+'" y="'+(ly+20)+'" text-anchor="middle" font-size="15" fill="'+DZC+'">'+esc(md(e.date))+'</text>';
+  });
+
+  /* ══ supporting lanes:共用同一時間座標,但不另建 timeline(無自身 baseline)══ */
+  var ICON={evidence:'M7 2h6l1 5-4 13-4-13z',systemic:'M6 3h8v5l-4 12-4-12z',local:'M4 16 16 4l4 4L8 20z',other:'M5 3h12v18H5z'};
+  lanes.forEach(function(b,bi){
+    var y0=LANE_TOP+bi*laneH,y=y0+laneH/2+6;
+    svg+='<line x1="30" y1="'+y0+'" x2="'+(W-40)+'" y2="'+y0+'" stroke="#1e2a34" stroke-width="1"/>';
+    svg+='<path d="'+(ICON[b.def.key]||ICON.other)+'" transform="translate(34,'+(y-26)+') scale(1.45)" fill="#55697a" opacity=".8"/>';
+    svg+='<text x="84" y="'+(y-6)+'" font-size="18" font-weight="700" fill="#9fb4c3">'+esc(b.def.label)+'</text>';
+    svg+='<text x="84" y="'+(y+15)+'" font-size="12.5" fill="#5f7383">'+esc(b.def.sub||'')+'</text>';
+    var list=evs.filter(function(e){return bandOf(e.type)===b.i;})
+      .map(function(e){return{o:e,x:xOf(ms(e.date))};});
+    var tiers=tierOf(list);
+    list.forEach(function(q,qi){
+      var e=q.o,x=q.x,cfg=cfgOf(e.type),tr=tiers[qi];
+      var ly=y-30-tr*38;
+      /* 引線:節點在真實日期,標籤往上錯開時用細線連回來 */
+      svg+='<line x1="'+x+'" y1="'+(y-11)+'" x2="'+x+'" y2="'+(ly+7)+'" stroke="'+cfg.color+'" stroke-width="1.2" opacity=".45"/>';
+      svg+='<circle cx="'+x+'" cy="'+y+'" r="9.5" fill="'+cfg.color+'"/>';
+      svg+='<text x="'+x+'" y="'+ly+'" text-anchor="middle" font-size="17" font-weight="600" fill="#d6e2ec">'+esc(e.label||cfg.label)+'</text>';
+      svg+='<text x="'+x+'" y="'+(ly+17)+'" text-anchor="middle" font-size="13" fill="#7d92a2">'+esc(md(e.date))+'</text>';
+      if(e.resp){
+        var RM={better:{s:'↑ 有效',c:'#27AE60'},stable:{s:'→ 穩定',c:'#C8A93A'},worse:{s:'↓ 惡化',c:'#E74C3C'},na:{s:'— 無法評估',c:'#7F8C8D'}};
+        var rm=RM[e.resp]||RM.na;
+        svg+='<rect x="'+(x-54)+'" y="'+(y+16)+'" width="108" height="23" rx="11.5" fill="'+rm.c+'" opacity=".2"/>';
+        svg+='<text x="'+x+'" y="'+(y+32)+'" text-anchor="middle" font-size="13.5" font-weight="700" fill="'+rm.c+'">'+esc(rm.s)+' <tspan font-size="10" opacity=".85">AI</tspan></text>';
+      }
+    });
+  });
+
+  /* ══ 底部時間軸:只負責月份定位(gap 已在疾病軸標過,不重複)══ */
+  var ay=LANE_TOP+lanes.length*laneH+30;
+  svg+='<line x1="'+padL+'" y1="'+ay+'" x2="'+(W-padR/2)+'" y2="'+ay+'" stroke="#2a3742" stroke-width="1.5"/>';
+  var MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  var ticks={};
+  evs.forEach(function(e){var t=ms(e.date);if(t===null)return;var dd=new Date(t);
+    ticks[dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')]={t:t,y:dd.getFullYear(),m:dd.getMonth()};});
+  var keys=Object.keys(ticks).sort(),lastY=null,yearMarks=[];
+  keys.forEach(function(k){
+    var o=ticks[k],x=xOf(o.t);
+    svg+='<line x1="'+x+'" y1="'+(ay-6)+'" x2="'+x+'" y2="'+(ay+6)+'" stroke="#3a4854" stroke-width="1.5"/>';
+    svg+='<text x="'+x+'" y="'+(ay+26)+'" text-anchor="middle" font-size="15" fill="#8ca0b0">'+MON[o.m]+'</text>';
+    if(o.y!==lastY){yearMarks.push({x:x,y:o.y});lastY=o.y;}
+  });
+  /* 年份分組:只在該年第一個月份上方標一次(取代原本 2025-10 + OCT 的重複) */
+  yearMarks.forEach(function(m2){
+    svg+='<text x="'+m2.x+'" y="'+(ay-18)+'" text-anchor="middle" font-size="16" font-weight="700" fill="#6b8090">'+m2.y+'</text>';
+  });
+
+  var months=Math.max(1,Math.round((t1-t0)/DAY/30));
+  var title=esc(d.chartNo+' '+d.name)+'　病程時序';
+  var usedT={};evs.forEach(function(e){usedT[e.type||'other']=1;});
+  var lg=TT.filter(function(t){return usedT[t.id];})
+    .map(function(t){return '<span><i style="background:'+t.color+'"></i>'+esc(t.label)+'</span>';}).join('');
+  var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8">'
+    +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+    +'<title>'+title+'</title><style>'
+    +'*{margin:0;padding:0;box-sizing:border-box}'
+    +'html,body{width:100%;min-height:100%;background:#0f161c;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif}'
+    +'.th{background:linear-gradient(90deg,'+caC+' 0%,#2c4250 100%);padding:1.7vh 2.4vw;display:flex;align-items:center;gap:1.4vw;font-size:clamp(15px,1.7vw,25px);position:sticky;top:0;z-index:5}'
+    +'.thi{font-weight:700}.thn{font-weight:700}'
+    +'.thm{margin-left:auto;font-size:.78em;opacity:.9;display:flex;gap:1.4vw;align-items:center}'
+    +'.now{background:#F0B429;color:#20303c;font-weight:700;padding:.28em .8em;border-radius:20px;font-size:.85em;white-space:nowrap}'
+    +'.tw{padding:2vh 1.6vw 1vh}svg{width:100%;height:auto;display:block}'
+    +'.lg{display:flex;flex-wrap:wrap;gap:.7vw 1.8vw;margin:0 1.6vw 3vh;padding:1.3vh 1.6vw;font-size:clamp(12px,1.05vw,16px);color:#a3b6c4;background:#141d25;border-radius:8px}'
+    +'.lg i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:middle}'
+    +'@media(max-width:700px){.th{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;padding:12px 16px}'
+    +'.thm{grid-column:1/-1;margin-left:0;justify-content:space-between;font-size:13px;gap:8px}}'
+    +'</style></head><body>'
+    +'<div class="th"><span class="thi">'+esc(d.chartNo)+'</span><span class="thn">'+esc(d.name)+'</span>'
+    +'<span class="thm"><span>'+esc(d.caName)+'</span><span>病程 '+months+' 個月 · '+evs.length+' 筆事件</span>'
+    +(evs.length?'<span class="now">最新 '+esc(md(evs[evs.length-1].date||''))+'</span>':'')+'</span></div>'
+    +'<div class="tw"><svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'+svg+'</svg></div>'
+    +'<div class="lg">'+lg+'</div>'
+    +'</body></html>';
+  try{w.document.open();w.document.write(html);w.document.close();}
+  catch(e){alert('無法開啟時序圖視窗:'+(e&&e.message?e.message:e));}
+};
+window.openImgWindow=function(caseId){
+  /* V5.24.1: 原本 if(!data)return 是**無聲失敗** —— 按鈕有顯示張數卻點了沒反應時,
+     使用者完全不知道發生什麼事(同坑 #29/#33/#43 的無聲失敗家族)。改成明確回報。 */
+  if(!window.__caseImgs){alert('影像資料未載入(__caseImgs 不存在)。\\n請重新產生一次 HTML 投影片。');return;}
+  var data=window.__caseImgs[caseId];
+  if(!data){
+    var keys=Object.keys(window.__caseImgs||{});
+    alert('找不到這組影像的資料。\\n\\n索引鍵:'+caseId+'\\n目前可用:'+(keys.length?keys.join('、'):'(空)')
+      +'\\n\\n請把這段訊息回報給開發者。');
+    return;
+  }
+  var w;
+  try{w=window.open('','_blank');}catch(e){w=null;}
+  if(!w){alert('瀏覽器擋下了新分頁,請允許本頁的彈出視窗後再試一次。');return;}
   var caC=data.caColor||'#4A7C8E';
-  var slidesH=data.images.map(function(img,i){
-    return '<section class="ps'+(i===0?' on':'')+'">'
-      +'<div class="ph"><span class="pci">'+data.chartNo+'</span> <span class="pcn">'+data.name+'</span><span class="ptitle">'+(img.caption||'病理影像')+'</span><span class="pcat">病理染色</span></div>'
-      +'<div class="pbody"><img src="'+img.src+'" alt="病理"></div>'
-      +'</section>';
-  }).join('');
-  var title=data.chartNo+' '+data.name+' 病理影像 - '+data.caName;
+  /* V5.15.1: 有 report(乳攝)時,報告文字當第一頁,圖片接在後面。
+     _esc 在此就地處理(檢視器是獨立產生的 HTML,不能直接用主程式的 escA) */
+  var _esc=function(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
+  var _pages=[];
+  if(data.report){
+    _pages.push('<section class="ps on">'
+      +'<div class="ph"><span class="pci">'+data.chartNo+'</span> <span class="pcn">'+data.name+'</span>'
+      +'<span class="ptitle">報告</span><span class="pcat">'+(data.catLabel||'影像')+'</span></div>'
+      +'<div class="pbody prep">'+_esc(data.report).replace(/\\n/g,'<br>')+'</div>'
+      +'</section>');
+  }
+  /* V5.18.0: 依 brk(分頁點)把圖分組 —— 第一張永遠開新頁,之後遇到 brk 就開新頁。
+     每組張數可以不同,所以「第一頁 2 張、第二頁 4 張」是自然的結果 */
+  var _groups=[];
+  data.images.forEach(function(img,i){
+    if(i===0||img.brk)_groups.push([]);
+    _groups[_groups.length-1].push(img);
+  });
+  /* 依該頁張數決定格線:1=全幅 / 2=左右 / 3-4=2×2 / 5-6=3×2 / 7+=自動塞滿 */
+  var _grid=function(n){
+    if(n<=1)return[1,1];
+    if(n===2)return[2,1];
+    if(n<=4)return[2,2];
+    if(n<=6)return[3,2];
+    var c=Math.ceil(Math.sqrt(n));return[c,Math.ceil(n/c)];
+  };
+  _groups.forEach(function(grp,gi){
+    var isFirst=(!data.report&&gi===0);
+    var g=_grid(grp.length),cols=g[0],rows=g[1];
+    var title=grp.length===1?(grp[0].caption||data.typeLabel||'影像')
+              :((data.typeLabel||'影像')+'（'+grp.length+' 張）');
+    var body;
+    if(grp.length===1){
+      body='<div class="pbody"><img src="'+grp[0].src+'" alt="'+(data.typeLabel||'影像')+'"></div>';
+    }else{
+      body='<div class="pbody pgrid" style="grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows+',1fr)">'
+        +grp.map(function(im){
+            return '<div class="pcell"><img src="'+im.src+'" alt="'+(data.typeLabel||'影像')+'">'
+              +(im.caption?'<div class="pcap">'+_esc(im.caption)+'</div>':'')+'</div>';
+          }).join('')
+        +'</div>';
+    }
+    _pages.push('<section class="ps'+(isFirst?' on':'')+'">'
+      +'<div class="ph"><span class="pci">'+data.chartNo+'</span> <span class="pcn">'+data.name+'</span><span class="ptitle">'+_esc(title)+'</span><span class="pcat">'+(data.catLabel||'影像')+'</span></div>'
+      +body
+      +'</section>');
+  });
+  var slidesH=_pages.join('');
+  var title=data.chartNo+' '+data.name+' '+(data.typeLabel||'影像')+' - '+data.caName;
   var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8"><title>'+title+'</title>'
     +'<style>'
     +'*{margin:0;padding:0;box-sizing:border-box}'
     +'html,body{width:100%;height:100%;background:#111;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;color:#fff;overflow:hidden}'
+    /* V5.15.1: 報告文字頁(乳攝)—— 可捲動、字級適中、左對齊易讀 */
+    +'.pbody.prep{display:block;overflow:auto;padding:4vh 6vw calc(4vh + clamp(48px,7vh,78px));font-size:clamp(16px,1.9vw,30px);line-height:1.75;color:#e8edf1;text-align:left;white-space:normal}'
     +'.ps{position:absolute;inset:0;display:none;flex-direction:column;background:#111}'
     +'.ps.on{display:flex}'
     +'.ph{background:'+caC+';padding:1.4vh 2vw;display:flex;align-items:center;gap:1vw;font-size:clamp(13px,1.5vw,20px)}'
@@ -6920,9 +7781,17 @@ window.openPathoWindow=function(caseId){
     +'.pcn{font-size:clamp(18px,2.2vw,28px)}'
     +'.ptitle{flex:1;text-align:center;font-weight:700;color:rgba(255,255,255,.9);font-size:clamp(13px,1.5vw,20px)}'
     +'.pcat{background:rgba(255,255,255,.18);padding:.4vh 1vw;border-radius:14px;font-size:clamp(11px,1vw,15px)}'
-    +'.pbody{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:2vh 2.5vw}'
+    /* V5.24.3 修:.pnav 是 position:fixed 不佔文件流,內容排到視窗底時右下角圖片的說明(.pcap)會被壓住(同坑 #6)。
+       底部保留導覽鈕高度;.pcap 改最多兩行,長檔名看得到更多。
+       註:註解要放在字串**外面**,寫進 CSS 字串裡會讓產出的 JS 斷行(坑 #48) */
+    +'.pbody{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:2vh 2.5vw calc(2vh + clamp(48px,7vh,78px))}'
+    /* V5.18.0: 多圖同頁的格線排版 */
+    +'.pbody.pgrid{display:grid;gap:1.2vw;align-items:stretch;justify-items:stretch}'
+    +'.pcell{display:flex;flex-direction:column;align-items:center;min-height:0;overflow:hidden}'
+    +'.pcell img{flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px}'
+    +'.pcap{font-size:clamp(11px,1.1vw,16px);color:#cfd8de;margin-top:.5vh;text-align:center;line-height:1.35;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}'
     +'.pbody img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px}'
-    +'.pnav{position:fixed;bottom:2.5vh;right:2.5vw;display:flex;align-items:center;gap:.8vw;background:rgba(20,30,40,.72);backdrop-filter:blur(8px);padding:.8vh 1.6vw;border-radius:30px;z-index:100}'
+    +'.pnav{position:fixed;bottom:2vh;right:2vw;display:flex;align-items:center;gap:.7vw;background:rgba(20,30,40,.72);backdrop-filter:blur(8px);padding:.7vh 1.3vw;border-radius:30px;z-index:100}'
     +'.pnb{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;width:46px;height:46px;border-radius:50%;cursor:pointer;font-size:19px;display:flex;align-items:center;justify-content:center}'
     +'.pnb:hover:not(:disabled){background:rgba(255,255,255,.38)}'
     +'.pnb:disabled{opacity:.25;cursor:default}'
@@ -6931,10 +7800,10 @@ window.openPathoWindow=function(caseId){
     +'</style></head><body>'
     +slidesH
     +'<div class="pbar" id="pbar" style="width:'+(100/data.images.length).toFixed(1)+'%"></div>'
-    +'<div class="pnav"><button class="pnb" id="pnb-prev" onclick="pgo(pc-1)">‹</button><span class="pni" id="pni">1<br>/'+data.images.length+'</span><button class="pnb" id="pnb-next" onclick="pgo(pc+1)">›</button><button class="pnb" id="pnb-mag" onclick="_pmTog()" title="放大鏡 L" style="font-size:18px">🔍</button></div>'
+    +'<div class="pnav"><button class="pnb" id="pnb-prev" onclick="pgo(pc-1)">‹</button><span class="pni" id="pni">1<br>/'+_pages.length+'</span><button class="pnb" id="pnb-next" onclick="pgo(pc+1)">›</button><button class="pnb" id="pnb-mag" onclick="_pmTog()" title="放大鏡 L" style="font-size:18px">🔍</button></div>'
     +'<'+'script>'
     /* V5.2.2: 新分頁也要有放大鏡 + 滾輪 zoom + 雙擊重設(複用主投影片邏輯,改 class 為 .ps) */
-    +'var pc=0,pn='+data.images.length+';'
+    +'var pc=0,pn='+_pages.length+'/* V5.18.0: 用實際頁數(含報告頁與多圖分頁),原本用 images.length 會算錯 */;'
     +'function pgo(i){var s=document.querySelectorAll(".ps");s[pc].classList.remove("on");pc=Math.max(0,Math.min(i,pn-1));s[pc].classList.add("on");document.getElementById("pni").innerHTML=(pc+1)+"<br>/"+pn;document.getElementById("pbar").style.width=((pc+1)/pn*100)+"%";document.getElementById("pnb-prev").disabled=pc===0;document.getElementById("pnb-next").disabled=pc===pn-1;_pmReset();}'
     /* 滾輪 zoom */
     +'var _pz=1,_ppx=0,_ppy=0,_pdrag=false,_psx=0,_psy=0,_pPx=0,_pPy=0,_pzT=null;'
@@ -6950,7 +7819,7 @@ window.openPathoWindow=function(caseId){
     +'function _pmInit(){if(_pmCv)return;_pmCv=document.createElement("canvas");_pmCv.style.cssText="position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;";document.body.appendChild(_pmCv);}'
     +'function _pmTog(){_pmInit();_pmOn=!_pmOn;var b=document.getElementById("pnb-mag");if(b)b.style.color=_pmOn?"#7FE87F":"";if(!_pmOn)_pmCv.style.display="none";}'
     +'function _pmReset(){if(_pmCv)_pmCv.style.display="none";}'
-    +'document.addEventListener("mousemove",function(e){if(!_pmOn||!_pmCv)return;var s=document.querySelectorAll(".ps")[pc];if(!s){_pmCv.style.display="none";return;}var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=="IMG")el=el.parentElement;var img=(el&&el.tagName==="IMG"&&s.contains(el))?el:s.querySelector("img");if(!img){_pmCv.style.display="none";return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_pmCv.style.display="none";return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rW=natW*scale,rH=natH*scale;var oX=(rect.width-rW)/2,oY=(rect.height-rH)/2;var cx=mx-oX,cy=my-oY;if(cx<0||cy<0||cx>rW||cy>rH){_pmCv.style.display="none";return;}var SZ=220,MAG=3.5;_pmCv.width=SZ;_pmCv.height=SZ;var ctx=_pmCv.getContext("2d");ctx.clearRect(0,0,SZ,SZ);var sx=(cx/rW)*natW,sy=(cy/rH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle="rgba(255,255,255,.6)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_pmCv.style.display="block";var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_pmCv.style.left=lx+"px";_pmCv.style.top=ly+"px";});'
+    +'document.addEventListener("mousemove",function(e){if(!_pmOn||!_pmCv)return;var s=document.querySelectorAll(".ps")[pc];if(!s){_pmCv.style.display="none";return;}var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=="IMG")el=el.parentElement;var img=(el&&el.tagName==="IMG"&&s.contains(el))?el:s.querySelector("img");if(!img){_pmCv.style.display="none";return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_pmCv.style.display="none";return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rW=natW*scale,rH=natH*scale;var oX=(rect.width-rW)/2,oY=(rect.height-rH)/2;var cx=mx-oX,cy=my-oY;if(cx<0||cy<0||cx>rW||cy>rH){_pmCv.style.display="none";return;}var SZ=220,MAG=3.5;_pmCv.width=SZ;_pmCv.height=SZ;var ctx=_pmCv.getContext("2d");ctx.clearRect(0,0,SZ,SZ);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";var sx=(cx/rW)*natW,sy=(cy/rH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle="rgba(255,255,255,.6)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_pmCv.style.display="block";var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_pmCv.style.left=lx+"px";_pmCv.style.top=ly+"px";});'
     +'document.addEventListener("mouseleave",function(){if(_pmCv)_pmCv.style.display="none";});'
     +'document.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" ")pgo(pc+1);if(e.key==="ArrowLeft")pgo(pc-1);if(e.key==="Escape"){if(_pmOn){_pmTog();}else{window.close();}}if(e.key==="l"||e.key==="L")_pmTog();});'
     +'pgo(0);'
@@ -6979,7 +7848,14 @@ window.openPathoWindow=function(caseId){
       +'<button class="fc-btn" style="color:#7B1FA2" onclick="fcApply(\'#7B1FA2\')" title="紫色文字">A</button>'
       +'<div class="hl-sep"></div>'
       +'<button class="hl-clr" onclick="hlClear()">✕ 清除</button>'
-    +'</div>\n'    +'<div class="nav-pill">'
+    /* V5.19.0 #2 Case Navigator:☰ 開目錄,直接跳到某個個案(頁數多時免得一直翻) */
+    +'</div>\n'
+    +'<div class="navdrawer" id="navdrawer"><div class="navdrawer-in">'
+    +'<div class="navdrawer-h">會議目錄<button class="navdrawer-x" onclick="toggleNav(0)">&times;</button></div>'
+    +'<div class="navdrawer-b" id="navdrawer-b"></div>'
+    +'</div></div>\n'
+    +'<div class="nav-pill" id="navpill">'
+    +'<button class="nb" id="nb-toc" onclick="toggleNav(1)" title="會議目錄">&#9776;</button>'
     +'<button class="nb" id="nb-prev" onclick="go(c-1)">&#9664;</button>'
     +'<span class="ni" id="ni">1&thinsp;/&thinsp;'+N+'</span>'
     +'<button class="nb" id="nb-next" onclick="go(c+1)">&#9654;</button>'
@@ -6997,12 +7873,40 @@ window.openPathoWindow=function(caseId){
     fname=m.date+'_'+cids.map(function(id){return CFG[id]?.name||id;}).join('+')+'多專科會議.html';
   }
   _lastSlidesHTML=fullHTML;
+  /* ════ V5.19.0 #7 產出 QA 預檢 ════
+     產出前把「使用者不會自己發現的問題」一次攤開,尤其是讀不到的圖片 ——
+     原本 `if(!src)return''` 會靜默略過,少一張圖也不會有人知道(同坑 #29/#33 的無聲失敗)。
+     只提醒不阻擋:使用者可以選擇「仍然產生」或「回去修正」。
+     _slidesSilent 為 true 時(HTML 分享等自動流程)跳過對話框,不打斷。 */
+  if(!_silent){/* V5.20.0: 改用參數,不再靠全域旗標 */
+    const _w=[];
+    const _miss=_qa.expectImgs-_qa.loadedImgs;
+    if(_miss>0){
+      _w.push('✗ 有 '+_miss+' 張影像讀取失敗，不會出現在投影片中：\n    '
+        +_qa.missing.slice(0,6).join('\n    ')+(_qa.missing.length>6?'\n    …等共 '+_qa.missing.length+' 張':''));
+    }
+    if(_qa.noDiscussion.length)_w.push('△ '+_qa.noDiscussion.length+' 個個案沒有填「討論方向」：\n    '+_qa.noDiscussion.slice(0,6).join('、')+(_qa.noDiscussion.length>6?' …':''));
+    if(_qa.longText.length)_w.push('△ '+_qa.longText.length+' 個個案內容較長，投影時可能需要捲動：\n    '+_qa.longText.slice(0,4).join('、'));
+    if(_qa.bigPages.length)_w.push('△ 有影像頁超過 6 張，投影時可能不易辨識：\n    '+_qa.bigPages.slice(0,4).join('、'));
+    if(_w.length){
+      const _msg='產出前檢查\n'
+        +'──────────────────────\n'
+        +'✓ 共 '+N+' 頁\n'
+        +'✓ 影像 '+_qa.loadedImgs+' / '+_qa.expectImgs+' 張已載入\n\n'
+        +_w.join('\n\n')
+        +'\n──────────────────────\n\n確定 = 仍然產生　　取消 = 回去修正';
+      if(!confirm(_msg))return;
+    }
+  }
+  /* V5.20.0 重構⑥:只有真的要下載時才建 <a> 觸發,否則直接回傳 HTML 字串 */
+  if(!_doDownload)return fullHTML;
   const blob=new Blob([fullHTML],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=fname;
   document.body.appendChild(a);a.click();
   setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
   showSaveToast('HTML 投影片已下載（'+N+' 頁）');
+  return fullHTML;
 
 }
 
@@ -7313,6 +8217,139 @@ async function genXLSX(){
 }
 
 
+/* ════ V5.25.0 病程時序 AI 判讀 ════
+   設計背景:要畫出「醫師一眼看懂」的病程圖,需要「轉折點」與「治療反應」這類語意資訊,
+   但這些個管師從病歷抄不出來(療效判定是臨床判斷)。個管師提出的解法很好:
+   **沿用既有的「AI 整理 → JSON → 匯入」工作流**,讓 AI 讀完整臨床脈絡後判讀,
+   個管師零額外填寫負擔。
+   守住的界線:(1) AI 判讀結果**明確標示來源**,圖上標「AI」;
+   (2) 匯入時顯示摘要讓個管師決定採用範圍(不逐筆確認,避免又變手填);
+   (3) 判讀只寫進 _ai 命名空間,**不覆蓋任何原始欄位**。 */
+function tlAiPrompt(cid,i){
+  const c=getSectionItem(cid,'cases',i);if(!c)return'';
+  const evs=(c.timeline||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
+  const line=function(t,v){return v&&String(v).trim()?(t+'：'+String(v).trim()+'\n'):'';};
+  let ctx='';
+  ctx+=line('診斷',c.diagnosis);
+  ctx+=line('現病史',c.cc);
+  ctx+=line('過去病史',[(c.phChips||[]).join(' '),c.ph||''].filter(Boolean).join(' '));
+  if((c.pathologies||[]).length)ctx+='病理：\n'+(c.pathologies||[]).map(function(x){return'  '+(x.date||'')+' '+(x.content||'');}).join('\n')+'\n';
+  if((c.markers||[]).length)ctx+='癌指數：\n'+(c.markers||[]).map(function(x){return'  '+(x.name||'')+'：'+(x.content||'');}).join('\n')+'\n';
+  if((c.exams||[]).length)ctx+='檢查：\n'+(c.exams||[]).map(function(x){return'  '+(x.name||'')+'('+(x.date||'')+')：'+(x.content||'');}).join('\n')+'\n';
+  if((c.treatments||[]).length)ctx+='治療：\n'+(c.treatments||[]).map(function(x){return'  '+(x.date||'')+' '+(x.name||'')+' '+(x.content||'');}).join('\n')+'\n';
+  const evList=evs.map(function(e){
+    const cfg=TL_TYPES.find(function(t){return t.id===e.type;})||TL_TYPES[TL_TYPES.length-1];
+    return'  {"date":"'+(e.date||'')+'","type":"'+(e.type||'')+'","label":"'+String(e.label||cfg.label).replace(/"/g,'\'')+'"}';
+  }).join(',\n');
+  return`你是 MDT 病程分析助理。請根據以下臨床資料，判讀事件清單中每一筆的「病程意義」，輸出 JSON。
+
+【輸出格式絕對規則】
+- 只輸出 JSON 物件，第一個字必須是「{」，最後一個字必須是「}」
+- 不要加 markdown 圍籬（不要寫 \`\`\`json）
+- 不要加任何說明文字、前言、結語
+
+【判讀原則（重要）】
+- 只根據下方提供的資料判讀，**不要引入外部知識或臆測**
+- 判斷不出來就不要給該欄位（寧可留空，不要猜）
+- 你判讀的是「這份病歷寫了什麼」，不是「這個病人應該怎麼治療」
+- 不要建議治療方案，不要評論醫療決策
+
+【要判讀的兩件事】
+
+1. pivot（病程轉折點）：這筆事件是否**改變了疾病狀態判定或後續治療方向**？
+   - true 的典型：確診、發現復發、發現轉移、影像顯示疾病進展而更換治療
+   - false 的典型：例行追蹤影像、同一療程的持續用藥、無變化的檢查
+   - 判斷依據寫在 basis（15 字內，引用資料中的事實）
+
+2. response（治療反應）：**僅對治療類事件**（type 為 chemo/surgery/rt）判讀
+   - "better"：治療後腫瘤縮小、癌指數下降、影像改善
+   - "stable"：無明顯變化
+   - "worse"：治療後仍進展、新病灶、癌指數上升
+   - "na"：資料不足以判斷（**不確定就給 na**）
+   - 判斷依據寫在 basis（15 字內，例如「AFP 579→148」「MRI 顯示 regression」）
+
+【輸出格式】
+{
+  "events": [
+    {"date":"2026-03-05","pivot":false,"response":"stable","basis":"AFP 3.62→3.12 無明顯變化"},
+    {"date":"2026-06-20","pivot":true,"basis":"新發骨轉移"}
+  ]
+}
+- date 必須與下方事件清單完全一致（用來對應）
+- 沒有要判讀的欄位就不要寫（例如非治療事件不要有 response）
+
+═══ 臨床資料 ═══
+${ctx}
+═══ 事件清單 ═══
+[
+${evList}
+]`;
+}
+function openTlAi(cid,i){
+  const c=getSectionItem(cid,'cases',i);if(!c)return;
+  if(!(c.timeline||[]).length){alert('這個個案還沒有治療事件，請先新增事件再做 AI 判讀。');return;}
+  _tlAiCid=cid;_tlAiIdx=i;
+  const el=document.getElementById('tlai-prompt');if(el)el.value=tlAiPrompt(cid,i);
+  const ta=document.getElementById('tlai-json');if(ta)ta.value='';
+  const er=document.getElementById('tlai-err');if(er)er.textContent='';
+  const m=document.getElementById('tlai-modal');if(m)m.style.display='flex';
+}
+function closeTlAi(){const m=document.getElementById('tlai-modal');if(m)m.style.display='none';}
+function copyTlAiPrompt(){
+  const el=document.getElementById('tlai-prompt');if(!el)return;
+  el.select();try{document.execCommand('copy');showSaveToast('提示詞已複製，請貼到院內 AI');}catch(e){alert('請手動複製');}
+}
+let _tlAiCid=null,_tlAiIdx=null;
+function doImportTlAi(){
+  const er=document.getElementById('tlai-err');
+  const raw=(document.getElementById('tlai-json')||{}).value||'';
+  if(!raw.trim()){if(er)er.textContent='請先貼上 AI 回傳的 JSON';return;}
+  let data;
+  try{data=_parseAIJSON(raw);}catch(e){if(er)er.textContent='JSON 解析失敗：'+e.message;return;}
+  const arr=Array.isArray(data)?data:(data&&Array.isArray(data.events)?data.events:null);
+  if(!arr){if(er)er.textContent='格式不正確：需要 {"events":[...]} 或事件陣列';return;}
+  const c=getSectionItem(_tlAiCid,'cases',_tlAiIdx);
+  if(!c){if(er)er.textContent='找不到個案';return;}
+  /* 用 date 對應回原事件;只寫進 _ai 命名空間,不動任何原始欄位 */
+  const RESP={better:'有效',stable:'穩定',worse:'惡化',na:'無法評估'};
+  let nPivot=0,nResp=0,unmatched=[];
+  const pend=[];
+  arr.forEach(function(r){
+    const d=(r&&r.date||'').trim();if(!d)return;
+    const ev=(c.timeline||[]).find(function(x){return(x.date||'').trim()===d;});
+    if(!ev){unmatched.push(d);return;}
+    const item={ev:ev,pivot:r.pivot===true,resp:(r.response&&RESP[r.response])?r.response:'',basis:String(r.basis||'').slice(0,40)};
+    if(item.pivot)nPivot++;
+    if(item.resp)nResp++;
+    pend.push(item);
+  });
+  if(!pend.length){if(er)er.textContent='沒有任何事件的日期對得上，請確認 AI 有照原日期輸出';return;}
+  /* 摘要:一次看完,三個按鈕決定採用範圍(不逐筆確認,避免又變成手填) */
+  const lines=pend.filter(function(x){return x.pivot||x.resp;}).map(function(x){
+    return'  '+(x.ev.date||'')+' '+(x.ev.label||'')
+      +(x.pivot?'  ★轉折點':'')
+      +(x.resp?'  療效：'+RESP[x.resp]:'')
+      +(x.basis?'（'+x.basis+'）':'');
+  });
+  const msg='AI 判讀結果\n──────────────────────\n'
+    +'轉折點：'+nPivot+' 筆　治療反應：'+nResp+' 筆\n'
+    +(unmatched.length?'⚠ 有 '+unmatched.length+' 筆日期對不上，已略過\n':'')
+    +'──────────────────────\n'
+    +(lines.length?lines.join('\n'):'(AI 沒有標記任何項目)')
+    +'\n──────────────────────\n\n'
+    +'確定 = 全部採用\n取消 = 只採用轉折點（不採用療效判讀）';
+  const useAll=confirm(msg);
+  pend.forEach(function(x){
+    x.ev._ai=x.ev._ai||{};
+    x.ev._ai.pivot=x.pivot;
+    x.ev._ai.basis=x.basis;
+    if(useAll&&x.resp)x.ev._ai.response=x.resp;else delete x.ev._ai.response;
+  });
+  markDirty();closeTlAi();
+  showSaveToast('已套用 AI 判讀：轉折點 '+nPivot+' 筆'+(useAll?'、療效 '+nResp+' 筆':'（未採用療效）'));
+  const cont=document.getElementById('cases-list');
+  if(typeof renderCasesInner==='function'&&cont)renderCasesInner();
+}
 function genImportPrompt(){
   const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出。
 
@@ -7339,10 +8376,22 @@ cc：現病史（Present Illness）
 ph：過去病史（Past History），若無請填 "Nil"
 phChips：慢性病陣列，從以下選填：["HTN","DM","CAD","CVA","HBV","HCV","CKD","COPD"]，無則空陣列
 pathologies：病理，陣列，每筆 {"date":"YYYY-MM-DD","content":"..."}
+  - 【重要】content 不要再寫日期（系統會自動顯示日期標籤，重複寫會顯示兩次）
+  - content 不要以日期開頭（系統顯示時已自動加上日期標題）
   - IHC 結果（ER/PR/HER2/Ki-67 等）放在 content 裡，不要放 markers
 exams：影像檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/SONO/Breast SONO/PET-CT/X-Ray/Echo/Endoscopy/Lab...","date":"YYYY-MM-DD","content":"..."}
+  - 【重要】content 不要再寫檢查名稱與日期（系統會自動顯示成「CT（2026-04-01）」，content 再寫一次就重複）
+    ✓ 正確：{"name":"CT","date":"2026-04-01","content":"Right subphrenic 3.5x3.1 cm nodular lesion"}
+    ✗ 錯誤：{"name":"CT","date":"2026-04-01","content":"CT 2026-04-01：Right subphrenic..."}
+  - 例外：content 內若是「與其他時間點比較」的敘述（如 compared with 2025-11-18 study），該日期要保留
   - 若檢查類型不在上述清單，name 填實際名稱
+  - 【重要】content 不要重複寫檢查名稱與日期（系統顯示時已自動加上「名稱（日期）」標題）
+    * 錯誤：{"name":"CT","date":"2026-04-01","content":"CT abdomen 2026-04-01: no distant metastasis"}
+    * 正確：{"name":"CT","date":"2026-04-01","content":"Abdomen with contrast: no distant metastasis"}
+    * 但 content 中若提到「與某次舊檢查比較」的日期（如 compared with 2025-11-18 study），要保留
 treatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"劑量/說明"}
+  - 【重要】content 不要再寫治療名稱與日期（系統會自動顯示，重複寫會顯示兩次）
+  - content 不要重複寫名稱與日期（系統顯示時已自動加上）
 markers：癌指數（PSA/CEA/CA125/AFP/CA19-9/CA15-3/PIVKA-II/β-hCG/LDH 等，HCC 常用 AFP 與 PIVKA-II），陣列，每筆：
   {"name":"指數名稱","date":"YYYY-MM-DD 或 空字串","content":"值(日期)→值(日期)"}
   - 同一 marker name 在陣列中只能出現一次（多次檢驗併進同一筆的 content 趨勢字串）
@@ -8424,7 +9473,7 @@ function buildTimelineRows(cid,idx,c){
   return ((c.timeline||[]).map(function(tl,ti){
     const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'"'+(t.id===tl.type?' selected':'')+'>'+t.label+'</option>';}).join('');
     return '<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-      +'<select data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="type" style="width:108px;font-size:12px;padding:4px 6px">'+opts+'</select>'
+      +'<select data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="type" style="width:108px;font-size:13px;padding:5px 7px">'+opts+'</select>'
       +'<input type="date" value="'+escA(tl.date||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="date" style="width:148px">'
       +'<input placeholder="自訂說明（空白用預設）" value="'+escA(tl.label||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
       +'<button class="delbtn" data-action="delstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" style="margin-left:auto">×</button>'
@@ -8524,10 +9573,7 @@ document.addEventListener('click',function(e){
           compressImage(re.target.result,2400,2400,0.82,function(compressed){
             c.pathologyImages.push({dataUrl:compressed,name:file.name,caption:file.name.replace(/\.[^.]+$/,'')});
             markDirty();loaded++;
-            if(loaded===files.length){
-              const el=document.getElementById('pathimgs-'+cid+'-'+idx);
-              if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-            }
+            if(loaded===files.length){_imgRedraw('path',cid,idx,c);}/* V5.16.0: 統一重繪 */
           });
         };
         reader.readAsDataURL(file);
@@ -8592,33 +9638,16 @@ document.addEventListener('click',function(e){
     })();return;
   }
   const delsurgimg=e.target.closest('[data-action="delsurgimg"]');
-  if(delsurgimg){
-    const cid=delsurgimg.dataset.cid,idx=parseInt(delsurgimg.dataset.idx),j=parseInt(delsurgimg.dataset.imgidx);
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.surgicalImages.splice(j,1);markDirty();
-    const el=document.getElementById('surgimgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
+  if(delsurgimg){/* V5.16.0: 統一核心 */
+    imgDel('surg',delsurgimg.dataset.cid,parseInt(delsurgimg.dataset.idx),parseInt(delsurgimg.dataset.imgidx));return;
   }
   const clearsurgimgs=e.target.closest('[data-action="clearsurgimgs"]');
-  if(clearsurgimgs){
-    const cid=clearsurgimgs.dataset.cid,idx=parseInt(clearsurgimgs.dataset.idx);
-    if(!confirm('清除所有手術照片？'))return;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.surgicalImages=[];markDirty();
-    const el=document.getElementById('surgimgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
+  if(clearsurgimgs){/* V5.16.0: 統一核心 */
+    imgClear('surg',clearsurgimgs.dataset.cid,parseInt(clearsurgimgs.dataset.idx));return;
   }
   const clearpathimgs=e.target.closest('[data-action="clearpathimgs"]');
-  if(clearpathimgs){
-    const cid=clearpathimgs.dataset.cid,idx=parseInt(clearpathimgs.dataset.idx);
-    if(!confirm('清除所有病理影像？'))return;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.pathologyImages=[];markDirty();
-    const el=document.getElementById('pathimgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
+  if(clearpathimgs){/* V5.16.0: 統一核心 */
+    imgClear('path',clearpathimgs.dataset.cid,parseInt(clearpathimgs.dataset.idx));return;
   }
   const copyshareurlbtn=e.target.closest('[data-action="copyshareurlbtn"]');
   if(copyshareurlbtn){
@@ -8648,53 +9677,69 @@ document.addEventListener('click',function(e){
   const deleteslide=e.target.closest('[data-action="deleteslide"]');
   if(deleteslide){deleteSharedSlide(deleteslide.dataset.fname);return;}
   const previewpathimg=e.target.closest('[data-action="previewpathimg"]');
-  if(previewpathimg){
-    const name=(previewpathimg.dataset.name||'').trim();
-    const dataUrl=(previewpathimg.dataset.dataurl||'').trim();
-    if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
-        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(){alert('無法讀取影像：'+name);});
-    }else{alert(name?'請先選擇資料夾':'無法預覽');} return;
+  if(previewpathimg){/* V5.14.0: 改走統一核心(順帶補上 subFolder 支援與坑 #31 的列舉退回) */
+    _imgPreview({name:previewpathimg.dataset.name,dataUrl:previewpathimg.dataset.dataurl,subFolder:previewpathimg.dataset.subfolder},'病理影像');return;
   }  const previewmammoimg=e.target.closest('[data-action="previewmammoimg"]');
-  if(previewmammoimg){
-    const name=(previewmammoimg.dataset.name||'').trim();
-    const dataUrl=(previewmammoimg.dataset.dataurl||'').trim();
-    if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
-        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(e){alert('無法載入乳攝影像：'+e.message);});
-    }
-    return;
+  if(previewmammoimg){/* V5.14.0: 統一核心 */
+    _imgPreview({name:previewmammoimg.dataset.name,dataUrl:previewmammoimg.dataset.dataurl,subFolder:previewmammoimg.dataset.subfolder},'乳攝影像');return;
   }
   const previewrelatedimg=e.target.closest('[data-action="previewrelatedimg"]');
-  if(previewrelatedimg){
-    const name=(previewrelatedimg.dataset.name||'').trim();
-    const dataUrl=(previewrelatedimg.dataset.dataurl||'').trim();
-    if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&imgFolderHandle){
-      /* V5.11.4 修坑 #31: 含括號檔名 getFileHandle 會失敗,退回列舉比對 */
-      (async function(){
-        let file=null;
-        try{const fh=await imgFolderHandle.getFileHandle(name);file=await fh.getFile();}catch(_e){}
-        if(!file){try{for await(const ent of imgFolderHandle.values()){if(ent.kind==='file'&&ent.name===name){file=await ent.getFile();break;}}}catch(_e2){}}
-        if(file){const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);}
-        else{alert('無法載入影像：找不到檔案 '+name);}
-      })();
+  if(previewrelatedimg){/* V5.14.0: 統一核心(原 V5.11.4 的列舉退回已收進 _imgGetFile) */
+    _imgPreview({name:previewrelatedimg.dataset.name,dataUrl:previewrelatedimg.dataset.dataurl,subFolder:previewrelatedimg.dataset.subfolder},'影像');return;
+  }
+
+  /* V5.17.0: 統一的圖片排序 handler — 五種圖片共用(靠 data-imgtype 判斷,
+     特殊議程沒有 imgtype 屬性,用 data-si 存在與否辨識) */
+  /* V5.18.0: 分頁點切換 / 一鍵套用排版(與 imgmove 同樣靠 imgtype 或 si 辨識類型) */
+  const _imgKindFromEl=function(el){
+    return _imgKindByField(el.dataset.imgtype)||(el.dataset.si!==undefined?'special':null);
+  };
+  const imgbrk=e.target.closest('[data-action="imgbrk"]');
+  if(imgbrk){
+    const _k=_imgKindFromEl(imgbrk);if(!_k)return;
+    imgToggleBrk(_k,imgbrk.dataset.cid,parseInt(_k==='special'?imgbrk.dataset.si:imgbrk.dataset.idx),parseInt(imgbrk.dataset.imgidx));
+    return;
+  }
+  const imglayout=e.target.closest('[data-action="imglayout"]');
+  if(imglayout){
+    const _k=_imgKindFromEl(imglayout);if(!_k)return;
+    imgApplyLayout(_k,imglayout.dataset.cid,parseInt(_k==='special'?imglayout.dataset.si:imglayout.dataset.idx),parseInt(imglayout.dataset.n));
+    return;
+  }
+  /* V5.23.0: 逐欄確認完畢 —— 清除 AI 匯入標記(個管師的工作流:匯入→逐欄查看修改→確認) */
+  const confirmai=e.target.closest('[data-action="confirmai"]');
+  if(confirmai){
+    const c=getSectionItem(confirmai.dataset.cid,'cases',parseInt(confirmai.dataset.idx));
+    if(c){
+      delete c._aiImported;markDirty();
+      const el=confirmai.closest('.casecard');
+      if(el){el.querySelectorAll('.fld-gap').forEach(function(x){x.remove();});}
+      confirmai.remove();
+      showSaveToast('已確認,標記清除');
     }
     return;
   }
-
-  const delpathimg=e.target.closest('[data-action="delpathimg"]');
-  if(delpathimg){
-    const cid=delpathimg.dataset.cid,idx=parseInt(delpathimg.dataset.idx),j=parseInt(delpathimg.dataset.imgidx);
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.pathologyImages.splice(j,1);markDirty();
-    const el=document.getElementById('pathimgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
+  /* V5.25.0: 逐案決定要不要產病程時序圖(個管師選 A —— 填 timeline 當下就決定) */
+  const tlaiopen=e.target.closest('[data-action="tlaiopen"]');
+  if(tlaiopen){openTlAi(tlaiopen.dataset.cid,parseInt(tlaiopen.dataset.caseidx));return;}
+  const updtlshow=e.target.closest('[data-action="updtlshow"]');
+  if(updtlshow){
+    const c=getSectionItem(updtlshow.dataset.cid,'cases',parseInt(updtlshow.dataset.caseidx));
+    if(c){c.showTimeline=!!updtlshow.checked;markDirty();}
     return;
+  }
+  const imgmove=e.target.closest('[data-action="imgmove"]');
+  if(imgmove){
+    if(imgmove.hasAttribute('disabled'))return;
+    const _k=_imgKindByField(imgmove.dataset.imgtype)||(imgmove.dataset.si!==undefined?'special':null);
+    if(!_k)return;
+    const _i=parseInt(_k==='special'?imgmove.dataset.si:imgmove.dataset.idx);
+    imgMove(_k,imgmove.dataset.cid,_i,parseInt(imgmove.dataset.imgidx),parseInt(imgmove.dataset.dir));
+    return;
+  }
+  const delpathimg=e.target.closest('[data-action="delpathimg"]');
+  if(delpathimg){/* V5.16.0: 統一核心 */
+    imgDel('path',delpathimg.dataset.cid,parseInt(delpathimg.dataset.idx),parseInt(delpathimg.dataset.imgidx));return;
   }
   const pickimgfolder=e.target.closest('[data-action="pickimgfolder"]');
   if(pickimgfolder){
@@ -8756,7 +9801,13 @@ document.addEventListener('click',function(e){
           if(elR){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elR.replaceWith(tmp.firstElementChild);}
         };
         document.getElementById('imgfolder-ok').onclick=function(){
-          const checked=[...overlay.querySelectorAll('#imgfolder-list input:checked')].map(function(x){return x.value;}).slice(0,maxN);
+          /* V5.17.0: 原本 slice(0,maxN) 是無聲截斷 —— 使用者勾了 10 張、只進 5 張卻沒有任何提示。
+             改成先算超出量,明確告知被略過幾張(仍照原本順序取前 maxN 張) */
+          const _allChecked=[...overlay.querySelectorAll('#imgfolder-list input:checked')].map(function(x){return x.value;});
+          const checked=_allChecked.slice(0,maxN);
+          if(_allChecked.length>maxN){
+            alert('最多只能加入 '+maxN+' 張，您勾選了 '+_allChecked.length+' 張。\n\n將取前 '+maxN+' 張，略過後面 '+(_allChecked.length-maxN)+' 張。');
+          }
           if(type==='mammo'){c.mammo.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''};});}
           else{c.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''};});}
           markDirty();document.body.removeChild(overlay);
@@ -8782,24 +9833,12 @@ document.addEventListener('click',function(e){
     return;
   }
   const clearimgs=e.target.closest('[data-action="clearimgs"]');
-  if(clearimgs){
-    const cid=clearimgs.dataset.cid,idx=parseInt(clearimgs.dataset.idx);
-    if(!confirm('清除所有相關影像？'))return;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    c.images=[];markDirty();
-    const el=document.getElementById('imgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
+  if(clearimgs){/* V5.16.0: 統一核心 */
+    imgClear('related',clearimgs.dataset.cid,parseInt(clearimgs.dataset.idx));return;
   }
   const clearmammoimgs=e.target.closest('[data-action="clearmammoimgs"]');
-  if(clearmammoimgs){
-    const cid=clearmammoimgs.dataset.cid,idx=parseInt(clearmammoimgs.dataset.idx);
-    if(!confirm('清除乳攝影像？'))return;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    if(c.mammo)c.mammo.images=[];markDirty();
-    const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
-    if(el){const tmp=document.createElement('div');tmp.innerHTML=buildMammoImgArea(cid,idx,c);el.replaceWith(tmp.firstElementChild);}
-    return;
+  if(clearmammoimgs){/* V5.16.0: 統一核心 */
+    imgClear('mammo',clearmammoimgs.dataset.cid,parseInt(clearmammoimgs.dataset.idx));return;
   }
   const del=e.target.closest('[data-action="delimg"]');
   if(del){delImg(del.dataset.cid,parseInt(del.dataset.idx),parseInt(del.dataset.imgidx));return;}
@@ -8813,20 +9852,22 @@ document.addEventListener('click',function(e){
       reader.onload=function(re){
         ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
         if(!c.mammo)c.mammo={date:'',report:'',images:[]};
-        if(c.mammo.images.length>=2)return;
+        if(c.mammo.images.length>=6)return;/* V5.17.0: 2→6 */
         // Compress image before storing
         const img2=new Image();
         img2.onload=function(){
-          const MAX=1200;
+          /* V5.15.0 修模糊:原為 1200px/0.75,比病理上傳(2400/0.82)差很多,
+             放大鏡放大 3.5 倍時明顯糊掉。統一成 2400/0.82 */
+          const MAX=2400;
           const scale=Math.min(1,MAX/Math.max(img2.width,img2.height));
           const cv=document.createElement('canvas');
           cv.width=Math.round(img2.width*scale);cv.height=Math.round(img2.height*scale);
           cv.getContext('2d').drawImage(img2,0,0,cv.width,cv.height);
-          const compressed=cv.toDataURL('image/jpeg',0.75);
+          const compressed=cv.toDataURL('image/jpeg',0.82);/* V5.15.0: 0.75→0.82 與病理一致 */
           ensureSec(cid);const c2=S.meeting.sections[cid].cases[idx];if(!c2)return;
           if(!c2.mammo)c2.mammo={date:'',report:'',images:[]};
-          if(c2.mammo.images.length>=2)return;
-          c2.mammo.images.push({dataUrl:compressed,name:file.name,caption:''});
+          if(c2.mammo.images.length>=6)return;/* V5.17.0: 2→6 */
+          c2.mammo.images.push({dataUrl:compressed,name:file.name,caption:file.name.replace(/\.[^.]+$/,'')});/* V5.17.0: 預載原檔名(原本存空字串,匯出 JSON 會掉題字) */
           markDirty();
           const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
           if(el){const tmp2=document.createElement('div');tmp2.innerHTML=buildMammoImgArea(cid,idx,c2);el.replaceWith(tmp2.firstElementChild);}
@@ -8839,25 +9880,12 @@ document.addEventListener('click',function(e){
     return;
   }
   const delmammo=e.target.closest('[data-action="delmammoimg"]');
-  if(delmammo){
-    const cid=delmammo.dataset.cid,idx=parseInt(delmammo.dataset.idx),j=parseInt(delmammo.dataset.imgidx);
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c||!c.mammo)return;
-    c.mammo.images.splice(j,1);markDirty();
-    const el=document.getElementById('mammo-imgs-'+cid+'-'+idx);
-    if(el){const tmp2=document.createElement('div');tmp2.innerHTML=buildMammoImgArea(cid,idx,c);el.replaceWith(tmp2.firstElementChild);}
-    return;
+  if(delmammo){/* V5.16.0: 統一核心 */
+    imgDel('mammo',delmammo.dataset.cid,parseInt(delmammo.dataset.idx),parseInt(delmammo.dataset.imgidx));return;
   }
   const previewsurgimg=e.target.closest('[data-action="previewsurgimg"]');
-  if(previewsurgimg){
-    const name=(previewsurgimg.dataset.name||'').trim();
-    const dataUrl=(previewsurgimg.dataset.dataurl||'').trim();
-    if(dataUrl){viewImg(dataUrl);return;}
-    if(name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(name).then(function(fh){return fh.getFile();}).then(function(file){
-        const r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(e){alert('無法載入手術照片：'+e.message);});
-    }
-    return;
+  if(previewsurgimg){/* V5.14.0: 統一核心 */
+    _imgPreview({name:previewsurgimg.dataset.name,dataUrl:previewsurgimg.dataset.dataurl,subFolder:previewsurgimg.dataset.subfolder},'手術照片');return;
   }
   const updcrpatient=e.target.closest('[data-action="updcrpatient"]');
   if(updcrpatient){
@@ -8886,22 +9914,13 @@ document.addEventListener('click',function(e){
     return;
   }
   const clearspecialimgs=e.target.closest('[data-action="clearspecialimgs"]');
-  if(clearspecialimgs){
-    var _cid=clearspecialimgs.dataset.cid,_si=parseInt(clearspecialimgs.dataset.si);
-    ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_si];
-    if(_d){_d.images=[];markDirty();}
-    var cont=document.getElementById('special-img-area-'+_cid+'-'+_si);
-    if(cont)cont.innerHTML=buildSpecialImgArea(_cid,_si,_d||{});
+  if(clearspecialimgs){/* V5.16.0: 統一核心(原本就沒有 confirm,註冊表 clearMsg 留空保留此行為) */
+    imgClear('special',clearspecialimgs.dataset.cid,parseInt(clearspecialimgs.dataset.si));
     return;
   }
   const delspecialimg=e.target.closest('[data-action="delspecialimg"]');
-  if(delspecialimg){
-    var _cid=delspecialimg.dataset.cid,_si=parseInt(delspecialimg.dataset.si),_ji=parseInt(delspecialimg.dataset.imgidx);
-    ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_si];
-    if(_d&&_d.images){_d.images.splice(_ji,1);markDirty();}
-    var cont=document.getElementById('special-img-area-'+_cid+'-'+_si);
-    if(cont)cont.innerHTML=buildSpecialImgArea(_cid,_si,_d);
-    return;
+  if(delspecialimg){/* V5.16.0: 統一核心(special 索引參數是 si 不是 idx) */
+    imgDel('special',delspecialimg.dataset.cid,parseInt(delspecialimg.dataset.si),parseInt(delspecialimg.dataset.imgidx));return;
   }
   const craddpt=e.target.closest('[data-action="craddpatient"]');
   if(craddpt){crAddPatient(craddpt.dataset.cid,parseInt(craddpt.dataset.si));return;}
@@ -8919,12 +9938,8 @@ document.addEventListener('click',function(e){
     ensureSec(_cid);var _sp=S.meeting.sections[_cid].special[_si];
     if(!_sp||!_sp.images||!_sp.images[_ji])return;
     var _img=_sp.images[_ji];
-    if(_img.dataUrl){viewImg(_img.dataUrl);return;}
-    if(_img.name&&imgFolderHandle){
-      imgFolderHandle.getFileHandle(_img.name).then(function(fh){return fh.getFile();}).then(function(file){
-        var r=new FileReader();r.onload=function(ev){viewImg(ev.target.result);};r.readAsDataURL(file);
-      }).catch(function(e){alert('無法載入影像：'+e.message);});
-    }
+    /* V5.14.0: 統一核心(特殊議程的圖從 S.meeting 取,但找檔/預覽邏輯與其他四種共用) */
+    _imgPreview(_img,'特殊議程影像');
     return;
   }
   const view=e.target.closest('[data-action="viewimg"]');
@@ -8997,19 +10012,15 @@ document.addEventListener('click',function(e){
 // Input/change delegation for struct fields
 document.addEventListener('input',function(e){
   var sic=e.target.closest('[data-action="updspecialimgcap"]');
-  if(sic){var _cid=sic.dataset.cid,_si=parseInt(sic.dataset.si),_ji=parseInt(sic.dataset.imgidx);ensureSec(_cid);var _d=S.meeting.sections[_cid].special[_si];if(_d&&_d.images&&_d.images[_ji])_d.images[_ji].caption=sic.value;markDirty();return;}
+  if(sic){/* V5.16.0: 統一核心 */imgSetCaption('special',sic.dataset.cid,parseInt(sic.dataset.si),parseInt(sic.dataset.imgidx),sic.value);return;}
 },true);
 document.addEventListener('change',function(e){
   const updcrp=e.target.closest('[data-action="updcrpatient"]');
   if(updcrp){var _cid=updcrp.dataset.cid,_si=parseInt(updcrp.dataset.si),_pi=parseInt(updcrp.dataset.pi),_key=updcrp.dataset.key;crUpdPatient(_cid,_si,_pi,_key,updcrp.value);return;}
   const cap=e.target.closest('[data-action="updimgcaption"]');
-  if(cap){
-    const cid=cap.dataset.cid,idx=parseInt(cap.dataset.idx),j=parseInt(cap.dataset.imgidx);
-    const itype=cap.dataset.imgtype;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
-    const arr=itype==='mammo'?(c.mammo=c.mammo||{images:[]},c.mammo.images):c[itype]||[];
-    if(arr[j])arr[j].caption=cap.value.trim();
-    markDirty();
+  if(cap){/* V5.16.0: 統一核心。data-imgtype 帶的是資料欄位名,經 _imgKindByField 轉成註冊表 kind */
+    const _k=_imgKindByField(cap.dataset.imgtype);
+    if(_k)imgSetCaption(_k,cap.dataset.cid,parseInt(cap.dataset.idx),parseInt(cap.dataset.imgidx),cap.value.trim());
     return;
   }
 });
@@ -9166,6 +10177,37 @@ function updateImgFolderSettingsStatus(){
      用 iframe 而非直接內嵌,因為 AudioSplitter 有 const VERSION 與 12 個通用 CSS class(row/meta/primary...)
      會跟 MDT 撞名。iframe 是同源沙盒:功能不受限(檔案上傳/AudioContext/下載都正常),但變數與樣式完全隔離,
      AudioSplitter 可獨立升版不用改一行。src 延遲到第一次開啟才設,避免拖慢 MDT 啟動。 -->
+<!-- V5.25.0: 病程時序 AI 判讀 -->
+<div id="tlai-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:center;justify-content:center;padding:3vh 3vw">
+  <div style="background:var(--surface);border-radius:8px;width:min(880px,95vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--blt)">
+      <span style="font-weight:700;font-size:15px;color:var(--text)">🤖 病程時序 AI 判讀</span>
+      <button class="btn btn-b btn-sm" style="margin-left:auto;font-size:12px" onclick="closeTlAi()">關閉</button>
+    </div>
+    <div style="flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:12px;color:var(--textmd);line-height:1.6;background:#F4F6F8;padding:9px 12px;border-radius:4px">
+        <b>步驟</b>：① 複製下方提示詞 → ② 貼給院內 AI → ③ 把 AI 回傳的 JSON 貼到下面 → ④ 套用<br>
+        AI 只判讀「病程轉折點」與「治療反應」，<b>不會修改您填的任何資料</b>，判讀結果在圖上會標示為 AI。
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;margin-bottom:5px">
+          <label style="font-size:12px">① 提示詞（含本個案臨床資料）</label>
+          <button class="btn btn-a btn-sm" style="margin-left:auto;font-size:12px" onclick="copyTlAiPrompt()">複製提示詞</button>
+        </div>
+        <textarea id="tlai-prompt" readonly style="width:100%;height:150px;font-size:11px;font-family:ui-monospace,monospace;padding:8px;border:1px solid var(--blt);border-radius:4px;background:#FAFBFC;resize:vertical"></textarea>
+      </div>
+      <div>
+        <label style="font-size:12px;display:block;margin-bottom:5px">② 貼上 AI 回傳的 JSON</label>
+        <textarea id="tlai-json" placeholder='{"events":[{"date":"2026-03-05","pivot":false,"response":"stable","basis":"AFP 下降"}]}' style="width:100%;height:130px;font-size:12px;font-family:ui-monospace,monospace;padding:8px;border:1px solid var(--blt);border-radius:4px;resize:vertical"></textarea>
+        <div id="tlai-err" style="color:var(--err);font-size:12px;margin-top:6px;min-height:16px"></div>
+      </div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--blt);display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-b" onclick="closeTlAi()">取消</button>
+      <button class="btn btn-a" onclick="doImportTlAi()">套用判讀</button>
+    </div>
+  </div>
+</div>
 <div id="audio-splitter-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:center;justify-content:center;padding:2vh 2vw">
   <div style="background:#fff;border-radius:8px;width:min(1240px,96vw);height:min(92vh,960px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.32)">
     <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--blt);flex-shrink:0;background:var(--surface)">
