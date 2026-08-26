@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.27.1';
+const VERSION='V5.27.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -7037,15 +7037,19 @@ async function genHTMLSlides(opts){
         if(_emb[type])return '';
         return n>0?(' <button class="patho-btn" onclick="openImgWindow(\'ci-'+caseIndex+'::'+type+'\')" title="開新分頁查看'+label+'">'+icon+' '+label+'('+n+')</button>'):'';
       };
-      /* V5.27.0: 四種影像若設為「夾在投影片」,在此產出獨立影像頁 */
-      _embedImgSlides('patho',c.pathologyImages,'病理影像');
-      _embedImgSlides('surg',c.surgicalImages,'手術照片');
-      _embedImgSlides('related',c.images,'影像');
+      /* V5.27.0: 四種影像若設為「夾在投影片」,在此產出獨立影像頁
+         V5.27.2 順序(個管師指定,依臨床時序而非程式碼順序):
+           乳房攝影(篩檢/初始影像)→ 相關影像(分期)→ 手術照片(術中所見)→ 病理影像(術後病理)
+         原本是「病理→手術→相關→乳攝」,剛好與臨床邏輯相反(病理最後才有卻排第一) */
       if(cid==='breast'&&c.mammo)_embedImgSlides('mammo',c.mammo.images,'乳房攝影');
-      var _pathoBtn=_mkImgBtn('patho','🔬','病理影像',_nPatho)
-                   +_mkImgBtn('surg','📷','手術照片',_nSurg)
+      _embedImgSlides('related',c.images,'影像');
+      _embedImgSlides('surg',c.surgicalImages,'手術照片');
+      _embedImgSlides('patho',c.pathologyImages,'病理影像');
+      /* V5.27.2: 按鈕順序與夾投影片順序一致(乳攝→影像→手術→病理),視覺與臨床時序同步 */
+      var _pathoBtn=_mkImgBtn('mammo','📸','乳房攝影',_mammoBtnN)
                    +_mkImgBtn('related','🖼','影像',_nRel)
-                   +_mkImgBtn('mammo','📸','乳房攝影',_mammoBtnN)/* V5.15.1 */
+                   +_mkImgBtn('surg','📷','手術照片',_nSurg)
+                   +_mkImgBtn('patho','🔬','病理影像',_nPatho)
                    +((_nTl>0&&!_emb.timeline)?(' <button class="patho-btn" onclick="openTimelineWindow(\'ci-'+caseIndex+'\')" title="開新分頁查看病程時序圖">📈 病程時序('+_nTl+')</button>'):'');/* V5.25.0 / V5.27.0 互斥 */
       slides.push('<section class="slide case" style="--ca:'+caColor+';">'
         +'<div class="ch">'
