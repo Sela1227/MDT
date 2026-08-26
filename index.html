@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.26.3';
+const VERSION='V5.27.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3591,14 +3591,14 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>病理</label>${addBtn('pathologies')}</div>
     <div id="pathlist-${cid}-${i}">${pathRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr"><label>病理染色影像</label></div>
+  <div class="fg full"><div class="field-hdr"><label>病理染色影像</label>${embedToggle(cid,i,'patho',d)}</div>
     ${buildPathImgArea(cid,i,d)}
   </div>
   <div class="fg full"><div class="field-hdr"><label>影像檢查</label>${addBtn('exams')}</div>
     <div id="examlist-${cid}-${i}">${examRows}</div>
   </div>
   ${cid==='breast'?`<div class="fg full">
-    <div class="field-hdr"><label>乳房攝影</label></div>
+    <div class="field-hdr"><label>乳房攝影</label>${embedToggle(cid,i,'mammo',d)}</div>
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
       <span style="font-size:11px;color:var(--textlt)">日期</span>
       <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" style="font-size:12px;padding:5px 8px">
@@ -3612,14 +3612,14 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label><!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
+  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label>${embedToggle(cid,i,'surg',d)}<!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
     ${buildSurgicalImgArea(cid,i,d)}
   </div>
-  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>相關影像</label><!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
+  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>相關影像</label>${embedToggle(cid,i,'related',d)}<!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
     ${buildImgArea(cid,i,d)}
   </div>
 
-  <div class="fsec">治療事件軸<label style="float:right;font-weight:600;font-size:11px;letter-spacing:normal;color:var(--textmd);cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="checkbox" data-action="updtlshow" data-cid="${cid}" data-caseidx="${i}"${d.showTimeline?' checked':''} style="width:14px;height:14px;cursor:pointer">產出時包含病程時序圖</label><button class="btn btn-b btn-sm" data-action="tlaiopen" data-cid="${cid}" data-caseidx="${i}" style="float:right;margin-right:10px;font-size:11px;padding:2px 10px;color:var(--acc)" title="匯出臨床資料給 AI 判讀病程轉折與治療反應">🤖 AI 判讀</button></div>
+  <div class="fsec">治療事件軸<label style="float:right;font-weight:600;font-size:11px;letter-spacing:normal;color:var(--textmd);cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="checkbox" data-action="updtlshow" data-cid="${cid}" data-caseidx="${i}"${d.showTimeline?' checked':''} style="width:14px;height:14px;cursor:pointer">產出時包含病程時序圖</label>${d.showTimeline?embedToggle(cid,i,'timeline',d):''}<button class="btn btn-b btn-sm" data-action="tlaiopen" data-cid="${cid}" data-caseidx="${i}" style="float:right;margin-right:10px;font-size:11px;padding:2px 10px;color:var(--acc)" title="匯出臨床資料給 AI 判讀病程轉折與治療反應">🤖 AI 判讀</button></div>
   <div class="fg full">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
       <button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="timeline" style="display:inline-block;width:auto;font-size:11px;padding:3px 10px">＋ 新增事件</button>
@@ -4656,6 +4656,17 @@ function getSectionList(cid,type){
 function getSectionItem(cid,type,i){
   return getSectionList(cid,type)[i]||null;
 }
+/* V5.27.0: 影像/時序「夾投影片 vs 開新分頁」切換的共用 UI。
+   逐個案、逐類型各自可選(個管師選 A:最靈活)。放在各影像區塊的標題列右側。 */
+function embedToggle(cid,i,kind,d){
+  const on=!!(d&&d.embed&&d.embed[kind]);
+  return '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--textlt)">'
+    +'<button class="btn btn-b btn-sm" data-action="setembed" data-cid="'+cid+'" data-caseidx="'+i+'" data-kind="'+kind+'" data-val="0"'
+    +' style="font-size:10.5px;padding:1px 8px;'+(!on?'background:var(--acc);color:#fff;border-color:var(--acc)':'opacity:.65')+'">開新分頁</button>'
+    +'<button class="btn btn-b btn-sm" data-action="setembed" data-cid="'+cid+'" data-caseidx="'+i+'" data-kind="'+kind+'" data-val="1"'
+    +' style="font-size:10.5px;padding:1px 8px;'+(on?'background:var(--acc);color:#fff;border-color:var(--acc)':'opacity:.65')+'">夾在投影片</button>'
+    +'</span>';
+}
 function ensureArray(obj,key){
   if(!obj)return[];
   if(!Array.isArray(obj[key]))obj[key]=[];
@@ -4703,6 +4714,12 @@ function createCase(cid,data,opts){
     flags:_arr(data.flags),                     /* ← 匯入原本缺 */
     timeline:_arr(data.timeline),
     showTimeline:!!data.showTimeline,/* V5.25.0: 逐案決定是否產病程時序圖 */
+    /* V5.27.0: 逐案、逐類型決定「夾在投影片」還是「開新分頁」。
+       預設 false = 開新分頁(維持 V5.15.0 起的行為,既有會議不受影響) */
+    embed:(data.embed&&typeof data.embed==='object')?{
+      patho:!!data.embed.patho,surg:!!data.embed.surg,related:!!data.embed.related,
+      mammo:!!data.embed.mammo,timeline:!!data.embed.timeline
+    }:{patho:false,surg:false,related:false,mammo:false,timeline:false},
     note:data.note||''
   };
 }
@@ -4818,7 +4835,15 @@ async function shareHTMLSlides(){
   try{
     readForm();
     const m=S.meeting,cids=S.cids;
-    const ghFname=m.date+'_'+(CFG[cids[0]]?.name||cids[0])+'多專科會議.html';
+    /* V5.27.1: 分享網址縮短 —— 原本檔名含中文(如「頭頸癌多專科會議」),
+       經 URL 編碼後 9 個中文字會膨脹成 81 個字元,佔網址一大半:
+         舊 /slides/2026-06-18_%E9%A0%AD%E9%A0%B8%E7%99%8C%E5%A4%9A%E5%B0%88%E7%A7%91%E6%9C%83%E8%AD%B0.html
+         新 /slides/2026-06-18_HeadNeck.html
+       改用既有的 CANCER_EN_CODES(HTML 下載的英文檔名選項本來就在用),
+       合併會議以 - 連接(+ 會被編碼成 %2B)。舊連結不受影響(檔案仍在);同名仍覆蓋(維持原行為)。 */
+    /* 合併會議用 - 連接:+ 會被 URL 編碼成 %2B(3 字元),- 不會被編碼 */
+    const _enCode=cids.map(function(id){return CANCER_EN_CODES[id]||id;}).join('-');
+    const ghFname=m.date+'_'+_enCode+'.html';
     if(!confirm('將上傳「'+ghFname+'」至 GitHub Pages\n\n佈署需約 3 分鐘後才能分享連結\n\n確定上傳？'))return;
     if(btn){btn.textContent='上傳中...';}
     showSaveToast('正在產生並上傳...');
@@ -6944,6 +6969,43 @@ async function genHTMLSlides(opts){
       _slideMeta.push({idx:slides.length,type:'case',cancer:ca.name,
         chartNo:c.chartNo||'',name:c.name?maskName(c.name):'',
         dx:(c.diagnosis||'').slice(0,40)});
+      /* V5.27.0: 通用「夾在投影片」產生器 —— 依 pageBreak 分組,每組一頁 grid 排版。
+         沿用特殊議程影像頁的版型,確保四種影像視覺一致。
+         回傳實際產出的頁數;embed=false 時不產任何投影片(改走按鈕)。 */
+      var _emb=(c.embed||{});
+      var _embedImgSlides=function(kind,imgs,label){
+        if(!_emb[kind])return 0;
+        var list=(imgs||[]).map(function(img){
+          return{caption:img.caption||img.name||'',
+                 src:img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'',
+                 pageBreak:!!img.pageBreak};
+        }).filter(function(x){return !!x.src;});
+        if(!list.length)return 0;
+        var grps=[];
+        list.forEach(function(im,gi){if(gi===0||im.pageBreak)grps.push([]);grps[grps.length-1].push(im);});
+        var n=0;
+        grps.forEach(function(g){
+          var gn=g.length;
+          var cols=gn<=1?1:(gn<=4?2:3),rows=gn<=2?1:(gn<=6?2:Math.ceil(gn/3));
+          var gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+          var ih=g.map(function(im){
+            return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
+              +'<img src="'+im.src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
+              +(im.caption?'<div class="img-cap">'+escA(im.caption)+'</div>':'')+'</div>';
+          }).join('');
+          var cap=(gn===1&&g[0].caption)?escA(g[0].caption):'';
+          slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
+            +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+            +'<span class="cno">'+escA(c.chartNo||'')+'</span>'
+            +'<span class="cnm">'+escA(c.name?maskName(c.name):'')+'</span>'
+            +(cap?'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9)">'+cap+'</span>':'')
+            +'<span class="cat">'+escA(label)+(gn>1?'（'+gn+' 張）':'')+'</span></div></div>'
+            +'<div style="'+gSt+'">'+ih+'</div>'
+            +'</section>');
+          n++;
+        });
+        return n;
+      };
       /* 先累積三種圖片(回傳實際載得到的張數),再據此組按鈕 */
       var _nPatho=_pushImgWin('ci-'+caseIndex,'patho','病理影像','病理染色',_imgMeta,c.pathologyImages);
       var _nSurg =_pushImgWin('ci-'+caseIndex,'surg','手術照片','手術照片',_imgMeta,c.surgicalImages);
@@ -6970,14 +7032,21 @@ async function genHTMLSlides(opts){
         :0;
       /* 按鈕要顯示的數量:有報告但沒圖時也要能點開,所以用「圖數 or (有報告則 1)」 */
       var _mammoBtnN=_nMammo||(_mammoRep?1:0);
+      /* V5.27.0: 夾在投影片的類型不出按鈕(避免同一批圖既在投影片又在分頁) */
       var _mkImgBtn=function(type,icon,label,n){
+        if(_emb[type])return '';
         return n>0?(' <button class="patho-btn" onclick="openImgWindow(\'ci-'+caseIndex+'::'+type+'\')" title="開新分頁查看'+label+'">'+icon+' '+label+'('+n+')</button>'):'';
       };
+      /* V5.27.0: 四種影像若設為「夾在投影片」,在此產出獨立影像頁 */
+      _embedImgSlides('patho',c.pathologyImages,'病理影像');
+      _embedImgSlides('surg',c.surgicalImages,'手術照片');
+      _embedImgSlides('related',c.images,'影像');
+      if(cid==='breast'&&c.mammo)_embedImgSlides('mammo',c.mammo.images,'乳房攝影');
       var _pathoBtn=_mkImgBtn('patho','🔬','病理影像',_nPatho)
                    +_mkImgBtn('surg','📷','手術照片',_nSurg)
                    +_mkImgBtn('related','🖼','影像',_nRel)
                    +_mkImgBtn('mammo','📸','乳房攝影',_mammoBtnN)/* V5.15.1 */
-                   +(_nTl>0?(' <button class="patho-btn" onclick="openTimelineWindow(\'ci-'+caseIndex+'\')" title="開新分頁查看病程時序圖">📈 病程時序('+_nTl+')</button>'):'');/* V5.25.0 */
+                   +((_nTl>0&&!_emb.timeline)?(' <button class="patho-btn" onclick="openTimelineWindow(\'ci-'+caseIndex+'\')" title="開新分頁查看病程時序圖">📈 病程時序('+_nTl+')</button>'):'');/* V5.25.0 / V5.27.0 互斥 */
       slides.push('<section class="slide case" style="--ca:'+caColor+';">'
         +'<div class="ch">'
         +'<div class="cht">'
@@ -7560,7 +7629,7 @@ window.openTimelineWindow=function(caseId){
   var realSpan=(t1-t0)||1;
   var compressed=segs.reduce(function(a,g){return a+(g.b-g.a);},0);
   var flowSpan=(realSpan-compressed)||1;
-  var W=1680,padL=200,padR=140,headH=104;
+  var W=1680,padL=250,padR=140,headH=104;/* V5.26.3: padL 200→250,讓軌名與副標有足夠空間 */
   var usableW=W-padL-padR-segs.length*GAP_W;
   var xOf=function(t){
     if(t===null)return padL;
@@ -7672,9 +7741,12 @@ window.openTimelineWindow=function(caseId){
     var tiers=tierOf(list);
     list.forEach(function(q,qi){
       var e=q.o,x=q.x,cfg=cfgOf(e.type),tr=tiers[qi];
+      /* V5.26.3 修:事件標籤是 text-anchor=middle,靠左的事件會往左延伸撞進軌名區(x<padL)。
+         給標籤 x 一個下限,只移文字不移節點(節點仍在真實日期,引線會斜著連過去) */
+      var lblX=Math.max(x,padL+90);/* V5.26.3: 下限拉大,確保長標籤置中後不入侵軌名區 */
       var ly=y-30-tr*38;
       /* 引線:節點在真實日期,標籤往上錯開時用細線連回來 */
-      svg+='<line x1="'+x+'" y1="'+(y-11)+'" x2="'+x+'" y2="'+(ly+7)+'" stroke="'+cfg.color+'" stroke-width="1.2" opacity=".45"/>';
+      svg+='<line x1="'+x+'" y1="'+(y-11)+'" x2="'+lblX+'" y2="'+(ly+7)+'" stroke="'+cfg.color+'" stroke-width="1.2" opacity=".45"/>';
       svg+='<circle cx="'+x+'" cy="'+y+'" r="9.5" fill="'+cfg.color+'"/>';
       /* V5.26.3: 標籤 x 加下限,避免 text-anchor=middle 往左延伸壓到軌名區 */
       var lxp=Math.max(x,padL+52);
@@ -9792,6 +9864,25 @@ document.addEventListener('click',function(e){
   /* V5.25.0: 逐案決定要不要產病程時序圖(個管師選 A —— 填 timeline 當下就決定) */
   const tlaiopen=e.target.closest('[data-action="tlaiopen"]');
   if(tlaiopen){openTlAi(tlaiopen.dataset.cid,parseInt(tlaiopen.dataset.caseidx));return;}
+  /* V5.27.0: 切換該類影像「夾投影片 / 開新分頁」 */
+  const setembed=e.target.closest('[data-action="setembed"]');
+  if(setembed){
+    const c=getSectionItem(setembed.dataset.cid,'cases',parseInt(setembed.dataset.caseidx));
+    if(c){
+      if(!c.embed)c.embed={};
+      c.embed[setembed.dataset.kind]=(setembed.dataset.val==='1');
+      markDirty();
+      const card=setembed.closest('.casecard');
+      if(card){
+        card.querySelectorAll('[data-action="setembed"][data-kind="'+setembed.dataset.kind+'"]').forEach(function(b){
+          const isOn=(b.dataset.val==='1'),sel=(isOn===c.embed[setembed.dataset.kind]);
+          b.style.cssText=b.style.cssText.replace(/background:[^;]*;?/,'').replace(/color:#fff;?/,'').replace(/border-color:[^;]*;?/,'').replace(/opacity:[^;]*;?/,'');
+          b.style.cssText+=sel?'background:var(--acc);color:#fff;border-color:var(--acc);':'opacity:.65;';
+        });
+      }
+    }
+    return;
+  }
   const updtlshow=e.target.closest('[data-action="updtlshow"]');
   if(updtlshow){
     const c=getSectionItem(updtlshow.dataset.cid,'cases',parseInt(updtlshow.dataset.caseidx));
