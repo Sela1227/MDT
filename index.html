@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.27.2';
+const VERSION='V5.27.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6974,16 +6974,16 @@ async function genHTMLSlides(opts){
          回傳實際產出的頁數;embed=false 時不產任何投影片(改走按鈕)。 */
       var _emb=(c.embed||{});
       var _embedImgSlides=function(kind,imgs,label){
-        if(!_emb[kind])return 0;
+        if(!_emb[kind])return [];
         var list=(imgs||[]).map(function(img){
           return{caption:img.caption||img.name||'',
                  src:img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'',
                  pageBreak:!!img.pageBreak};
         }).filter(function(x){return !!x.src;});
-        if(!list.length)return 0;
+        if(!list.length)return [];
         var grps=[];
         list.forEach(function(im,gi){if(gi===0||im.pageBreak)grps.push([]);grps[grps.length-1].push(im);});
-        var n=0;
+        var out=[];
         grps.forEach(function(g){
           var gn=g.length;
           var cols=gn<=1?1:(gn<=4?2:3),rows=gn<=2?1:(gn<=6?2:Math.ceil(gn/3));
@@ -6994,7 +6994,7 @@ async function genHTMLSlides(opts){
               +(im.caption?'<div class="img-cap">'+escA(im.caption)+'</div>':'')+'</div>';
           }).join('');
           var cap=(gn===1&&g[0].caption)?escA(g[0].caption):'';
-          slides.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
+          out.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
             +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
             +'<span class="cno">'+escA(c.chartNo||'')+'</span>'
             +'<span class="cnm">'+escA(c.name?maskName(c.name):'')+'</span>'
@@ -7002,9 +7002,8 @@ async function genHTMLSlides(opts){
             +'<span class="cat">'+escA(label)+(gn>1?'（'+gn+' 張）':'')+'</span></div></div>'
             +'<div style="'+gSt+'">'+ih+'</div>'
             +'</section>');
-          n++;
         });
-        return n;
+        return out;/* V5.27.3: 只回傳,由呼叫端決定何時 push */
       };
       /* 先累積三種圖片(回傳實際載得到的張數),再據此組按鈕 */
       var _nPatho=_pushImgWin('ci-'+caseIndex,'patho','病理影像','病理染色',_imgMeta,c.pathologyImages);
@@ -7041,10 +7040,16 @@ async function genHTMLSlides(opts){
          V5.27.2 順序(個管師指定,依臨床時序而非程式碼順序):
            乳房攝影(篩檢/初始影像)→ 相關影像(分期)→ 手術照片(術中所見)→ 病理影像(術後病理)
          原本是「病理→手術→相關→乳攝」,剛好與臨床邏輯相反(病理最後才有卻排第一) */
-      if(cid==='breast'&&c.mammo)_embedImgSlides('mammo',c.mammo.images,'乳房攝影');
-      _embedImgSlides('related',c.images,'影像');
-      _embedImgSlides('surg',c.surgicalImages,'手術照片');
-      _embedImgSlides('patho',c.pathologyImages,'病理影像');
+      /* V5.27.3 修:原本在這裡直接 push,導致影像頁排在個案文字頁**之前**
+         (翻頁變成 乳攝→影像→手術→病理→病人資料,完全顛倒)。
+         根因:V5.27.0 為了讓按鈕拿到張數,把產生器放在組按鈕之前 ——
+         但它同時也負責 push,「算張數」與「排版位置」兩件事該分開。
+         改成先收集,等個案文字頁 push 完再接上。 */
+      var _embSlides=[];
+      if(cid==='breast'&&c.mammo)_embSlides=_embSlides.concat(_embedImgSlides('mammo',c.mammo.images,'乳房攝影'));
+      _embSlides=_embSlides.concat(_embedImgSlides('related',c.images,'影像'));
+      _embSlides=_embSlides.concat(_embedImgSlides('surg',c.surgicalImages,'手術照片'));
+      _embSlides=_embSlides.concat(_embedImgSlides('patho',c.pathologyImages,'病理影像'));
       /* V5.27.2: 按鈕順序與夾投影片順序一致(乳攝→影像→手術→病理),視覺與臨床時序同步 */
       var _pathoBtn=_mkImgBtn('mammo','📸','乳房攝影',_mammoBtnN)
                    +_mkImgBtn('related','🖼','影像',_nRel)
@@ -7074,6 +7079,8 @@ async function genHTMLSlides(opts){
         +(chips?'<div class="ct">'+chips+'</div>':'')
         +'<div class="pg2">'+caseIndex+'/'+cases.length+'</div>'
         +'</section>');
+      /* V5.27.3: 個案文字頁一定是第一頁,夾入的影像頁緊接在後 */
+      if(_embSlides.length)Array.prototype.push.apply(slides,_embSlides);
 
 
 
