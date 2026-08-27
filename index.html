@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.27.3';
+const VERSION='V5.28.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -4996,7 +4996,29 @@ async function uploadSlidesToGitHub(htmlContent, fname){
   });
   if(!resp.ok){
     const err=await resp.json().catch(()=>({}));
-    throw new Error((err.message||resp.status)+' — 請確認 Token 權限（需 Contents: Read and write）');
+    /* V5.27.4: 原本不管什麼錯都硬加「請確認 Token 權限」,把 GitHub 真正的原因蓋掉。
+       個管師遇到的實例:GitHub 回「Timed out validating rule, please try again」
+       (檔案含 base64 圖片常有 1~3MB,GitHub 的 repository ruleset 掃描會逾時),
+       但畫面顯示「請確認 Token 權限」→ 誤導去查權限,其實只要重試。
+       改成依狀態碼與訊息給對應建議。 */
+    var _m=String(err.message||''),_st=resp.status;
+    var _hint='';
+    if(/timed out|timeout/i.test(_m)){
+      _hint='這是 GitHub 端的暫時性逾時（檔案較大時常見），請直接再按一次上傳。';
+    }else if(_st===401){
+      _hint='Token 無效或已過期，請到設定頁重新填入。';
+    }else if(_st===403){
+      _hint='Token 權限不足，需要 Contents: Read and write。';
+    }else if(_st===404){
+      _hint='找不到 repository 或路徑，請確認 Token 對這個 repo 有權限。';
+    }else if(_st===409){
+      _hint='檔案版本衝突，請再試一次。';
+    }else if(_st===422){
+      _hint='檔案可能過大或內容被 GitHub 規則擋下。';
+    }else{
+      _hint='請確認網路連線與 Token 權限（需 Contents: Read and write）。';
+    }
+    throw new Error((_m||('HTTP '+_st))+'\n\n→ '+_hint);
   }
   return 'https://sela1227.github.io/MDT-slides/'+(GH_SLIDES_PATH?GH_SLIDES_PATH+'/':'')+fname;
 }
@@ -7558,9 +7580,9 @@ function hlClear(){
 }
 var _magMode=false,_magCv=null;
 function _initMag(){if(_magCv)return;_magCv=document.createElement('canvas');_magCv.style.cssText='position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;';document.body.appendChild(_magCv);}
-function _toggleMag(){_initMag();_magMode=!_magMode;var btn=document.getElementById('nb-mag');if(btn)btn.style.color=_magMode?'#7FE87F':'';if(!_magMode)_magCv.style.display='none';}
-document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=(function(){var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;return(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');}());if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rendW=natW*scale,rendH=natH*scale;var offX=(rect.width-rendW)/2,offY=(rect.height-rendH)/2;var cx=mx-offX,cy=my-offY;if(cx<0||cy<0||cx>rendW||cy>rendH){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';/* V5.15.0: 放大時用高品質插值,減少模糊 */var sx=(cx/rendW)*natW,sy=(cy/rendH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
-document.addEventListener('mouseleave',function(){if(_magCv)_magCv.style.display='none';});
+function _toggleMag(){_initMag();_magMode=!_magMode;var btn=document.getElementById('nb-mag');if(btn)btn.style.color=_magMode?'#7FE87F':'';if(!_magMode)_magCv.style.display='none';document.body.style.cursor='';}
+document.addEventListener('mousemove',function(e){if(!_magMode||!_magCv)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide')){_magCv.style.display='none';return;}var img=(function(){var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=='IMG')el=el.parentElement;return(el&&el.tagName==='IMG'&&slide.contains(el))?el:slide.querySelector('img');}());if(!img){_magCv.style.display='none';return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_magCv.style.display='none';return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rendW=natW*scale,rendH=natH*scale;var offX=(rect.width-rendW)/2,offY=(rect.height-rendH)/2;var cx=mx-offX,cy=my-offY;if(cx<0||cy<0||cx>rendW||cy>rendH){_magCv.style.display='none';return;}var SZ=220,MAG=3.5;_magCv.width=SZ;_magCv.height=SZ;var ctx=_magCv.getContext('2d');ctx.clearRect(0,0,SZ,SZ);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';/* V5.15.0: 放大時用高品質插值,減少模糊 */var sx=(cx/rendW)*natW,sy=(cy/rendH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_magCv.style.display='block';document.body.style.cursor='none';/* V5.28.0: 原本放大鏡浮在游標右上方 24px,放大的是「游標所指處」—— 使用者要看的點在鏡片外面,不直覺。改成鏡片**罩在游標上、中心點就是放大位置**,像真的放大鏡壓在圖上。刻意不做邊界夾擠(夾了就會讓中心 ≠ 游標,破壞這個承諾) */var lx=e.clientX-SZ/2,ly=e.clientY-SZ/2;_magCv.style.left=lx+'px';_magCv.style.top=ly+'px';});
+document.addEventListener('mouseleave',function(){document.body.style.cursor='';if(_magCv)_magCv.style.display='none';});
 document.addEventListener('keydown',function(e){if(e.key==='l'||e.key==='L')_toggleMag();});
 var _zoom=1,_panX=0,_panY=0,_dragging=false,_dragSx=0,_dragSy=0,_dragPx=0,_dragPy=0,_zoomTarget=null;
 function _zoomImg(){if(!_zoomTarget)return;_zoomTarget.style.transform='scale('+_zoom+') translate('+_panX+'px,'+_panY+'px)';_zoomTarget.style.cursor=_zoom>1?'grab':'default';_zoomTarget.style.transition=_dragging?'':'transform .15s';}
@@ -7970,10 +7992,10 @@ window.openImgWindow=function(caseId){
     /* 放大鏡 */
     +'var _pmOn=false,_pmCv=null;'
     +'function _pmInit(){if(_pmCv)return;_pmCv=document.createElement("canvas");_pmCv.style.cssText="position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;";document.body.appendChild(_pmCv);}'
-    +'function _pmTog(){_pmInit();_pmOn=!_pmOn;var b=document.getElementById("pnb-mag");if(b)b.style.color=_pmOn?"#7FE87F":"";if(!_pmOn)_pmCv.style.display="none";}'
+    +'function _pmTog(){_pmInit();_pmOn=!_pmOn;var b=document.getElementById("pnb-mag");if(b)b.style.color=_pmOn?"#7FE87F":"";if(!_pmOn)_pmCv.style.display="none";document.body.style.cursor="";}'
     +'function _pmReset(){if(_pmCv)_pmCv.style.display="none";}'
-    +'document.addEventListener("mousemove",function(e){if(!_pmOn||!_pmCv)return;var s=document.querySelectorAll(".ps")[pc];if(!s){_pmCv.style.display="none";return;}var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=="IMG")el=el.parentElement;var img=(el&&el.tagName==="IMG"&&s.contains(el))?el:s.querySelector("img");if(!img){_pmCv.style.display="none";return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_pmCv.style.display="none";return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rW=natW*scale,rH=natH*scale;var oX=(rect.width-rW)/2,oY=(rect.height-rH)/2;var cx=mx-oX,cy=my-oY;if(cx<0||cy<0||cx>rW||cy>rH){_pmCv.style.display="none";return;}var SZ=220,MAG=3.5;_pmCv.width=SZ;_pmCv.height=SZ;var ctx=_pmCv.getContext("2d");ctx.clearRect(0,0,SZ,SZ);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";var sx=(cx/rW)*natW,sy=(cy/rH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle="rgba(255,255,255,.6)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_pmCv.style.display="block";var lx=e.clientX+24,ly=e.clientY-SZ-24;if(lx+SZ>window.innerWidth)lx=e.clientX-SZ-24;if(ly<4)ly=e.clientY+24;_pmCv.style.left=lx+"px";_pmCv.style.top=ly+"px";});'
-    +'document.addEventListener("mouseleave",function(){if(_pmCv)_pmCv.style.display="none";});'
+    +'document.addEventListener("mousemove",function(e){if(!_pmOn||!_pmCv)return;var s=document.querySelectorAll(".ps")[pc];if(!s){_pmCv.style.display="none";return;}var el=document.elementFromPoint(e.clientX,e.clientY);while(el&&el.tagName!=="IMG")el=el.parentElement;var img=(el&&el.tagName==="IMG"&&s.contains(el))?el:s.querySelector("img");if(!img){_pmCv.style.display="none";return;}var rect=img.getBoundingClientRect();var mx=e.clientX-rect.left,my=e.clientY-rect.top;if(mx<0||my<0||mx>rect.width||my>rect.height){_pmCv.style.display="none";return;}var natW=img.naturalWidth,natH=img.naturalHeight;var scaleW=rect.width/natW,scaleH=rect.height/natH;var scale=Math.min(scaleW,scaleH);var rW=natW*scale,rH=natH*scale;var oX=(rect.width-rW)/2,oY=(rect.height-rH)/2;var cx=mx-oX,cy=my-oY;if(cx<0||cy<0||cx>rW||cy>rH){_pmCv.style.display="none";return;}var SZ=220,MAG=3.5;_pmCv.width=SZ;_pmCv.height=SZ;var ctx=_pmCv.getContext("2d");ctx.clearRect(0,0,SZ,SZ);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";var sx=(cx/rW)*natW,sy=(cy/rH)*natH;var swN=(SZ/MAG)*(img.naturalWidth/rect.width),shN=(SZ/MAG)*(img.naturalHeight/rect.height);ctx.drawImage(img,sx-swN/2,sy-shN/2,swN,shN,0,0,SZ,SZ);ctx.strokeStyle="rgba(255,255,255,.6)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(SZ/2-12,SZ/2);ctx.lineTo(SZ/2+12,SZ/2);ctx.stroke();ctx.beginPath();ctx.moveTo(SZ/2,SZ/2-12);ctx.lineTo(SZ/2,SZ/2+12);ctx.stroke();_pmCv.style.display="block";document.body.style.cursor="none";var lx=e.clientX-SZ/2,ly=e.clientY-SZ/2;_pmCv.style.left=lx+"px";_pmCv.style.top=ly+"px";});'
+    +'document.addEventListener("mouseleave",function(){document.body.style.cursor="";if(_pmCv)_pmCv.style.display="none";});'
     +'document.addEventListener("keydown",function(e){if(e.key==="ArrowRight"||e.key===" ")pgo(pc+1);if(e.key==="ArrowLeft")pgo(pc-1);if(e.key==="Escape"){if(_pmOn){_pmTog();}else{window.close();}}if(e.key==="l"||e.key==="L")_pmTog();});'
     +'pgo(0);'
     +'<'+'/script>'
