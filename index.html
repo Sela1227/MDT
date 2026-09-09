@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.28.0';
+const VERSION='V5.28.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -4659,12 +4659,23 @@ function getSectionItem(cid,type,i){
 /* V5.27.0: 影像/時序「夾投影片 vs 開新分頁」切換的共用 UI。
    逐個案、逐類型各自可選(個管師選 A:最靈活)。放在各影像區塊的標題列右側。 */
 function embedToggle(cid,i,kind,d){
+  /* V5.28.1: 個管師反映「很淡很淡,反黑才看得到」。原因有三:
+     ① 未選中只用 opacity:.65,在淺色底上淡到接近消失
+     ② 字級 10.5px —— V5.24.0 已把全站主要文字拉到 14px,這裡卻是全系統最小
+     ③ 兩顆按鈕沒有外框群組,看不出是「二選一」
+     改法:未選中改成有明確邊框與可讀文字色(不靠 opacity),選中用實色填滿,
+     字級拉到 12px,外面加一圈群組框讓它看起來就是個開關。 */
   const on=!!(d&&d.embed&&d.embed[kind]);
-  return '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--textlt)">'
-    +'<button class="btn btn-b btn-sm" data-action="setembed" data-cid="'+cid+'" data-caseidx="'+i+'" data-kind="'+kind+'" data-val="0"'
-    +' style="font-size:10.5px;padding:1px 8px;'+(!on?'background:var(--acc);color:#fff;border-color:var(--acc)':'opacity:.65')+'">開新分頁</button>'
-    +'<button class="btn btn-b btn-sm" data-action="setembed" data-cid="'+cid+'" data-caseidx="'+i+'" data-kind="'+kind+'" data-val="1"'
-    +' style="font-size:10.5px;padding:1px 8px;'+(on?'background:var(--acc);color:#fff;border-color:var(--acc)':'opacity:.65')+'">夾在投影片</button>'
+  const base='font-size:12px;font-weight:600;padding:3px 10px;border-radius:3px;cursor:pointer;line-height:1.5;';
+  const sel='background:var(--acc);color:#fff;border:1px solid var(--acc);';
+  const unsel='background:#fff;color:var(--textmd);border:1px solid var(--blt);';
+  const btn=function(val,label,active){
+    return '<button data-action="setembed" data-cid="'+cid+'" data-caseidx="'+i+'" data-kind="'+kind+'" data-val="'+val+'"'
+      +' style="'+base+(active?sel:unsel)+'">'+label+'</button>';
+  };
+  return '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:2px;'
+    +'background:#F2F5F7;border:1px solid var(--blt);border-radius:5px">'
+    +btn('0','開新分頁',!on)+btn('1','夾在投影片',on)
     +'</span>';
 }
 function ensureArray(obj,key){
@@ -9905,12 +9916,16 @@ document.addEventListener('click',function(e){
       if(!c.embed)c.embed={};
       c.embed[setembed.dataset.kind]=(setembed.dataset.val==='1');
       markDirty();
+      /* V5.28.1: 原本用正則改 cssText 很脆弱,改成整段重設 */
       const card=setembed.closest('.casecard');
       if(card){
-        card.querySelectorAll('[data-action="setembed"][data-kind="'+setembed.dataset.kind+'"]').forEach(function(b){
-          const isOn=(b.dataset.val==='1'),sel=(isOn===c.embed[setembed.dataset.kind]);
-          b.style.cssText=b.style.cssText.replace(/background:[^;]*;?/,'').replace(/color:#fff;?/,'').replace(/border-color:[^;]*;?/,'').replace(/opacity:[^;]*;?/,'');
-          b.style.cssText+=sel?'background:var(--acc);color:#fff;border-color:var(--acc);':'opacity:.65;';
+        const _k=setembed.dataset.kind,_cur=!!c.embed[_k];
+        const _base='font-size:12px;font-weight:600;padding:3px 10px;border-radius:3px;cursor:pointer;line-height:1.5;';
+        card.querySelectorAll('[data-action="setembed"][data-kind="'+_k+'"]').forEach(function(b){
+          const _act=((b.dataset.val==='1')===_cur);
+          b.style.cssText=_base+(_act
+            ?'background:var(--acc);color:#fff;border:1px solid var(--acc);'
+            :'background:#fff;color:var(--textmd);border:1px solid var(--blt);');
         });
       }
     }
