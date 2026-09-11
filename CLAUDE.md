@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.30.1 | AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面:原本插在 treatments 與 markers 之間,但畫面順序是「癌指數 → 基因檢測」,移到 markers 之後。功能無影響(JSON 靠 key 對應),但個管師的工作流是「匯入後逐欄查看修改」,順序一致較好對照 |
 | V5.30.0 | 新增基因檢測欄位(個管師需求):①`genomics[]` 結構同 markers({name,date,content}),放在**癌指數下方**,可手動輸入;②AI 匯入 prompt 加 genomics 定義(NGS panel/單基因/TMB/MSI),可整串代入;③**第六種影像** `genomicsImages`(🧬 NGS 報告影像)走 IMG_KINDS 註冊表,支援夾投影片/開新分頁切換;④Word 記錄與 HTML 投影片都在癌指數後輸出。**不夾帶 PDF**(個管師確認自己另開) |
 | V5.29.0 | 影像子資料夾比對放寬 + 未命中提示 + 重選資料夾:①`_resolveSubFolder` 原本只做**完全比對**,個管師的資料夾是「1453274 林○吉」這種形式就找不到 → 加前綴比對,但**病歷號之後必須是分隔字元**(不能只用 startsWith,否則 1453274 會誤中 14532740 不同病人);②選圖對話框原本只在「找到」時顯示子資料夾名,改成未找到時也明說;③加「↻ 換資料夾」按鈕(原本選過就永遠不能換) |
 | V5.28.1 | 修「夾投影片/開新分頁」切換太淡(個管師:反黑才看到):①未選中只用 `opacity:.65` 在淺底上近乎消失 → 改成白底+實框+可讀文字色;②字級 10.5px(V5.24.0 已把全站拉到 14px,這裡卻最小)→ 12px 加粗;③兩顆按鈕加外層群組框,一眼看出是二選一。handler 的即時切換也從「正則改 cssText」改成整段重設 |
@@ -830,6 +831,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.30.1 AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面。個管師問「json prompt 你有同時改嗎」—— 查證後確認 V5.30.0 **有改而且內容完整**(欄位定義、name 範例 EGFR/ALK/BRCA/FoundationOne/TSO500/MSI-MMR、「沒有就給空陣列不要臆測」、日期重複清理也涵蓋 genomics),但發現**順序不一致**:prompt 是「treatments → genomics → markers」,而編輯畫面是「癌指數 → 基因檢測 → 治療」。功能上沒有影響(JSON 靠 key 對應,順序不影響解析),但個管師的主要工作流是「AI 匯入後**逐欄查看修改**」,prompt 順序與畫面順序一致比較好對照。移到 markers 之後。個管師說「雖然我們是不會細看」—— 仍值得改,因為這種小落差累積起來會讓人不信任工具的一致性。屬 c+1。
 
 V5.30.0 新增基因檢測欄位。個管師需求:「需要多一欄基因檢測,類似癌指數,但手動輸入,可以用 JSON 整串代入;也可以有地方放照片,TAG 寫 NGS」。**四題定案**:獨立一個區塊、放癌指數下方、影像獨立成第六種、**不夾帶 PDF**(個管師:自己另開就好 —— 這個決定是對的,NGS 報告 PDF 常 2-5MB,存進 localStorage 幾乎必爆)。**做法**:①`genomics[]` 結構刻意與 `markers` 相同(`{name,date,content}`),可直接沿用 `addStruct`/`delStruct`/`updstruct` 的通用 struct row 機制,只換欄位提示(基因/Panel、檢測結果含變異/VAF/TMB/MSI);②AI 匯入 prompt 加 genomics 定義並附 name 範例(EGFR/ALK/BRCA/FoundationOne/TSO500/MSI-MMR),明令「沒有就給空陣列不要臆測」,日期重複清理也涵蓋 genomics;③**第六種影像** `genomicsImages` 走 V5.16.0 的 `IMG_KINDS` 註冊表 —— **只加一列註冊 + 一個 build 函式,del/clear/preview/排序/拖曳/分頁點全部自動繼承**,這正是當初重構的回報;同時支援 V5.27.0 的夾投影片/開新分頁切換(🧬 按鈕排在病理之後);④Word 記錄(`addRow('基因檢測',gnS)`)與 HTML 投影片(`_row('基因檢測')`)都緊接癌指數輸出,無資料時不出現。21 項驗證全通過,端到端模擬含 FoundationOne CDx 實例。屬 b+1。
 

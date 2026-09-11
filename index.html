@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.30.0';
+const VERSION='V5.30.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -8657,11 +8657,6 @@ exams：影像檢查，陣列，每筆 {"name":"CT/MRI/Bone scan/SONO/Breast SON
 treatments：治療，陣列，每筆 {"name":"藥物/手術名稱","date":"YYYY-MM-DD","content":"劑量/說明"}
   - 【重要】content 不要再寫治療名稱與日期（系統會自動顯示，重複寫會顯示兩次）
   - content 不要重複寫名稱與日期（系統顯示時已自動加上）
-genomics：基因檢測（NGS panel 或單基因），陣列，每筆 {"name":"基因或 Panel 名稱","date":"YYYY-MM-DD","content":"檢測結果"}
-  - name 例：EGFR、ALK、BRCA1/2、FoundationOne CDx、TSO500、MSI/MMR
-  - content 寫變異、VAF、TMB、MSI 狀態、可用藥建議等；【重要】不要重複寫 name 與 date
-  - 資料中沒有基因檢測就給空陣列 []，不要臆測
-
 markers：癌指數（PSA/CEA/CA125/AFP/CA19-9/CA15-3/PIVKA-II/β-hCG/LDH 等，HCC 常用 AFP 與 PIVKA-II），陣列，每筆：
   {"name":"指數名稱","date":"YYYY-MM-DD 或 空字串","content":"值(日期)→值(日期)"}
   - 同一 marker name 在陣列中只能出現一次（多次檢驗併進同一筆的 content 趨勢字串）
@@ -8673,6 +8668,10 @@ markers：癌指數（PSA/CEA/CA125/AFP/CA19-9/CA15-3/PIVKA-II/β-hCG/LDH 等，
       範例：{"name":"AFP","date":"","content":"1.64(2023-05-15)→134(2026-05-04)"}
     * 單筆（content 只有 1 個時間點，無「→」符號）→ date 填那個時間點的 YYYY-MM-DD
       範例：{"name":"AFP","date":"2026-04-02","content":"8.96(2026-04-02)"}
+genomics：基因檢測（NGS panel 或單基因），陣列，每筆 {"name":"基因或 Panel 名稱","date":"YYYY-MM-DD","content":"檢測結果"}
+  - name 例：EGFR、ALK、BRCA1/2、FoundationOne CDx、TSO500、MSI/MMR
+  - content 寫變異、VAF、TMB、MSI 狀態、可用藥建議等；【重要】不要重複寫 name 與 date
+  - 資料中沒有基因檢測就給空陣列 []，不要臆測
 familyHistory：家族癌症史，自由文字；僅 _cancer 為「乳癌」或「婦癌」時填寫，其他癌別填空字串 ""
 mammo：乳房攝影，僅 _cancer 為「乳癌」時填寫，格式：{"date":"YYYY-MM-DD","report":"Findings:...\nImpression:...","images":[]}；其他癌別省略此欄位
 discussion:討論方向，一句話摘要本次討論重點
