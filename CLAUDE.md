@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.30.2 | 修「資料夾 handle 失效時顯示原始英文錯誤」:handle 存在 IndexedDB 會自動還原,但 `restoreRootHandle` **只檢查權限沒檢查資料夾是否還在**;資料夾被改名/移動後,點選取就跳「A requested file or directory could not be found」。加 `_isStaleHandleErr`+`_handleFolderErr`:偵測 NotFoundError → 清掉失效 handle → 中文說明常見原因 → 直接引導重選並自動重試。6 處 catch 統一走這條 |
 | V5.30.1 | AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面:原本插在 treatments 與 markers 之間,但畫面順序是「癌指數 → 基因檢測」,移到 markers 之後。功能無影響(JSON 靠 key 對應),但個管師的工作流是「匯入後逐欄查看修改」,順序一致較好對照 |
 | V5.30.0 | 新增基因檢測欄位(個管師需求):①`genomics[]` 結構同 markers({name,date,content}),放在**癌指數下方**,可手動輸入;②AI 匯入 prompt 加 genomics 定義(NGS panel/單基因/TMB/MSI),可整串代入;③**第六種影像** `genomicsImages`(🧬 NGS 報告影像)走 IMG_KINDS 註冊表,支援夾投影片/開新分頁切換;④Word 記錄與 HTML 投影片都在癌指數後輸出。**不夾帶 PDF**(個管師確認自己另開) |
 | V5.29.0 | 影像子資料夾比對放寬 + 未命中提示 + 重選資料夾:①`_resolveSubFolder` 原本只做**完全比對**,個管師的資料夾是「1453274 林○吉」這種形式就找不到 → 加前綴比對,但**病歷號之後必須是分隔字元**(不能只用 startsWith,否則 1453274 會誤中 14532740 不同病人);②選圖對話框原本只在「找到」時顯示子資料夾名,改成未找到時也明說;③加「↻ 換資料夾」按鈕(原本選過就永遠不能換) |
@@ -831,6 +832,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.30.2 修「資料夾 handle 失效時顯示原始英文錯誤」。個管師截圖:點「📂 新增資料夾 選取」跳出 `無法存取資料夾：A requested file or directory could not be found at the time an operation was processed.` —— 看不懂也不知道怎麼辦。**根因**:資料夾 handle 存在 IndexedDB(`imgFolder_root`),重開瀏覽器會自動還原,但 `restoreRootHandle()` **只做 `_checkPerm()` 檢查權限,沒檢查資料夾是否還存在**;而按鈕文字取自 `imgFolderHandle.name`,所以畫面還顯示舊資料夾名(「新增資料夾」—— Windows 預設名,個管師顯然後來改過名或移動了),實際 handle 早已指向不存在的位置。**做法**:加 `_isStaleHandleErr(e)` 偵測(`NotFoundError` 或訊息含 `could not be found`,但**排除 AbortError 與權限錯誤**,那兩種要走原路徑)+ `_handleFolderErr(e,retryFn)` 統一處理 —— 清掉失效的 `imgFolderHandle`/`imgRootHandle` 與 IndexedDB 記錄,用中文說明常見原因(資料夾被改名、移動、刪除,或換了電腦),直接問要不要重選,選完自動重試原本的操作。6 處原本 `alert('無法存取資料夾：'+e.message)` 的 catch 全部改走這條。node 驗證 5 種錯誤情境判定正確。**過程中踩到自己的坑**:插入註解時把原本 `async function restoreRootHandle` 的 `async` 切掉,語法檢查立刻抓到 —— 這正是每次打包都跑語法檢查的價值。屬 c+1。**教訓**:**持久化的外部資源 handle 必須同時檢查「權限」與「存在性」** —— 只檢查權限會讓失效 handle 一路帶到使用者操作時才爆,而且爆出來的是瀏覽器的原始英文訊息。
 
 V5.30.1 AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面。個管師問「json prompt 你有同時改嗎」—— 查證後確認 V5.30.0 **有改而且內容完整**(欄位定義、name 範例 EGFR/ALK/BRCA/FoundationOne/TSO500/MSI-MMR、「沒有就給空陣列不要臆測」、日期重複清理也涵蓋 genomics),但發現**順序不一致**:prompt 是「treatments → genomics → markers」,而編輯畫面是「癌指數 → 基因檢測 → 治療」。功能上沒有影響(JSON 靠 key 對應,順序不影響解析),但個管師的主要工作流是「AI 匯入後**逐欄查看修改**」,prompt 順序與畫面順序一致比較好對照。移到 markers 之後。個管師說「雖然我們是不會細看」—— 仍值得改,因為這種小落差累積起來會讓人不信任工具的一致性。屬 c+1。
 

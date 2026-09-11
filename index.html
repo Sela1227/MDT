@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.30.1';
+const VERSION='V5.30.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3859,7 +3859,7 @@ function crPickImages(cid,si,pi){var d=getSectionItem(cid,'special',si);if(!d||!
   if(!_sub)_sub=await _resolveSubFolder(imgFolderHandle,'_特殊議程');
   var _scanHandle=_sub?_sub.handle:imgFolderHandle;
   var _subName=_sub?_sub.name:'';
-  var entries=await _folderEntries(_scanHandle);var files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));files.sort((a,b)=>a.name.localeCompare(b.name));if(!files.length){alert(_subName?('子資料夾「'+_subName+'」內沒有圖檔'):'資料夾內沒有圖檔');return;}var existing=new Set(p.images.map(x=>x.name));var list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0"><input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span></label>').join('');var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px"><div style="font-weight:700;font-size:15px">選取佐証圖片</div><div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+(_subName?' / <b style="color:#2a3540">'+escA(_subName)+'</b>':'<span style="color:#8A5A1F">　（未找到「'+escA(c.chartNo||'')+'」子資料夾，顯示根目錄檔案）</span>')+'</div><div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button><button id="cr-img-ok" class="btn btn-a btn-sm">確認</button></div></div>';document.body.appendChild(overlay);overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);overlay.querySelector('#cr-img-ok').onclick=()=>{var checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''}));markDirty();document.body.removeChild(overlay);var el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';};}catch(e){if(e.name!=='AbortError')alert('無法存取資料夾:'+e.message);}})();}
+  var entries=await _folderEntries(_scanHandle);var files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));files.sort((a,b)=>a.name.localeCompare(b.name));if(!files.length){alert(_subName?('子資料夾「'+_subName+'」內沒有圖檔'):'資料夾內沒有圖檔');return;}var existing=new Set(p.images.map(x=>x.name));var list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0"><input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span></label>').join('');var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px"><div style="font-weight:700;font-size:15px">選取佐証圖片</div><div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+(_subName?' / <b style="color:#2a3540">'+escA(_subName)+'</b>':'<span style="color:#8A5A1F">　（未找到「'+escA(c.chartNo||'')+'」子資料夾，顯示根目錄檔案）</span>')+'</div><div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button><button id="cr-img-ok" class="btn btn-a btn-sm">確認</button></div></div>';document.body.appendChild(overlay);overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);overlay.querySelector('#cr-img-ok').onclick=()=>{var checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''}));markDirty();document.body.removeChild(overlay);var el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';};}catch(e){if(e.name!=='AbortError')await _handleFolderErr(e);}})();}
 function crPatientRow(cid,si,pi,p){
   var imgLabel=(p.images&&p.images.length)?p.images.length+'張已選':'未選圖片';
   var cidE=escA(cid);
@@ -3974,7 +3974,7 @@ function pickSpecialImgs(cid,si){
         var cont=document.getElementById('special-img-area-'+cid+'-'+si);
         if(cont)cont.innerHTML=buildSpecialImgArea(cid,si,d);
       };
-    }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+    }catch(e){if(e.name!=='AbortError')await _handleFolderErr(e);}
   })();
 }
 
@@ -4039,7 +4039,7 @@ async function pickNasFolder(){
     await _nasIdbPut(h);
     updateNasStatus();
     showSaveToast('NAS 備份資料夾已設定：'+h.name);
-  }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+  }catch(e){if(e.name!=='AbortError')await _handleFolderErr(e);}
 }
 
 async function clearNasFolder(){
@@ -5696,6 +5696,37 @@ async function restoreImgFolderHandle(){
 }
 
 // Restore root on startup
+async /* V5.30.2: 資料夾 handle 存在 IndexedDB,重開會自動還原 —— 但**只檢查權限,沒檢查資料夾是否還在**。
+   個管師遇到的狀況:資料夾被改名(按鈕還顯示舊名「新增資料夾」),點選取就跳
+   「A requested file or directory could not be found」這種原始英文錯誤,看不懂也不知道怎麼辦。
+   統一處理:偵測 NotFoundError → 清掉失效 handle → 明確說明並直接引導重選。 */
+function _isStaleHandleErr(e){
+  if(!e)return false;
+  const n=String(e.name||''),m=String(e.message||'');
+  return n==='NotFoundError'||/could not be found|not be found at the time/i.test(m);
+}
+async function _handleFolderErr(e,retryFn){
+  if(_isStaleHandleErr(e)){
+    const oldName=(imgFolderHandle&&imgFolderHandle.name)||'';
+    imgFolderHandle=null;imgRootHandle=null;
+    try{await _idbDel('imgFolder_root');}catch(_){}
+    if(confirm('影像資料夾已無法存取'+(oldName?('（原本是「'+oldName+'」）'):'')+'。\n\n'
+      +'常見原因:資料夾被改名、移動、刪除,或換了電腦。\n\n'
+      +'要現在重新選擇資料夾嗎?')){
+      try{
+        const nh=await window.showDirectoryPicker({mode:'read'});
+        if(nh){
+          imgFolderHandle=nh;imgRootHandle=nh;
+          try{await _idbPut('imgFolder_root',nh);}catch(_2){}
+          showSaveToast('已改用資料夾：'+nh.name);
+          if(typeof retryFn==='function')return await retryFn();
+        }
+      }catch(err2){if(err2.name!=='AbortError')alert('無法選取資料夾：'+err2.message);}
+    }
+    return;
+  }
+  alert('無法存取資料夾：'+(e&&e.message?e.message:e));
+}
 async function restoreRootHandle(){
   const h=await _idbGet('imgFolder_root');
   if(!h)return;
@@ -9822,7 +9853,7 @@ document.addEventListener('click',function(e){
           const el3=document.getElementById('pathimgs-'+cid+'-'+idx);
           if(el3){const tmp=document.createElement('div');tmp.innerHTML=buildPathImgArea(cid,idx,c);el3.replaceWith(tmp.firstElementChild);}
         };
-      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+      }catch(e){if(e.name!=='AbortError')await _handleFolderErr(e);}
     })();
     return;
   }
@@ -9903,7 +9934,7 @@ document.addEventListener('click',function(e){
           const el3=document.getElementById('surgimgs-'+cid+'-'+idx);
           if(el3){const tmp=document.createElement('div');tmp.innerHTML=buildSurgicalImgArea(cid,idx,c);el3.replaceWith(tmp.firstElementChild);}
         };
-      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+      }catch(e){if(e.name!=='AbortError')await _handleFolderErr(e);}
     })();return;
   }
   const delsurgimg=e.target.closest('[data-action="delsurgimg"]');
@@ -10125,7 +10156,7 @@ document.addEventListener('click',function(e){
           const elOk=type==='mammo'?document.getElementById('mammo-imgs-'+cid+'-'+idx):document.getElementById('imgs-'+cid+'-'+idx);
           if(elOk){const tmp=document.createElement('div');tmp.innerHTML=type==='mammo'?buildMammoImgArea(cid,idx,c):buildImgArea(cid,idx,c);elOk.replaceWith(tmp.firstElementChild);}
         };
-      }catch(e){if(e.name!=='AbortError')alert('無法存取資料夾：'+e.message);}
+      }catch(e){if(e.name!=='AbortError')await _handleFolderErr(e);}
     })();
     return;
   }

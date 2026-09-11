@@ -111,6 +111,45 @@
 
 ## 版本歷程
 
+### V5.30.2
+**修:資料夾失效時顯示原始英文錯誤**
+
+個管師截圖:點「📂 新增資料夾 選取」跳出
+
+```
+無法存取資料夾：A requested file or directory could not be found
+at the time an operation was processed.
+```
+
+看不懂,也不知道怎麼辦。
+
+**根因**
+
+資料夾 handle 存在 IndexedDB(`imgFolder_root`),重開瀏覽器會自動還原 —— 但 `restoreRootHandle()` **只做 `_checkPerm()` 檢查權限,沒檢查資料夾是否還存在**。
+
+而按鈕文字取自 `imgFolderHandle.name`,所以畫面還顯示舊資料夾名(「新增資料夾」是 Windows 預設名,個管師顯然後來改過名或移動了),實際 handle 早已指向不存在的位置。
+
+**做法**
+
+| 函式 | 作用 |
+|---|---|
+| `_isStaleHandleErr(e)` | 偵測 `NotFoundError` 或訊息含 `could not be found`,**排除 AbortError 與權限錯誤**(那兩種要走原路徑) |
+| `_handleFolderErr(e, retryFn)` | 清掉失效的 handle 與 IndexedDB 記錄 → 中文說明常見原因 → 直接引導重選 → 選完自動重試原操作 |
+
+訊息改成:
+
+> 影像資料夾已無法存取（原本是「新增資料夾」）。
+>
+> 常見原因:資料夾被改名、移動、刪除,或換了電腦。
+>
+> 要現在重新選擇資料夾嗎?
+
+6 處原本 `alert('無法存取資料夾：'+e.message)` 的 catch 全部改走這條。node 驗證 5 種錯誤情境判定正確。
+
+**過程中踩到自己的坑**:插入註解時把原本 `async function restoreRootHandle` 的 `async` 切掉,**語法檢查立刻抓到** —— 這正是每次打包都跑語法檢查的價值。
+
+**教訓**:**持久化的外部資源 handle 必須同時檢查「權限」與「存在性」** —— 只檢查權限會讓失效 handle 一路帶到使用者操作時才爆,而且爆出來的是瀏覽器的原始英文訊息。
+
 ### V5.30.1
 **AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面**
 
