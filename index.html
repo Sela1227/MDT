@@ -1293,7 +1293,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.30.2';
+const VERSION='V5.30.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5695,11 +5695,13 @@ async function restoreImgFolderHandle(){
   updateFolderStatusBar();
 }
 
-// Restore root on startup
-async /* V5.30.2: 資料夾 handle 存在 IndexedDB,重開會自動還原 —— 但**只檢查權限,沒檢查資料夾是否還在**。
-   個管師遇到的狀況:資料夾被改名(按鈕還顯示舊名「新增資料夾」),點選取就跳
-   「A requested file or directory could not be found」這種原始英文錯誤,看不懂也不知道怎麼辦。
-   統一處理:偵測 NotFoundError → 清掉失效 handle → 明確說明並直接引導重選。 */
+/* V5.30.2: 資料夾 handle 存在 IndexedDB,重開會自動還原 —— 但只檢查權限,沒檢查資料夾是否還在。
+   資料夾被改名後點選取就跳「A requested file or directory could not be found」原始英文錯誤。
+   統一處理:偵測 NotFoundError → 清掉失效 handle → 中文說明並引導重選。
+   V5.30.3 修:上一版插入這段註解時,把原本 restoreRootHandle 的 async 留在註解前面,
+   變成「async + 註解 + function _isStaleHandleErr」—— 語法上合法(只是把它變成 async),
+   但 restoreRootHandle 失去 async 而其內有 await,整個 script 掛掉,
+   登入畫面的三位個管師完全不顯示。註解裡不可用反引號(這裡是模板字串環境)。 */
 function _isStaleHandleErr(e){
   if(!e)return false;
   const n=String(e.name||''),m=String(e.message||'');
@@ -5727,6 +5729,7 @@ async function _handleFolderErr(e,retryFn){
   }
   alert('無法存取資料夾：'+(e&&e.message?e.message:e));
 }
+// Restore root on startup
 async function restoreRootHandle(){
   const h=await _idbGet('imgFolder_root');
   if(!h)return;

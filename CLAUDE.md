@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.30.3 | **緊急修復**:V5.30.2 插入註解時把 `async function restoreRootHandle` 的 async 留在註解前面,被新函式吃掉 → restoreRootHandle 失去 async 但內含 await → 整個 script 掛掉 → **登入畫面三位個管師完全消失**(坑#52)。第二次修正又在模板字串環境的註解裡用反引號再度出錯。已加打包驗證:`async /*` 偵測 + 主 script 執行測試 |
 | V5.30.2 | 修「資料夾 handle 失效時顯示原始英文錯誤」:handle 存在 IndexedDB 會自動還原,但 `restoreRootHandle` **只檢查權限沒檢查資料夾是否還在**;資料夾被改名/移動後,點選取就跳「A requested file or directory could not be found」。加 `_isStaleHandleErr`+`_handleFolderErr`:偵測 NotFoundError → 清掉失效 handle → 中文說明常見原因 → 直接引導重選並自動重試。6 處 catch 統一走這條 |
 | V5.30.1 | AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面:原本插在 treatments 與 markers 之間,但畫面順序是「癌指數 → 基因檢測」,移到 markers 之後。功能無影響(JSON 靠 key 對應),但個管師的工作流是「匯入後逐欄查看修改」,順序一致較好對照 |
 | V5.30.0 | 新增基因檢測欄位(個管師需求):①`genomics[]` 結構同 markers({name,date,content}),放在**癌指數下方**,可手動輸入;②AI 匯入 prompt 加 genomics 定義(NGS panel/單基因/TMB/MSI),可整串代入;③**第六種影像** `genomicsImages`(🧬 NGS 報告影像)走 IMG_KINDS 註冊表,支援夾投影片/開新分頁切換;④Word 記錄與 HTML 投影片都在癌指數後輸出。**不夾帶 PDF**(個管師確認自己另開) |
@@ -478,6 +479,23 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#52 插入註解時把 `async` 與 `function` 拆開 → 整個 script 掛掉(V5.30.3 修)** ✅
+- 症狀:**登入畫面的三位個管師完全消失**,系統無法使用
+- 根因:V5.30.2 在 `async function restoreRootHandle(){` 前面插入一段註解,結果變成:
+  ```
+  async /* 註解… */
+  function _isStaleHandleErr(e){     ← 新加的函式吃掉了那個 async
+  ...
+  function restoreRootHandle(){      ← 失去 async,但內部有 await
+  ```
+- **為什麼語法檢查抓不到**:`async /*註解*/ function` 在語法上**完全合法**(只是把 `_isStaleHandleErr` 變成 async);真正的錯誤是 `restoreRootHandle` 失去 async 卻含 await —— 這在**第一次修正時被抓到了**,我補回 async 就過了。**但第二次修正時我在註解裡用了反引號**,而那段程式在模板字串環境內,反引號提前結束模板 → 又一次語法錯誤
+- 兩次都是**同一個根源:在既有程式碼前插入註解時,沒檢查插入點是否切斷了語法單元**
+- 教訓:
+  1. **插入註解前先看清楚插入點前面是什麼** —— `async`、`export`、`return` 這類修飾詞後面不能插註解再接別的東西
+  2. **在模板字串環境裡寫註解不可用反引號**(這是坑 #48 的變體)
+  3. **語法檢查通過 ≠ 行為正確** —— `async` 跑到別的函式上是語法合法的邏輯錯誤;應補「執行測試」(用 `new Function(main)` 實際解析整段主 script)
+- 已加入打包驗證:`async /*` 樣式偵測 + 主 script 執行測試
 
 **#51 資料累積寫在「使用它的地方」之後 → 按鈕永遠不出現(V5.26.2 修)** ✅
 - 症狀:個管師勾了「產出時包含病程時序圖」,但產出的 HTML 投影片**沒有 📈 病程時序按鈕**
@@ -832,6 +850,8 @@ if not missing:
 ---
 
 ## 十一、一句話總結
+
+V5.30.3 緊急修復:**登入畫面的三位個管師完全消失**,系統無法使用(坑 #52)。根因是 V5.30.2 在 `async function restoreRootHandle(){` 前面插入註解,結果 `async` 被留在註解前、被我新加的 `_isStaleHandleErr` 吃掉,而 `restoreRootHandle` 失去 async 卻仍含 `await` → 整個 script 掛掉 → `renderLogin()` 從未執行。**為什麼語法檢查沒擋住**:`async /*註解*/ function` 在語法上**完全合法**(只是把後面那個函式變成 async),這是**語法正確但邏輯錯誤**;第一次修正時語法檢查確實抓到了 restoreRootHandle 缺 async,但**我在補寫的註解裡用了反引號**,而那段在模板字串環境內 → 反引號提前結束模板 → 又一次錯誤(坑 #48 的變體)。兩次都是同一個根源:**在既有程式碼前插入註解時,沒檢查插入點是否切斷了語法單元**。已加入打包驗證:`async /*` 樣式偵測 + **主 script 執行測試**(用 `new Function(main)` 實際解析整段,而非只做 `node --check`)。屬 c+1,但這是本專案少數「讓系統完全無法使用」的事故,教訓寫進坑 #52。
 
 V5.30.2 修「資料夾 handle 失效時顯示原始英文錯誤」。個管師截圖:點「📂 新增資料夾 選取」跳出 `無法存取資料夾：A requested file or directory could not be found at the time an operation was processed.` —— 看不懂也不知道怎麼辦。**根因**:資料夾 handle 存在 IndexedDB(`imgFolder_root`),重開瀏覽器會自動還原,但 `restoreRootHandle()` **只做 `_checkPerm()` 檢查權限,沒檢查資料夾是否還存在**;而按鈕文字取自 `imgFolderHandle.name`,所以畫面還顯示舊資料夾名(「新增資料夾」—— Windows 預設名,個管師顯然後來改過名或移動了),實際 handle 早已指向不存在的位置。**做法**:加 `_isStaleHandleErr(e)` 偵測(`NotFoundError` 或訊息含 `could not be found`,但**排除 AbortError 與權限錯誤**,那兩種要走原路徑)+ `_handleFolderErr(e,retryFn)` 統一處理 —— 清掉失效的 `imgFolderHandle`/`imgRootHandle` 與 IndexedDB 記錄,用中文說明常見原因(資料夾被改名、移動、刪除,或換了電腦),直接問要不要重選,選完自動重試原本的操作。6 處原本 `alert('無法存取資料夾：'+e.message)` 的 catch 全部改走這條。node 驗證 5 種錯誤情境判定正確。**過程中踩到自己的坑**:插入註解時把原本 `async function restoreRootHandle` 的 `async` 切掉,語法檢查立刻抓到 —— 這正是每次打包都跑語法檢查的價值。屬 c+1。**教訓**:**持久化的外部資源 handle 必須同時檢查「權限」與「存在性」** —— 只檢查權限會讓失效 handle 一路帶到使用者操作時才爆,而且爆出來的是瀏覽器的原始英文訊息。
 
