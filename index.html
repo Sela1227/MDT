@@ -1176,17 +1176,27 @@ textarea{resize:vertical}
     <hr style="border:none;border-top:1px solid var(--blt);margin:16px 0">
 
     <div style="padding:16px 0">
-      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">GitHub 投影片分享</div>
-      <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">設定後可將 HTML 投影片直接上傳至 GitHub Pages 產生可分享連結<br>需先至 GitHub 申請 Personal Access Token（Contents: Read and write）</div>
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">投影片分享</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">設定後可將 HTML 投影片上傳到分享空間，產生可傳給醫師的連結（數秒生效）。</div>
+      <!-- V5.41.0:分享改走 Cloudflare KV。與 P0-9 相同的保管原則。 -->
+      <div style="padding:9px 12px;background:#EFF4F7;border-left:3px solid var(--acc);border-radius:2px;font-size:12px;line-height:1.75;margin-bottom:12px">
+        <b>請注意</b><br>
+        • 上傳的投影片<b>含完整病歷號</b>，知道網址的人就能開啟。<b>請勿轉貼到公開群組。</b><br>
+        • 已分享的內容由 <b>林醫師統一管理與清除</b>；本系統只負責上傳。<br>
+        • API Token <b>只存在這台電腦、不會進入備份檔</b>；還原備份後需重新填入一次。
+      </div>
 
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-    <input type="password" id="gh-token-input" placeholder="ghp_xxxxxxxx（Personal Access Token）" style="flex:1;font-size:12px;font-family:monospace">
-    <button class="btn btn-a btn-sm" onclick="saveGhToken()">儲存</button>
-    <button class="btn btn-b btn-sm" onclick="clearGhToken()">清除</button>
+    <input type="password" id="cf-token-input" placeholder="Cloudflare API Token（由林醫師提供）" style="flex:1;font-size:12px;font-family:monospace">
+    <button class="btn btn-a btn-sm" onclick="saveCfToken()">儲存</button>
+    <button class="btn btn-b btn-sm" onclick="clearCfToken()">清除</button>
   </div>
-  <div id="gh-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
-  <div style="font-weight:600;font-size:12px;margin-bottom:6px">已分享的投影片</div>
-  <div id="shared-slides-list"></div>
+  <div id="cf-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
+  <!-- V5.41.0:移除「已分享的投影片」清單。
+       分享改走 Cloudflare 後,這個清單只會顯示**舊的 GitHub 連結**(新的不再寫入),
+       而清單上的刪除鍵打的是 GitHub API —— 對 Cloudflare 上的檔案無效,
+       個管師會以為刪掉了但實際上還在(**謊報成功**,坑 #33 的形狀)。
+       已分享內容的管理權在林醫師(Git Pusher),個管師只負責上傳。 -->
 
   <hr style="border:none;border-top:1px solid var(--blt);margin:0 0 16px">
     </div>
@@ -1390,7 +1400,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.40.0';
+const VERSION='V5.42.4';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1920,16 +1930,18 @@ function calPrev(){renderMonthStats();_calMonth--;if(_calMonth<0){_calMonth=11;_
 function calNext(){renderMonthStats();_calMonth++;if(_calMonth>11){_calMonth=0;_calYear++}renderCalendar()}
 function calToday(){renderMonthStats();_calYear=new Date().getFullYear();_calMonth=new Date().getMonth();renderCalendar()}
 
-function togglePhChip(cid,i,chip,el){
-  ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
+function togglePhChip(cid,i,chip,el,type){
+  const _ty=type?type:"cases";/* V5.42.0 */
+  ensureSec(cid);const c=S.meeting.sections[cid][_ty][i];
   if(!c.phChips)c.phChips=[];
   const idx2=c.phChips.indexOf(chip);
   if(idx2>=0){c.phChips.splice(idx2,1);el.classList.remove('on');}
   else{c.phChips.push(chip);el.classList.add('on');}
   markDirty();
 }
-function updStruct(cid,i,field,idx,key,val){
-  ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
+function updStruct(cid,i,field,idx,key,val,type){
+  const _ty=type?type:"cases";/* V5.42.0 */
+  ensureSec(cid);const c=S.meeting.sections[cid][_ty][i];
   if(!c[field])c[field]=[];if(!c[field][idx])c[field][idx]={};
   c[field][idx][key]=val;markDirty();
   if(field==='timeline'){
@@ -1937,8 +1949,9 @@ function updStruct(cid,i,field,idx,key,val){
     if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
   }
 }
-function delStruct(cid,i,field,rowIdx){
-  ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
+function delStruct(cid,i,field,rowIdx,type){
+  const _ty=type?type:"cases";/* V5.42.0 */
+  ensureSec(cid);const c=S.meeting.sections[cid][_ty][i];
   if(!c[field])return;
   c[field].splice(rowIdx,1);
   markDirty();
@@ -1962,8 +1975,16 @@ function delStruct(cid,i,field,rowIdx){
     if(cur>rowIdx)el.dataset.rowid=String(cur-1);
   });
 }
-function addStruct(cid,i,field){
-  ensureSec(cid);const c=S.meeting.sections[cid].cases[i];
+function addStruct(cid,i,field,type){
+  /* V5.42.0:必要提報事件改用同一張卡片後不能再寫死 .cases —— 漏改的話,在必要事件卡片上的操作會去改到同索引的**個案討論**資料(不報錯,安靜寫錯地方)。type 省略時為 cases,既有呼叫端不受影響。 */
+  const _ty=type?type:"cases";
+  /* ⚠ V5.42.4 E-1:這個函式**產生的新列**也必須帶 data-ty ——
+     V5.42.0 只改了 addStruct 自己讀寫哪個陣列,**沒改它產生出來的 HTML**。
+     結果:必要事件卡片按「+新增病理/檢查/治療」→ 新列確實加到 events[i],
+     但那一列的 updstruct/delstruct **沒有 data-ty** → handler 退回 'cases'
+     → **在新列打字寫進同索引的個案討論,按 × 刪掉的也是個案討論的列**。
+     兩行分開看都正確,合起來才是錯的(坑 #53 的形狀)。 */
+  ensureSec(cid);const c=S.meeting.sections[cid][_ty][i];
   if(!c[field])c[field]=[];
   c[field].push({name:'',date:'',content:''});
   markDirty();
@@ -1988,10 +2009,10 @@ function addStruct(cid,i,field){
       const tmp=document.createElement('div');
       const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'">'+t.label+'</option>';}).join('');
       tmp.innerHTML='<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-        +'<select data-action="updstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="type" style="width:108px;font-size:13px;padding:5px 7px">'+opts+'</select>'
-        +'<input type="date" value="" data-action="updstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="date" style="width:148px">'
-        +'<input placeholder="自訂說明（空白用預設）" value="" data-action="updstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
-        +'<button class="delbtn" data-action="delstruct" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" style="margin-left:auto">×</button>'
+        +'<select data-action="updstruct" data-ty="'+_ty+'" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="type" style="width:108px;font-size:13px;padding:5px 7px">'+opts+'</select>'
+        +'<input type="date" value="" data-action="updstruct" data-ty="'+_ty+'" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="date" style="width:148px">'
+        +'<input placeholder="自訂說明（空白用預設）" value="" data-action="updstruct" data-ty="'+_ty+'" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
+        +'<button class="delbtn" data-action="delstruct" data-ty="'+_ty+'" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" style="margin-left:auto">×</button>'
         +'</div></div>';
       tlEl.appendChild(tmp.firstElementChild);
     }
@@ -2003,47 +2024,47 @@ function addStruct(cid,i,field){
   if(field==='pathologies'){
     div.innerHTML=`<div class="struct-row">
       <div class="struct-fields path-row">
-        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}" data-key="date">
-        <textarea placeholder="病理報告" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5"></textarea>
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}">×</button>
+        <input type="date" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}" data-key="date">
+        <textarea placeholder="病理報告" rows="2" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5"></textarea>
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${rowIdx}">×</button>
       </div></div>`;
   } else if(field==='exams'){
     const opts=EXAM_TYPES.map(t=>'<option>'+escA(t)+'</option>').join('');
     div.innerHTML=`<div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${rowIdx},'${cid}')"><option value="">— 選擇 —</option>${opts}<option value="__other__">其他</option></select>
-        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="date" style="width:148px">
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
+        <select data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${rowIdx},'${cid}')"><option value="">— 選擇 —</option>${opts}<option value="__other__">其他</option></select>
+        <input type="date" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
     </div>`;
   } else if(field==='treatments'){
     div.innerHTML=`<div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <input placeholder="項目 (化療/放療/手術...)" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="name" style="flex:1">
-        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="date" style="width:148px">
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
+        <input placeholder="項目 (化療/放療/手術...)" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="name" style="flex:1">
+        <input type="date" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
     </div>`;
   } else if(field==='genomics'){
     /* V5.30.0: 基因檢測新列(結構同癌指數,只是欄位提示不同) */
     div.innerHTML=`<div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <input placeholder="基因/Panel (EGFR/FoundationOne...)" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${rowIdx}" data-key="name" style="width:220px">
-        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${rowIdx}" data-key="date" style="width:148px">
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
+        <input placeholder="基因/Panel (EGFR/FoundationOne...)" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${rowIdx}" data-key="name" style="width:220px">
+        <input type="date" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${rowIdx}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="檢測結果（變異/VAF/TMB/MSI/建議用藥…）" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+      <textarea placeholder="檢測結果（變異/VAF/TMB/MSI/建議用藥…）" rows="2" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
     </div>`;
   } else if(field==='markers'){
     div.innerHTML=`<div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <input placeholder="指數名稱 (PSA/CEA...)" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="name" style="width:140px">
-        <input type="date" value="" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="date" style="width:148px">
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
+        <input placeholder="指數名稱 (PSA/CEA...)" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="name" style="width:140px">
+        <input type="date" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="數值或趨勢" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
+      <textarea placeholder="數值或趨勢" rows="1" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${rowIdx}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box"></textarea>
     </div>`;
   }
   if(div.firstElementChild)container.appendChild(div.firstElementChild);
@@ -2241,7 +2262,7 @@ function calCreateMtg(cid,date){
 
 
 
-function openSettings(){loadGhTokenStatus();showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
+function openSettings(){loadGhTokenStatus();loadCfTokenStatus();/* V5.41.0 */showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
 function openHistory(){
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -3456,9 +3477,13 @@ function _imgKindByField(f){
 /* V5.16.0: 保留原函式名(HTML 有直接呼叫),內部改走統一核心 */
 function delImg(cid,i,j){imgDel('related',cid,i,j);}
 
-function updMammo(cid,i,key,val){
+function updMammo(cid,i,key,val,type){
+  /* V5.42.1 A-3:原本寫死 .cases[i] —— 必要事件卡片上填的乳攝日期/報告
+     會寫進**同索引的個案討論**。而且它不會 ReferenceError,
+     A-1 修好之後反而更難發現。 */
+  const _ty=type?type:"cases";
   ensureSec(cid);
-  const c=S.meeting.sections[cid].cases[i];if(!c)return;
+  const c=S.meeting.sections[cid][_ty][i];if(!c)return;
   if(!c.mammo)c.mammo={date:'',report:'',images:[]};
   c.mammo[key]=val;markDirty();
 }
@@ -4167,12 +4192,17 @@ function renderTimelineSVG(events,caColor,mode){
   }
   return '<svg viewBox="0 0 '+W+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'+(isDark?'<rect width="'+W+'" height="'+totalH+'" fill="#1a2530" rx="8"/>':'')+'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+nodes+labels+diffs+'</svg>';
 }
-function caseViewHTML(cid,i,d){
+/* V5.42.0:加 type 讓必要提報也能用同一張檢視卡片。
+   檢視模式是唯讀的(不寫回資料),所以不像編輯模式要參數化每個 upd();
+   要處理的只有兩件事:DOM id 不能撞、死亡病例的專屬欄位要顯示。 */
+function caseViewHTML(cid,i,d,type){
+  const _ty=type?type:"cases";
+  const _isEv=_ty==='events';
   const drs=getDoctors(d).join('、')||'—';
   const hasRec=d.summary||d.decision;
   const row=(l,v)=>v?`<div class="vc-r"><span class="vc-l">${l}</span><span class="vc-v">${escA(v)}</span></div>`:'';
   const chips=(d.topics||[]).length?`<div class="vc-chips">${(d.topics||[]).map(t=>`<span class="vc-chip">${t}</span>`).join('')}</div>`:'';
-  const cardId='vcc-'+cid+'-'+i;
+  const cardId='vcc-'+cid+'-'+_ty+'-'+i;/* V5.42.0:id 帶 _ty,否則與個案討論同索引會撞 */
   return`<div class="vc" id="${cardId}">
 <div class="vc-hdr" onclick="toggleVCCard('${cardId}')" style="cursor:pointer" title="點擊展開/收合">
 <span style="margin-right:8px;font-size:11px;opacity:.5" class="vc-collapse-icon">▶</span>
@@ -4202,6 +4232,16 @@ ${hasRec?`<div class="vc-rec">${row('摘要',d.summary)}${row('結論',d.decisio
 ${(d.surgicalImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">手術照片</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.surgicalImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'照片'+(j+1))}</span><button data-action="previewsurgimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" data-subfolder="${escA(img.subFolder||'')}" data-chartno="${escA((d&&d.chartNo)||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 ${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewrelatedimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" data-subfolder="${escA(img.subFolder||'')}" data-chartno="${escA((d&&d.chartNo)||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 ${(d.timeline&&d.timeline.length)?'<div class=\"vc-r\" style=\"background:var(--surface)\"><span class=\"vc-l\" style=\"align-self:flex-start;padding-top:2px\">事件軸</span><div class=\"vc-v\">'+renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view')+'</div></div>':''}
+${_isEv?[
+  row('死亡日期',d.deathDate),
+  row('死亡地點',d.deathPlace),
+  row('直接死因',d.causeDirect),
+  row('死因歸因',d.attribution),
+  row('與治療關聯',d.txRelated),
+  /* V5.42.0:「不需改善」要明白寫出來 —— 留白會讓認證訪查以為漏填 */
+  row('改善方案',d.improveNeeded==='需改善'?(d.improvePlan||'（待填）'):(d.improveNeeded||'')),
+  row('結案狀態',d.eventStatus)
+].join(''):''}
 </div></div>`;
 }
 function followupViewHTML(cid,i,d,type='followups'){
@@ -4291,7 +4331,7 @@ function casesPane(cid){
       '<div class="sh-track">'+
       '<div class="sh-track-hdr"><span class="sh-track-dot"></span>必要事件</div>'+
       '<div id="div-events-'+cid+'">'+
-        (events.length?events.map((c,i)=>{try{return vm?teamViewHTML(cid,i,c,'events'):teamHTML(cid,i,c,'events',true);}catch(err){console.error('eventsHTML error',err);return '';}}).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
+        (events.length?events.map((c,i)=>{try{/* V5.42.0:必要提報改用個案卡片(先不開影像) */const _e=migrateEvent(cid,c);if(_e!==c)events[i]=_e;return vm?caseViewHTML(cid,i,_e,'events'):caseHTML(cid,i,_e,'events',{noImages:true});}catch(err){console.error('eventsHTML error',err);return '';}}).join(''):'<div class="sh-empty">（本次無必要事件）</div>')+
       '</div>'+bEvents+
       '</div>'
     ):'')+
@@ -4305,15 +4345,27 @@ function casesPane(cid){
   );
 }
 
-function caseHTML(cid,i,d){
-  const inp=(f,v,ph='')=>`<input value="${escA(v||'')}" oninput="upd('${cid}','cases',${i},'${f}',this.value)" placeholder="${ph}" class="f-in-auto">`;
-  const ta=(f,v,rows,ph='')=>`<textarea rows="${rows}" oninput="upd('${cid}','cases',${i},'${f}',this.value)" placeholder="${ph}" class="f-ta">${escA(v||'')}</textarea>`;
-  const addBtn=(field,label='+ 新增')=>`<button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="${field}" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">${label}</button>`;
+/* V5.42.0:加 type 參數,讓必要提報事件也能用同一張卡片。
+   原本 15 處 'cases' 是寫死的字面值 —— 拿去渲染 events 會把輸入寫進 sec.cases。
+   **漏改任何一處都不會報錯,只會安靜地寫到錯的區塊**,等產投影片才發現內容不見
+   (坑 #55 的形狀),所以打包檢查加了一條:caseHTML 內不得殘留寫死的 'cases'。
+   type 省略時為 'cases',既有呼叫端完全不受影響。 */
+function caseHTML(cid,i,d,type,opts){
+  const _ty=type?type:"cases";
+  /* V5.42.0 opts.noImages:必要提報事件先不開放影像。
+     理由不是「用不到」,而是**影像選取流程有 8 處寫死 .cases[**,
+     而那 8 處剛好是前十輪修過最多次、最脆弱的地方(歸屬驗證 V5.32~V5.35 花了五個版本)。
+     週一是這 20 個版本的第一次實測 —— 這時候動影像,出問題會分不清是哪一版造成的。
+     病史/檢查/病理/治療/**病程時序**全部可用,那才是死亡病例討論要的「詳細過程」。 */
+  const _noImg=!!(opts&&opts.noImages);
+  const inp=(f,v,ph='')=>`<input value="${escA(v||'')}" oninput="upd('${cid}','${_ty}',${i},'${f}',this.value)" placeholder="${ph}" class="f-in-auto">`;
+  const ta=(f,v,rows,ph='')=>`<textarea rows="${rows}" oninput="upd('${cid}','${_ty}',${i},'${f}',this.value)" placeholder="${ph}" class="f-ta">${escA(v||'')}</textarea>`;
+  const addBtn=(field,label='+ 新增')=>`<button class="btnadd" data-action="addstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="${field}" style="margin-left:8px;font-size:11px;padding:2px 8px;display:inline-block;width:auto">${label}</button>`;
 
   // PH chips
   const PH_CHIPS=['HTN','DM','CAD','CVA','HBV','HCV','CKD','COPD'];
   const phChips=d.phChips||[];
-  const chips2=PH_CHIPS.map(c=>{const on=phChips.includes(c);return`<span class="tchip ${on?'on':''}" data-action="phchip" data-cid="${cid}" data-idx="${i}" data-chip="${c}">${c}</span>`}).join('');
+  const chips2=PH_CHIPS.map(c=>{const on=phChips.includes(c);return`<span class="tchip ${on?'on':''}" data-action="phchip" data-ty="${_ty}" data-cid="${cid}" data-idx="${i}" data-chip="${c}">${c}</span>`}).join('');
 
   // Pathologies
   const paths=(d.pathologies||[]);
@@ -4321,9 +4373,9 @@ function caseHTML(cid,i,d){
   const pathRows=paths.map((p,pi)=>`
     <div class="struct-row">
       <div class="struct-fields path-row">
-        <input type="date" value="${escA(p.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}" data-key="date">
-        <textarea placeholder="病理報告（如：SCC, Grade 2, pT2N1...）" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5">${escA(p.content||'')}</textarea>
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}">×</button>
+        <input type="date" value="${escA(p.date||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}" data-key="date">
+        <textarea placeholder="病理報告（如：SCC, Grade 2, pT2N1...）" rows="2" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}" data-key="content" style="resize:vertical;min-height:40px;line-height:1.5">${escA(p.content||'')}</textarea>
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="pathologies" data-rowid="${pi}">×</button>
       </div>
     </div>`).join('');
 
@@ -4332,11 +4384,11 @@ function caseHTML(cid,i,d){
   const examRows=exams.map((ex,ei)=>`
     <div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <select data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${ei},'${cid}')">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="__other__"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>${!EXAM_TYPES.includes(ex.name)?`<input placeholder="檢查類型" value="${escA(ex.name)}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:100px;font-size:12px">`:``}
-        <input type="date" value="${escA(ex.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="date" style="width:148px">
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" style="margin-left:auto">×</button>
+        <select data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${ei},'${cid}')">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="__other__"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>${!EXAM_TYPES.includes(ex.name)?`<input placeholder="檢查類型" value="${escA(ex.name)}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:100px;font-size:12px">`:``}
+        <input type="date" value="${escA(ex.date||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(ex.content||'')}</textarea>
+      <textarea placeholder="檢查結果" rows="2" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(ex.content||'')}</textarea>
     </div>`).join('');
 
   // Markers
@@ -4345,20 +4397,20 @@ function caseHTML(cid,i,d){
   const markerRows=mkrs.map((mk,mi)=>`
     <div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <input placeholder="指數名稱 (PSA/CEA...)" value="${escA(mk.name||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="name" style="width:140px">
-        <input type="date" value="${escA(mk.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="date" style="width:148px">
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" style="margin-left:auto">×</button>
+        <input placeholder="指數名稱 (PSA/CEA...)" value="${escA(mk.name||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="name" style="width:140px">
+        <input type="date" value="${escA(mk.date||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="數值或趨勢（如：5.21→8.53→13.7）" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(mk.content||'')}</textarea>
+      <textarea placeholder="數值或趨勢（如：5.21→8.53→13.7）" rows="1" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="markers" data-rowid="${mi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(mk.content||'')}</textarea>
     </div>`).join('');
   const genomicsRows=gens.map((gn,gi)=>`
     <div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <input placeholder="基因/Panel (EGFR/FoundationOne...)" value="${escA(gn.name||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${gi}" data-key="name" style="width:140px">
-        <input type="date" value="${escA(gn.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${gi}" data-key="date" style="width:148px">
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${gi}" style="margin-left:auto">×</button>
+        <input placeholder="基因/Panel (EGFR/FoundationOne...)" value="${escA(gn.name||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${gi}" data-key="name" style="width:140px">
+        <input type="date" value="${escA(gn.date||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${gi}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${gi}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="數值或趨勢（如：5.21→8.53→13.7）" rows="1" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${gi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(gn.content||'')}</textarea>
+      <textarea placeholder="數值或趨勢（如：5.21→8.53→13.7）" rows="1" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="genomics" data-rowid="${gi}" data-key="content" style="resize:vertical;min-height:32px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(gn.content||'')}</textarea>
     </div>`).join('');
 
   // Treatments
@@ -4366,39 +4418,48 @@ function caseHTML(cid,i,d){
   const trtRows=trts.map((tr,ti)=>`
     <div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <input placeholder="項目 (化療/放療/手術...)" value="${escA(tr.name||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="name" style="flex:1">
-        <input type="date" value="${escA(tr.date||'')}" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="date" style="width:148px">
-        <button class="delbtn" data-action="delstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" style="margin-left:auto">×</button>
+        <input placeholder="項目 (化療/放療/手術...)" value="${escA(tr.name||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="name" style="flex:1">
+        <input type="date" value="${escA(tr.date||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="date" style="width:148px">
+        <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" style="margin-left:auto">×</button>
       </div>
-      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(tr.content||'')}</textarea>
+      <textarea placeholder="藥物/劑量/說明" rows="2" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="treatments" data-rowid="${ti}" data-key="content" style="resize:vertical;min-height:36px;line-height:1.5;width:100%;font-size:14px;padding:7px 9px;border:1px solid var(--border);border-radius:2px;box-sizing:border-box">${escA(tr.content||'')}</textarea>
     </div>`).join('');
 
   // Topics
   const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-  const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
+  const topicChips=TOPICS.map(t=>{const on=(d.topics||[]).includes(t);return`<span class="tchip ${on?'on':''}" data-action="topic" data-ty="${_ty}" data-cid="${cid}" data-idx="${i}" data-topic="${t}">${t}</span>`}).join('');
 
-  return`<div class="casecard cc-collapsed" id="cc-${cid}-cases-${i}">
-<div class="casetop" data-action="togglecase" data-card="cc-${cid}-cases-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-cases-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag sec-tag-case">個案討論</span>${(d.flags||[]).map(function(fl){const c2=flagColor(fl);return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}${d._aiImported?`<span class="ai-badge" data-action="confirmai" data-cid="${cid}" data-idx="${i}" title="逐欄確認後點此清除標記">AI 匯入待確認 ✓</span>`:''}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1)" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1)" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','cases',${i})">×</button></div>
+  /* V5.42.0:DOM id 要帶 _ty —— 否則同一個癌別裡「個案討論 #0」與「必要事件 #0」
+     會產生相同的 id(cc-head_neck-cases-0),展開/收合與各種 getElementById 會抓錯卡片。 */
+  const _isEv=_ty==='events';
+  return`<div class="casecard cc-collapsed" id="cc-${cid}-${_ty}-${i}">
+<div class="casetop" data-action="togglecase" data-card="cc-${cid}-${_ty}-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-${_ty}-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag ${_isEv?'sec-tag-team':'sec-tag-case'}">${_isEv?'必要提報':'個案討論'}</span>${_isEv&&d.eventStatus?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${d.eventStatus==='已結案'?'#8A9BA8':d.eventStatus==='已討論待改善'?'#8A5A1F':'#B3261E'};color:#fff;margin-left:4px;flex-shrink:0">${escA(d.eventStatus)}</span>`:''}${(d.flags||[]).map(function(fl){const c2=flagColor(fl);return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}${d._aiImported?`<span class="ai-badge" data-action="confirmai" data-ty="${_ty}" data-cid="${cid}" data-idx="${i}" title="逐欄確認後點此清除標記">AI 匯入待確認 ✓</span>`:''}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1,'${_ty}')" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1,'${_ty}')" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','${_ty}',${i})">×</button></div>
 <div class="cg2">
 
   <div class="fg full" style="padding-bottom:2px">
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${FLAG_LIST.map(function(fl){const on=(d.flags||[]).includes(fl);const col=flagColor(fl);return'<span data-action="caseflag" data-cid="'+cid+'" data-idx="'+i+'" data-flag="'+fl+'" style="cursor:pointer;font-size:11px;padding:2px 10px;border-radius:10px;border:1.5px solid '+col+';color:'+(on?'#fff':col)+';background:'+(on?col:'transparent')+';font-weight:600">'+fl+'</span>';}).join('')}
+      ${FLAG_LIST.map(function(fl){const on=(d.flags||[]).includes(fl);const col=flagColor(fl);/* V5.42.3 D-1:這一段是**單引號字串**不是樣板字串 —— `${_ty}` 不會被插值,
+         dataset.ty 拿到的是字面上的 "${_ty}",而它是**非空字串所以 truthy**,
+         處理器的 ||'cases' 防線完全失效 → sections[cid]["${_ty}"] → undefined[idx] → TypeError。
+         五個旗標從 V5.42.0 起全部點不動,而且**兩種卡片都中**。
+         全檔 28 個 data-ty="${_ty}" 裡只有這一個錯,而它們在原始碼裡**長得一模一樣** ——
+         六項靜態檢查全過、肉眼看不出來,只有把 HTML 產生出來才現形。 */
+      return'<span data-action="caseflag" data-ty="'+_ty+'" data-cid="'+cid+'" data-idx="'+i+'" data-flag="'+fl+'" style="cursor:pointer;font-size:11px;padding:2px 10px;border-radius:10px;border:1.5px solid '+col+';color:'+(on?'#fff':col)+';background:'+(on?col:'transparent')+';font-weight:600">'+fl+'</span>';}).join('')}
     </div>
   </div>
   <div class="fsec">基本資料</div>
-  <div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','cases',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','cases',${i},'chartNo',this.value)" placeholder="病歷號" class="f-in"></div>
-  <div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','cases',${i},'name',this.value)" placeholder="姓名" class="f-in"></div>
+  <div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${_ty}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${_ty}',${i},'chartNo',this.value)" placeholder="病歷號" class="f-in"></div>
+  <div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${_ty}',${i},'name',this.value)" placeholder="姓名" class="f-in"></div>
   <div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>年齡 / 性別</label>
     <div style="display:flex;gap:6px;align-items:center">
-      <input value="${escA(d.age||'')}" oninput="upd('${cid}','cases',${i},'age',this.value)" placeholder="年齡" style="font-size:12px;padding:5px 8px;width:72px">
-      <select onchange="upd('${cid}','cases',${i},'gender',this.value)" class="f-in-auto"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
+      <input value="${escA(d.age||'')}" oninput="upd('${cid}','${_ty}',${i},'age',this.value)" placeholder="年齡" style="font-size:12px;padding:5px 8px;width:72px">
+      <select onchange="upd('${cid}','${_ty}',${i},'gender',this.value)" class="f-in-auto"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
     </div>
   </div>
   <!-- V4.7.0: ECOG + 衰弱量表(CFS) — 預設留空,選填 -->
   <div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>ECOG / 衰弱量表</label>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-      <select onchange="upd('${cid}','cases',${i},'ecog',this.value)" style="font-size:12px;padding:5px 8px;min-width:175px" title="ECOG Performance Status">
+      <select onchange="upd('${cid}','${_ty}',${i},'ecog',this.value)" style="font-size:12px;padding:5px 8px;min-width:175px" title="ECOG Performance Status">
         <option value="" ${!d.ecog?'selected':''}>— ECOG —</option>
         <option value="0" ${d.ecog==='0'?'selected':''}>0:活動正常</option>
         <option value="1" ${d.ecog==='1'?'selected':''}>1:輕症狀,可工作</option>
@@ -4406,7 +4467,7 @@ function caseHTML(cid,i,d){
         <option value="3" ${d.ecog==='3'?'selected':''}>3:臥床≥50%,部分自理</option>
         <option value="4" ${d.ecog==='4'?'selected':''}>4:完全臥床,無法自理</option>
       </select>
-      <select onchange="upd('${cid}','cases',${i},'cfs',this.value)" style="font-size:12px;padding:5px 8px;min-width:200px" title="Clinical Frailty Scale (CFS)">
+      <select onchange="upd('${cid}','${_ty}',${i},'cfs',this.value)" style="font-size:12px;padding:5px 8px;min-width:200px" title="Clinical Frailty Scale (CFS)">
         <option value="" ${!d.cfs?'selected':''}>— 衰弱量表 —</option>
         <option value="1" ${d.cfs==='1'?'selected':''}>1:非常健朗</option>
         <option value="2" ${d.cfs==='2'?'selected':''}>2:健康</option>
@@ -4422,9 +4483,9 @@ function caseHTML(cid,i,d){
   </div>
   <div class="fg full"><label>主治醫師</label>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
-      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第三主治（選填）</div>${drSelDept(cid,'cases',i,Array.isArray(d.doctors)?d.doctors[2]||'':'',2)}</div>
+      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,_ty,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
+      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,_ty,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
+      <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第三主治（選填）</div>${drSelDept(cid,_ty,i,Array.isArray(d.doctors)?d.doctors[2]||'':'',2)}</div>
     </div>
   </div>
 
@@ -4434,29 +4495,37 @@ function caseHTML(cid,i,d){
   <div class="fg full"><label>過去病史</label>
     <div style="font-size:10px;color:var(--textlt);margin-bottom:4px">慢性病勾選</div>
     <div class="trow" style="margin-bottom:8px">${chips2}</div>
-    <input value="${escA(d.ph||'')}" oninput="upd('${cid}','cases',${i},'ph',this.value)" placeholder="其他病史（如手術史、藥物史）" class="f-in">
+    <input value="${escA(d.ph||'')}" oninput="upd('${cid}','${_ty}',${i},'ph',this.value)" placeholder="其他病史（如手術史、藥物史）" class="f-in">
   </div>
-  ${(cid==='breast'||cid==='gynecology')?`<div class="fg full"><label>家族史</label><textarea rows="2" oninput="upd('${cid}','cases',${i},'familyHistory',this.value)" placeholder="如：乳癌（母親）、婦癌（姊）" class="f-ta">${escA(d.familyHistory||'')}</textarea></div>`:''}
+  ${(cid==='breast'||cid==='gynecology')?`<div class="fg full"><label>家族史</label><textarea rows="2" oninput="upd('${cid}','${_ty}',${i},'familyHistory',this.value)" placeholder="如：乳癌（母親）、婦癌（姊）" class="f-ta">${escA(d.familyHistory||'')}</textarea></div>`:''}
 
   <div class="fsec">臨床資料</div>
   <div class="fg full"><div class="field-hdr"><label>病理</label>${addBtn('pathologies')}</div>
     <div id="pathlist-${cid}-${i}">${pathRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr"><label>病理染色影像</label>${embedToggle(cid,i,'patho',d)}</div>
+  ${_noImg?"":`<!-- V5.42.2 B-1:_noImg 原本只擋影像內容,**標題列與內嵌開關還在** ——
+         必要事件卡片會出現空的影像區塊(看到標題卻沒有選圖按鈕,會以為壞掉),
+         而那個開關按下去會改到同索引個案討論的 embed 旗標。
+         「不開影像」應該是整塊不出現。與第十次審核 Z-1 同一個形狀:
+         **保護的邊界要用「使用者看到什麼、點得到什麼」來畫,不是用「程式碼長得像一組」。** -->
+  <div class="fg full"><div class="field-hdr"><label>病理染色影像</label>${embedToggle(cid,i,'patho',d,_ty)}</div>
     ${buildPathImgArea(cid,i,d)}
-  </div>
+  </div>`}
   <div class="fg full"><div class="field-hdr"><label>影像檢查</label>${addBtn('exams')}</div>
     <div id="examlist-${cid}-${i}">${examRows}</div>
   </div>
-  ${cid==='breast'?`<div class="fg full">
-    <div class="field-hdr"><label>乳房攝影</label>${embedToggle(cid,i,'mammo',d)}</div>
+  ${(cid==='breast'&&!_noImg)?`<div class="fg full">
+    <!-- V5.42.1 A-3b:整段納入 _noImg —— 「不開影像」應該是整塊不開。
+         原本只擋了下面的 buildMammoImgArea,日期與報告欄位還在,
+         填了會寫進同索引的個案討論(updMammo 當時也還寫死 .cases)。 -->
+    <div class="field-hdr"><label>乳房攝影</label>${embedToggle(cid,i,'mammo',d,_ty)}</div>
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
       <span style="font-size:11px;color:var(--textlt)">日期</span>
-      <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value)" class="f-in-auto">
+      <input type="date" value="${escA(d.mammo?.date||'')}" oninput="updMammo('${cid}',${i},'date',this.value,'${_ty}')" class="f-in-auto">
     </div>
-    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value)" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
+    <textarea rows="4" oninput="updMammo('${cid}',${i},'report',this.value,'${_ty}')" placeholder="Findings: ... Impression: BI-RADS Category ..." style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;border:1px solid var(--border);border-radius:2px;line-height:1.6;margin-bottom:6px">${escA(d.mammo?.report||'')}</textarea>
     <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像</div>
-    <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${buildMammoImgArea(cid,i,d)}</div>
+    <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${_noImg?"":buildMammoImgArea(cid,i,d)}</div>
   </div>`:''}  <div class="fg full"><div class="field-hdr"><label>癌指數</label>${addBtn('markers')}</div>
     <div id="marklist-${cid}-${i}">${markerRows}</div>
   </div>
@@ -4464,28 +4533,41 @@ function caseHTML(cid,i,d){
   <div class="fg full"><div class="field-hdr"><label>基因檢測</label>${addBtn('genomics')}</div>
     <div id="genlist-${cid}-${i}">${genomicsRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>NGS 報告影像</label>${embedToggle(cid,i,'genomics',d)}</div>
+  ${_noImg?"":`<div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>NGS 報告影像</label>${embedToggle(cid,i,'genomics',d,_ty)}</div>
     ${buildGenomicsImgArea(cid,i,d)}
-  </div>
+  </div>`}
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
     <div id="trtlist-${cid}-${i}">${trtRows}</div>
   </div>
-  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label>${embedToggle(cid,i,'surg',d)}<!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
+  ${_noImg?"":`<div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label>${embedToggle(cid,i,'surg',d,_ty)}<!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
     ${buildSurgicalImgArea(cid,i,d)}
-  </div>
-  <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>相關影像</label>${embedToggle(cid,i,'related',d)}<!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
+  </div>`}
+  ${_noImg?"":`<div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>相關影像</label>${embedToggle(cid,i,'related',d,_ty)}<!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
     ${buildImgArea(cid,i,d)}
-  </div>
+  </div>`}
 
-  <div class="fsec">治療事件軸<label style="float:right;font-weight:600;font-size:11px;letter-spacing:normal;color:var(--textmd);cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="checkbox" data-action="updtlshow" data-cid="${cid}" data-caseidx="${i}"${d.showTimeline?' checked':''} style="width:14px;height:14px;cursor:pointer">產出時包含病程時序圖</label>${d.showTimeline?embedToggle(cid,i,'timeline',d):''}<button class="btn btn-b btn-sm" data-action="tlaiopen" data-cid="${cid}" data-caseidx="${i}" style="float:right;margin-right:10px;font-size:11px;padding:2px 10px;color:var(--acc)" title="匯出臨床資料給 AI 判讀病程轉折與治療反應">🤖 AI 判讀</button></div>
+  <div class="fsec">治療事件軸<label style="float:right;font-weight:600;font-size:11px;letter-spacing:normal;color:var(--textmd);cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="checkbox" data-action="updtlshow" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}"${d.showTimeline?' checked':''} style="width:14px;height:14px;cursor:pointer">產出時包含病程時序圖</label>${d.showTimeline?embedToggle(cid,i,'timeline',d,_ty):''}<button class="btn btn-b btn-sm" data-action="tlaiopen" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" style="float:right;margin-right:10px;font-size:11px;padding:2px 10px;color:var(--acc)" title="匯出臨床資料給 AI 判讀病程轉折與治療反應">🤖 AI 判讀</button></div>
   <div class="fg full">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
-      <button class="btnadd" data-action="addstruct" data-cid="${cid}" data-caseidx="${i}" data-field="timeline" style="display:inline-block;width:auto;font-size:11px;padding:3px 10px">＋ 新增事件</button>
-      <button class="btn btn-b btn-sm" onclick="importTimelineFromTreatments('${cid}',${i})" style="font-size:11px">⬇ 從治療記錄帶入</button>
+      <button class="btnadd" data-action="addstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="timeline" style="display:inline-block;width:auto;font-size:11px;padding:3px 10px">＋ 新增事件</button>
+      <button class="btn btn-b btn-sm" onclick="importTimelineFromTreatments('${cid}',${i},'${_ty}')" style="font-size:11px">⬇ 從治療記錄帶入</button>
     </div>
     <div id="tllist-${cid}-${i}">${buildTimelineRows(cid,i,d)}</div>
     <div id="tl-svg-preview-${cid}-${i}" style="margin-top:8px">${(d.timeline&&d.timeline.length)?renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view'):''}</div>
   </div>
+
+  ${_isEv?`
+  <div class="fsec" style="color:var(--err)">死亡資訊</div>
+  <div class="cg2">
+    <div class="fg"><label>死亡日期</label><input type="date" value="${escA(d.deathDate||'')}" oninput="upd('${cid}','${_ty}',${i},'deathDate',this.value)" class="f-in-auto"></div>
+    <div class="fg"><label>死亡地點</label><select onchange="upd('${cid}','${_ty}',${i},'deathPlace',this.value)" class="f-in-auto"><option value="">—</option>${DEATH_PLACES.map(function(x){return '<option value="'+escA(x)+'"'+(d.deathPlace===x?' selected':'')+'>'+escA(x)+'</option>';}).join('')}</select></div>
+  </div>
+  <div class="fg full"><label>直接死因</label>${ta('causeDirect',d.causeDirect,2,'例：呼吸衰竭')}</div>
+  <div class="cg2">
+    <div class="fg"><label>死因歸因</label><select onchange="upd('${cid}','${_ty}',${i},'attribution',this.value)" class="f-in-auto"><option value="">—</option>${ATTRIBUTIONS.map(function(x){return '<option value="'+escA(x)+'"'+(d.attribution===x?' selected':'')+'>'+escA(x)+'</option>';}).join('')}</select></div>
+    <div class="fg"><label>與治療之關聯</label><select onchange="upd('${cid}','${_ty}',${i},'txRelated',this.value)" class="f-in-auto"><option value="">—</option>${TX_RELATIONS.map(function(x){return '<option value="'+escA(x)+'"'+(d.txRelated===x?' selected':'')+'>'+escA(x)+'</option>';}).join('')}</select></div>
+  </div>
+  `:''}
 
   <div class="fsec">討論</div>
   <div class="fg full fg-gap"><label>討論方向${d._aiImported&&!(d.discussion||"").trim()?' <span class="fld-gap">待補</span>':''}</label>${ta('discussion',d.discussion,2,'例：確定臨床分期 & 治療策略討論')}</div>
@@ -4494,6 +4576,14 @@ function caseHTML(cid,i,d){
   <div class="fsec" style="color:var(--fog)">會議記錄（開會後填入）</div>
   <div class="fg full"><label>討論摘要</label>${ta('summary',d.summary,3,'影像討論：...')}</div>
   <div class="fg full"><label>決策結論</label>${ta('decision',d.decision,2,'建議...')}</div>
+  ${_isEv?`
+  <div class="fsec" style="color:var(--err)">改善方案與結案</div>
+  <div class="cg2">
+    <div class="fg"><label>是否需改善方案</label><select onchange="upd('${cid}','${_ty}',${i},'improveNeeded',this.value);_toggleImprovePlan('${cid}','${_ty}',${i},this.value)" class="f-in-auto"><option value="">—</option>${IMPROVE_OPTS.map(function(x){return '<option value="'+escA(x)+'"'+(d.improveNeeded===x?' selected':'')+'>'+escA(x)+'</option>';}).join('')}</select></div>
+    <div class="fg"><label>結案狀態</label><select onchange="upd('${cid}','${_ty}',${i},'eventStatus',this.value)" class="f-in-auto">${EVENT_STATUS.map(function(x){return '<option value="'+escA(x)+'"'+((d.eventStatus||'待討論')===x?' selected':'')+'>'+escA(x)+'</option>';}).join('')}</select></div>
+  </div>
+  <div class="fg full" id="improve-plan-${cid}-${_ty}-${i}" style="display:${d.improveNeeded==='需改善'?'':'none'}"><label>改善方案</label>${ta('improvePlan',d.improvePlan,3,'具體措施、負責單位、預計完成時間')}</div>
+  `:''}
 
 </div></div>`;
 }
@@ -5517,7 +5607,9 @@ function getSectionItem(cid,type,i){
 }
 /* V5.27.0: 影像/時序「夾投影片 vs 開新分頁」切換的共用 UI。
    逐個案、逐類型各自可選(個管師選 A:最靈活)。放在各影像區塊的標題列右側。 */
-function embedToggle(cid,i,kind,d){
+/* V5.42.2 B-1(防禦層):加 type —— 即使日後有人把 _noImg 拿掉,
+   這個開關也不會改到同索引的個案討論。與 A-3 的 updMammo 同樣是雙層作法。 */
+function embedToggle(cid,i,kind,d,type){
   /* V5.28.1: 個管師反映「很淡很淡,反黑才看得到」。原因有三:
      ① 未選中只用 opacity:.65,在淺色底上淡到接近消失
      ② 字級 10.5px —— V5.24.0 已把全站主要文字拉到 14px,這裡卻是全系統最小
@@ -5529,7 +5621,7 @@ function embedToggle(cid,i,kind,d){
   const sel='background:var(--acc);color:#fff;border:1px solid var(--acc);';
   const unsel='background:#fff;color:var(--textmd);border:1px solid var(--blt);';
   const btn=function(val,label,active){
-    return '<button data-action="setembed" data-cid="'+cid+'" data-caseidx="'+i+'" data-kind="'+kind+'" data-val="'+val+'"'
+    return '<button data-action="setembed" data-cid="'+cid+'" data-caseidx="'+i+'" data-ty="'+(type||'cases')+'" data-kind="'+kind+'" data-val="'+val+'"'
       +' style="'+base+(active?sel:unsel)+'">'+label+'</button>';
   };
   return '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:2px;'
@@ -5610,6 +5702,58 @@ function createFollowup(data){data=data||{};
     followFocus:data.followFocus||'',  /* V5.22.0: 本次追蹤重點 */
     note:data.note||''};               /* 目前結果(沿用舊欄位,舊資料不搬動) */
 }
+/* ════════════════════════════════════════════════════════════════
+   V5.42.0 必要提報事件(死亡病例討論)改用個案討論的資料結構
+   ────────────────────────────────────────────────────────────────
+   原本 events 與 team 共用 createTeamItem —— 只有 13 個欄位,
+   「事件發生到死亡的詳細過程」只能塞進一個 discussion textarea。
+   但死亡病例討論**就是一種個案討論**:一樣要寫病史、檢查、病理、治療歷程,
+   而那些欄位(含病程時序的結構化多列)個案卡片早就有了,只是長在別張卡片上。
+
+   **本系統沒有病人資料庫** —— 每張卡片各自獨立。所謂「連結舊記錄」只是
+   「查一下這個病歷號以前填過沒有,有的話幫你複製一份」,不是建立病人實體。
+   ════════════════════════════════════════════════════════════════ */
+const EVENT_STATUS=['待討論','已討論待改善','已結案'];
+const DEATH_PLACES=['本院住院','本院急診','他院','安寧/居家','不詳'];
+const ATTRIBUTIONS=['疾病進展','治療相關併發症','合併症/共病','感染','非癌症因素','無法判定'];
+const TX_RELATIONS=['確定相關','可能相關','不太可能','無關','無法判定'];
+const IMPROVE_OPTS=['需改善','不需改善（疾病自然進程）','不需改善（其他）'];
+
+/* V5.42.0:「改善方案」欄位只在選「需改善」時出現 ——
+   這讓「留白」與「經討論認定不需改善」在資料上分得開(認證訪查看到空白會問)。
+   刻意不整區重繪:那會讓卡片收合、捲動位置歸零(坑 #62 的教訓)。 */
+function _toggleImprovePlan(cid,ty,i,val){
+  const box=document.getElementById('improve-plan-'+cid+'-'+ty+'-'+i);
+  if(!box)return;
+  box.style.display=(val==='需改善')?'':'none';
+}
+
+function createEvent(cid,data,opts){
+  data=data||{};
+  const base=createCase(cid,data,opts);
+  return Object.assign(base,{
+    deathDate:data.deathDate||'',
+    deathPlace:data.deathPlace||'',
+    causeDirect:data.causeDirect||'',      /* 直接死因 */
+    attribution:data.attribution||'',      /* 死因歸因 */
+    txRelated:data.txRelated||'',          /* 與治療之關聯 —— 癌委會最關心,也決定要不要改善 */
+    improveNeeded:data.improveNeeded||'',  /* 「留白」與「認定不需要」必須分得開 */
+    improvePlan:data.improvePlan||'',
+    eventStatus:data.eventStatus||'待討論',
+    prevDate:data.prevDate||'',
+    _v:2
+  });
+}
+
+/* V5.42.0:舊必要事件(createTeamItem 結構)的一次性遷移。
+   欄位名剛好相同,直接餵給 createEvent,缺的由 createCase 補預設值。
+   ⚠ 語意差異:`cc` 舊 label 是「之前現病史」、個案是「現病史」——
+   內容不動,只是 label 變了;死亡病例本來就是回顧性的,讀起來不會有問題。 */
+function migrateEvent(cid,e){
+  if(e&&e._v>=2)return e;
+  return createEvent(cid,e||{});
+}
+
 function createTeamItem(data){data=data||{};
   return{id:data.id||uid(),chartNo:data.chartNo||'',name:data.name||'',
     doctors:Array.isArray(data.doctors)?data.doctors:['',''],doctor:data.doctor||'',
@@ -5628,7 +5772,8 @@ function createItem(cid,type,data,opts){
   switch(type){
     case'cases':return createCase(cid,data,opts);
     case'followups':return createFollowup(data);
-    case'team':case'events':return createTeamItem(data);
+    case'team':return createTeamItem(data);
+    case'events':return createEvent(cid,data,opts);/* V5.42.0 */
     default:return createSpecial(data);
   }
 }
@@ -5641,7 +5786,8 @@ function assertCaseSchema(c){
 }
 function addItem(cid,type){ensureSec(cid);/* V5.21.0: 改走單一工廠。withDeptDefault 保留手動新增原本會帶癌別預設科別的行為 */
   const blank=createItem(cid,type,{},{withDeptDefault:true});S.meeting.sections[cid][type].push(blank);const i=S.meeting.sections[cid][type].length-1;const cont=document.getElementById(`div-${type}-${cid}`);const empty=cont.querySelector('.sh-empty');if(empty)empty.remove();const div=document.createElement('div');div.innerHTML=type==='cases'?caseHTML(cid,i,blank):
-    type==='team'||type==='events'?teamHTML(cid,i,blank,type,false):/* V5.0.0: team/events 用 teamHTML */
+    type==='events'?caseHTML(cid,i,blank,'events',{noImages:true}):/* V5.42.0 */
+     type==='team'?teamHTML(cid,i,blank,type,false):/* V5.0.0: team/events 用 teamHTML */
     type==='followups'?followupHTML(cid,i,blank,type,true):
     specialHTML(cid,i,blank);
   const newCard=div.firstElementChild;
@@ -5683,7 +5829,8 @@ function delItem(cid,type,i){
   const items=S.meeting.sections[cid][type];
   cont.innerHTML=items.map((d,idx)=>
     type==='cases'?caseHTML(cid,idx,d):
-    type==='team'||type==='events'?teamHTML(cid,idx,d,type):
+    type==='events'?caseHTML(cid,idx,d,'events',{noImages:true}):/* V5.42.0 */
+    type==='team'?teamHTML(cid,idx,d,type):
     type==='followups'?followupHTML(cid,idx,d,type):
     specialHTML(cid,idx,d)
   ).join('');
@@ -5699,11 +5846,11 @@ const GH_BRANCH='main';
 const GH_SLIDES_PATH='slides';
 
 // ── GitHub slides share manager ──
-function getSharedSlides(){try{return JSON.parse(localStorage.getItem('mdt_shared_slides')||'[]');}catch{return[];}}
-function saveSharedSlides(arr){localStorage.setItem('mdt_shared_slides',JSON.stringify(arr));}
 
 async function shareHTMLSlides(){
-  if(!getGhToken()){alert('請先到設定頁填入 GitHub Personal Access Token');return;}
+  /* V5.41.0:守門條件必須跟著換 —— 分享改走 Cloudflare 之後還檢查 GitHub token,
+     個管師填了 CF token 一樣會被擋在門外(坑 #60:舊路徑關掉後,它的使用者去哪了)。 */
+  if(!getCfToken()){alert('請先到「設定 → 系統 → 投影片分享」填入 Cloudflare API Token');return;}
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   const btn=document.getElementById('btn-share-slides');
   if(btn){btn.disabled=true;btn.textContent='產生中...';}
@@ -5725,20 +5872,23 @@ async function shareHTMLSlides(){
        合併會議以 - 連接(+ 會被編碼成 %2B)。舊連結不受影響(檔案仍在);同名仍覆蓋(維持原行為)。 */
     /* 合併會議用 - 連接:+ 會被 URL 編碼成 %2B(3 字元),- 不會被編碼 */
     const _enCode=cids.map(function(id){return CANCER_EN_CODES[id]||id;}).join('-');
-    const ghFname=m.date+'_'+_enCode+'.html';
-    if(!confirm('將上傳「'+ghFname+'」至 GitHub Pages\n\n佈署需約 3 分鐘後才能分享連結\n\n確定上傳？'))return;
+    /* V5.41.0:檔名補上 _MDT,與「HTML 下載」的格式一致(L9161)——
+       Worker 的清單頁靠 `日期_癌別_MDT.html` 這個格式篩選出會議記錄,
+       不帶 _MDT 的檔案上傳後不會出現在會議室電腦的書籤清單裡。 */
+    const ghFname=m.date+'_'+_enCode+'_MDT.html';
+    if(!confirm('將上傳「'+ghFname+'」至分享空間\n\n數秒後即可使用連結\n\n確定上傳？'))return;
     if(btn){btn.textContent='上傳中...';}
     _upTip=showStickyToast('正在產生並上傳，請稍候…');/* V5.33.0 W-5:原本 2.2 秒就消失,但含影像時作業要十幾秒 → 中間完全沒回饋,使用者以為當掉會重複按 */
     // Generate slides HTML without downloading
     const fullHTML=await buildSlidesHTMLOnly();
     if(!fullHTML){throw new Error('無法產生投影片內容');}
-    const shareUrl=await uploadSlidesToGitHub(fullHTML,ghFname);
-    const arr=getSharedSlides();
-    const existing=arr.findIndex(s=>s.fname===ghFname);
-    const entry={fname:ghFname,url:shareUrl,uploadedAt:new Date().toISOString(),title:m.title||ghFname,date:m.date||''};
-    if(existing>=0)arr[existing]=entry;else arr.unshift(entry);
-    saveSharedSlides(arr.slice(0,30));
-    showSaveToast('已上傳！佈署約 3 分鐘後生效');
+    const shareUrl=await uploadSlidesToCloudflare(fullHTML,ghFname);/* V5.41.0 */
+    /* V5.41.0:不再於本機保存分享清單。
+       ① 原本的 slice(0,30) 上限本身就是 P0-7 的一部分 —— 超過 30 筆後 UI 就管不到
+       ② 已分享內容的管理權在林醫師(Git Pusher 有完整的搜尋/改名/刪除/QR 介面,
+          而且跨三台電腦看得到全部),個管師只負責上傳
+       ③ 本機再存一份等於「同一件事兩份實作」,兩邊會分歧(坑 #61) */
+    showSaveToast('已上傳，連結可以用了');/* V5.41.0:Cloudflare 數秒生效,不再是 GitHub 的 3 分鐘 */
     // Show link in output area
     const linkEl=document.getElementById('slide-share-link');
     if(linkEl){
@@ -5774,7 +5924,7 @@ async function shareHTMLSlides(){
       });
     };
     document.getElementById('share-close-btn').onclick=function(){document.body.removeChild(modal);};
-    if(document.getElementById('shared-slides-list'))renderSharedSlides();
+    /* V5.41.0:清單 UI 已移除 */
   }catch(e){
     alert('上傳失敗：'+e.message);
   }finally{
@@ -5783,41 +5933,7 @@ async function shareHTMLSlides(){
   }
 }
 
-async function deleteSharedSlide(fname){
-  if(!confirm('確定刪除「'+fname+'」？\n（GitHub Pages 上的檔案將一併移除）'))return;
-  const token=getGhToken();
-  if(!token){alert('請先設定 Token');return;}
-  const url='https://api.github.com/repos/'+GH_REPO+'/contents/'+GH_SLIDES_PATH+'/'+fname;
-  try{
-    const r=await fetch(url,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
-    if(!r.ok)throw new Error('找不到檔案');
-    const j=await r.json();
-    const resp=await fetch(url,{method:'DELETE',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
-      body:JSON.stringify({message:'Delete slides: '+fname,sha:j.sha})});
-    if(!resp.ok)throw new Error('刪除失敗：'+resp.status);
-    saveSharedSlides(getSharedSlides().filter(s=>s.fname!==fname));
-    renderSharedSlides();
-    showSaveToast('已刪除 '+fname);
-  }catch(e){alert('刪除失敗：'+e.message);}
-}
 
-function renderSharedSlides(){
-  const el=document.getElementById('shared-slides-list');if(!el)return;
-  const arr=getSharedSlides();
-  if(!arr.length){el.innerHTML='<div style="font-size:12px;color:var(--textlt);padding:8px 0">尚無已分享的投影片</div>';return;}
-  el.innerHTML=arr.map(function(s,idx){
-    const dt=s.uploadedAt?new Date(s.uploadedAt).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Taipei'}):'';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--blt)">'
-      +'<div style="flex:1;min-width:0">'
-      +'<div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(s.title||s.fname)+'</div>'
-      +'<div style="font-size:11px;color:var(--textlt);margin-top:2px">'+escA(s.date)+(dt?' · 上傳 '+dt:'')+'</div>'
-      +'</div>'
-      +'<button class="btn btn-b btn-sm" data-action="copyslideurl" data-idx="'+idx+'">複製連結</button>'
-      +'<a href="'+escA(s.url)+'" target="_blank" class="btn btn-b btn-sm" style="text-decoration:none">開啟</a>'
-      +'<button class="btn btn-sm" style="background:#fee;color:var(--err);border:1px solid var(--err);border-radius:2px;padding:3px 8px;cursor:pointer;font-size:12px" data-action="deleteslide" data-fname="'+escA(s.fname)+'">刪除</button>'
-      +'</div>';
-  }).join('');
-}
 
 async function _folderEntries(handle){
   const arr=[];
@@ -5854,79 +5970,105 @@ async function _resolveSubFolder(rootHandle,subName){
   }catch(e2){}
   return null;
 }
-function getGhToken(){return localStorage.getItem('mdt_gh_token')||'';}
-function saveGhToken(){
-  const t=document.getElementById('gh-token-input').value.trim();
-  if(!t){alert('請輸入 Token');return;}
-  localStorage.setItem('mdt_gh_token',t);
-  document.getElementById('gh-token-status').textContent='✓ Token 已儲存（本機）';
-  document.getElementById('gh-token-input').value='';
+/* V5.41.0:已無呼叫端。mdt_gh_token 若還留在 localStorage 不影響運作,
+   個管師可於「清除孤兒資料」時一併回收。 */
+/* V5.41.0:GitHub token 的設定 UI 已移除,這支保留為空實作 ——
+   openSettings() 仍會呼叫它(移除呼叫要動另一處),留個安全的空殼比較單純。 */
+function loadGhTokenStatus(){}
+
+/* ════════════════════════════════════════════════════════════════
+   V5.41.0 投影片分享改走 Cloudflare Workers KV
+   ────────────────────────────────────────────────────────────────
+   原本上傳到 GitHub Pages,帶來兩項列管中的個資問題:
+     P0-6 repo 為 public、檔名可窮舉、投影片內含完整病歷號
+     P0-7 deleteSharedSlide 只是新增一個刪除 commit,**檔案永留 Git 歷史**
+   Cloudflare KV 的刪除是真刪除(連結立刻失效,沒有歷史),P0-7 因此解決;
+   佈署也從 3 分鐘降到數秒。
+
+   Account ID 與 Namespace ID 寫死 —— 它們**不是機密**(沒有 token 就不能
+   做任何事),而且個管師三台電腦不必各設定一次。
+   **API Token 不寫死**:比照 P0-9 的做法存在 mdt_cf_token,
+   而該 key 不在 _PREF_FIXED 裡 → **不會進入備份檔**。
+   (Cloudflare 的 KV token 權限只有 Read/Edit 兩級,Edit 含刪除 ——
+   沒辦法給個管師「只能寫不能刪」的權限,這點是已知限制。)
+   ════════════════════════════════════════════════════════════════ */
+/* V5.41.0:GitHub 分享整組移除(uploadSlidesToGitHub / getGhToken / saveGhToken /
+   clearGhToken / getSharedSlides / saveSharedSlides)—— 分享改走 Cloudflare 後
+   它們全部成了「沒人走的路徑」。依坑 #61 的原則:留著就是同一件事的第二份實作,
+   遲早會有人改了一邊忘了另一邊。**P0-6 / P0-7 兩項個資列管也因此關閉。** */
+const CF_ACCOUNT_ID='0b6e4749bcc0c4f9a989293b6f518ae7';
+const CF_NAMESPACE_ID='2c941f7dd17e43bd9224c966aeec4876';
+const CF_BASE_URL='https://share.selaginella.io';
+
+function getCfToken(){return localStorage.getItem('mdt_cf_token')||'';}
+function saveCfToken(){
+  const t=(document.getElementById('cf-token-input')||{}).value;
+  const v=(t||'').trim();
+  if(!v){alert('請輸入 API Token');return;}
+  localStorage.setItem('mdt_cf_token',v);
+  const el=document.getElementById('cf-token-status');
+  if(el){el.textContent='✓ 已儲存（只存在這台電腦，不會進入備份檔）';el.style.color='var(--ok)';}
+  const inp=document.getElementById('cf-token-input');if(inp)inp.value='';
 }
-function clearGhToken(){
-  localStorage.removeItem('mdt_gh_token');
-  document.getElementById('gh-token-status').textContent='Token 已清除';
+function clearCfToken(){
+  localStorage.removeItem('mdt_cf_token');
+  const el=document.getElementById('cf-token-status');
+  if(el){el.textContent='已清除';el.style.color='var(--textlt)';}
 }
-function loadGhTokenStatus(){
-  const el=document.getElementById('gh-token-status');
-  if(!el)return;
-  el.textContent=getGhToken()?'✓ Token 已設定':'尚未設定 Token';
-  renderSharedSlides();
+function loadCfTokenStatus(){
+  const el=document.getElementById('cf-token-status');if(!el)return;
+  if(getCfToken()){el.textContent='✓ 已設定（只存在這台電腦，不會進入備份檔）';el.style.color='var(--ok)';}
+  else{el.textContent='尚未設定，無法使用「HTML 分享」';el.style.color='var(--textlt)';}
 }
 
-async function uploadSlidesToGitHub(htmlContent, fname){
-  const token=getGhToken();
-  if(!token){alert('請先到設定頁填入 GitHub Token');return;}
-  const path=GH_SLIDES_PATH+'/'+fname;
-  const url='https://api.github.com/repos/'+GH_REPO+'/contents/'+path;
-  // Check if file exists (need SHA to update)
-  let sha='';
-  try{
-    const r=await fetch(url,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
-    if(r.ok){const j=await r.json();sha=j.sha||'';}
-  }catch(e){}
-  // Encode content (handle Unicode)
-  const bytes=new TextEncoder().encode(htmlContent);
-  let b64='';
-  const chunk=8192;
-  for(let i=0;i<bytes.length;i+=chunk){
-    b64+=String.fromCharCode(...bytes.subarray(i,i+chunk));
-  }
-  b64=btoa(b64);
-  const body={message:'Upload slides: '+fname,content:b64,branch:GH_BRANCH};
-  if(sha)body.sha=sha;
+/* 上傳到 KV。key 就是檔名;同名會直接覆蓋(維持原本 GitHub 的行為)。
+   metadata 供 Worker 的清單頁顯示標題、大小與上傳時間。 */
+async function uploadSlidesToCloudflare(htmlContent, fname){
+  const token=getCfToken();
+  if(!token){alert('請先到「設定 → 系統 → 投影片分享」填入 Cloudflare API Token');return;}
+
+  /* 從 HTML 取 <title> 當清單頁的標題 */
+  let title=fname.replace(/\.[^.]+$/,'');
+  const tm=htmlContent.slice(0,8192).match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if(tm&&tm[1].trim())title=tm[1].trim().slice(0,120);
+
+  const blob=new Blob([htmlContent],{type:'text/html; charset=utf-8'});
+  const meta={title:title,size:blob.size,uploaded:new Date().toISOString().slice(0,19)};
+
+  const fd=new FormData();
+  fd.append('value',blob);
+  fd.append('metadata',JSON.stringify(meta));
+
+  const url='https://api.cloudflare.com/client/v4/accounts/'+CF_ACCOUNT_ID
+    +'/storage/kv/namespaces/'+CF_NAMESPACE_ID+'/values/'+encodeURIComponent(fname);
+
   const resp=await fetch(url,{
     method:'PUT',
-    headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
-    body:JSON.stringify(body)
+    headers:{'Authorization':'Bearer '+token},
+    body:fd
   });
+
   if(!resp.ok){
-    const err=await resp.json().catch(()=>({}));
-    /* V5.27.4: 原本不管什麼錯都硬加「請確認 Token 權限」,把 GitHub 真正的原因蓋掉。
-       個管師遇到的實例:GitHub 回「Timed out validating rule, please try again」
-       (檔案含 base64 圖片常有 1~3MB,GitHub 的 repository ruleset 掃描會逾時),
-       但畫面顯示「請確認 Token 權限」→ 誤導去查權限,其實只要重試。
-       改成依狀態碼與訊息給對應建議。 */
-    var _m=String(err.message||''),_st=resp.status;
-    var _hint='';
-    if(/timed out|timeout/i.test(_m)){
-      _hint='這是 GitHub 端的暫時性逾時（檔案較大時常見），請直接再按一次上傳。';
-    }else if(_st===401){
-      _hint='Token 無效或已過期，請到設定頁重新填入。';
-    }else if(_st===403){
-      _hint='Token 權限不足，需要 Contents: Read and write。';
-    }else if(_st===404){
-      _hint='找不到 repository 或路徑，請確認 Token 對這個 repo 有權限。';
-    }else if(_st===409){
-      _hint='檔案版本衝突，請再試一次。';
-    }else if(_st===422){
-      _hint='檔案可能過大或內容被 GitHub 規則擋下。';
-    }else{
-      _hint='請確認網路連線與 Token 權限（需 Contents: Read and write）。';
-    }
-    throw new Error((_m||('HTTP '+_st))+'\n\n→ '+_hint);
+    /* 比照 V5.27.4 的教訓:依狀態碼給對應建議,不要一律說「請確認 Token 權限」 */
+    let msg='';
+    try{
+      const j=await resp.json();
+      msg=(j.errors||[]).map(function(e){return '['+(e.code||'')+'] '+(e.message||'');}).join('; ');
+    }catch(e){}
+    let hint='';
+    if(resp.status===401||resp.status===403)hint='Token 無效、過期或權限不足（需要 Workers KV Storage: Edit）。';
+    else if(resp.status===404)hint='找不到 KV 命名空間，請回報（設定可能已變更）。';
+    else if(resp.status===413)hint='檔案過大，KV 單筆上限 25 MB。含大量影像時容易超過。';
+    else if(resp.status===429)hint='請求過於頻繁，稍候再試。';
+    else hint='請確認網路連線；院內網路若擋 api.cloudflare.com 會無法上傳。';
+    throw new Error((msg||('HTTP '+resp.status))+'\n\n→ '+hint);
   }
-  return 'https://sela1227.github.io/MDT-slides/'+(GH_SLIDES_PATH?GH_SLIDES_PATH+'/':'')+fname;
+
+  return CF_BASE_URL+'/'+encodeURIComponent(fname);
 }
+
+/* ⚠ V5.41.0 起已無呼叫端(分享改走 Cloudflare)。保留作為相容層與歷史參考;
+   新程式碼請用 uploadSlidesToCloudflare()。 */
 
 
 function updateFolderStatusBar(){
@@ -6007,20 +6149,23 @@ window.addEventListener('beforeunload', function(e){
 });
 
 
-function moveCase(cid, idx, dir){
+function moveCase(cid, idx, dir, type){
+  /* V5.42.1 A-4:必要事件卡片按 ▲▼ 原本重排的是**個案討論**的順序 */
+  const _ty=type?type:"cases";
   ensureSec(cid);
-  const cases=S.meeting.sections[cid].cases;
+  const cases=S.meeting.sections[cid][_ty];
   const newIdx=idx+dir;
   if(newIdx<0||newIdx>=cases.length)return;
   const tmp=cases[idx];cases[idx]=cases[newIdx];cases[newIdx]=tmp;
   markDirty();
-  // Re-render cases pane
-  const cont=document.getElementById('div-cases-'+cid);
+  // Re-render pane
+  const cont=document.getElementById('div-'+_ty+'-'+cid);
   if(cont){
     const vm=S.viewMode;
     const fn=vm?caseViewHTML:caseHTML;
+    const _op=_ty==='events'?{noImages:true}:undefined;
     cont.innerHTML=cases.map(function(c,i){
-      try{return fn(cid,i,c);}
+      try{return fn(cid,i,c,_ty,_op);}
     catch(e){
       /* V5.35.0 P1-6:同上 */
       console.error('[render case]',cid,i,e,c);
@@ -6340,6 +6485,30 @@ function autoImportPrevFollowups(cids){
       fups[fups.length-1]._autoImported=true;
       if(c.chartNo)existing.add(c.chartNo);
     });
+    /* ════ V5.42.0 E-1:必要提報事件也要跨場帶入 ════
+       原本帶入來源只有 cases / team / ongoing followups —— **events 完全沒有**。
+       死亡病例討論完之後,如果改善方案還在執行,下一場不會出現 → **漏追**。
+       而必要提報是要呈報癌症委員會、認證會查的項目,漏追比一般個案嚴重。
+       帶入條件是「不是已結案」:「待討論」與「已討論待改善」都要繼續追,
+       這正是個管師說的「以前提過的(超過 30 天)簡單帶過」那一批。 */
+    (sec.events||[]).filter(function(ev){return (ev.eventStatus||'待討論')!=='已結案';}).forEach(function(ev){
+      if(!ev.chartNo&&!ev.name)return;
+      if(ev.chartNo&&existing.has(ev.chartNo))return;
+      fups.push(createFollowup({
+        chartNo:ev.chartNo||'',
+        name:ev.name||'',
+        doctors:Array.isArray(ev.doctors)?ev.doctors.slice(0,2):[(ev.doctor||''),''],
+        doctor:ev.doctor||'',
+        prevDate:prev.date||'',
+        prevDecision:('【必要提報】'+(ev.eventStatus||'')+(ev.improveNeeded?'　'+ev.improveNeeded:'')
+                      +(ev.improvePlan?'\n改善方案：'+ev.improvePlan:'')
+                      +(ev.decision?'\n'+ev.decision:'')).trim()
+      }));
+      fups[fups.length-1]._autoImported=true;
+      fups[fups.length-1]._fromEvent=true;
+      if(ev.chartNo)existing.add(ev.chartNo);
+    });
+
     // ongoing 前期追蹤也帶入
     (sec.followups||[]).filter(function(f){return f.status==='ongoing';}).forEach(function(f){
       if(!f.chartNo&&!f.name)return;
@@ -7356,8 +7525,24 @@ async function genDOCX(mode){
           if(ev.diagnosis){
             children.push(mkBlock('\u8a3a\u65b7',ev.diagnosis,false));
           }
+          /* ════ V5.42.0:死亡病例的專屬欄位 ════
+             這些正是要呈報癌症委員會的內容,而 DOCX 是癌委會看的版本,不能漏。
+             「改善方案」刻意把「不需改善」也印出來 —— 留白會讓認證訪查以為漏填,
+             而「經討論認定不需改善」是一個結論,不是空白。 */
+          const _dInfo=[
+            ev.deathDate?('\u6b7b\u4ea1\u65e5\u671f\uff1a'+ev.deathDate+(ev.deathPlace?'\u3000'+ev.deathPlace:'')):'',
+            ev.causeDirect?('\u76f4\u63a5\u6b7b\u56e0\uff1a'+ev.causeDirect):'',
+            ev.attribution?('\u6b7b\u56e0\u6b78\u56e0\uff1a'+ev.attribution):'',
+            ev.txRelated?('\u8207\u6cbb\u7642\u95dc\u806f\uff1a'+ev.txRelated):''
+          ].filter(Boolean).join('\n');
+          if(_dInfo)children.push(mkBlock('\u6b7b\u4ea1\u8cc7\u8a0a',_dInfo,false));
+          if(ev.cc){children.push(mkBlock('\u75c5\u7a0b\u7d93\u904e',ev.cc,false));}
           if(ev.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',ev.summary,false));}
           if(ev.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',ev.decision,false,{emphasis:true}));}
+          if(ev.improveNeeded){
+            const _imp=ev.improveNeeded==='\u9700\u6539\u5584'?(ev.improvePlan||'\uff08\u5f85\u586b\uff09'):ev.improveNeeded;
+            children.push(mkBlock('\u6539\u5584\u65b9\u6848',_imp,false,{emphasis:true}));
+          }
           children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
@@ -8233,11 +8418,27 @@ async function genHTMLSlides(opts){
       var dxLine=c.diagnosis?('<div class="cdx">'+escA(c.diagnosis).replace(/\n/g,'<br>')+'</div>'):'';
       var dm=(c.age||c.gender)?caseDemo(c):'';
       var sections=[];
-      if(c.cc)sections.push({lbl:'現病史',txt:c.cc});
+      /* ════ V5.42.0:必要提報(死亡病例)的專屬欄位 ════
+         死亡資訊放最前面 —— 投影片是會議當下在看的,主席第一眼要知道「什麼時候、為什麼死的」。
+         改善方案放最後,而且「不需改善」也要印出來:留白會讓人以為漏填,
+         但「經討論認定不需改善」是一個結論。 */
+      if(trackLabel==='必要事件'){
+        var _d=[];
+        if(c.deathDate)_d.push('死亡日期：'+c.deathDate+(c.deathPlace?'　'+c.deathPlace:''));
+        if(c.causeDirect)_d.push('直接死因：'+c.causeDirect);
+        if(c.attribution)_d.push('死因歸因：'+c.attribution);
+        if(c.txRelated)_d.push('與治療關聯：'+c.txRelated);
+        if(_d.length)sections.push({lbl:'死亡資訊',txt:_d.join('\n')});
+      }
+      if(c.cc)sections.push({lbl:trackLabel==='必要事件'?'病程經過':'現病史',txt:c.cc});
       if(c.familyHistory)sections.push({lbl:'家族史',txt:c.familyHistory});
       if(c.discussion)sections.push({lbl:'討論方向',txt:c.discussion});
       if(c.summary)sections.push({lbl:'摘要',txt:c.summary});
       if(c.decision)sections.push({lbl:'決策',txt:c.decision});
+      if(trackLabel==='必要事件'&&c.improveNeeded){
+        sections.push({lbl:'改善方案',
+          txt:c.improveNeeded==='需改善'?(c.improvePlan||'（待填）'):c.improveNeeded});
+      }
       var body=sections.length
         ? sections.map(function(s){return '<div style="margin-bottom:1.8vh"><div style="font-size:clamp(15px,1.5vw,22px);font-weight:700;color:'+caColor+';margin-bottom:0.6vh;letter-spacing:.02em">'+s.lbl+'</div><div style="white-space:pre-wrap;line-height:1.6;font-size:clamp(17px,1.8vw,26px);color:#2A3540">'+escA(s.txt)+'</div></div>';}).join('')
         : '<div style="color:rgba(0,0,0,.4);font-style:italic;text-align:center;margin-top:6vh;font-size:clamp(15px,1.5vw,22px)">（尚未填寫討論內容）</div>';
@@ -9528,8 +9729,10 @@ async function genXLSX(){
    守住的界線:(1) AI 判讀結果**明確標示來源**,圖上標「AI」;
    (2) 匯入時顯示摘要讓個管師決定採用範圍(不逐筆確認,避免又變手填);
    (3) 判讀只寫進 _ai 命名空間,**不覆蓋任何原始欄位**。 */
-function tlAiPrompt(cid,i){
-  const c=getSectionItem(cid,'cases',i);if(!c)return'';
+function tlAiPrompt(cid,i,type){
+  /* V5.42.4 C-1:prompt 的臨床資料也要取對卡片 */
+  const _ty=(type==='events'||type==='cases')?type:(_tlAiTy||'cases');
+  const c=getSectionItem(cid,_ty,i);if(!c)return'';
   const evs=(c.timeline||[]).slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
   const line=function(t,v){return v&&String(v).trim()?(t+'：'+String(v).trim()+'\n'):'';};
   let ctx='';
@@ -9588,11 +9791,17 @@ ${ctx}
 ${evList}
 ]`;
 }
-function openTlAi(cid,i){
-  const c=getSectionItem(cid,'cases',i);if(!c)return;
+let _tlAiTy='cases';/* V5.42.4 C-1:AI 判讀對話框開在哪一種卡片上 */
+function openTlAi(cid,i,type){
+  /* V5.42.4 C-1:AI 判讀原本寫死 'cases' —— 在必要事件卡片按「🤖 AI 判讀」
+     會讀到同索引個案討論的時序,匯入時也寫回那裡。
+     用白名單而非 ||'cases'(坑 #67:非空但不存在的鍵擋不住)。 */
+  const _ty=(type==='events'||type==='cases')?type:'cases';
+  _tlAiTy=_ty;
+  const c=getSectionItem(cid,_ty,i);if(!c)return;
   if(!(c.timeline||[]).length){alert('這個個案還沒有治療事件，請先新增事件再做 AI 判讀。');return;}
   _tlAiCid=cid;_tlAiIdx=i;
-  const el=document.getElementById('tlai-prompt');if(el)el.value=tlAiPrompt(cid,i);
+  const el=document.getElementById('tlai-prompt');if(el)el.value=tlAiPrompt(cid,i,_ty);/* V5.42.4 */
   const ta=document.getElementById('tlai-json');if(ta)ta.value='';
   const er=document.getElementById('tlai-err');if(er)er.textContent='';
   const m=document.getElementById('tlai-modal');if(m)m.style.display='flex';
@@ -9611,7 +9820,8 @@ function doImportTlAi(){
   try{data=_parseAIJSON(raw);}catch(e){if(er)er.textContent='JSON 解析失敗：'+e.message;return;}
   const arr=Array.isArray(data)?data:(data&&Array.isArray(data.events)?data.events:null);
   if(!arr){if(er)er.textContent='格式不正確：需要 {"events":[...]} 或事件陣列';return;}
-  const c=getSectionItem(_tlAiCid,'cases',_tlAiIdx);
+  /* V5.42.4 C-1:寫回時用開啟時記下的 type,否則匯入的時序會落到個案討論 */
+  const c=getSectionItem(_tlAiCid,_tlAiTy||'cases',_tlAiIdx);
   if(!c){if(er)er.textContent='找不到個案';return;}
   /* 用 date 對應回原事件;只寫進 _ai 命名空間,不動任何原始欄位 */
   const RESP={better:'有效',stable:'穩定',worse:'惡化',na:'無法評估'};
@@ -9650,8 +9860,22 @@ function doImportTlAi(){
   });
   markDirty();closeTlAi();
   showSaveToast('已套用 AI 判讀：轉折點 '+nPivot+' 筆'+(useAll?'、療效 '+nResp+' 筆':'（未採用療效）'));
-  const cont=document.getElementById('cases-list');
-  if(typeof renderCasesInner==='function'&&cont)renderCasesInner();
+  /* V5.42.4 C-1:重繪也要看是哪一種卡片 —— 原本只重繪個案討論,
+     在必要事件按 AI 判讀套用後,畫面上看不到新的時序(資料其實已經寫進去了)。 */
+  if(_tlAiTy==='events'){
+    const ec=document.getElementById('div-events-'+_tlAiCid);
+    if(ec){
+      const sec=S.meeting.sections[_tlAiCid]||{};
+      const vm=S.viewMode;
+      ec.innerHTML=(sec.events||[]).map(function(c2,i2){
+        try{return vm?caseViewHTML(_tlAiCid,i2,c2,'events'):caseHTML(_tlAiCid,i2,c2,'events',{noImages:true});}
+        catch(e){console.error('[render event]',e);return '';}
+      }).join('');
+    }
+  }else{
+    const cont=document.getElementById('cases-list');
+    if(typeof renderCasesInner==='function'&&cont)renderCasesInner();
+  }
 }
 function genImportPrompt(){
   const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出。
@@ -10742,8 +10966,9 @@ function closeCancerSheet(){
 }
 
 /* ════ Event delegation ════ */
-function importTimelineFromTreatments(cid,idx){
-  ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+function importTimelineFromTreatments(cid,idx,type){
+  const _ty=type?type:"cases";/* V5.42.0 */
+  ensureSec(cid);const c=S.meeting.sections[cid][_ty][idx];if(!c)return;
   const existing=new Set((c.timeline||[]).map(function(t){return t.type+'_'+t.date;}));
   const cands=[];
   (c.pathologies||[]).forEach(function(p){
@@ -11005,19 +11230,9 @@ document.addEventListener('click',function(e){
     const el=document.getElementById('slide-share-link');if(el)el.innerHTML='';
     return;
   }
-  const copyslideurl=e.target.closest('[data-action="copyslideurl"]');
-  if(copyslideurl){
-    const idx=parseInt(copyslideurl.dataset.idx);
-    const arr=getSharedSlides();
-    const url=(arr[idx]||{}).url||'';
-    navigator.clipboard.writeText(url).then(function(){
-      copyslideurl.textContent='✓ 已複製';
-      setTimeout(function(){copyslideurl.textContent='複製連結';},2000);
-    }).catch(function(){alert('請手動複製：'+url);});
-    return;
-  }
-  const deleteslide=e.target.closest('[data-action="deleteslide"]');
-  if(deleteslide){deleteSharedSlide(deleteslide.dataset.fname);return;}
+  /* V5.41.0:copyslideurl / deleteslide 兩個 handler 已移除 ——
+     產生它們的 renderSharedSlides() 連同「已分享的投影片」UI 一起拿掉了。
+     留著等於留兩個永遠觸發不到的 handler,而其中 deleteslide 打的是 GitHub API。 */
   const previewpathimg=e.target.closest('[data-action="previewpathimg"]');
   if(previewpathimg){/* V5.14.0: 改走統一核心(順帶補上 subFolder 支援與坑 #31 的列舉退回) */
     _imgPreview({name:previewpathimg.dataset.name,dataUrl:previewpathimg.dataset.dataurl,subFolder:previewpathimg.dataset.subfolder},'病理影像',previewpathimg.dataset.chartno||'');return;
@@ -11051,7 +11266,7 @@ document.addEventListener('click',function(e){
   /* V5.23.0: 逐欄確認完畢 —— 清除 AI 匯入標記(個管師的工作流:匯入→逐欄查看修改→確認) */
   const confirmai=e.target.closest('[data-action="confirmai"]');
   if(confirmai){
-    const c=getSectionItem(confirmai.dataset.cid,'cases',parseInt(confirmai.dataset.idx));
+    const c=getSectionItem(confirmai.dataset.cid,confirmai.dataset.ty||'cases',parseInt(confirmai.dataset.idx));/* V5.42.0 */
     if(c){
       delete c._aiImported;markDirty();
       const el=confirmai.closest('.casecard');
@@ -11063,7 +11278,7 @@ document.addEventListener('click',function(e){
   }
   /* V5.25.0: 逐案決定要不要產病程時序圖(個管師選 A —— 填 timeline 當下就決定) */
   const tlaiopen=e.target.closest('[data-action="tlaiopen"]');
-  if(tlaiopen){openTlAi(tlaiopen.dataset.cid,parseInt(tlaiopen.dataset.caseidx));return;}
+  if(tlaiopen){openTlAi(tlaiopen.dataset.cid,parseInt(tlaiopen.dataset.caseidx),tlaiopen.dataset.ty);return;}/* V5.42.4 C-1 */
   /* V5.27.0: 切換該類影像「夾投影片 / 開新分頁」 */
   /* V5.29.0: 重選影像根資料夾 */
   const rerootimgfolder=e.target.closest('[data-action="rerootimgfolder"]');
@@ -11098,7 +11313,7 @@ document.addEventListener('click',function(e){
   }
   const setembed=e.target.closest('[data-action="setembed"]');
   if(setembed){
-    const c=getSectionItem(setembed.dataset.cid,'cases',parseInt(setembed.dataset.caseidx));
+    const c=getSectionItem(setembed.dataset.cid,setembed.dataset.ty||'cases',parseInt(setembed.dataset.caseidx));/* V5.42.2 B-1 */
     if(c){
       if(!c.embed)c.embed={};
       c.embed[setembed.dataset.kind]=(setembed.dataset.val==='1');
@@ -11120,7 +11335,7 @@ document.addEventListener('click',function(e){
   }
   const updtlshow=e.target.closest('[data-action="updtlshow"]');
   if(updtlshow){
-    const c=getSectionItem(updtlshow.dataset.cid,'cases',parseInt(updtlshow.dataset.caseidx));
+    const c=getSectionItem(updtlshow.dataset.cid,updtlshow.dataset.ty||'cases',parseInt(updtlshow.dataset.caseidx));/* V5.42.0 */
     if(c){c.showTimeline=!!updtlshow.checked;markDirty();}
     return;
   }
@@ -11231,7 +11446,13 @@ document.addEventListener('click',function(e){
   const caseflag=e.target.closest('[data-action="caseflag"]');
   if(caseflag){
     const cid=caseflag.dataset.cid,idx=parseInt(caseflag.dataset.idx),fl=caseflag.dataset.flag;
-    ensureSec(cid);const c=S.meeting.sections[cid].cases[idx];if(!c)return;
+    ensureSec(cid);
+    /* V5.42.3 D-1:白名單比 ||'cases' 可靠 —— 後者只擋得住「空值」,
+       擋不住「非空但不存在的鍵」(例如未插值的字面字串 "${_ty}")。
+       任何非預期的值都退回安全預設,而不是變成一個不存在的鍵。 */
+    const _fty=caseflag.dataset.ty;
+    const _farr=S.meeting.sections[cid][(_fty==='events'||_fty==='cases')?_fty:'cases'];
+    const c=_farr&&_farr[idx];if(!c)return;
     if(!Array.isArray(c.flags))c.flags=[];
     const pos=c.flags.indexOf(fl);
     if(pos>=0)c.flags.splice(pos,1);else c.flags.push(fl);
@@ -11357,7 +11578,7 @@ document.addEventListener('click',function(e){
   const view=e.target.closest('[data-action="viewimg"]');
   if(view){viewImg(view.dataset.src);return;}
   const chip=e.target.closest('[data-action="phchip"]');
-  if(chip){const {cid,idx:ci,chip:c}=chip.dataset;togglePhChip(cid,parseInt(ci),c,chip);return;}
+  if(chip){const {cid,idx:ci,chip:c,ty}=chip.dataset;togglePhChip(cid,parseInt(ci),c,chip,ty);return;}/* V5.42.0 */
   const st=e.target.closest('[data-action="specialtype"]');
   if(st){
     ensureSec(st.dataset.cid);
@@ -11379,7 +11600,7 @@ document.addEventListener('click',function(e){
   const tp=e.target.closest('[data-action="topic"]');
   if(tp){
     ensureSec(tp.dataset.cid);
-    const c=S.meeting.sections[tp.dataset.cid].cases[parseInt(tp.dataset.idx)];
+    const c=S.meeting.sections[tp.dataset.cid][tp.dataset.ty||'cases'][parseInt(tp.dataset.idx)];/* V5.42.0 */
     if(!c)return;
     if(!c.topics)c.topics=[];
     const t=tp.dataset.topic;
@@ -11389,9 +11610,9 @@ document.addEventListener('click',function(e){
     markDirty();return;
   }
   const addst=e.target.closest('[data-action="addstruct"]');
-  if(addst){e.stopPropagation();addStruct(addst.dataset.cid,parseInt(addst.dataset.caseidx),addst.dataset.field);return;}
+  if(addst){e.stopPropagation();addStruct(addst.dataset.cid,parseInt(addst.dataset.caseidx),addst.dataset.field,addst.dataset.ty);return;}/* V5.42.0 */
   const delst=e.target.closest('[data-action="delstruct"]');
-  if(delst){delStruct(delst.dataset.cid,parseInt(delst.dataset.caseidx),delst.dataset.field,parseInt(delst.dataset.rowid));return;}
+  if(delst){delStruct(delst.dataset.cid,parseInt(delst.dataset.caseidx),delst.dataset.field,parseInt(delst.dataset.rowid),delst.dataset.ty);return;}/* V5.42.0 */
   const tog=e.target.closest('[data-action="togglecase"]');
   if(tog&&e.target.closest('.casetop')){
     const card=document.getElementById(tog.dataset.card);if(!card)return;
@@ -11439,14 +11660,14 @@ document.addEventListener('change',function(e){
 document.addEventListener('input',function(e){
   const el=e.target.closest('[data-action="updstruct"]');
   if(!el)return;
-  const {cid,caseidx,field,rowid,key}=el.dataset;
-  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,el.value);
+  const {cid,caseidx,field,rowid,key,ty}=el.dataset;
+  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,el.value,ty);/* V5.42.0 */
 });
 document.addEventListener('change',function(e){
   const el=e.target.closest('[data-action="updstruct"]');
   if(!el)return;
-  const {cid,caseidx,field,rowid,key}=el.dataset;
-  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,el.value);
+  const {cid,caseidx,field,rowid,key,ty}=el.dataset;
+  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,el.value,ty);/* V5.42.0 */
 });
 
 /* ════ Init ════ */
