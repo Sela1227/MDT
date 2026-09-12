@@ -1400,7 +1400,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.42.4';
+const VERSION='V5.42.5';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1763,7 +1763,18 @@ function cleanOrphanKeys(){
   orphans.forEach(function(k){localStorage.removeItem(k);});
   showSaveToast('已清除 '+orphans.length+' 筆,回收約 '+mb+' MB');/* V5.32.4: 成功訊息改 toast */
 }
-function loadLocal(id){try{const r=localStorage.getItem('mdt_m_'+id);return r?JSON.parse(r):null}catch{return null}}
+function loadLocal(id){
+  try{
+    const r=localStorage.getItem('mdt_m_'+id);
+    if(!r)return null;
+    const m=JSON.parse(r);
+    /* V5.42.5 E-1:開啟時順手清掉 V5.42.4 以前的空殼時序列。
+       只在記憶體清,不主動寫回 —— 使用者存檔時自然帶過去,
+       避免「只是開啟看一下」就改動 localStorage(那會讓 NAS 同步的 version 判斷變複雜)。 */
+    try{cleanTimelineGhosts(m);}catch(e){}
+    return m;
+  }catch(e){return null;}
+}
 function getIdx(){try{return JSON.parse(localStorage.getItem('mdt_idx')||'[]')}catch{return[]}}
 
 /* ════ Sync ════ */
@@ -1945,7 +1956,7 @@ function updStruct(cid,i,field,idx,key,val,type){
   if(!c[field])c[field]=[];if(!c[field][idx])c[field][idx]={};
   c[field][idx][key]=val;markDirty();
   if(field==='timeline'){
-    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+i);
+    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+_ty+'-'+i);
     if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
   }
 }
@@ -1956,17 +1967,17 @@ function delStruct(cid,i,field,rowIdx,type){
   c[field].splice(rowIdx,1);
   markDirty();
   if(field==='timeline'){
-    const tlEl=document.getElementById('tllist-'+cid+'-'+i);
+    const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+i);
     if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,i,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);[...tmp.childNodes].forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
-    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+i);
+    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+_ty+'-'+i);
     if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
     return;
   }
-  const listId=field==='pathologies'?('pathlist-'+cid+'-'+i)
-    :field==='exams'?('examlist-'+cid+'-'+i)
-    :field==='treatments'?('trtlist-'+cid+'-'+i)
-    :field==='markers'?('marklist-'+cid+'-'+i)
-    :field==='genomics'?('genlist-'+cid+'-'+i)/* V5.30.0 */:null;
+  const listId=field==='pathologies'?('pathlist-'+cid+'-'+_ty+'-'+i)
+    :field==='exams'?('examlist-'+cid+'-'+_ty+'-'+i)
+    :field==='treatments'?('trtlist-'+cid+'-'+_ty+'-'+i)
+    :field==='markers'?('marklist-'+cid+'-'+_ty+'-'+i)
+    :field==='genomics'?('genlist-'+cid+'-'+_ty+'-'+i)/* V5.30.0 */:null;
   const container=document.getElementById(listId);if(!container)return;
   const rows=container.querySelectorAll('.struct-row');
   if(rows[rowIdx])rows[rowIdx].remove();
@@ -1976,6 +1987,13 @@ function delStruct(cid,i,field,rowIdx,type){
   });
 }
 function addStruct(cid,i,field,type){
+  /* ⚠ V5.42.5 F-1:結構列容器 id 原本只有 ${cid}-${i} ——
+     個案討論 #0 與必要事件 #0 產生**完全相同的 id**,而 getElementById
+     永遠回傳文件中的**第一個**;casesPane 的排版是個案討論在前,
+     所以**必要事件的新列一律被插進個案討論的清單裡** ——
+     必要事件按新增畫面沒反應、個案討論憑空多一列(而個管師很可能把它刪掉,
+     刪掉的其實是必要事件的資料)。
+     卡片 id(cc-/vcc-/tgi-)在 V5.42.0 就帶了 _ty,**這七個列容器是漏網的**。
   /* V5.42.0:必要提報事件改用同一張卡片後不能再寫死 .cases —— 漏改的話,在必要事件卡片上的操作會去改到同索引的**個案討論**資料(不報錯,安靜寫錯地方)。type 省略時為 cases,既有呼叫端不受影響。 */
   const _ty=type?type:"cases";
   /* ⚠ V5.42.4 E-1:這個函式**產生的新列**也必須帶 data-ty ——
@@ -1986,17 +2004,22 @@ function addStruct(cid,i,field,type){
      兩行分開看都正確,合起來才是錯的(坑 #53 的形狀)。 */
   ensureSec(cid);const c=S.meeting.sections[cid][_ty][i];
   if(!c[field])c[field]=[];
-  c[field].push({name:'',date:'',content:''});
+  /* V5.42.5 E-1:timeline 的資料形狀是 {type,date,label},不是 {name,date,content} ——
+     原本無條件先 push 一筆通用列,timeline 分支再 push 一筆正確的 → **一次新增產生兩列**,
+     其中一列是永遠填不了的空殼(欄位名對不上,畫面上也渲染不出來)。
+     不拋錯、不報警,只是多一筆髒資料,而且會被存進 localStorage、進備份、進產出。
+     timeline 走自己的分支,通用 push 跳過。 */
+  if(field!=='timeline')c[field].push({name:'',date:'',content:''});
   markDirty();
   // DOM update: append new row without re-rendering all cases
   const rowIdx=c[field].length-1;
   const blank={name:'',date:'',content:''};
-  const listId=field==='pathologies'?('pathlist-'+cid+'-'+i)
-               :field==='exams'?('examlist-'+cid+'-'+i)
-               :field==='treatments'?('trtlist-'+cid+'-'+i)
-               :field==='markers'?('marklist-'+cid+'-'+i)
-               :field==='genomics'?('genlist-'+cid+'-'+i)/* V5.30.0 */
-               :field==='timeline'?('tllist-'+cid+'-'+i):null;
+  const listId=field==='pathologies'?('pathlist-'+cid+'-'+_ty+'-'+i)
+               :field==='exams'?('examlist-'+cid+'-'+_ty+'-'+i)
+               :field==='treatments'?('trtlist-'+cid+'-'+_ty+'-'+i)
+               :field==='markers'?('marklist-'+cid+'-'+_ty+'-'+i)
+               :field==='genomics'?('genlist-'+cid+'-'+_ty+'-'+i)/* V5.30.0 */
+               :field==='timeline'?('tllist-'+cid+'-'+_ty+'-'+i):null;
   // timeline uses buildTimelineRows, not generic struct row
   if(field==='timeline'){
     if(!c.timeline)c.timeline=[];
@@ -2004,7 +2027,7 @@ function addStruct(cid,i,field,type){
     c.timeline.push({type:'dx',date:'',label:''});
     markDirty();
     // Append only the new row (don't re-render all rows)
-    const tlEl=document.getElementById('tllist-'+cid+'-'+i);
+    const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+i);
     if(tlEl){
       const tmp=document.createElement('div');
       const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'">'+t.label+'</option>';}).join('');
@@ -4501,7 +4524,7 @@ function caseHTML(cid,i,d,type,opts){
 
   <div class="fsec">臨床資料</div>
   <div class="fg full"><div class="field-hdr"><label>病理</label>${addBtn('pathologies')}</div>
-    <div id="pathlist-${cid}-${i}">${pathRows}</div>
+    <div id="pathlist-${cid}-${_ty}-${i}">${pathRows}</div>
   </div>
   ${_noImg?"":`<!-- V5.42.2 B-1:_noImg 原本只擋影像內容,**標題列與內嵌開關還在** ——
          必要事件卡片會出現空的影像區塊(看到標題卻沒有選圖按鈕,會以為壞掉),
@@ -4512,7 +4535,7 @@ function caseHTML(cid,i,d,type,opts){
     ${buildPathImgArea(cid,i,d)}
   </div>`}
   <div class="fg full"><div class="field-hdr"><label>影像檢查</label>${addBtn('exams')}</div>
-    <div id="examlist-${cid}-${i}">${examRows}</div>
+    <div id="examlist-${cid}-${_ty}-${i}">${examRows}</div>
   </div>
   ${(cid==='breast'&&!_noImg)?`<div class="fg full">
     <!-- V5.42.1 A-3b:整段納入 _noImg —— 「不開影像」應該是整塊不開。
@@ -4527,17 +4550,17 @@ function caseHTML(cid,i,d,type,opts){
     <div style="font-size:11px;color:var(--textlt);margin-bottom:4px">乳攝影像</div>
     <div class="case-imgs" id="mammo-imgs-${cid}-${i}" data-cid="${cid}" data-idx="${i}" data-mammo="1">${_noImg?"":buildMammoImgArea(cid,i,d)}</div>
   </div>`:''}  <div class="fg full"><div class="field-hdr"><label>癌指數</label>${addBtn('markers')}</div>
-    <div id="marklist-${cid}-${i}">${markerRows}</div>
+    <div id="marklist-${cid}-${_ty}-${i}">${markerRows}</div>
   </div>
   <!-- V5.30.0: 基因檢測(個管師指定放癌指數下方)。結構同癌指數,可手動輸入或 AI 匯入 -->
   <div class="fg full"><div class="field-hdr"><label>基因檢測</label>${addBtn('genomics')}</div>
-    <div id="genlist-${cid}-${i}">${genomicsRows}</div>
+    <div id="genlist-${cid}-${_ty}-${i}">${genomicsRows}</div>
   </div>
   ${_noImg?"":`<div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>NGS 報告影像</label>${embedToggle(cid,i,'genomics',d,_ty)}</div>
     ${buildGenomicsImgArea(cid,i,d)}
   </div>`}
   <div class="fg full"><div class="field-hdr"><label>治療</label>${addBtn('treatments')}</div>
-    <div id="trtlist-${cid}-${i}">${trtRows}</div>
+    <div id="trtlist-${cid}-${_ty}-${i}">${trtRows}</div>
   </div>
   ${_noImg?"":`<div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>手術照片</label>${embedToggle(cid,i,'surg',d,_ty)}<!-- V5.18.0: 舊「每頁 N 張」下拉已移除(V5.15.0 改按鈕檢視後即失效),改用卡片上的「⏎ 換頁」分頁點 + 一鍵套用排版 --></div>
     ${buildSurgicalImgArea(cid,i,d)}
@@ -4552,8 +4575,8 @@ function caseHTML(cid,i,d,type,opts){
       <button class="btnadd" data-action="addstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="timeline" style="display:inline-block;width:auto;font-size:11px;padding:3px 10px">＋ 新增事件</button>
       <button class="btn btn-b btn-sm" onclick="importTimelineFromTreatments('${cid}',${i},'${_ty}')" style="font-size:11px">⬇ 從治療記錄帶入</button>
     </div>
-    <div id="tllist-${cid}-${i}">${buildTimelineRows(cid,i,d)}</div>
-    <div id="tl-svg-preview-${cid}-${i}" style="margin-top:8px">${(d.timeline&&d.timeline.length)?renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view'):''}</div>
+    <div id="tllist-${cid}-${_ty}-${i}">${buildTimelineRows(cid,i,d)}</div>
+    <div id="tl-svg-preview-${cid}-${_ty}-${i}" style="margin-top:8px">${(d.timeline&&d.timeline.length)?renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view'):''}</div>
   </div>
 
   ${_isEv?`
@@ -5780,6 +5803,31 @@ function createItem(cid,type,data,opts){
 /* V5.21.0: schema 自我檢查 —— 匯入等路徑用,缺欄位就 console 警告。
    把「靠人記得補欄位」變成「程式自己發現」(同 _assertConfigConsistency 的思路) */
 const _CASE_SCHEMA_KEYS=Object.keys(createCase('__probe__',{}));
+/* V5.42.5 E-1:清掉 V5.42.4 以前雙重 push 留下的空殼列。
+   特徵:timeline 裡出現 {name,date,content} 形狀(正確的是 {type,date,label}),
+   而且三個欄位都是空的。只清「形狀不對且完全空白」的,有內容的一律保留。 */
+function cleanTimelineGhosts(m){
+  if(!m||!m.sections)return 0;
+  let n=0;
+  Object.keys(m.sections).forEach(function(cid){
+    const sec=m.sections[cid]||{};
+    ['cases','events'].forEach(function(ty){
+      (sec[ty]||[]).forEach(function(c){
+        if(!Array.isArray(c.timeline))return;
+        const before=c.timeline.length;
+        c.timeline=c.timeline.filter(function(t){
+          if(!t)return false;
+          const ghost=(t.type===undefined&&t.label===undefined)
+            &&!(t.name||'').trim()&&!(t.date||'').trim()&&!(t.content||'').trim();
+          return !ghost;
+        });
+        n+=before-c.timeline.length;
+      });
+    });
+  });
+  return n;
+}
+
 function assertCaseSchema(c){
   if(!c||typeof c!=='object')return _CASE_SCHEMA_KEYS.slice();
   return _CASE_SCHEMA_KEYS.filter(function(k){return !(k in c);});
@@ -11024,9 +11072,9 @@ function importTimelineFromTreatments(cid,idx,type){
     c.timeline.sort(function(a,b){return a.date.localeCompare(b.date);});
     markDirty();
     document.body.removeChild(modal);
-    const tlEl=document.getElementById('tllist-'+cid+'-'+idx);
+    const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+idx);
     if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,idx,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);tmp.childNodes.forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
-    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+idx);
+    const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+_ty+'-'+idx);
     if(svgEl)svgEl.innerHTML=c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
   };
 }
