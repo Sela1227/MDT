@@ -876,7 +876,17 @@ textarea{resize:vertical}
           <div class="sec-body">
             <!-- 資料夾授權：優先顯示 -->
             <div id="output-cid-label" style="display:none;gap:8px;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:12px;margin-bottom:8px"></div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0"><div id="folder-status-bar" style="display:contents"></div></div>
+            <!-- V5.43.3:「檢查影像」與「錄音切割」從「主力產出」移到這一排。
+                 個管師的觀察:**那一排是產出的,這兩顆不是** ——
+                 檢查影像是「選完圖之後確認有沒有選對」,跟左邊的資料夾按鈕是同一件事的上下游;
+                 錄音切割是會議當下的工具,產出的是逐字稿不是會議文件。
+                 混在產出列裡會讓「這場弄完了要按哪幾顆」變得不清楚。 -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;min-height:0">
+              <div id="folder-status-bar" style="display:contents"></div>
+              <span style="flex:1"></span>
+              <button class="btn btn-b btn-sm" id="btn-audit-imgs" style="font-size:12px;padding:3px 10px" onclick="auditMeetingImages().catch(function(e){console.error(e);alert('檢查失敗:'+(e&&e.message||e));})">🔍 檢查影像</button>
+              <button class="btn btn-b btn-sm" id="btn-audio" style="font-size:12px;padding:3px 10px" onclick="openAudioSplitter()">🎙 錄音切割</button>
+            </div>
             <div style="margin-bottom:8px">
               <button onclick="openPostMtgPanel()" style="width:100%;padding:10px 16px;background:linear-gradient(135deg,#2E5F8A,#1a3f5c);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(46,95,138,.35);transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'"><span style="font-size:16px">&#9998;</span>會後填寫（摘要、結論、追蹤狀態）<span style="font-size:11px;opacity:.8;margin-left:4px">▶</span></button>
             </div>
@@ -894,15 +904,11 @@ textarea{resize:vertical}
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
               <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);alert('投影片產生失敗：'+(e&&e.message||e)+'\n\n請截圖回報。');})">HTML 投影片</button>
-              <!-- V5.31.2: 影像歸屬診斷(只檢查不改行為)。建議流程:選完圖 → 按這顆 → 綠燈才產投影片 -->
-              <button class="btn btn-b" id="btn-audit-imgs" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="auditMeetingImages().catch(function(e){console.error(e);alert('檢查失敗:'+(e&&e.message||e));})">🔍 檢查影像</button>
               <!-- V5.13.0: 長官習慣 Word 不用 PPTX → 本顆由「PPTX 簡報」改為「Word 簡報」(genDOCX('deck'));genPPTX 函式保留但已無 UI 入口 -->
               <button class="btn btn-b" id="btn-worddeck" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX('deck')">Word 簡報</button>
               <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
               <!-- V5.11.0: 會議小抄(可列印 A4 / 存 PDF,一頁 8 案,現場手寫用) -->
               <button class="btn btn-b" id="btn-sheet" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPrintSheet()">會議小抄</button>
-              <!-- V5.12.0: 錄音切割台(iframe 彈窗載入 AudioSplitter.html) -->
-              <button class="btn btn-b" id="btn-audio" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="openAudioSplitter()">錄音切割</button>
             </div>
             <div id="slide-share-link"></div>
             <!-- ════ V5.36.1 U-3:一年用兩次的 Excel/JSON 匯入匯出,不該和每場會議都要按的三顆並排。
@@ -1400,7 +1406,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.43.2';
+const VERSION='V5.43.3';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
