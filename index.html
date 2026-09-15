@@ -902,7 +902,13 @@ textarea{resize:vertical}
             <!-- 主力 4 按鈕(LINE / HTML 投影片 / PPTX / DOCX) -->
             <!-- V5.12.0: 主力產出增為 6 顆,改 auto-fit 讓窄螢幕自動換行(固定 6 欄在小視窗會擠爆按鈕文字) -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
-              <button class="btn btn-a" style="padding:10px 4px;font-size:13px;font-weight:600;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
+              <!-- V5.43.4:LINE 通知從 btn-a(深底)改成 btn-b,與其餘產出按鈕一致。
+                   原本深色**沒有規則可循** —— 13 顆產出按鈕只有「LINE 通知」與
+                   「AI 生成摘要」是深色,而兩者重要性天差地遠(一個每場都用、
+                   一個收在摺疊區一年用不到幾次)。深色在設計上意味「主要動作」,反而誤導。
+                   **深色從此只代表一件事:需要串接 AI 才能用**(目前只有 AI 生成摘要)。
+                   連同 font-weight:600 一起拿掉,才會跟旁邊四顆真的一樣。 -->
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
               <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);alert('投影片產生失敗：'+(e&&e.message||e)+'\n\n請截圖回報。');})">HTML 投影片</button>
               <!-- V5.13.0: 長官習慣 Word 不用 PPTX → 本顆由「PPTX 簡報」改為「Word 簡報」(genDOCX('deck'));genPPTX 函式保留但已無 UI 入口 -->
               <button class="btn btn-b" id="btn-worddeck" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX('deck')">Word 簡報</button>
@@ -1406,7 +1412,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.43.3';
+const VERSION='V5.43.4';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
