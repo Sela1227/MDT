@@ -1400,7 +1400,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.43.1';
+const VERSION='V5.43.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -2369,6 +2369,23 @@ document.addEventListener('keydown',function(e){
   }
 });
 
+/* ════ V5.43.2:存檔成功後把個案卡片收合起來 ════
+   個管師回報「以前存好就會收合了,現在不會,不確定有沒有存好」。
+   查證後確認:卡片預設就帶 cc-collapsed,以前存完會 renderEditor() 整頁重繪
+   → 全部回到預設的收合狀態。**那是重繪的副作用,不是刻意設計**;
+   V5.36.1(坑 #62)拿掉自動切檢視模式時,收合也跟著消失了。
+   但那個收合其實有兩個作用:①「存好了」的視覺訊號 ②「這個填完了,換下一個」的動線。
+   做法:只加 class、不重繪 —— 保留 V5.36.1 的好處(捲動位置不歸零),
+   同時把個管師習慣的訊號還回來。自動存檔(silent)不收合,那會打斷打字。 */
+function _collapseAllCases(){
+  document.querySelectorAll('.casecard:not(.track-card)').forEach(function(c){
+    if(c.classList.contains('cc-collapsed'))return;
+    c.classList.add('cc-collapsed');
+    var id=c.id;if(!id)return;
+    var icon=document.getElementById('tgi-'+id.slice(3));
+    if(icon)icon.textContent='▶';
+  });
+}
 function _syncAbandonBtnLabel(){
   document.querySelectorAll('[data-role="abandon"]').forEach(function(b){
     b.textContent=_dirty?'放棄編輯':'檢視';
@@ -6812,6 +6829,12 @@ function hidePersistentError(){
 let _dirty=false;
 function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}
   _syncAbandonBtnLabel();/* V5.37.1 Z-4 */
+  /* V5.43.2:一有修改就把「已儲存」換掉 —— 留著舊時間戳比沒有更糟,
+     個管師會以為剛才的修改也存進去了。 */
+  var _ab2=document.getElementById('actionbar-msg');
+  if(_ab2&&_ab2.textContent.indexOf('已儲存')>=0){
+    _ab2.innerHTML='<span style="color:var(--warn)">● 有未儲存的修改</span>';
+  }
 }
 async function saveMeeting(opts){
   /* ════ V5.31.1 N-1(複審最嚴重)════
@@ -6969,7 +6992,16 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
     setTimeout(()=>{
       S._snapshot=null;_dirty=false;
       const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
-      _syncAbandonBtnLabel();/* V5.37.1 Z-4:存完 _dirty=false → 文字變「檢視」 */
+      _syncAbandonBtnLabel();
+      _collapseAllCases();/* V5.43.2:把個管師習慣的「存好了」訊號還回來 */
+      /* V5.43.2:底部固定列顯示狀態 —— toast 只有 2.2 秒、出現在右下角,
+         個管師眼睛看著卡片中間時很容易錯過。這一行就在按鈕旁邊,而且會留著。 */
+      var _ab=document.getElementById('actionbar-msg');
+      if(_ab){
+        var _t=new Date();
+        var _hh=('0'+_t.getHours()).slice(-2)+':'+('0'+_t.getMinutes()).slice(-2);
+        _ab.innerHTML='<span style="color:var(--ok)">\u2713 \u5df2\u5132\u5b58 '+_hh+'</span>';
+      }/* V5.37.1 Z-4:存完 _dirty=false → 文字變「檢視」 */
     },1200);
   }
 }
