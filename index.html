@@ -1400,7 +1400,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.43.0';
+const VERSION='V5.43.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -8953,13 +8953,21 @@ async function hlExport(){
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var src=await resp.text();
     var json=JSON.stringify(marks);
-    var tag='<script id="hl-data" type="application/json">'+json+'<\\/script>';
-    /* 已有 hl-data 就整段換掉(可反覆畫、反覆匯出);沒有就插在 </body> 前 */
-    if(/<script id="hl-data"[^>]*>[\\s\\S]*?<\\/script>/.test(src)){
-      src=src.replace(/<script id="hl-data"[^>]*>[\\s\\S]*?<\\/script>/, tag);
-    }else{
-      src=src.replace(/<\\/body>/i, tag+'\\n</body>');
-    }
+    /* ⚠ V5.43.1:這裡**不能用 regex 搜尋那個 script 標籤的字面值** ——
+       那個字串會出現在 hlExport **自己的原始碼**裡(它就在同一份 HTML 的 script 區塊中),
+       regex 從頭找會**先匹配到自己的程式碼**,把函式本體換成資料 → 整段 JS 語法壞掉。
+       而且壞的是**匯出後的檔案**,按匯出的當下完全看不出來(V5.43.0 就是這樣)。
+       兩道防護:
+       ① 搜尋字串用拼接組出來,原始碼裡不存在可被搜到的字面值
+       ② 用 lastIndexOf 從**後面**找 —— 佔位標籤永遠在 extraJs 之後 */
+    var _o='<scr'+'ipt id="hl'+'-data"';
+    var _c='</scr'+'ipt>';
+    var a1=src.lastIndexOf(_o);
+    if(a1<0)throw new Error('這份投影片沒有標記存放區(可能是舊版產出的),請重新產生一次 HTML 投影片。');
+    var a2=src.indexOf('>',a1);
+    var a3=src.indexOf(_c,a2);
+    if(a2<0||a3<0)throw new Error('標記存放區格式異常');
+    src=src.slice(0,a2+1)+json+src.slice(a3);
     var fname=decodeURIComponent((location.pathname.split('/').pop()||'slides.html'));
     var blob=new Blob([src],{type:'text/html;charset=utf-8'});
     var a=document.createElement('a');
@@ -9475,7 +9483,12 @@ window.openImgWindow=function(caseId){
     +'<button class="nb" onclick="var el=document.documentElement;!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen()" title="F">&#9974;</button>'
     +'<button class="nb" id="nb-mag" onclick="_toggleMag()" title="放大鏡 L" style="font-size:clamp(12px,1.1vw,16px)">&#128269;</button>'
     +'</div>\n<div class="bar" id="bar" style="width:'+(1/N*100)+'%"></div>\n'
-    +'<script>'+js+sc+'\n</'+'script>\n'+('<script>'+extraJs+'\n</'+'script>')+'\n</body></html>'
+    +'<script>'+js+sc+'\n</'+'script>\n'+('<script>'+extraJs+'\n</'+'script>')
+    /* V5.43.1:標記資料的佔位標籤,一律放在 extraJs **之後**。
+       ① 有固定目標,匯出時不必判斷「有沒有」
+       ② 位置在 extraJs 之後 —— 這點是必要的,見 hlExport 的說明 */
+    +'\n<script id="hl-data" type="application/json">{}</'+'script>'
+    +'\n</body></html>'
   /* V5.5.0: 依設定偏好決定檔名語言(中文 / 英文 cancer code) */
   const _fnLang=getHtmlFnameLang();
   let fname;
