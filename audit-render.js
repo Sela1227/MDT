@@ -109,6 +109,43 @@ setTimeout(()=>{
     Object.keys(o).forEach(k=>console.log('  '+k+': '+(o[k]?'✅':'🔴')));
   }catch(e){ console.log('  🔴 '+e.message.slice(0,150)); }
 
+  // ── [V5.46.1] R-1 那一類:整張卡片的 data-ty 覆蓋率 ──
+  console.log('\n=== [坑#68/R-1] 必要事件卡片 data-ty 覆蓋率 ===');
+  try{
+    const r=run("(function(){var s=S.meeting.sections['head_neck'];"
+      +"var ev=createItem('head_neck','events',{chartNo:'E9',"
+      +"pathologies:[{date:'2026-01-01',content:'p'}],exams:[{name:'CT',date:'2026-01-02',content:'e'}],"
+      +"treatments:[{name:'Op',date:'2026-01-03',content:'t'}],markers:[{name:'CEA',content:'5'}],"
+      +"genomics:[{name:'EGFR',date:'2026-01-04',content:'g'}],"
+      +"timeline:[{type:'dx',date:'2026-01-05',label:'x'}],phChips:['DM']},{});"
+      +"var d=document.createElement('div');d.innerHTML=caseHTML('head_neck',0,ev,'events',{noImages:true});"
+      +"var bad=[];d.querySelectorAll('[data-action][data-cid]').forEach(function(el){"
+      +"  if(el.dataset.action==='togglecase')return;"
+      +"  if(el.dataset.ty!=='events')bad.push(el.dataset.action+'='+(el.dataset.ty||'(無)'));});"
+      +"return JSON.stringify({total:d.querySelectorAll('[data-action][data-cid]').length,bad:bad.slice(0,8)});})()");
+    const o=JSON.parse(r);
+    console.log('  帶 data-cid 的元素:',o.total,'| data-ty≠events:',o.bad.length,o.bad.length?'🔴 '+o.bad.join(', '):'✅');
+    if(o.bad.length)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));}
+
+  // ── [V5.46.1] R-2:存檔 → 立即修改 → 放棄,放棄後應等於磁碟 ──
+  console.log('\n=== [R-2] 存檔→立即修改→放棄 往返 ===');
+  try{
+    const r=run("(function(){var s=S.meeting.sections['head_neck'];"
+      +"S.meeting.date='2026-10-01';S.viewMode=false;"
+      +"s.cases[0].discussion='A1';_editGen++;"
+      +"var json=JSON.stringify(S.meeting);saveLocal(S.meeting);S._snapshot=json;"  /* 模擬 _doSave 成功當下 */
+      +"s.cases[0].discussion='A2';markDirty();"                               /* 1.2 秒內再改 */
+      +"if(S._snapshot){S.meeting=JSON.parse(S._snapshot);}"                    /* 放棄編輯 */
+      +"var mem=S.meeting.sections['head_neck'].cases[0].discussion;"
+      +"var disk=loadLocal(S.meeting.id).sections['head_neck'].cases[0].discussion;"
+      +"return JSON.stringify({mem:mem,disk:disk});})()");
+    const o=JSON.parse(r);
+    const ok=o.mem==='A1'&&o.disk==='A1';
+    console.log('  放棄後記憶體='+o.mem+' 磁碟='+o.disk+'  '+(ok?'✅ 已存的 A1 保住了':'🔴'));
+    if(!ok)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));}
+
   console.log('\n=== 總計錯誤 ===');
   console.log('  ', errs.length, errs.length?'':'✅');
   process.exit(bad?1:0);

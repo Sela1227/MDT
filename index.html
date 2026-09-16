@@ -1421,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.46.0';
+const VERSION='V5.46.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -2572,7 +2572,7 @@ function _inheritPrevMtgHeader(cids){
     showSaveToast('已帶入 '+(prev.date||'上一場')+' 的時間與地點，請確認');
   }catch(e){console.warn('_inheritPrevMtgHeader:',e);}
 }
-function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);S.meeting.date=date;_inheritPrevMtgHeader(cids);autoImportPrevFollowups(cids);S.viewMode=false;renderEditor();restoreImgFolderHandle();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
+function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);_resetEditState();/* V5.46.1 R-3+R-2:新會議也要有快照 */S.meeting.date=date;_inheritPrevMtgHeader(cids);autoImportPrevFollowups(cids);S.viewMode=false;renderEditor();restoreImgFolderHandle();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
 function openFromSb(cid){
   const cids=pairIds(cid);S.cids=cids;setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -2638,7 +2638,7 @@ function openFromSb(cid){
 }
 function startNewMtgForCancer(){
   const cids=S.cids;
-  S.meeting=newMeetingObj(S.user.id,cids);
+  S.meeting=newMeetingObj(S.user.id,cids);_resetEditState();/* V5.46.1 R-3+R-2:新會議也要有快照 */
   // Pre-fill date from calendar month if available
   const ca0=CFG[cids[0]];
   if(ca0?.weekday!==undefined&&ca0?.weeknum){
@@ -2662,6 +2662,7 @@ async function _loadMtg(id){
 async function openMtgById(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
+  _resetEditState();/* V5.46.1 R-3:換了一場會議 → 重設編輯狀態 */
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
   renderEditor();restoreImgFolderHandle();showView('meeting');
 }
@@ -2681,6 +2682,7 @@ async function openMtgSchedule(id){
 async function openMtgRecord(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
+  _resetEditState();/* V5.46.1 R-3:換了一場會議 → 重設編輯狀態 */
   /* ════ V5.46.0 根治方案甲:停用 mdt_sec_*(審核 A-1/A-2/A-3/B-2)════
      原本這一行會用 `mdt_sec_{cid}_{date}` **覆蓋**剛從 `mdt_m_` 讀進來的 sections。
      問題是 `mdt_sec_` 有三個致命性質:
@@ -2695,7 +2697,7 @@ async function openMtgRecord(id,editMode=false){
   renderEditor();restoreImgFolderHandle();showView('meeting');
 }
 function showConflict(c){S.conflict=c;const fmt=m=>`<div class="csr"><span class="csr-k">版本</span><span class="csr-v">v${m.version}</span></div><div class="csr"><span class="csr-k">儲存者</span><span class="csr-v">${m.savedBy||'—'}</span></div><div class="csr"><span class="csr-k">時間</span><span class="csr-v">${m.savedAt?new Date(m.savedAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):'—'}</span></div>`;document.getElementById('cf-shared').innerHTML=`<div class="csl ${c.newerIs==='shared'?'newer':''}">共享資料夾 ${c.newerIs==='shared'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.shared)}`;document.getElementById('cf-local').innerHTML=`<div class="csl ${c.newerIs==='local'?'newer':''}">本機備份 ${c.newerIs==='local'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.local)}`;document.getElementById('cf-note').textContent=`建議使用 v${Math.max(c.shared.version,c.local.version)}`;document.getElementById('cf-modal').classList.add('open')}
-async function resolveConflict(choice){document.getElementById('cf-modal').classList.remove('open');const winner=choice==='shared'?S.conflict.shared:S.conflict.local;saveLocal(winner);await saveShared(winner);S.meeting=winner;S.cids=winner.cids;setSbActive(winner.cids.find(c=>S.user.cancers.includes(c)));renderEditor();restoreImgFolderHandle();showView('meeting');S.conflict=null}
+async function resolveConflict(choice){document.getElementById('cf-modal').classList.remove('open');const winner=choice==='shared'?S.conflict.shared:S.conflict.local;saveLocal(winner);await saveShared(winner);S.meeting=winner;_resetEditState();/* V5.46.1 R-3 */S.cids=winner.cids;setSbActive(winner.cids.find(c=>S.user.cancers.includes(c)));renderEditor();restoreImgFolderHandle();showView('meeting');S.conflict=null}
 
 /* ════ Settings ════ */
 function showStab(id,el){document.querySelectorAll('.stab').forEach(s=>s.classList.remove('on'));document.querySelectorAll('#st-tabs .tab').forEach(n=>n.classList.remove('active'));document.getElementById('stab-'+id).classList.add('on');el.classList.add('active');if(id==='examtypes')renderExamTypesTab();if(id==='imgfolder')updateImgFolderSettingsStatus();}
@@ -3146,7 +3148,13 @@ function renderEditor(){
   if(fc)fc.textContent=autoContact;
   document.getElementById('out-area').style.display='none';document.getElementById('save-msg').innerHTML='';
   document.getElementById('ai-result-area').style.display='none';
-  _dirty=false;setLibStatus('');applyAICfg();
+  /* ════ V5.46.1 R-3(P1)════
+     `renderEditor()` 有 18 個呼叫點,它被當成「重繪」用,卻同時做了「重設編輯狀態」。
+     `rebindMeetingImages` 的寫法是 `markDirty(); renderEditor();` ——
+     影像的 subFolder 與 size 已改,但 _dirty 立刻被清掉:
+     底部按鈕變「檢視」、自動存檔跳過、關分頁不攔截,**畫面上卻寫著「請記得儲存」**。
+     清狀態改由 `_resetEditState()` 負責,只在「換了一場會議」時呼叫。 */
+  setLibStatus('');applyAICfg();
   // Apply view / edit mode + meeting mode (schedule vs record)
   const wrap=document.querySelector('#view-meeting .wrap');
   if(S.viewMode){wrap.classList.add('view-mode');_renderInfoDoc();}
@@ -4649,7 +4657,7 @@ function caseHTML(cid,i,d,type,opts){
       <button class="btnadd" data-action="addstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="timeline" style="display:inline-block;width:auto;font-size:11px;padding:3px 10px">＋ 新增事件</button>
       <button class="btn btn-b btn-sm" onclick="importTimelineFromTreatments('${cid}',${i},'${_ty}')" style="font-size:11px">⬇ 從治療記錄帶入</button>
     </div>
-    <div id="tllist-${cid}-${_ty}-${i}">${buildTimelineRows(cid,i,d)}</div>
+    <div id="tllist-${cid}-${_ty}-${i}">${buildTimelineRows(cid,i,d,_ty)}</div>
     <div id="tl-svg-preview-${cid}-${_ty}-${i}" style="margin-top:8px">${(d.timeline&&d.timeline.length)?renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view'):''}</div>
   </div>
 
@@ -5416,6 +5424,7 @@ function confirmCopyMtg(){
   closeCopyMtgDialog();
   // Jump to the new meeting
   S.meeting=copy;
+  _resetEditState();/* V5.46.1 R-3 */
   S.viewMode=true;
   S.meetingMode='record';
   showShell('app');
@@ -6910,6 +6919,14 @@ let _dirty=false;
    改用「修改世代號」:存檔前記下 gen,收尾時比對,期間有新修改就什麼都不做。 */
 let _editGen=0;
 let _saving=false;/* V5.45.0 C-3:重入保護 */
+/* V5.46.1 R-3:只在「換了一場會議」時呼叫 —— openMtgRecord / openMtgSmart /
+   createNewMtg / confirmCopyMtg / resolveConflict 等入口。
+   把「重繪」與「重設編輯狀態」分開,是因為前者有 18 個呼叫點而後者只該發生在換會議時。 */
+function _resetEditState(){
+  _dirty=false;
+  _editGen++;
+  S._snapshot=S.meeting?JSON.stringify(S.meeting):null;
+}
 function markDirty(){
   _editGen++;if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}
   _syncAbandonBtnLabel();/* V5.37.1 Z-4 */
@@ -7007,7 +7024,16 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
       alert(_msg);
     }
   }else{
-    _dirty=false;
+    /* ════ V5.46.1 R-2(P0)════
+       快照代表「磁碟上現在的狀態」,必須在**寫入成功的當下**更新,與 1.2 秒的收尾動畫無關。
+       V5.45.0 為了修 B-1 把它放進收尾的 setTimeout,而那個 setTimeout 有 gen 檢查 ——
+       只要「存檔後 1.2 秒內繼續打字」(Ctrl+S 的主流用法),**快照就停在進入編輯模式那一刻**。
+       後果:按「放棄編輯」會把**已經存檔的內容**也倒回去,連 version 一起倒退,
+       下次存檔與別台**同號但內容不同**,NAS 只比版本號 → 兩邊永遠不會對齊。 */
+    S._snapshot=JSON.stringify(S.meeting);
+    /* V5.46.1 R-8:這裡到上面的 _genAtSave 之間有一個 await saveShared() ——
+       舊版共享資料夾有連線時那個 await 會真的讓出執行緒,期間的輸入會被標成已存。 */
+    if(_editGen===_genAtSave)_dirty=false;
     hidePersistentError();
     /* V5.35.1 Y-4:V5.34.0 之後 tab-save-msg-<cid> 變成永遠空白的死元素
        (span 還在產生,但全檔已無人寫入)。分頁儲存時補回狀態顯示。 */
@@ -7053,10 +7079,8 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
     setTimeout(()=>{
       /* V5.45.0 A-4:期間有新修改就不清 dirty、不收合、不顯示已儲存 */
       if(_editGen!==_genAtSave)return;
-      /* V5.45.0 B-1:快照改成「剛存好的狀態」而非 null ——
-         原本清成 null 之後「放棄編輯」找不到快照可還原,
-         想放棄的修改留在 S.meeting,之後任何儲存都會把它寫進去。 */
-      S._snapshot=JSON.stringify(S.meeting);_dirty=false;
+      /* V5.46.1 R-2:快照已在寫入成功的當下更新(見上方),這裡只留 UI 收尾。 */
+      _dirty=false;
       const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
       _syncAbandonBtnLabel();
       _collapseAllCases();/* V5.43.2:把個管師習慣的「存好了」訊號還回來 */
@@ -11427,7 +11451,14 @@ function importTimelineFromTreatments(cid,idx,type){
    V5.42.4(坑 #68)只補了 `addStruct` 產生的那批,這支是漏網的。
    少了 data-ty,必要事件卡片上的時序列會去讀寫同索引的個案討論。 */
 function buildTimelineRows(cid,idx,c,type){
-  const _ty=type?type:"cases";
+  /* ⚠ V5.46.1 R-1:type **必填**。V5.46.0 加了這個參數,但只改了兩個**重繪**呼叫點
+     (addStruct / delStruct 之後),**卡片第一次渲染的主路徑沒改** ——
+     只要會議重新開啟或重繪,必要事件卡片上既有的每一列時序都帶 data-ty="cases",
+     打字與刪除都作用到**同索引的個案討論**(兩邊都不報錯,產投影片才發現)。
+     `type?type:"cases"` 這種寬容預設正是它藏了一版沒被發現的原因 ——
+     改成當場 console.error,下次漏傳會立刻現形。 */
+  if(type!=='cases'&&type!=='events'){console.error('[buildTimelineRows] type 必填,收到:',type);type='cases';}
+  const _ty=type;
   return ((c.timeline||[]).map(function(tl,ti){
     const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'"'+(t.id===tl.type?' selected':'')+'>'+t.label+'</option>';}).join('');
     return '<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
