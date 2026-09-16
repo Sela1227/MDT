@@ -1421,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.48.0';
+const VERSION='V5.48.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1988,6 +1988,11 @@ function delStruct(cid,i,field,rowIdx,type){
   const _ty=type?type:"cases";/* V5.42.0 */
   ensureSec(cid);const c=S.meeting.sections[cid][_ty][i];
   if(!c[field])return;
+  /* V5.48.1 DEL-2:有內容的列才確認,空白列直接刪 —— × 緊鄰日期欄,誤觸率不低,
+     而必要事件的病理、治療列是死亡病例回顧的核心內容 */
+  const _row=c[field][rowIdx]||{};
+  const _has=Object.keys(_row).some(function(k){return k!=='_ai'&&String(_row[k]||'').trim();});
+  if(_has&&!confirm('確定刪除這一列？'))return;
   c[field].splice(rowIdx,1);
   markDirty();
   if(field==='timeline'){
@@ -2079,7 +2084,7 @@ function addStruct(cid,i,field,type){
     const opts=EXAM_TYPES.map(t=>'<option>'+escA(t)+'</option>').join('');
     div.innerHTML=`<div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <select data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${rowIdx},'${cid}','${_ty}')"><option value="">— 選擇 —</option>${opts}<option value="__other__">其他</option></select>
+        <select data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="name" style="width:120px" onchange="onExamTypeChange(this)"><option value="">— 選擇 —</option>${opts}<option value="__other__">其他</option></select>
         <input type="date" value="" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${rowIdx}" style="margin-left:auto">×</button>
       </div>
@@ -4323,7 +4328,7 @@ function caseViewHTML(cid,i,d,type){
   return`<div class="vc" id="${cardId}">
 <div class="vc-hdr" onclick="toggleVCCard('${cardId}')" style="cursor:pointer" title="點擊展開/收合">
 <span style="margin-right:8px;font-size:11px;opacity:.5" class="vc-collapse-icon">▶</span>
-${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${(d.gender||'M')==='M'?'M':'F'}/${d.age||'—'}${d.ecog?' &nbsp;ECOG '+escA(d.ecog):''}${d.cfs?' &nbsp;衰弱量表 '+escA(d.cfs):''} &nbsp;VS ${escA(drs)}</span>
+${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub"> ${d.gender==='F'?'F':d.gender==='M'?'M':'—'}/${d.age||'—'}${d.ecog?' &nbsp;ECOG '+escA(d.ecog):''}${d.cfs?' &nbsp;衰弱量表 '+escA(d.cfs):''} &nbsp;VS ${escA(drs)}</span>
 <button onclick="event.stopPropagation();editSingleCase('${cid}',${i},'${_ty}')" style="margin-left:auto;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;padding:2px 10px;border-radius:2px;font-size:11px;cursor:pointer">編輯</button>
 ${d.diagnosis?`<div class="vc-hdr-sub" style="margin-top:3px">${escA(d.diagnosis)}</div>`:''}
 </div>
@@ -4501,7 +4506,7 @@ function caseHTML(cid,i,d,type,opts){
   const examRows=exams.map((ex,ei)=>`
     <div class="struct-row" style="position:relative">
       <div style="display:flex;gap:6px;margin-bottom:5px;align-items:center">
-        <select data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px" onchange="onExamTypeChange(this,${i},${ei},'${cid}','${_ty}')">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="__other__"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>${!EXAM_TYPES.includes(ex.name)?`<input placeholder="檢查類型" value="${escA(ex.name)}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:100px;font-size:12px">`:``}
+        <select data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:120px" onchange="onExamTypeChange(this)">${EXAM_TYPES.map(t=>'<option value="'+escA(t)+'"'+(t===ex.name?' selected':'')+'>'+escA(t)+'</option>').join('')}<option value="__other__"${!EXAM_TYPES.includes(ex.name)?' selected':''}>其他</option></select>${!EXAM_TYPES.includes(ex.name)?`<input placeholder="檢查類型" value="${escA(ex.name)}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="name" style="width:100px;font-size:12px">`:``}
         <input type="date" value="${escA(ex.date||'')}" data-action="updstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" data-key="date" style="width:148px">
         <button class="delbtn" data-action="delstruct" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}" data-field="exams" data-rowid="${ei}" style="margin-left:auto">×</button>
       </div>
@@ -4555,7 +4560,7 @@ function caseHTML(cid,i,d,type,opts){
 
   <div class="fg full" style="padding-bottom:2px">
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${FLAG_LIST.map(function(fl){const on=(d.flags||[]).includes(fl);const col=flagColor(fl);/* V5.42.3 D-1:這一段是**單引號字串**不是樣板字串 —— `${_ty}` 不會被插值,
+      ${_isEv?'':FLAG_LIST.map(function(fl){const on=(d.flags||[]).includes(fl);const col=flagColor(fl);/* V5.42.3 D-1:這一段是**單引號字串**不是樣板字串 —— `${_ty}` 不會被插值,
          dataset.ty 拿到的是字面上的 "${_ty}",而它是**非空字串所以 truthy**,
          處理器的 ||'cases' 防線完全失效 → sections[cid]["${_ty}"] → undefined[idx] → TypeError。
          五個旗標從 V5.42.0 起全部點不動,而且**兩種卡片都中**。
@@ -5248,7 +5253,23 @@ function openPostMtgPanel(){
       +'<div>'
       +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
       +'<textarea data-action="postteam-decision" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.decision||'')+'</textarea>'
-      +'</div>';
+      +'</div>'
+      /* V5.48.1 EV-8:必要事件的會後產出關鍵是「是否需改善、改善方案、結案狀態」,
+         原本只能回到卡片上填。這三項正是死亡病例討論的結論。 */
+      +(arrType==='events'?(
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'
+        +'<div><div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">是否需改善方案</div>'
+        +'<select data-action="postev-improve" data-cid="'+escA(cid)+'" data-ti="'+ti+'" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px">'
+        +'<option value="">—</option>'+IMPROVE_OPTS.map(function(x){return '<option value="'+escA(x)+'"'+(t.improveNeeded===x?' selected':'')+'>'+escA(x)+'</option>';}).join('')
+        +'</select></div>'
+        +'<div><div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">結案狀態</div>'
+        +'<select data-action="postev-status" data-cid="'+escA(cid)+'" data-ti="'+ti+'" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid var(--blt);border-radius:3px">'
+        +EVENT_STATUS.map(function(x){return '<option value="'+escA(x)+'"'+((t.eventStatus||'待討論')===x?' selected':'')+'>'+escA(x)+'</option>';}).join('')
+        +'</select></div>'
+        +'</div>'
+        +'<div style="margin-top:8px"><div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">改善方案</div>'
+        +'<textarea data-action="postev-plan" data-cid="'+escA(cid)+'" data-ti="'+ti+'" rows="2" placeholder="具體措施、負責單位、預計完成時間" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.improvePlan||'')+'</textarea></div>'
+      ):'');
     return card;
   }
   S.cids.forEach(function(cid){
@@ -5385,6 +5406,20 @@ function savePostMtg(){
     var cid=el.dataset.cid,arrType=el.dataset.arrtype,ti=parseInt(el.dataset.ti);
     var arr=(S.meeting.sections[cid]||{})[arrType];
     if(arr&&arr[ti])arr[ti].decision=el.value.trim();
+  });
+  /* V5.48.1 EV-8:必要事件的三個會後欄位,套 R-10 的白名單 */
+  var _pk=function(v,list){return list.indexOf(v)>=0?v:'';};
+  panel.querySelectorAll('[data-action="postev-improve"]').forEach(function(el){
+    var ev=((S.meeting.sections[el.dataset.cid]||{}).events||[])[parseInt(el.dataset.ti)];
+    if(ev)ev.improveNeeded=_pk(el.value,IMPROVE_OPTS);
+  });
+  panel.querySelectorAll('[data-action="postev-status"]').forEach(function(el){
+    var ev=((S.meeting.sections[el.dataset.cid]||{}).events||[])[parseInt(el.dataset.ti)];
+    if(ev)ev.eventStatus=_pk(el.value,EVENT_STATUS)||'待討論';
+  });
+  panel.querySelectorAll('[data-action="postev-plan"]').forEach(function(el){
+    var ev=((S.meeting.sections[el.dataset.cid]||{}).events||[])[parseInt(el.dataset.ti)];
+    if(ev)ev.improvePlan=el.value.trim();
   });
   S.cids.forEach(function(cid){
     ((S.meeting.sections[cid]||{}).cases||[]).forEach(function(c){c.followNext=true;});
@@ -6268,10 +6303,25 @@ function updateFolderStatusBar(){
    選「其他」時動態插入的自訂欄也沒設 dataset.ty,委派再退回 cases。
    V5.42.0 起就存在,一直沒被發現是因為個案討論卡片自己剛好寫對。
    坑 #68 的第四個漏網點 —— 而且 data-ty 覆蓋率檢查**看不到 inline on* 屬性裡的參數**。 */
-function onExamTypeChange(sel,caseIdx,examIdx,cid,type){
-  const _ty=(type==='events'||type==='cases')?type:(sel&&sel.dataset&&sel.dataset.ty==='events'?'events':'cases');
+/* ════ V5.48.1 DEL-1(P0)+ EV-1 根治 ════
+   原本 onchange 呼叫把 i 與 ei(列序號)**寫死在 inline 屬性字串裡**。
+   delStruct 刪一列後只會把 data-rowid 往前遞補,**不會更新 inline 字串裡的 ${ei}** ——
+   於是同一個選單上,委派的 updstruct 讀新的 data-rowid 寫到正確的列,
+   inline 的 onExamTypeChange 讀舊的 ei 寫到**下一列**。
+   個案討論:刪過檢查列後每次改類型都連帶改掉下一列;必要事件:錯寫到同序號個案的第 n+1 列。
+   「AI 匯入後刪掉重複的檢查、再修正類型」正是個管師的日常動線。
+
+   根治:**這支不再寫資料** —— 委派的 updstruct 已經會依 data-rowid 寫入 name,
+   這支只負責「選其他時插入自訂欄 / 選別的時移除自訂欄」的畫面動作。
+   所有座標一律從元素當下的 dataset 讀,那才是 delStruct 會更新的東西。
+   兩處資料寫入刪掉之後,這一類錯位就不可能再發生。 */
+function onExamTypeChange(sel){
+  if(!sel||!sel.dataset)return;
+  const cid=sel.dataset.cid;
+  const caseIdx=sel.dataset.caseidx;
+  const rowid=sel.dataset.rowid;
+  const _ty=sel.dataset.ty==='events'?'events':'cases';
   if(sel.value==='__other__'){
-    /* V4.6.6: 只把「自訂類型」文字輸入視為已存在;type=date 不算,否則切到「其他」時找不到輸入欄 */
     let inp=sel.nextElementSibling;
     const isCustomTypeInp=inp&&inp.tagName==='INPUT'&&inp.type!=='date';
     if(!isCustomTypeInp){
@@ -6282,25 +6332,20 @@ function onExamTypeChange(sel,caseIdx,examIdx,cid,type){
       inp.dataset.cid=cid;
       inp.dataset.caseidx=caseIdx;
       inp.dataset.field='exams';
-      inp.dataset.rowid=examIdx;
-        inp.dataset.ty=_ty;/* V5.47.1 EV-1:自訂欄也要帶 */
+      inp.dataset.rowid=rowid;   /* 之後 delStruct 遞補時也會更新到它 */
+      inp.dataset.ty=_ty;
       inp.dataset.key='name';
       sel.parentNode.insertBefore(inp,sel.nextSibling);
       inp.focus();
     }
-    // Set name to empty so user fills it
-    const c=S.meeting?.sections[cid]?.[_ty]?.[caseIdx];
-    if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name='';
-    markDirty();
+    /* 委派的 updstruct 已把 name 寫成 '__other__';清成空字串讓自訂欄接手 */
+    const c=S.meeting?.sections?.[cid]?.[_ty]?.[parseInt(caseIdx,10)];
+    const ri=parseInt(rowid,10);
+    if(c&&c.exams&&c.exams[ri]&&c.exams[ri].name==='__other__'){c.exams[ri].name='';}
   } else {
-    /* V4.6.6: 只刪「自訂類型」文字輸入(type='text' 或無 type),不要誤刪緊跟的日期欄 type='date'
-       原 bug:`if(inp&&inp.tagName==='INPUT')inp.remove()` 會把任何 INPUT 刪掉,
-       包括 select 後面的 type=date 日期欄,導致選 CT 等項目時日期消失 */
     const inp=sel.nextElementSibling;
     if(inp&&inp.tagName==='INPUT'&&inp.type!=='date')inp.remove();
-    const c=S.meeting?.sections[cid]?.[_ty]?.[caseIdx];
-    if(c&&c.exams&&c.exams[examIdx])c.exams[examIdx].name=sel.value;
-    markDirty();
+    /* 不寫資料 —— updstruct 委派已經寫了 */
   }
 }
 
