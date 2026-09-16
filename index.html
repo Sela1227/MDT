@@ -1213,6 +1213,16 @@ textarea{resize:vertical}
     <button class="btn btn-b btn-sm" onclick="clearCfToken()">清除</button>
   </div>
   <div id="cf-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
+
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">Zoom 會議密碼</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">三組季密碼。<b>只存在這台電腦、不進備份</b>，三台各填一次。</div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+    <input type="password" id="zoom-q1" placeholder="1/4/7/10 月" style="width:120px;font-size:12px;font-family:monospace">
+    <input type="password" id="zoom-q2" placeholder="2/5/8/11 月" style="width:120px;font-size:12px;font-family:monospace">
+    <input type="password" id="zoom-q3" placeholder="3/6/9/12 月" style="width:120px;font-size:12px;font-family:monospace">
+    <button class="btn btn-a btn-sm" onclick="saveZoomPwds()">儲存</button>
+  </div>
+  <div id="zoom-pwd-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
   <!-- V5.41.0:移除「已分享的投影片」清單。
        分享改走 Cloudflare 後,這個清單只會顯示**舊的 GitHub 連結**(新的不再寫入),
        而清單上的刪除鍵打的是 GitHub API —— 對 Cloudflare 上的檔案無效,
@@ -1406,14 +1416,14 @@ const DEFAULT_DRS=[
 ];
 const mk=(d,n)=>`${d}::${n}`;
 const DEFAULT_C={
-  head_neck:{id:'head_neck',name:'頭頸癌',defaultDept:'口腔外科',partner:'lymphoma',role:'first',weekday:4,weeknum:3,color:'#4A7C8E',defaultSlot:'12:30-13:30',slot:'12:30-13:00',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'頭頸癌召集人',conv:'頭頸外科::張建明醫師',memberKeys:[mk('口腔外科','王威群醫師'),mk('耳鼻喉科','李俊毅醫師'),mk('血液腫瘤科','劉大智醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','劉育昌醫師')]},
-  lymphoma:{id:'lymphoma',name:'血液淋巴癌',defaultDept:'血液腫瘤科',partner:'head_neck',role:'second',weekday:4,weeknum:3,defaultSlot:'12:30-13:30',color:'#5B8FA8',slot:'13:00-13:30',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'6222131',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'血液淋巴癌召集人',conv:'血液腫瘤科::劉大智醫師',memberKeys:[mk('血液腫瘤科','張正雄醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','林伯儒醫師')]},
-  thoracic:{id:'thoracic',name:'胸腔癌',partner:null,defaultDept:'胸腔外科',weekday:4,weeknum:3,color:'#6B7FA0',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6007',pwd:'7813888',url:'https://zoom.us/j/7256166007?pwd=oHlSANba92wzDrbbYs6NFVRFBT8O2x.1'},convTitle:'肺癌召集人',conv:'胸腔內科::張竣期醫師',memberKeys:[mk('胸腔外科','黃榆涵醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','劉奕祥醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  breast:{id:'breast',name:'乳癌',partner:null,defaultDept:'一般外科',weekday:4,weeknum:3,defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6003',pwd:'6222131',url:'https://zoom.us/j/7256166003?pwd=4gN5lhkzdIfh8WylCq7bYPl194bFI6.1'},convTitle:'乳癌召集人',conv:'一般外科::李岳聰醫師',memberKeys:[mk('一般外科','吳鴻昇醫師'),mk('一般外科','林建華醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','熊敬業醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  digestive:{id:'digestive',name:'消化道癌',defaultDept:'一般外科',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F 人文藝術館會議室'/* V5.13.6 修:原為「彰濱-1F  人文會議室」(雙空格+名稱不符),不在 DEFAULT_LOCS 中 → select 找不到 option 會存成空值 */,zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
-  hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',defaultDept:'一般外科',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F 人文藝術館會議室'/* V5.13.6 修:原為「彰濱-1F  人文會議室」(雙空格+名稱不符),不在 DEFAULT_LOCS 中 → select 找不到 option 會存成空值 */,zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
-  urology:{id:'urology',name:'泌尿道癌',partner:null,defaultDept:'泌尿科',weekday:3,weeknum:2,color:'#7A6E8A',defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-7F 愛書人會議室'/* V5.13.6 修:原為雙空格,與 DEFAULT_LOCS 不符 */,zoom:{id:'725-616-6001',pwd:'6222131',url:'https://zoom.us/j/7256166001?pwd=6Ir1uPjOzDjA25ARbf88rOOq1X80rn.1'},convTitle:'泌尿道癌召集人',conv:'泌尿科::楊哲學醫師',memberKeys:[mk('泌尿科','吳其翔醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
-  gynecology:{id:'gynecology',name:'婦癌',partner:null,defaultDept:'婦產科',weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'2609926',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦產科::吳宏明醫師',memberKeys:[mk('婦產科','林坤沂醫師'),mk('婦產科','吳宏明醫師'),mk('婦產科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
+  head_neck:{id:'head_neck',name:'頭頸癌',defaultDept:'口腔外科',partner:'lymphoma',role:'first',weekday:4,weeknum:3,color:'#4A7C8E',defaultSlot:'12:30-13:30',slot:'12:30-13:00',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'頭頸癌召集人',conv:'頭頸外科::張建明醫師',memberKeys:[mk('口腔外科','王威群醫師'),mk('耳鼻喉科','李俊毅醫師'),mk('血液腫瘤科','劉大智醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','劉育昌醫師')]},
+  lymphoma:{id:'lymphoma',name:'血液淋巴癌',defaultDept:'血液腫瘤科',partner:'head_neck',role:'second',weekday:4,weeknum:3,defaultSlot:'12:30-13:30',color:'#5B8FA8',slot:'13:00-13:30',loc:'彰濱-8樓 圓桌會議室',zoom:{id:'725-616-6002',pwd:'',url:'https://zoom.us/j/7256166002?pwd=xKAMGo0Cu2N9UA5ba185qgjLmhGZmK.1'},convTitle:'血液淋巴癌召集人',conv:'血液腫瘤科::劉大智醫師',memberKeys:[mk('血液腫瘤科','張正雄醫師'),mk('影像診斷科','李唯揚醫師'),mk('病理科','劉奕祥醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  thoracic:{id:'thoracic',name:'胸腔癌',partner:null,defaultDept:'胸腔外科',weekday:4,weeknum:3,color:'#6B7FA0',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6007',pwd:'',url:'https://zoom.us/j/7256166007?pwd=oHlSANba92wzDrbbYs6NFVRFBT8O2x.1'},convTitle:'肺癌召集人',conv:'胸腔內科::張竣期醫師',memberKeys:[mk('胸腔外科','黃榆涵醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','劉奕祥醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
+  breast:{id:'breast',name:'乳癌',partner:null,defaultDept:'一般外科',weekday:4,weeknum:3,defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-1F 人文藝術館會議室',zoom:{id:'725-616-6003',pwd:'',url:'https://zoom.us/j/7256166003?pwd=4gN5lhkzdIfh8WylCq7bYPl194bFI6.1'},convTitle:'乳癌召集人',conv:'一般外科::李岳聰醫師',memberKeys:[mk('一般外科','吳鴻昇醫師'),mk('一般外科','林建華醫師'),mk('影像診斷科','葉偉成醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','熊敬業醫師'),mk('血液腫瘤科','張正雄醫師')]},
+  digestive:{id:'digestive',name:'消化道癌',defaultDept:'一般外科',partner:'hepatobiliary',role:'first',weekday:4,weeknum:1,color:'#7A8C6E',defaultSlot:'07:30-08:30',slot:'07:30-08:00',loc:'彰濱-1F 人文藝術館會議室'/* V5.13.6 修:原為「彰濱-1F  人文會議室」(雙空格+名稱不符),不在 DEFAULT_LOCS 中 → select 找不到 option 會存成空值 */,zoom:{id:'725-616-6001',pwd:'',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'消化道癌召集人',conv:'一般外科::歐金俊醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  hepatobiliary:{id:'hepatobiliary',name:'肝膽胰癌',defaultDept:'一般外科',partner:'digestive',role:'second',weekday:4,weeknum:1,defaultSlot:'07:30-08:30',color:'#8A9E6E',slot:'08:00-08:30',loc:'彰濱-1F 人文藝術館會議室'/* V5.13.6 修:原為「彰濱-1F  人文會議室」(雙空格+名稱不符),不在 DEFAULT_LOCS 中 → select 找不到 option 會存成空值 */,zoom:{id:'725-616-6001',pwd:'',url:'https://zoom.us/j/7256166001?pwd=bGqy0tLm0GgEdfq0VpQtC5uIcI0NXP.1'},convTitle:'肝膽胰癌召集人',conv:'血液腫瘤科::張正雄醫師',memberKeys:[mk('一般外科','李岳聰醫師'),mk('一般外科','林建華醫師'),mk('肝膽腸胃科','陳忠宏醫師'),mk('肝膽腸胃科','王俊偉醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','賴義雄醫師'),mk('核醫科','侯柏年醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('放射腫瘤科','林伯儒醫師')]},
+  urology:{id:'urology',name:'泌尿道癌',partner:null,defaultDept:'泌尿科',weekday:3,weeknum:2,color:'#7A6E8A',defaultSlot:'07:30-08:30',slot:'07:30-08:30',loc:'彰濱-7F 愛書人會議室'/* V5.13.6 修:原為雙空格,與 DEFAULT_LOCS 不符 */,zoom:{id:'725-616-6001',pwd:'',url:'https://zoom.us/j/7256166001?pwd=6Ir1uPjOzDjA25ARbf88rOOq1X80rn.1'},convTitle:'泌尿道癌召集人',conv:'泌尿科::楊哲學醫師',memberKeys:[mk('泌尿科','吳其翔醫師'),mk('影像診斷科','張哲維醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','劉育昌醫師'),mk('血液腫瘤科','張正雄醫師')]},
+  gynecology:{id:'gynecology',name:'婦癌',partner:null,defaultDept:'婦產科',weekday:3,weeknum:2,color:'#9E6E7A',defaultSlot:'12:30-13:30',slot:'12:30-13:30',loc:'彰濱-3樓 甲狀腺會議室',zoom:{id:'725-616-6003',pwd:'',url:'https://us06web.zoom.us/j/7256166003?pwd=RkR3eDNRK1YzSzlFbnpnWjVIZjJhQT09'},convTitle:'婦癌召集人',conv:'婦產科::吳宏明醫師',memberKeys:[mk('婦產科','林坤沂醫師'),mk('婦產科','吳宏明醫師'),mk('婦產科','陳天惠醫師'),mk('影像診斷科','蔡秉樺醫師'),mk('病理科','鄧呂壕醫師'),mk('放射腫瘤科','林伯儒醫師'),mk('血液腫瘤科','劉大智醫師')]}
 };
 const USERS=[
   {id:'yang',name:'楊靜雯',ext:'17965',cancers:['lymphoma','digestive','gynecology']},
@@ -1421,7 +1431,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.49.0';
+const VERSION='V5.50.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -2316,7 +2326,7 @@ function calCreateMtg(cid,date){
 
 async function openSettings(){
   if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
-  loadGhTokenStatus();loadCfTokenStatus();/* V5.41.0 */showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
+  loadGhTokenStatus();loadCfTokenStatus();/* V5.41.0 */loadZoomPwdStatus();/* V5.50.0 */showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
 async function openHistory(){
   if(!(await _confirmLeave()))return;/* V5.48.0 R-4 */
   showView('history');setSbActive(null);
@@ -2745,12 +2755,33 @@ function moveExamType(i,dir){
   saveAll();renderExamTypesTab();
 }
 
+/* ════ V5.50.0 B-5:Zoom 密碼從程式碼移到設定 ════
+   三組季密碼原本寫死在這裡 —— 而 index.html 放在**公開的 GitHub Pages**,view-source 就看得到。
+   改存 localStorage `mdt_zoom_pwd`,比照 API Token **不進備份**。三台電腦各填一次。
+   ⚠ 密碼本身仍要在 Zoom 後台**重新產生** —— 舊的三組已經在 Git 歷史裡。 */
+function _zoomPwds(){
+  try{const r=localStorage.getItem('mdt_zoom_pwd');return r?JSON.parse(r):{};}catch(e){return {};}
+}
+function saveZoomPwds(){
+  const g=function(id){return ((document.getElementById(id)||{}).value||'').trim();};
+  localStorage.setItem('mdt_zoom_pwd',JSON.stringify({q1:g('zoom-q1'),q2:g('zoom-q2'),q3:g('zoom-q3')}));
+  loadZoomPwdStatus();showSaveToast('Zoom 密碼已儲存');
+}
+function loadZoomPwdStatus(){
+  const el=document.getElementById('zoom-pwd-status');if(!el)return;
+  const z=_zoomPwds();
+  const n=['q1','q2','q3'].filter(function(k){return z[k];}).length;
+  el.textContent=n===3?'\u2713 三組已設定（只存在這台電腦，不進備份）':(n?'已設定 '+n+'/3 組':'尚未設定，會議 Zoom 密碼欄會是空的');
+  el.style.color=n===3?'var(--ok)':'var(--warn)';
+  ['q1','q2','q3'].forEach(function(k){const i=document.getElementById('zoom-'+k);if(i)i.value=z[k]||'';});
+}
 function zoomPwdByMonth(dateStr){
   if(!dateStr)return'';
   const mo=parseInt((dateStr||'').split('-')[1]||0);
-  if([1,4,7,10].includes(mo))return'7813888';
-  if([2,5,8,11].includes(mo))return'2609926';
-  if([3,6,9,12].includes(mo))return'6222131';
+  const z=_zoomPwds();
+  if([1,4,7,10].includes(mo))return z.q1||'';
+  if([2,5,8,11].includes(mo))return z.q2||'';
+  if([3,6,9,12].includes(mo))return z.q3||'';
   return'';
 }
 function onZoomSuffixChange(suffix){
@@ -3324,7 +3355,7 @@ function migrateSecToMtg(){
   }catch(e){console.warn('migrateSecToMtg:',e);}
 }
 
-function loadMergedSections(){/* V5.46.0:停用,見 openMtgRecord 的說明 */}
+/* V5.50.0 R-11:loadMergedSections 空殼已移除,呼叫端一併清掉 */
 
 // Save one cancer's section separately
 /* ════ V5.34.0 ④ 儲存合併(個管師:能少一個鈕就少一個)════
@@ -3352,7 +3383,6 @@ function renderCasesInner(){
     el.innerHTML=casesPane(cids[0]);
   } else {
     // Merged meeting: load per-cancer sections first
-    loadMergedSections();
     let tabsHtml='<div class="tabs" id="ctabs">';
     myFirst.forEach((id,i)=>{
       const isOwn=S.user.cancers.includes(id);
@@ -5119,7 +5149,7 @@ async function testNasBackup(){
 }
 
 /* V5.45.0 A-5:永不進備份的 key。`mdt_ai` 是 V5.37.0 以前的舊格式,同樣含金鑰。 */
-const _NEVER_BACKUP=/^mdt_(ai_key|cf_token|ai)$/;
+const _NEVER_BACKUP=/^mdt_(ai_key|cf_token|ai|zoom_pwd)$/;/* V5.50.0 B-5 */
 async function backupToNAS(){
   if(!nasHandle)return;
   try{
@@ -7999,12 +8029,7 @@ function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
   idx.forEach(m=>{
     const data=localStorage.getItem('mdt_m_'+m.id);
     if(data)backup.meetings['mdt_m_'+m.id]=data;
-    // Also export per-cancer sections for merged meetings
-    (m.cids||[]).forEach(cid=>{
-      const sk='mdt_sec_'+cid+'_'+m.date;
-      const sd=localStorage.getItem(sk);
-      if(sd)backup.meetings[sk]=sd;
-    });
+    /* V5.50.0 R-11:mdt_sec_ 已停用(V5.46.0),匯出不再帶它 */
   });
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const count=idx.length;
@@ -10546,12 +10571,7 @@ function exportMeetingJSON(){
   const meetingData={};
   const key='mdt_m_'+m.id;
   meetingData[key]=JSON.stringify(m);
-  // Also include per-cancer section files for merged meetings
-  (m.cids||[]).forEach(function(cid){
-    const sk='mdt_sec_'+cid+'_'+m.date;
-    const sd=localStorage.getItem(sk);
-    if(sd)meetingData[sk]=sd;
-  });
+  /* V5.50.0 R-11:mdt_sec_ 已停用,匯出不再帶它 */
   const backup={
     version:VERSION,
     exportedAt:new Date().toISOString(),
