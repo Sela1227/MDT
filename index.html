@@ -1421,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.48.1';
+const VERSION='V5.49.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3293,26 +3293,34 @@ function delSec(cid,date){localStorage.removeItem(secKey(cid,date))}
    因為它才是含會議 ID、會跟 NAS 同步的那一份。
    不動 version、不動 touchedAt,避免把舊資料推成「比別台新」。
    舊的 mdt_sec_ key **暫不刪除**,保留一版作為退路。 */
+/* V5.49.0 R-7:遷移邏輯抽出來,可指定會議 id 清單;啟動時對全部跑一次(看旗標),
+   還原備份後對匯入的那批再跑一次(不看旗標)—— 舊備份裡仍有 mdt_sec_,還原後不會自動遷移。
+   任一筆寫入失敗就不設旗標,下次啟動重試。 */
+function _migrateSecForIds(ids){
+  let n=0,fail=0;
+  const list=ids?getIdx().filter(function(e){return ids.indexOf(e.id)>=0;}):getIdx();
+  list.forEach(function(e){
+    if((e.cids||[]).length<2)return;
+    const m=loadLocal(e.id);if(!m||!m.sections)return;
+    let changed=false;
+    e.cids.forEach(function(cid){
+      const sec=loadSec(cid,m.date);if(!sec)return;
+      const cur=m.sections[cid];
+      const empty=!cur||!['cases','followups','team','events','special'].some(function(k){return (cur[k]||[]).length;});
+      if(empty){m.sections[cid]=sec;changed=true;}
+    });
+    if(changed){try{localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));n++;}catch(err){fail++;}}
+  });
+  return {migrated:n,failed:fail};
+}
 function migrateSecToMtg(){
   try{
     if(localStorage.getItem('mdt_mig_sec_v1'))return;
-    let n=0;
-    getIdx().forEach(function(e){
-      if((e.cids||[]).length<2)return;
-      const m=loadLocal(e.id);if(!m||!m.sections)return;
-      let changed=false;
-      e.cids.forEach(function(cid){
-        const sec=loadSec(cid,m.date);
-        if(!sec)return;
-        const cur=m.sections[cid];
-        const empty=!cur||!['cases','followups','team','events','special']
-          .some(function(k){return (cur[k]||[]).length;});
-        if(empty){m.sections[cid]=sec;changed=true;}
-      });
-      if(changed){try{localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));n++;}catch(err){}}
-    });
-    localStorage.setItem('mdt_mig_sec_v1','1');
-    if(n)console.log('[V5.46.0] 分區資料遷移:'+n+' 場合併會議');
+    const r=_migrateSecForIds(null);
+    if(!r.failed)localStorage.setItem('mdt_mig_sec_v1','1');
+    else console.warn('[V5.49.0] 分區遷移有 '+r.failed+' 筆寫入失敗,下次啟動重試');
+    if(r.migrated)console.log('[V5.49.0] 分區資料遷移:'+r.migrated+' 場合併會議');
+    return;
   }catch(e){console.warn('migrateSecToMtg:',e);}
 }
 
@@ -4570,7 +4578,7 @@ function caseHTML(cid,i,d,type,opts){
     </div>
   </div>
   <div class="fsec">基本資料</div>
-  <div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${_ty}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${_ty}',${i},'chartNo',this.value)" placeholder="病歷號" class="f-in"></div>
+  <div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${_ty}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${_ty}',${i},'chartNo',this.value);_offerCopyFromHistory(this)" placeholder="病歷號" class="f-in"></div>
   <div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${_ty}',${i},'name',this.value)" placeholder="姓名" class="f-in"></div>
   <div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>年齡 / 性別</label>
     <div style="display:flex;gap:6px;align-items:center">
@@ -5370,7 +5378,18 @@ function openPostMtgPanel(){
 }
 
 function closePostMtgPanel(){
-  document.getElementById('postmtg-panel').style.display='none';
+  /* V5.49.0 B-7:面板裡打的東西沒存就關,原本直接消失。
+     面板有「存檔關閉」按鈕,但個管師也可能按 × 或點外面。
+     只在面板內有未寫回的內容時才問。 */
+  const panel=document.getElementById('postmtg-panel');
+  if(!panel){return;}
+  let changed=false;
+  panel.querySelectorAll('textarea[data-action],select[data-action]').forEach(function(el){
+    if(el.tagName==='TEXTAREA'&&el.value!==el.defaultValue)changed=true;
+    if(el.tagName==='SELECT'){const d=Array.from(el.options).find(function(o){return o.defaultSelected;});if(d&&d.value!==el.value)changed=true;}
+  });
+  if(changed&&!confirm('會後填寫的內容尚未存檔。\n\n確定 = 放棄這些修改並關閉\n取消 = 留在面板'))return;
+  panel.style.display='none';
 }
 
 function savePostMtg(){
@@ -6590,6 +6609,66 @@ function checkBackupReminder(){
 }
 
 
+/* ════ V5.49.0 EV-11:輸入病歷號後查歷史會議,有的話問要不要複製 ════
+   個管師 V5.42.0 的原話:「把必要提報當作一個個案討論,如果之前有在別的會議相同病歷號,
+   看要不要連結;如果沒有,就是全新個案」。設計說明寫了但一直沒實作(審核 EV-11)。
+   本系統**沒有病人資料庫**,這只是「查一下以前填過沒有,有的話幫你複製一份」。
+   依個管師 V5.42.0 選的 B:**只帶臨床文字,不帶影像** ——
+   影像的 subFolder 跟著那場的資料夾走,帶過來歸屬驗證會全紅;而且死亡病例討論要的是新的影像。
+   只在「這張卡片其他欄位還是空的」時才問,避免打擾已填一半的卡片。 */
+const _COPY_FIELDS=['name','age','gender','ecog','cfs','doctors','doctor','diagnosis','cc','ph','phChips',
+  'familyHistory','pathologies','exams','treatments','markers','genomics','timeline'];
+function _offerCopyFromHistory(inp){
+  try{
+    if(!inp||!inp.dataset)return;
+    const chartNo=(inp.value||'').trim();if(!chartNo)return;
+    /* 從 oninput 的 upd(...) 字串取座標 —— 這裡是 blur,沒有 data-*;直接從 closest 卡片讀 */
+    const card=inp.closest('.casecard');if(!card||!card.id)return;
+    const mm=card.id.match(/^cc-(.+?)-(cases|events)-(\d+)$/);if(!mm)return;
+    const cid=mm[1],ty=mm[2],idx=parseInt(mm[3],10);
+    const cur=S.meeting?.sections?.[cid]?.[ty]?.[idx];if(!cur)return;
+    /* 其他欄位已有內容 → 不打擾 */
+    const filled=['diagnosis','cc','ph'].some(function(k){return String(cur[k]||'').trim();})
+      ||['pathologies','exams','treatments','timeline'].some(function(k){return (cur[k]||[]).length;});
+    if(filled)return;
+    /* 找歷史:同病歷號、不是本場、最近的一筆(個案討論優先,再必要事件) */
+    const idx2=getIdx();let best=null;
+    idx2.forEach(function(mi){
+      if(mi.id===S.meeting.id)return;
+      const m=loadLocal(mi.id);if(!m||!m.sections)return;
+      Object.keys(m.sections).forEach(function(c2){
+        ['cases','events'].forEach(function(t2){
+          ((m.sections[c2]||{})[t2]||[]).forEach(function(c){
+            if(String(c.chartNo||'').trim()!==chartNo)return;
+            if(!best||String(m.date||'')>String(best.date||''))best={date:m.date,cid:c2,ty:t2,item:c,title:m.title||''};
+          });
+        });
+      });
+    });
+    if(!best)return;
+    const cname=CFG[best.cid]?.name||best.cid;
+    const label=best.ty==='events'?'必要提報':'個案討論';
+    if(!confirm('這位病人在 '+best.date+' '+cname+'（'+label+'）討論過。\n\n要把那次的臨床資料複製過來嗎？\n（病史、檢查、病理、治療、時序；不含影像）\n\n確定 = 複製\n取消 = 全新個案')){return;}
+    _COPY_FIELDS.forEach(function(k){
+      const v=best.item[k];
+      if(v===undefined||v===null)return;
+      cur[k]=Array.isArray(v)?JSON.parse(JSON.stringify(v)):(typeof v==='object'?JSON.parse(JSON.stringify(v)):v);
+    });
+    /* 討論方向、摘要、決策不帶 —— 那是「這一場」要討論的 */
+    markDirty();
+    const cont=document.getElementById('div-'+ty+'-'+cid);
+    if(cont){
+      const arr=S.meeting.sections[cid][ty];
+      cont.innerHTML=arr.map(function(c2,i2){
+        try{return ty==='events'?caseHTML(cid,i2,c2,'events',{noImages:true}):caseHTML(cid,i2,c2,'cases');}
+        catch(e){console.error('[render]',e);return '';}
+      }).join('');
+      const nc=document.getElementById('cc-'+cid+'-'+ty+'-'+idx);
+      if(nc){nc.classList.remove('cc-collapsed');const ic=document.getElementById('tgi-'+cid+'-'+ty+'-'+idx);if(ic)ic.textContent='\u25BC';}
+    }
+    showSaveToast('已從 '+best.date+' 複製臨床資料');
+  }catch(e){console.warn('_offerCopyFromHistory:',e);}
+}
 function openCaseHistoryPanel(chartNo, name){
   if(!chartNo){return;}
   // Collect all decisions for this patient from history
@@ -7033,12 +7112,18 @@ function markDirty(){
     _ab2.innerHTML='<span style="color:var(--warn)">● 有未儲存的修改</span>';
   }
 }
+let _savePromise=null;
 async function saveMeeting(opts){
-  /* V5.45.0 C-3:連按或按住 Ctrl+S 會觸發多次完整儲存(version 連跳、對 NAS 並行寫入)。
-     按鈕的 disabled 擋不住鍵盤。 */
-  if(_saving)return;
+  /* V5.45.0 C-3:連按或按住 Ctrl+S 會觸發多次完整儲存;按鈕的 disabled 擋不住鍵盤。
+     V5.49.0 R-9:原本 `if(_saving)return;` 會**無聲丟掉**手動儲存 —— 自動存檔進行中按 Ctrl+S
+     或「存檔關閉」,什麼都不發生也沒提示;後者隨即關閉面板,使用者以為已存。
+     改為排隊:進行中的存完,再執行這一次。連按仍由鍵盤的 e.repeat 擋下。 */
+  if(_saving&&_savePromise){
+    return _savePromise.then(function(){return saveMeeting(opts);});
+  }
   _saving=true;
-  try{ return await _doSave(opts); } finally { _saving=false; }
+  _savePromise=_doSave(opts).finally(function(){_saving=false;_savePromise=null;});
+  return _savePromise;
 }
 async function _doSave(opts){
   /* ════ V5.31.1 N-1(複審最嚴重)════
@@ -8066,6 +8151,9 @@ function importAllJSON(input){
       }
       // Reload
       loadAll();renderSbRecent();
+      /* V5.49.0 R-7:還原的備份可能是 V5.45 以前的(仍含 mdt_sec_),旗標已設過就不會再遷移 ——
+         這裡對全部會議不看旗標再跑一次。 */
+      try{const _r=_migrateSecForIds(null);if(_r.migrated)console.log('[R-7] 還原後遷移 '+_r.migrated+' 場');}catch(e){}
       if(el)el.textContent='匯入成功！已還原 '+count+' 場會議記錄。';
       showSaveToast('匯入完成！共 '+count+' 場');
       openHistory();
@@ -9204,6 +9292,9 @@ async function hlExport(){
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var src=await resp.text();
     var json=JSON.stringify(marks);
+    /* V5.49.0 B-8:標記內容(innerHTML)若含 script 結尾標籤會提前關閉 hl-data 標籤,整份檔案壞掉。
+       JSON 裡的 < 全部換成 \u003c —— JSON.parse 讀回來仍是 <,但 HTML parser 看不到。 */
+    json=json.replace(/</g,'\\u003c');
     /* ⚠ V5.43.1:這裡**不能用 regex 搜尋那個 script 標籤的字面值** ——
        那個字串會出現在 hlExport **自己的原始碼**裡(它就在同一份 HTML 的 script 區塊中),
        regex 從頭找會**先匹配到自己的程式碼**,把函式本體換成資料 → 整段 JS 語法壞掉。

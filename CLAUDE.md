@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.49.0 | (**EV-11 新功能**)病歷號 blur 時查歷史會議,同病歷號討論過就問要不要複製臨床資料(不含影像、不含討論/摘要/決策;只在卡片其他欄位還空時才問);(R-9)重入保護改**排隊**,不再無聲丟掉手動儲存;(B-7)會後填寫面板關閉前有未寫回內容就確認;(R-7)遷移抽 `_migrateSecForIds()`,還原備份後不看旗標再跑一次,寫入失敗不設旗標;(B-8)標記 JSON 把 `<` 換成 `\u003c`,內容含 script 結尾標籤不會弄壞檔案。**實作時我自己在註解裡寫了那五個字,主 script 被切斷,`audit-render.js` 當場抓到(坑#79)** |
 | V5.48.1 | **DEL-1 根治 + 專項批次 3**(坑#78):(**DEL-1 P0**)`onExamTypeChange` 的列序號寫死在 inline,刪列後 `data-rowid` 遞補但 inline 不變 → **改類型寫到下一列**(個案自己也會);改成不寫資料、只管自訂欄畫面;(DEL-2)刪有內容的列先確認;(EV-8)會後填寫面板加必要事件的改善/結案三欄;(EV-9)必要事件隱藏旗標、換 placeholder;(EV-10)性別缺值顯示「—」。**打包檢查加:inline 不得含列序號** |
 | V5.48.0 | **必要提報專項批次 2**(坑#77):(**EV-6 影響全部癌別**)「上一場」用 `idx.find()` 而 `mdt_idx` 自 V5.31.0 依日期新→舊,**預先建好下個月時,前期追蹤帶入的是下個月那場**;改 filter 早於本場再取最近;(EV-7)必要事件匯入跳過整理,抽 `_normalizeImported()` 共用(去空白、性別 M/F、時序類型白名單轉 other 並保留原代碼),`_importWarn` 匯入後彙整顯示;(R-4)剩餘 5 個入口補 `_confirmLeave`;`openMtgSchedule` 補 `_resetEditState` |
 | V5.47.1 | **必要提報專項審核批次 1**(坑#76):(**EV-1 P0**)檢查類型 `onExamTypeChange` 是 inline onchange,內部寫死 `.cases` → **改到同序號個案討論**,V5.42.0 起存在;加 type 參數,自訂欄補 `dataset.ty`;(EV-2)檢視按「編輯」展開錯卡;(EV-3)新增必要事件收合;(EV-4)刪除不確認;(EV-5)上一場只有必要事件時**永遠不帶入**。**`audit-render.js` 加「逐一操作不得改到他卡」**(29 元件 0 污染) |
@@ -521,6 +522,15 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#79 `<script>` 區塊內任何地方出現 `</script` 字面值(含註解),HTML parser 就在那裡切斷(V5.49.0)** 🔴
+- 我在 B-8 的註解裡寫了「若含 `</script` 會提前關閉…」—— **這句話本身就讓主 script 在 L9295 提前關閉**,整個系統載不起來
+- **`node --check` 全過**:打包檢查用 `<script[^>]*>([\s\S]*?)</script>` 抽 script 內容,要 `</script>` 帶 `>` 才匹配,所以註解裡的 `</script 會` 沒被當成結尾;抽出來的 JS 是完整的,語法當然對
+- **HTML parser 不管後面接什麼**:看到 `</script` 就結束 script 元素。瀏覽器與 jsdom 都是這樣
+- **這是坑 #67 的第四個形狀**(靜態分析驗證程式碼,驗證不了程式碼在瀏覽器裡怎麼被解析):`</script` 不是 JS 語法問題,是 **HTML 語法問題**,而 JS 檢查工具不看 HTML
+- `audit-render.js` 當場抓到(`Unexpected end of input` + `S is not defined`),**如果沒有它,這一版會直接壞在個管師手上**
+- 已加打包檢查:全檔 `</script` 出現處,後面不是 `>` 的一律 🔴。**註解、字串、樣板字串都算**
+- 原則:**在 `<script>` 裡永遠不要寫 `</script` 這五個字連在一起**,要寫就拆成 `'</scr'+'ipt'` 或用「script 結尾標籤」描述
 
 **#78 inline 屬性裡的列序號,刪除後不會被更新(V5.48.1 DEL-1)** 🔴
 - `delStruct` 刪一列後只會把 `data-rowid` 往前遞補,**不會更新 inline 字串裡寫死的 `${ei}`**
@@ -1202,6 +1212,11 @@ for _j in range(_i,len(h)):
         _d-=1
         if _st and _d==0:_b=h[_i:_j+1];break
 print("caseHTML 殘留 'cases':", "✓ 0" if _b.count("'cases'")==0 else f"⚠️ {_b.count(chr(39)+'cases'+chr(39))} 處")
+
+# ════ V5.49.0 加:script 內不得有 </script 字面值(坑 #79)════
+# node --check 抓不到:它用 regex 抽 script,要 </script> 帶 > 才算結尾;HTML parser 不管後面接什麼。
+_bad=[m.start() for m in re.finditer(r'</script', h) if h[m.start():m.start()+9]!='</script>']
+print("script 內 </script 字面值:", "✓ 0" if not _bad else f"⚠️ {len(_bad)} 處 L{[h[:b].count(chr(10))+1 for b in _bad]}")
 ```
 
 版本號命名 V**x.y.z**(嚴格進位,**第二/三碼最大就是 9**):
@@ -1321,6 +1336,8 @@ print("caseHTML 殘留 'cases':", "✓ 0" if _b.count("'cases'")==0 else f"⚠�
 **其餘待辦(批次 C)**:P0-5 NAS 備份檔名未含使用者識別(三台共用 10 份輪替 → 實際只留 3 天)、P1-3 `getNetworkTime` 封網時每次儲存阻塞 10 秒、P1-4 `readForm` 前三欄無 null guard 且允許空日期(空日期會共用同一組 section key 互相覆蓋)、P1-5 NAS 檔名用本地時間(全系統唯一漏網)、P1-6 渲染錯誤靜默吞掉導致個案卡片空白、P2-1 inline onclick 217 處、P2-2 `escA` 不跳脫單引號且 7 處欄位未跳脫(臨床文字常含 `<`)、P2-3 docx 走 CDN 無 SRI(封網即失效)、P2-4 使用者切換非權限控管(需寫入 USER_GUIDE)。
 
 ## 十一、一句話總結
+
+V5.49.0 EV-11 實作 + 審核批次 3(R-7/R-9/B-7/B-8)。**EV-11**:個管師確認「要實作,查有就問要不要複製」—— 這是 V5.42.0 她自己提的需求(「之前有在別的會議相同病歷號,看要不要連結;沒有就是全新個案」),設計說明寫了但一直沒做。做法:病歷號欄位 `onblur` 時掃全部歷史會議(cases 與 events 都找),同病歷號取日期最近的一筆,`confirm` 問要不要複製;**只帶臨床文字**(name/age/gender/ecog/cfs/doctors/diagnosis/cc/ph/phChips/familyHistory/pathologies/exams/treatments/markers/genomics/timeline),**不帶影像**(依她 V5.42.0 選的 B —— 影像的 subFolder 跟著那場資料夾走,帶過來歸屬驗證全紅),**不帶討論方向/摘要/決策**(那是這一場要討論的);**只在卡片其他欄位還是空的時候才問**,避免打擾已填一半的。座標從 `closest('.casecard').id` 的 `cc-{cid}-{ty}-{i}` 解析,所以兩種卡片都能用。**R-9**:`if(_saving)return` 會無聲丟掉手動儲存 —— 自動存檔進行中按「存檔關閉」,面板關了使用者以為存了;改為排隊,`_savePromise.then(()=>saveMeeting(opts))`。**B-7**:會後面板關閉前比對每個 textarea 的 `value` vs `defaultValue`、select 的 `defaultSelected`,有差就 confirm。**R-7**:遷移抽成 `_migrateSecForIds(ids)`,啟動時看旗標跑全部、還原備份後不看旗標再跑一次(舊備份仍含 `mdt_sec_`),任一筆寫入失敗就不設旗標下次重試;舊本體砍掉不留死碼。**B-8**:標記匯出的 JSON 把 `<` 換 `\u003c`,innerHTML 含 `</script` 也不會提前關閉 hl-data 標籤 —— 實測 `</script` 消失、`JSON.parse` 回來完整。屬 b+1。
 
 V5.48.1 DEL-1 根治 + 專項批次 3(坑 #78)。個管師問「先看審稿這問題你解決沒」—— **沒有**:V5.47.1 給 `onExamTypeChange` 加了 `type` 參數修了「寫錯卡片」(EV-1),但**列序號 `${ei}` 還是寫死在 inline 屬性裡**。`delStruct` 刪一列後只把 `data-rowid` 往前遞補,inline 字串不會變 —— 同一個選單上,委派的 `updstruct` 讀新的 `data-rowid` 寫對列,inline 的 `onExamTypeChange` 讀舊的 `ei` **寫到下一列**。個案討論自己也會中(刪過檢查列後每次改類型都連帶改掉下一列),必要事件則錯寫到同序號個案的第 n+1 列,而且錯位隨刪除次數改變。「AI 匯入後刪掉重複的檢查、再修正類型」正是日常動線。根治採審核的「更根本的做法」:**`onExamTypeChange` 不再寫資料**(委派已經會寫),只負責自訂欄的插入/移除,所有座標從元素當下的 dataset 讀。實測:兩種卡片刪第 1 列後改剩下第 1 列,都只改到自己那一列,個案討論 `["CT","MRI","PET"]` 不動。**已加打包檢查**:inline `on*` 不得含 `${ei}`/`${pi}`/`${ti}`/`${mi}`/`${rowIdx}` —— 第一次跑抓到我自己註解裡的範例字串,改了措辭。**原則**:任何會被刪除/重排的列,座標只能存在 `data-*`;inline 在渲染時就固定了,之後怎麼改 DOM 都不會跟著變。批次 3:**DEL-2** 刪有內容的列先 confirm(空白列直接刪,不增加負擔);**EV-8** 會後填寫面板為必要事件加「是否需改善/結案狀態/改善方案」三欄並套白名單寫回 —— 那三項正是死亡病例討論的結論,原本只能回卡片上填;**EV-9** 必要事件卡片隱藏五個討論旗標(對死亡病例無意義)、討論方向 placeholder 換成「死因歸因與治療關聯之討論、是否需改善」;**EV-10** 性別 `(d.gender||'M')==='M'?'M':'F'` 讓空值顯示 M、「男」顯示 F,改成非 M/F 顯示「—」。**EV-11 待個管師確認**:設計說明寫的「連結舊記錄」(查病歷號、複製舊資料)從未實作,要決定是延後還是遺漏。屬 c+1。
 
