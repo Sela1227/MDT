@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.50.1 | B-5 依個管師決定改為**延後**:`zoomPwdByMonth` 設定沒填就退回 `_LEGACY_ZOOM`,功能不受影響;三組密碼仍在公開程式碼裡(已知且接受)。B-4 記錄:「HTML 分享」按鈕從未被用過,個管師用 Git Pusher。兩項列入「十之四、已決定延後的項目」 |
 | V5.50.0 | (**B-5**)三組 Zoom 季密碼從程式碼移到設定頁(`mdt_zoom_pwd`,不進備份),`DEFAULT_C` 的 8 處 pwd 清空 —— index.html 在公開 GitHub Pages,密碼一直是公開的,**Zoom 後台仍需重新產生**;(R-11)`exportAllJSON`/`exportMeetingJSON` 不再帶 `mdt_sec_`、`loadMergedSections` 空殼與呼叫端移除;(C-8)USER_GUIDE 第三節更新到 V5.44.0 版面。**B-4 待決策**:「HTML 分享」直打 `api.cloudflare.com`,瀏覽器 CORS 極可能擋,需實機確認或改走 Worker |
 | V5.49.0 | (**EV-11 新功能**)病歷號 blur 時查歷史會議,同病歷號討論過就問要不要複製臨床資料(不含影像、不含討論/摘要/決策;只在卡片其他欄位還空時才問);(R-9)重入保護改**排隊**,不再無聲丟掉手動儲存;(B-7)會後填寫面板關閉前有未寫回內容就確認;(R-7)遷移抽 `_migrateSecForIds()`,還原備份後不看旗標再跑一次,寫入失敗不設旗標;(B-8)標記 JSON 把 `<` 換成 `\u003c`,內容含 script 結尾標籤不會弄壞檔案。**實作時我自己在註解裡寫了那五個字,主 script 被切斷,`audit-render.js` 當場抓到(坑#79)** |
 | V5.48.1 | **DEL-1 根治 + 專項批次 3**(坑#78):(**DEL-1 P0**)`onExamTypeChange` 的列序號寫死在 inline,刪列後 `data-rowid` 遞補但 inline 不變 → **改類型寫到下一列**(個案自己也會);改成不寫資料、只管自訂欄畫面;(DEL-2)刪有內容的列先確認;(EV-8)會後填寫面板加必要事件的改善/結案三欄;(EV-9)必要事件隱藏旗標、換 placeholder;(EV-10)性別缺值顯示「—」。**打包檢查加:inline 不得含列序號** |
@@ -1335,6 +1336,16 @@ print("script 內 </script 字面值:", "✓ 0" if not _bad else f"⚠️ {len(_
 | ~~**P0-9**~~ ✅ V5.37.0 已修 | ~~`mdt_ai`(含 API Key)寫進每份備份 JSON~~ | 備份上 NAS/互傳/外寄 → 金鑰外流 | `_PREF_FIXED` 移除 `mdt_ai`;或拆成 `mdt_ai_pref`(可備份)與 `mdt_ai_key`(永不備份) |
 
 **其餘待辦(批次 C)**:P0-5 NAS 備份檔名未含使用者識別(三台共用 10 份輪替 → 實際只留 3 天)、P1-3 `getNetworkTime` 封網時每次儲存阻塞 10 秒、P1-4 `readForm` 前三欄無 null guard 且允許空日期(空日期會共用同一組 section key 互相覆蓋)、P1-5 NAS 檔名用本地時間(全系統唯一漏網)、P1-6 渲染錯誤靜默吞掉導致個案卡片空白、P2-1 inline onclick 217 處、P2-2 `escA` 不跳脫單引號且 7 處欄位未跳脫(臨床文字常含 `<`)、P2-3 docx 走 CDN 無 SRI(封網即失效)、P2-4 使用者切換非權限控管(需寫入 USER_GUIDE)。
+
+## 十之四、個管師已決定延後的項目(2026-09-16)
+
+| 項目 | 決定 | 現況 | 要處理時 |
+|---|---|---|---|
+| **B-5** Zoom 密碼在公開程式碼裡 | 「先不要管,但記下來」 | V5.50.1 加了 `_LEGACY_ZOOM` 退路,設定沒填就用舊值。**三組密碼仍在 GitHub Pages 上** | ①三台填「設定→系統→Zoom 會議密碼」②Zoom 後台重新產生三組 ③刪 `_LEGACY_ZOOM` 與 `||_LEGACY_ZOOM.qN` |
+| **B-4** MDT 的「HTML 分享」直打 Cloudflare API,瀏覽器 CORS 極可能擋 | 「目前還沒有人用,先這樣。我自己用 Git Pusher,個管不愛用」 | 那顆按鈕**從未被用過**,可能從 V5.41.0 起就是壞的但沒人發現 | 若日後要讓個管師從系統上傳:Worker 加 `/upload` 端點(index.html 只放上傳密碼,不放 CF token);若確定不用:**依減法原則移除那顆按鈕與 `uploadSlidesToCloudflare`** —— 沒人走的路徑該刪(坑#61) |
+| **A-5 / B-5 人工** | — | AI Key、CF Token、Zoom 密碼三樣都曾出現在備份或公開程式碼 | **換掉**。程式已不再外流,但舊的已流出 |
+
+---
 
 ## 十一、一句話總結
 
