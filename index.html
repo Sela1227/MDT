@@ -860,10 +860,12 @@ textarea{resize:vertical}
           <div id="mtg-actionbar">
             <span id="actionbar-msg" style="font-size:12px;color:var(--textlt)"></span>
             <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-              <button class="btn btn-b btn-sm" onclick="doOutput('line')">LINE 通知</button>
-              <button class="btn btn-b btn-sm" onclick="genHTMLSlides().catch(function(e){console.error(e);alert('投影片產生失敗：'+(e&&e.message||e));})">HTML 投影片</button>
-              <button class="btn btn-b btn-sm" onclick="genPrintSheet()">會議小抄</button>
-              <span style="width:1px;background:var(--blt);margin:0 2px"></span>
+              <!-- V5.44.0:三顆產出鍵(LINE 通知 / HTML 投影片 / 會議小抄)移除。
+                   V5.39.0(F-3)加它們的理由是「產出鍵在整頁最底部,8 個個案要滑過全部才按得到」——
+                   但個管師指出:**編輯模式時根本不需要產出那些**。
+                   這跟 V5.43.3 是同一個分類問題:產出是「弄完了」才做的事,
+                   跟「編輯中隨時要用」的儲存混在一起,反而讓固定列失焦。
+                   固定列只留真正隨時要用的兩顆。 -->
               <button class="btn btn-b btn-sm" onclick="abandonEdit()" data-role="abandon">放棄編輯</button>
               <button class="btn btn-a btn-sm" onclick="saveMeeting()" title="儲存（Ctrl+S）">儲存</button>
             </span>
@@ -940,7 +942,14 @@ textarea{resize:vertical}
             <!-- 完整匯出 + AI 提示詞(較少用,收在資料區最底) -->
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="exportMeetingJSON()">JSON 完整匯出</button>
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genImportPrompt()">AI 匯入提示詞</button>
+              <!-- V5.44.0:AI 匯入提示詞分三種。三個區塊的欄位不一樣 ——
+                   醫療小組只有 11 欄、必要提報多了死亡資訊與改善方案,
+                   用同一份提示詞會讓 AI 產出用不到的欄位,或漏掉該區塊特有的。
+                   匯入仍然只有一顆按鈕:三種提示詞都要求 AI 輸出 `_target`,
+                   JSON 自己宣告要進哪一區。 -->
+              <button class="btn btn-b" style="padding:10px 4px;font-size:12px;white-space:nowrap;text-align:center;justify-content:center" onclick="genImportPrompt()" title="產生「個案討論」的 AI 轉換提示詞">提示詞·個案</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:12px;white-space:nowrap;text-align:center;justify-content:center" onclick="genImportPrompt('team')" title="產生「醫療小組」的 AI 轉換提示詞">提示詞·小組</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:12px;white-space:nowrap;text-align:center;justify-content:center" onclick="genImportPrompt('events')" title="產生「必要提報事件」的 AI 轉換提示詞">提示詞·提報</button>
               <button class="btn btn-a" id="btn-ai-gen" style="padding:10px 4px;font-size:13px;background:var(--fog);display:none;text-align:center;justify-content:center" onclick="genAIInline()">AI 生成摘要</button>
             </div>
             <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importCaseJSON(this)">
@@ -1412,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.43.4';
+const VERSION='V5.44.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -10055,7 +10064,94 @@ function doImportTlAi(){
     if(typeof renderCasesInner==='function'&&cont)renderCasesInner();
   }
 }
-function genImportPrompt(){
+/* ════ V5.44.0:AI 匯入提示詞分成三種 ════
+   個案討論 / 醫療小組 / 必要提報事件的欄位**不一樣**,用同一份提示詞會讓 AI
+   產出一堆該區塊用不到的欄位,或漏掉該區塊特有的(例如必要提報的死亡資訊)。
+   三種提示詞都要求 AI 輸出 `_target`,匯入時據此路由。 */
+/* V5.44.0:三種提示詞共用的顯示邏輯。`#out-area` 在 V5.37.1(Z-1)已移出摺疊區,
+   所以這裡不必擔心「設了 display 卻看不到」。 */
+function _showPromptBox(txt,label){
+  const ta=document.getElementById('out-text');
+  const area=document.getElementById('out-area');
+  if(!ta||!area)return;
+  ta.textContent=txt;
+  area.style.display='block';
+  const ok=document.getElementById('copy-ok');if(ok)ok.style.display='none';
+  if(area.scrollIntoView)area.scrollIntoView({behavior:'smooth',block:'start'});/* V5.44.0:加保護,某些環境沒有這個方法 */
+  if(label)showSaveToast('已產生「'+label+'」的匯入提示詞');
+}
+
+const _TEAM_PROMPT=`你是 MDT 會議系統的資料轉換助理。請將以下**醫療小組討論**的資料轉換成 JSON。
+
+【輸出格式絕對規則】
+- 只輸出 JSON 陣列(即使只有一筆也用陣列)
+- 第一個字必須是「[」,最後一個字必須是「]」
+- 絕對不要加 markdown 圍籬,不要加任何說明文字
+
+【重要限制】只能使用貼上的資料,絕對不可自行推斷、補充、或引用任何外部醫學知識。資料中沒有的欄位一律留空字串。
+
+欄位定義:
+_target:固定填 "team"(必填,系統據此判斷放到哪一區)
+_cancer:癌別名稱,從以下選填(必填):「頭頸癌」「血液淋巴癌」「胸腔癌」「乳癌」「消化道癌」「肝膽胰癌」「泌尿道癌」「婦癌」
+chartNo:病歷號(字串)
+name:姓名(原文,系統顯示時自動遮蔽中間字)
+doctors:主治醫師陣列(最多 2 位),格式 ["王大明醫師",""]
+prevDate:上次討論日期 YYYY-MM-DD(資料沒提就留空)
+diagnosis:完整診斷(含分期)
+cc:**之前**的現病史/病程摘要
+discussion:這次要討論的方向或問題
+summary:**最新情況**(上次討論後到現在的變化)
+decision:決策結論
+note:備註
+
+範例:
+[{"_target":"team","_cancer":"頭頸癌","chartNo":"1234567","name":"王大明","doctors":["李醫師",""],"prevDate":"2026-05-14","diagnosis":"Oral SCC, cT2N1M0","cc":"2026-03 確診後接受手術","discussion":"術後輔助治療選擇","summary":"傷口癒合良好,病理邊緣陰性","decision":"建議接受術後放療","note":""}]
+
+請轉換以下資料:
+`;
+
+const _EVENT_PROMPT=`你是 MDT 會議系統的資料轉換助理。請將以下**必要提報事件(死亡病例討論)**的資料轉換成 JSON。
+
+【輸出格式絕對規則】
+- 只輸出 JSON 陣列(即使只有一筆也用陣列)
+- 第一個字必須是「[」,最後一個字必須是「]」
+- 絕對不要加 markdown 圍籬,不要加任何說明文字
+
+【重要限制】只能使用貼上的資料,絕對不可自行推斷、補充、或引用任何外部醫學知識。
+**死因歸因與「與治療之關聯」尤其不可推測** —— 資料沒明講就留空字串,那是 MDT 會議上要討論決定的,不是 AI 判斷的。
+
+欄位定義(個案基本欄位與「個案討論」相同,另有死亡病例專屬欄位):
+_target:固定填 "events"(必填)
+_cancer:癌別名稱,從以下選填(必填):「頭頸癌」「血液淋巴癌」「胸腔癌」「乳癌」「消化道癌」「肝膽胰癌」「泌尿道癌」「婦癌」
+chartNo / name / age / gender("M"或"F") / doctors(陣列,最多3位)
+diagnosis:完整診斷(含分期)
+cc:**病程經過**(事件發生到死亡的過程,這是必要提報的核心內容)
+ph:過去病史,若無填 "Nil"
+phChips:慢性病陣列,從 ["HTN","DM","CAD","CVA","HBV","HCV","CKD","COPD"] 選,無則空陣列
+pathologies / exams / treatments / markers:格式與個案討論相同,每筆 {"name":"...","date":"YYYY-MM-DD","content":"..."}
+  (pathologies 與 markers 無 name 欄位時可省略)
+timeline:病程時序,陣列,每筆 {"type":"dx|op|ct|rt|io|tt|prog|resp|other","date":"YYYY-MM-DD","label":"事件說明"}
+
+【死亡病例專屬欄位】
+deathDate:死亡日期 YYYY-MM-DD
+deathPlace:從以下選填:「本院住院」「本院急診」「他院」「安寧/居家」「不詳」
+causeDirect:直接死因(例:呼吸衰竭、敗血性休克)
+attribution:死因歸因,從以下選填:「疾病進展」「治療相關併發症」「合併症/共病」「感染」「非癌症因素」「無法判定」
+  —— **資料沒明確說明就留空字串**
+txRelated:與治療之關聯,從以下選填:「確定相關」「可能相關」「不太可能」「無關」「無法判定」
+  —— **資料沒明確說明就留空字串**
+improveNeeded:留空字串(這是會議上討論決定的)
+eventStatus:固定填 "待討論"
+
+範例:
+[{"_target":"events","_cancer":"肝膽胰癌","chartNo":"1453274","name":"林大明","age":"68","gender":"M","doctors":["張醫師","",""],"diagnosis":"HCC, BCLC C","cc":"2026-01 確診後接受 TACE,3 月因肝衰竭住院","ph":"HBV carrier","phChips":["HBV"],"treatments":[{"name":"TACE","date":"2026-01-15","content":"第一次"}],"timeline":[{"type":"dx","date":"2026-01-10","label":"確診 HCC"}],"deathDate":"2026-03-20","deathPlace":"本院住院","causeDirect":"肝衰竭","attribution":"","txRelated":"","improveNeeded":"","eventStatus":"待討論"}]
+
+請轉換以下資料:
+`;
+
+function genImportPrompt(kind){
+  if(kind==='team'){_showPromptBox(_TEAM_PROMPT,'醫療小組');return;}
+  if(kind==='events'){_showPromptBox(_EVENT_PROMPT,'必要提報事件');return;}
   const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出。
 
 【輸出格式絕對規則】
@@ -10128,10 +10224,7 @@ flags：討論原因標籤，陣列。【固定輸出空陣列 []，不要推斷
 
 
 `;
-  document.getElementById('out-text').textContent=prompt;
-  document.getElementById('out-area').style.display='block';
-  document.getElementById('copy-ok').style.display='none';
-  document.getElementById('out-area').scrollIntoView({behavior:'smooth',block:'start'});
+  _showPromptBox(prompt,'個案討論');/* V5.44.0 */
 }
 
 function exportMeetingJSON(){
@@ -10425,6 +10518,20 @@ function importCaseJSON(inputEl){
       const cid=nameMap[caName]||(S.cids&&S.cids[0]);
       if(!cid||!S.cids.includes(cid)){skipped++;return;}
       ensureSec(cid);
+      /* ════ V5.44.0:JSON 可以宣告要進哪一區 ════
+         個管師:「醫療小組跟必要事件提報,也要提供 JSON 匯入個案」。
+         做法不是加兩顆匯入按鈕(那會讓摺疊區再多兩顆),
+         而是讓 **JSON 自己宣告** —— 三種提示詞各自要求 AI 輸出對應的 `_target`。
+         沒有 `_target` 就當 cases(向後相容,舊的 JSON 照樣能用)。 */
+      const _tg=(d._target==='team'||d._target==='events')?d._target:'cases';
+      if(_tg!=='cases'){
+        /* team 走 createTeamItem(11 欄);events 走 createEvent(個案全欄 + 死亡病例欄位) */
+        const item=createItem(cid,_tg,d,{});
+        if(!S.meeting.sections[cid][_tg])S.meeting.sections[cid][_tg]=[];
+        S.meeting.sections[cid][_tg].push(item);
+        imported++;
+        return;
+      }
       const blank={
         id:uid(),
         chartNo:String(d.chartNo||'').trim(),
@@ -10468,9 +10575,26 @@ function importCaseJSON(inputEl){
         if(!addedByCid[tcid])addedByCid[tcid]=[];
         addedByCid[tcid].push(d);
       });
+      /* V5.44.0:非 cases 的用整區重繪(量少、而且 team/events 的容器與卡片型別不同) */
       Object.keys(addedByCid).forEach(function(tcid){
+        ['team','events'].forEach(function(ty){
+          if(!addedByCid[tcid].some(function(x){return x._target===ty;}))return;
+          const cont2=document.getElementById('div-'+ty+'-'+tcid);
+          if(!cont2)return;
+          const arr=S.meeting.sections[tcid][ty]||[];
+          const vm=S.viewMode;
+          cont2.innerHTML=arr.map(function(c2,i2){
+            try{
+              if(ty==='events')return vm?caseViewHTML(tcid,i2,c2,'events'):caseHTML(tcid,i2,c2,'events',{noImages:true});
+              return vm?teamViewHTML(tcid,i2,c2,'team'):teamHTML(tcid,i2,c2,'team',true);
+            }catch(e){console.error('[render '+ty+']',e);return '';}
+          }).join('');
+        });
         const allCases=S.meeting.sections[tcid].cases;
-        const addedCount=addedByCid[tcid].length;
+        const addedCount=addedByCid[tcid].filter(function(x){
+          return !(x._target==='team'||x._target==='events');
+        }).length;
+        if(!addedCount)return;
         const startIdx=allCases.length-addedCount;
         const cont=document.getElementById('div-cases-'+tcid);
         if(!cont)return;
