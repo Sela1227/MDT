@@ -146,6 +146,33 @@ setTimeout(()=>{
     if(!ok)bad++;
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));}
 
+  // ── [V5.47.1] EV-1 那一類:逐一操作必要事件卡片的每個元件,個案討論不得被改到 ──
+  //    比 data-ty 覆蓋率更根本 —— 委派、inline on*、動態插入的元素全部涵蓋
+  console.log('\n=== [EV-1] 逐一操作必要事件卡片,個案討論不得被改到 ===');
+  try{
+    const r=run("(function(){"
+      +"var s=S.meeting.sections['head_neck'];"
+      +"while(s.cases.length)s.cases.pop();while((s.events||[]).length)s.events.pop();"
+      +"s.cases.push(createItem('head_neck','cases',{chartNo:'C0',exams:[{name:'CT',date:'2026-01-01',content:'x'}],timeline:[{type:'dx',date:'2026-01-01',label:'c'}]},{}));"
+      +"s.events=s.events||[];"
+      +"s.events.push(createItem('head_neck','events',{chartNo:'E0',exams:[{name:'MRI',date:'2026-02-01',content:'y'}],timeline:[{type:'dx',date:'2026-02-01',label:'e'}]},{}));"
+      +"var host=document.createElement('div');host.id='div-events-head_neck';document.body.appendChild(host);"
+      +"host.innerHTML=caseHTML('head_neck',0,s.events[0],'events',{noImages:true});"
+      +"var snap=JSON.stringify(s.cases[0]);var bad=[];var n=0;"
+      +"host.querySelectorAll('input,select,textarea').forEach(function(el){"
+      +"  if(el.type==='date'||el.type==='checkbox'||el.type==='file')return;"
+      +"  if(el.tagName==='SELECT'){if(el.options.length<2)return;el.selectedIndex=el.selectedIndex===0?1:0;el.dispatchEvent(new Event('change',{bubbles:true}));}"
+      +"  else{el.value='probe';el.dispatchEvent(new Event('input',{bubbles:true}));}"
+      +"  n++;"
+      +"  if(JSON.stringify(s.cases[0])!==snap){bad.push((el.dataset.action||el.tagName)+'/'+(el.dataset.field||el.dataset.key||el.name||''));s.cases[0]=JSON.parse(snap);}"
+      +"});"
+      +"host.remove();"
+      +"return JSON.stringify({操作:n,污染:bad.slice(0,6)});})()");
+    const o=JSON.parse(r);
+    console.log('  操作了',o.操作,'個元件 | 改到個案討論的:',o.污染.length,o.污染.length?'🔴 '+o.污染.join(', '):'✅');
+    if(o.污染.length)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));}
+
   console.log('\n=== 總計錯誤 ===');
   console.log('  ', errs.length, errs.length?'':'✅');
   process.exit(bad?1:0);

@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.47.1 | **必要提報專項審核批次 1**(坑#76):(**EV-1 P0**)檢查類型 `onExamTypeChange` 是 inline onchange,內部寫死 `.cases` → **改到同序號個案討論**,V5.42.0 起存在;加 type 參數,自訂欄補 `dataset.ty`;(EV-2)檢視按「編輯」展開錯卡;(EV-3)新增必要事件收合;(EV-4)刪除不確認;(EV-5)上一場只有必要事件時**永遠不帶入**。**`audit-render.js` 加「逐一操作不得改到他卡」**(29 元件 0 污染) |
 | V5.47.0 | **複審批次 2**(坑#75):(R-6)必要提報提示詞的時序類型**手寫**,與 `TL_TYPES` 只有三個重疊 → AI 產出的手術/化療/進展全變「其他」;改由程式產生,`_EVENT_PROMPT` 改函式;(R-10)死亡病例選單欄位加**白名單**,不在選項的清空並列 `_importWarn`;(R-4)換會議/回首頁/開設定/換使用者五個入口加 `_confirmLeave()`(有未存修改先問);(R-5)自動存檔加「會議畫面仍顯示 + 紀錄編輯模式」兩條件,不再把已離開的會議寫進清單 |
 | V5.46.1 | **複審批次 1**(坑#74):(**R-1 P0**)`buildTimelineRows` 的 `type` 只改了兩個重繪呼叫點,**主渲染路徑沒改** → 必要事件時序列帶 `data-ty="cases"`,打字與刪除作用到同索引個案;type 改必填(漏傳當場 console.error);(**R-2 P0**)快照放在有 gen 檢查的 setTimeout 內 → 存檔後 1.2 秒內打字,「放棄編輯」把**已存內容也倒回**且 version 倒退;改為寫入成功當下更新;(R-3)`renderEditor()` 不再清 `_dirty`,改由 `_resetEditState()` 在 6 個換會議入口呼叫;(R-8)else 分支也加 gen 檢查。**`audit-render.js` 加兩項:整卡 data-ty 覆蓋率、存檔→改→放棄往返** |
 | V5.46.0 | **根治方案甲:停用 `mdt_sec_*`**(坑#73,一次解決審核 A-1/A-2/A-3/B-2 四個 P0/P1)。個管師實際回報的是 A-3:「**刪掉病程時序的一列,存檔重開又出現**」—— `loadMergedSections()` 會用磁碟上的第二份副本蓋掉記憶體中未存的修改,而 `renderEditor()` 有 18 處呼叫。停止讀、停止寫、加一次性遷移、舊 key 留一版當退路。另修 `buildTimelineRows` 的 `data-ty`(坑#68 的漏網之魚)與 B-2 的 `_loadedDate` 殘留 |
@@ -518,6 +519,20 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#76 inline `on*` 屬性裡的函式參數,data-ty 覆蓋率檢查看不到(V5.47.1 EV-1)** 🔴
+- 檢查類型的 `<select>` 同時掛了兩個處理器:委派的 `data-action="updstruct"`(有 `data-ty`,正確)與
+  inline 的 `onchange="onExamTypeChange(this,${i},${ei},'${cid}')"`(**沒有 type 參數**,函式內部寫死 `.cases[caseIdx]`)
+- 必要事件卡片上改檢查類型 → **改到同序號個案討論的檢查名稱**;選「其他」時動態插入的自訂欄也沒設 `dataset.ty`,委派再退回 cases
+- **V5.42.0 起就存在**,四輪審核沒抓到,因為**個案討論卡片自己剛好寫對**
+- 這是坑 #68 的**第四個**漏網點,也是最隱蔽的:前三個(`addStruct`/`buildTimelineRows`/主渲染路徑)都是委派元件,
+  `data-ty` 覆蓋率檢查抓得到;**這個是 inline 屬性,參數藏在字串裡,檢查看不到**
+- **審核給的檢查更根本**:渲染一張資料齊全的必要事件卡片,**逐一操作每個 input/select/textarea,斷言個案討論的 JSON 不變** ——
+  委派、inline、動態插入的全部涵蓋,不用再分類找。已加進 `audit-render.js`(29 個元件、0 個污染)
+- 同版:**EV-2** 檢視卡片按「編輯」展開的是 `cc-{cid}-cases-{i}`(同序號個案),個管師會直接在別人的卡片上打字;
+  **EV-3** 新增必要事件的卡片是收合的,游標落在看不見的欄位,像按了沒反應;**EV-4** 刪除必要事件不確認;
+  **EV-5** `autoImportPrevFollowups` 的 `if(!sources.length)return` 讓「上一場只有必要事件」時 events 帶入**永遠執行不到** —— 正是 E-1 要防的漏追
+- **個管師說「必要提報那邊問題多」,四個 P1 就是她感受到的四件事**:改到別人、按編輯開錯卡、按新增像沒反應、下一場沒帶入
 
 **#75 提示詞裡的選項清單手寫,跟程式定義對不上(V5.47.0 R-6)** ✅
 - V5.44.0 寫必要提報的提示詞時,時序類型**手寫**成 `dx|op|ct|rt|io|tt|prog|resp|other`
@@ -1282,6 +1297,8 @@ print("caseHTML 殘留 'cases':", "✓ 0" if _b.count("'cases'")==0 else f"⚠�
 **其餘待辦(批次 C)**:P0-5 NAS 備份檔名未含使用者識別(三台共用 10 份輪替 → 實際只留 3 天)、P1-3 `getNetworkTime` 封網時每次儲存阻塞 10 秒、P1-4 `readForm` 前三欄無 null guard 且允許空日期(空日期會共用同一組 section key 互相覆蓋)、P1-5 NAS 檔名用本地時間(全系統唯一漏網)、P1-6 渲染錯誤靜默吞掉導致個案卡片空白、P2-1 inline onclick 217 處、P2-2 `escA` 不跳脫單引號且 7 處欄位未跳脫(臨床文字常含 `<`)、P2-3 docx 走 CDN 無 SRI(封網即失效)、P2-4 使用者切換非權限控管(需寫入 USER_GUIDE)。
 
 ## 十一、一句話總結
+
+V5.47.1 必要提報專項審核批次 1(坑 #76)。個管師說「**必要提報那邊問題多**」,審核於是把必要事件區塊 84 個可操作元件**逐一實際點擊或輸入**,再比對個案討論有沒有被動到 —— 結果 83 個乾淨,**1 個 P0**。**EV-1**:檢查類型的 `<select>` 同時掛了委派的 `data-action="updstruct"`(有 `data-ty`,正確)與 inline 的 `onchange="onExamTypeChange(...)"`(**沒有 type 參數**,內部寫死 `.cases[caseIdx]`);必要事件卡片上改檢查類型 → **改到同序號個案討論的檢查名稱**,選「其他」時動態插入的自訂欄也沒設 `dataset.ty`。**V5.42.0 起就存在,四輪審核沒抓到**,因為個案討論卡片自己剛好寫對。這是坑 #68 的**第四個**漏網點,也是最隱蔽的 —— 前三個都是委派元件,`data-ty` 覆蓋率檢查抓得到;**這個是 inline 屬性,參數藏在字串裡,檢查看不到**。**審核給的檢查更根本**:逐一操作每個 input/select/textarea,斷言個案討論的 JSON 不變 —— 委派、inline、動態插入全部涵蓋;已加進 `audit-render.js`,29 個元件 0 個污染。四個 P1 正是個管師感受到的四件事:**EV-2** 檢視卡片按「編輯」展開的是同序號個案(`editSingleCase` 寫死 `cases`),個管師會直接在別人的卡片上打字;**EV-3** 新增必要事件的卡片是收合的(`addItem` 只對 cases 展開),游標落在看不見的欄位,像按了沒反應,個管師會連按好幾次;**EV-4** 刪除必要事件不確認(`delItem` 只對 cases 問),一張填滿死因與改善方案的卡片按一次 × 就沒了;**EV-5** `autoImportPrevFollowups` 的 `if(!sources.length)return` 讓「上一場只有必要事件、沒有個案」時 events 帶入**永遠執行不到** —— 正是 V5.42.0 E-1 要防的漏追,而且 ongoing 前期追蹤也一起漏。批次 2 待做:EV-6(「上一場」會選到日期較晚的會議,影響全部癌別)、EV-7(必要事件 JSON 匯入跳過整套整理、`_importWarn` 從未顯示)、R-4 剩餘入口、`openMtgSchedule` 的 `_resetEditState`。屬 c+1。
 
 V5.47.0 複審批次 2(坑 #75)。四項都不阻擋上線但都會弄壞資料。**R-6 是我 V5.44.0 手寫出來的**:必要提報提示詞的時序類型寫成 `dx|op|ct|rt|io|tt|prog|resp|other`,而系統 `TL_TYPES` 是 `dx|biopsy|chemo|surgery|rt|imaging|follow|recurrence|metastasis|other`,**只有三個重疊** —— AI 依提示詞輸出的手術、化療、**疾病進展**,匯入後全部變成「其他」,死亡病例時序圖的疾病主軸因此缺少進展事件,而那正是要看的轉折;不會報錯、不會警告。修法是清單改由 `TL_TYPES.map(...)` 程式產生,`_EVENT_PROMPT` 從 const 改成函式(樣板字串在定義時就求值,const 引用不到執行期的 `TL_TYPES`)。**R-10 是同一類的另一面**:提示詞把選項給了 AI,但匯入端沒驗證 —— AI 若輸出「疾病惡化」或英文,會存進資料、下拉顯示空白、DOCX 照原文印;加白名單 `_pick(v,list)`,不在選項的清空並列進 `_importWarn`。**原則**:提示詞裡任何「從以下選填」的清單一律從程式常數產生,匯入端一律白名單驗證,**兩邊都做才閉合**。**R-4**:系統內換頁不檢查未儲存修改 —— `beforeunload` 只管關分頁,側欄開另一場、回首頁、開設定、換使用者原本都不問,`S.meeting` 直接被換掉而 2 分鐘自動存檔的兜底也跟著消失;加 `_confirmLeave()`(有未存修改就問「確定=先儲存再離開 / 取消=留在這裡」,儲存失敗就不離開),掛在五個入口,那五個函式因此改成 async。**R-5** 是 B-6 的副作用:自動存檔條件只看 `f-date` 有沒有值,不看使用者是否還在會議畫面 —— 新建會議加了個案沒存就回首頁,畫面隱藏但 `#f-date` 仍在 DOM,自動存檔照樣把「使用者以為沒存就不算數」的會議寫進清單與 NAS;加「會議畫面仍顯示 + `meetingMode==='record'` + `!viewMode`」三個條件。實測:提示詞清單涵蓋全部 10 個 TL_TYPES 且不含舊代碼、白名單清掉 2 個 AI 自創值並保留合法值、`_confirmLeave` 無修改時直接放行、載入錯誤 0。屬 c+1。
 
