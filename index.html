@@ -1421,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.46.1';
+const VERSION='V5.47.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1845,7 +1845,9 @@ function renderLogin(){
     _autoLoginTimer=setTimeout(function(){_cancelAutoLogin();pickUser(lastUser.id);},1500);
   }
 }
-function pickUser(uid_){_cancelAutoLogin();S.user=USERS.find(u=>u.id===uid_);if(S.user)try{localStorage.setItem('mdt_last_user',uid_);}catch(e){}showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步:新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');}/* V5.13.5: 有寫入失敗就明確警告,不再靜默謊報成功 */if(r.failed){showSaveToast('⚠ NAS 同步有 '+r.failed+' 筆寫入失敗,請檢查 NAS 連線後重試');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(_ok){if(_ok)_markNasBackupToday();/* V5.13.5: 只有真成功才標記今日完成,失敗當天會再試 */}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+async function pickUser(uid_){
+  if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
+  _cancelAutoLogin();S.user=USERS.find(u=>u.id===uid_);if(S.user)try{localStorage.setItem('mdt_last_user',uid_);}catch(e){}showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步:新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');}/* V5.13.5: 有寫入失敗就明確警告,不再靜默謊報成功 */if(r.failed){showSaveToast('⚠ NAS 同步有 '+r.failed+' 筆寫入失敗,請檢查 NAS 連線後重試');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(_ok){if(_ok)_markNasBackupToday();/* V5.13.5: 只有真成功才標記今日完成,失敗當天會再試 */}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){
@@ -1942,7 +1944,8 @@ function goBackFromMeeting(){
   }
 }
 
-function showHome(){
+async function showHome(){
+  if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
   document.getElementById('home-t').textContent=greet()+'，'+S.user.name;
   setTimeout(checkBackupReminder,400);
   renderMonthStats();
@@ -2306,7 +2309,9 @@ function calCreateMtg(cid,date){
 
 
 
-function openSettings(){loadGhTokenStatus();loadCfTokenStatus();/* V5.41.0 */showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
+async function openSettings(){
+  if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
+  loadGhTokenStatus();loadCfTokenStatus();/* V5.41.0 */showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
 function openHistory(){
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -2573,7 +2578,8 @@ function _inheritPrevMtgHeader(cids){
   }catch(e){console.warn('_inheritPrevMtgHeader:',e);}
 }
 function createNewMtg(){const cid=document.getElementById('nm-cancer').value,date=document.getElementById('nm-date').value;if(!date){alert('請選擇日期');return}closeNewModal();const cids=pairIds(cid);S.cids=cids;S.meeting=newMeetingObj(S.user.id,cids);_resetEditState();/* V5.46.1 R-3+R-2:新會議也要有快照 */S.meeting.date=date;_inheritPrevMtgHeader(cids);autoImportPrevFollowups(cids);S.viewMode=false;renderEditor();restoreImgFolderHandle();showView('meeting');setSbActive(cid);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'))}
-function openFromSb(cid){
+async function openFromSb(cid){
+  if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
   const cids=pairIds(cid);S.cids=cids;setSbActive(cid);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
   const ca0=CFG[cids[0]];
@@ -2667,6 +2673,7 @@ async function openMtgById(id,editMode=false){
   renderEditor();restoreImgFolderHandle();showView('meeting');
 }
 async function openMtgSmart(id){
+  if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
   // Decide mode: no cases → edit; has cases → view
   const local=loadLocal(id);if(!local)return;
   const hasCases=Object.values(local.sections||{}).some(s=>(s.cases||[]).length>0||(s.followups||[]).length>0);
@@ -5848,18 +5855,26 @@ function _toggleImprovePlan(cid,ty,i,val){
 function createEvent(cid,data,opts){
   data=data||{};
   const base=createCase(cid,data,opts);
-  return Object.assign(base,{
+  /* V5.47.0 R-10:選單欄位加白名單 —— AI 匯入若輸出「疾病惡化」或英文,
+     不在選項裡的值會存進資料、在下拉選單顯示成空白、在 DOCX 與投影片照原文印出。
+     死因歸因與治療關聯要呈報癌委會,不能讓 AI 自創的詞混進去。被清空的列進匯入報告。 */
+  const _pick=function(v,list){return list.indexOf(v)>=0?v:'';};
+  const _dropped=[];
+  const _chk=function(field,v,list){const r=_pick(v,list);if(v&&!r)_dropped.push(field+'『'+v+'』');return r;};
+  const ev=Object.assign(base,{
     deathDate:data.deathDate||'',
-    deathPlace:data.deathPlace||'',
-    causeDirect:data.causeDirect||'',      /* 直接死因 */
-    attribution:data.attribution||'',      /* 死因歸因 */
-    txRelated:data.txRelated||'',          /* 與治療之關聯 —— 癌委會最關心,也決定要不要改善 */
-    improveNeeded:data.improveNeeded||'',  /* 「留白」與「認定不需要」必須分得開 */
+    deathPlace:_chk('死亡地點',data.deathPlace,DEATH_PLACES),
+    causeDirect:data.causeDirect||'',      /* 直接死因(自由文字) */
+    attribution:_chk('死因歸因',data.attribution,ATTRIBUTIONS),
+    txRelated:_chk('與治療關聯',data.txRelated,TX_RELATIONS),
+    improveNeeded:_chk('改善方案',data.improveNeeded,IMPROVE_OPTS),
     improvePlan:data.improvePlan||'',
-    eventStatus:data.eventStatus||'待討論',
+    eventStatus:_pick(data.eventStatus,EVENT_STATUS)||'待討論',
     prevDate:data.prevDate||'',
     _v:2
   });
+  if(_dropped.length)ev._importWarn=_dropped;/* 供匯入報告顯示 */
+  return ev;
 }
 
 /* V5.42.0:舊必要事件(createTeamItem 結構)的一次性遷移。
@@ -6284,7 +6299,12 @@ setInterval(async function(){
      當機、斷電、Windows 更新重開機都會整段消失(beforeunload 只防得住主動關分頁)。
      改成看「有沒有日期」:沒日期 readForm 會擋下並跳 alert,
      不先檢查的話那個 alert 會每 2 分鐘彈一次。 */
-    if(_dirty&&S.meeting&&!_saving&&((document.getElementById('f-date')||{}).value||'')){
+    /* V5.47.0 R-5:B-6 的條件只看 f-date 有沒有值,**不看使用者是否還在會議畫面** ——
+       新建會議加了個案沒存就回首頁,畫面隱藏了但 #f-date 仍在 DOM,自動存檔照樣寫進清單。
+       使用者以為「沒存就不算數」的會議出現在清單與 NAS 上。加兩個條件:會議畫面仍顯示 + 紀錄編輯模式。 */
+    const _vm=document.getElementById('view-meeting');
+    const _onScreen=_vm&&_vm.style.display!=='none';
+    if(_dirty&&S.meeting&&!_saving&&_onScreen&&S.meetingMode==='record'&&!S.viewMode&&((document.getElementById('f-date')||{}).value||'')){
     await saveMeeting({silent:true});
   }
 },2*60*1000);
@@ -6922,6 +6942,17 @@ let _saving=false;/* V5.45.0 C-3:重入保護 */
 /* V5.46.1 R-3:只在「換了一場會議」時呼叫 —— openMtgRecord / openMtgSmart /
    createNewMtg / confirmCopyMtg / resolveConflict 等入口。
    把「重繪」與「重設編輯狀態」分開,是因為前者有 18 個呼叫點而後者只該發生在換會議時。 */
+/* ════ V5.47.0 R-4:系統內換頁不檢查未儲存修改 ════
+   beforeunload 只管「關分頁/重新整理」。側欄開另一場、回首頁、開設定,
+   原本都不問,S.meeting 直接被換掉 —— 而 2 分鐘自動存檔的兜底也跟著消失。
+   所有會換掉 S.meeting 或離開會議畫面的入口,第一行先過這裡。
+   儲存失敗(配額)就不離開;取消就留在原地。 */
+async function _confirmLeave(){
+  if(!_dirty)return true;
+  if(!confirm('這場會議有未儲存的修改。\n\n確定 = 先儲存再離開\n取消 = 留在這裡'))return false;
+  await saveMeeting();
+  return !_dirty;
+}
 function _resetEditState(){
   _dirty=false;
   _editGen++;
@@ -10224,7 +10255,13 @@ note:備註
 請轉換以下資料:
 `;
 
-const _EVENT_PROMPT=`你是 MDT 會議系統的資料轉換助理。請將以下**必要提報事件(死亡病例討論)**的資料轉換成 JSON。
+/* V5.47.0 R-6:類型清單改由 TL_TYPES 產生,**不要手寫** ——
+   V5.44.0 手寫的是 dx|op|ct|rt|io|tt|prog|resp|other,而系統定義的是
+   dx|biopsy|chemo|surgery|rt|imaging|follow|recurrence|metastasis|other,只有三個重疊。
+   AI 依提示詞輸出的手術、化療、疾病進展,匯入後全部變成「其他」——
+   死亡病例時序圖的疾病主軸會缺少進展事件,而那正是要看的轉折。 */
+function _tlTypeList(){return TL_TYPES.map(function(t){return t.id+'('+t.label+')';}).join('、');}
+function _EVENT_PROMPT_FN(){return `你是 MDT 會議系統的資料轉換助理。請將以下**必要提報事件(死亡病例討論)**的資料轉換成 JSON。
 
 【輸出格式絕對規則】
 - 只輸出 JSON 陣列(即使只有一筆也用陣列)
@@ -10244,7 +10281,8 @@ ph:過去病史,若無填 "Nil"
 phChips:慢性病陣列,從 ["HTN","DM","CAD","CVA","HBV","HCV","CKD","COPD"] 選,無則空陣列
 pathologies / exams / treatments / markers:格式與個案討論相同,每筆 {"name":"...","date":"YYYY-MM-DD","content":"..."}
   (pathologies 與 markers 無 name 欄位時可省略)
-timeline:病程時序,陣列,每筆 {"type":"dx|op|ct|rt|io|tt|prog|resp|other","date":"YYYY-MM-DD","label":"事件說明"}
+timeline:病程時序,陣列,每筆 {"type":"<類型代碼>","date":"YYYY-MM-DD","label":"事件說明"}
+  type 只能填以下代碼(**不可自創**):${_tlTypeList()}
 
 【死亡病例專屬欄位】
 deathDate:死亡日期 YYYY-MM-DD
@@ -10261,11 +10299,11 @@ eventStatus:固定填 "待討論"
 [{"_target":"events","_cancer":"肝膽胰癌","chartNo":"1453274","name":"林大明","age":"68","gender":"M","doctors":["張醫師","",""],"diagnosis":"HCC, BCLC C","cc":"2026-01 確診後接受 TACE,3 月因肝衰竭住院","ph":"HBV carrier","phChips":["HBV"],"treatments":[{"name":"TACE","date":"2026-01-15","content":"第一次"}],"timeline":[{"type":"dx","date":"2026-01-10","label":"確診 HCC"}],"deathDate":"2026-03-20","deathPlace":"本院住院","causeDirect":"肝衰竭","attribution":"","txRelated":"","improveNeeded":"","eventStatus":"待討論"}]
 
 請轉換以下資料:
-`;
+`;}
 
 function genImportPrompt(kind){
   if(kind==='team'){_showPromptBox(_TEAM_PROMPT,'醫療小組');return;}
-  if(kind==='events'){_showPromptBox(_EVENT_PROMPT,'必要提報事件');return;}
+  if(kind==='events'){_showPromptBox(_EVENT_PROMPT_FN(),'必要提報事件');return;}
   const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出。
 
 【輸出格式絕對規則】
