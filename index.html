@@ -1421,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.44.1';
+const VERSION='V5.45.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -2363,6 +2363,7 @@ document.addEventListener('keydown',function(e){
   /* ① Ctrl/Cmd + S = 儲存 */
   if(mod&&(e.key==='s'||e.key==='S')){
     e.preventDefault();
+    if(e.repeat)return;/* V5.45.0 C-3:按住不放不要連續觸發 */
     if(S.meeting&&!S.viewMode&&typeof saveMeeting==='function')saveMeeting();
     return;
   }
@@ -5049,6 +5050,8 @@ async function testNasBackup(){
   }catch(e){alert('❌ 測試失敗：'+e.message);}
 }
 
+/* V5.45.0 A-5:永不進備份的 key。`mdt_ai` 是 V5.37.0 以前的舊格式,同樣含金鑰。 */
+const _NEVER_BACKUP=/^mdt_(ai_key|cf_token|ai)$/;
 async function backupToNAS(){
   if(!nasHandle)return;
   try{
@@ -5058,7 +5061,13 @@ async function backupToNAS(){
 
     // 1. Collect all localStorage mdt_* data
     var data={};
-    Object.keys(localStorage).forEach(function(k){if(k.startsWith('mdt_'))data[k]=localStorage.getItem(k);});
+    /* ════ V5.45.0 A-5(P0,現在進行式的外流)════
+     V5.37.0 的 P0-9 只修了**手動匯出**(`_PREF_FIXED` 白名單),
+     NAS 每日自動備份走的是**前綴全收** —— `mdt_ai_key` 與 `mdt_cf_token` 都以 `mdt_` 開頭。
+     每天一份、每人 10 份,全部含明文金鑰,放在三人共用的 NAS 上;
+     而 CF token 有 KV 的 Edit 權限(**含刪除**)。
+     **這正是坑 #61**:同一件事(決定什麼能備份)有兩份實作,修了一份漏了另一份。 */
+    Object.keys(localStorage).forEach(function(k){if(k.startsWith('mdt_')&&!_NEVER_BACKUP.test(k))data[k]=localStorage.getItem(k);});
 
     // 2. Collect all images (base64 from dataUrl or read from imgFolderHandle)
     var images={};
@@ -6222,7 +6231,13 @@ function onExamTypeChange(sel,caseIdx,examIdx,cid){
 
 // ── Auto-save every 2 minutes when dirty ──
 setInterval(async function(){
-  if(_dirty&&S.meeting&&S.meeting.version){
+  /* ════ V5.45.0 B-6(P1)════
+     新會議的 version 是 0,這個條件**永遠不成立** —— 而第一次建檔
+     (AI 整理、JSON 匯入後逐欄修改)通常是最長的一段輸入,**完全沒有自動存檔保護**。
+     當機、斷電、Windows 更新重開機都會整段消失(beforeunload 只防得住主動關分頁)。
+     改成看「有沒有日期」:沒日期 readForm 會擋下並跳 alert,
+     不先檢查的話那個 alert 會每 2 分鐘彈一次。 */
+    if(_dirty&&S.meeting&&!_saving&&((document.getElementById('f-date')||{}).value||'')){
     await saveMeeting({silent:true});
   }
 },2*60*1000);
@@ -6848,7 +6863,17 @@ function hidePersistentError(){
   document.body.style.paddingTop='';
 }
 let _dirty=false;
-function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}
+/* ════ V5.45.0 A-4(P0)════
+   存檔收尾的 1.2 秒 setTimeout **無條件**把 _dirty 清成 false。
+   但 V5.38.0 加 Ctrl+S 的目的就是「連續打字中存檔」,**「按完立刻繼續打」是主流操作**。
+   後果:那 1.2 秒內打的字被標成「已儲存」→ beforeunload 不攔、自動存檔跳過、
+   底部列顯示「✓ 已儲存」—— **使用者完全看不出來那段沒存到**;
+   而且 `_collapseAllCases()` 會把**正在輸入的那張卡片收起來**。
+   改用「修改世代號」:存檔前記下 gen,收尾時比對,期間有新修改就什麼都不做。 */
+let _editGen=0;
+let _saving=false;/* V5.45.0 C-3:重入保護 */
+function markDirty(){
+  _editGen++;if(!_dirty){_dirty=true;const el=document.getElementById('save-msg');if(el&&!el.innerHTML.includes('儲存中'))el.innerHTML='<span class="smsg swarn"><span class="sdot"></span>有未儲存的變更</span>'}
   _syncAbandonBtnLabel();/* V5.37.1 Z-4 */
   /* V5.43.2:一有修改就把「已儲存」換掉 —— 留著舊時間戳比沒有更糟,
      個管師會以為剛才的修改也存進去了。 */
@@ -6858,12 +6883,22 @@ function markDirty(){if(!_dirty){_dirty=true;const el=document.getElementById('s
   }
 }
 async function saveMeeting(opts){
+  /* V5.45.0 C-3:連按或按住 Ctrl+S 會觸發多次完整儲存(version 連跳、對 NAS 並行寫入)。
+     按鈕的 disabled 擋不住鍵盤。 */
+  if(_saving)return;
+  _saving=true;
+  try{ return await _doSave(opts); } finally { _saving=false; }
+}
+async function _doSave(opts){
   /* ════ V5.31.1 N-1(複審最嚴重)════
      V5.31.0 為了 P0-4 在失敗時設 _dirty=true,但**1.2 秒後的收尾 setTimeout 又設回 false**,
      還把 S._snapshot 清掉、切換成檢視模式 —— 失敗後畫面反而長得像「儲存成功」。
      新增的保護只活了 1.2 秒,P0-4 等於沒修,而且比原版更有誤導性。
      修法:把 lok 提升到 try 外層,收尾邏輯**只在成功時執行**。 */
   let _lok=false;
+  /* V5.45.0 A-4:跟 _lok 同樣要提升到 try 外 —— const 是區塊作用域,
+     宣告在 try{} 內的話,try 之後的收尾 setTimeout 讀不到(坑 #54 的形狀)。 */
+  let _genAtSave=0;
   /* ════ V5.31.0 P1-1(內部審核)════
      原本按鈕 disable 在函式開頭、enable 在結尾,中間的日期衝突檢查若按「取消」就 return,
      **enable 那行永遠執行不到** → 整頁儲存按鈕卡在「儲存中…」,必須重新整理才能再存,
@@ -6939,6 +6974,7 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
      每按一次「取消」version 就憑空 +1;而 version 是 NAS 同步的衝突仲裁依據,
      被灌水後同步時會無條件壓過其他機器上真正較新的版本。 */
   S.meeting.version=(S.meeting.version||0)+1;
+  _genAtSave=_editGen;/* V5.45.0 A-4:在序列化之前記下(宣告在 try 外,見下方) */
   const lok=saveLocal(S.meeting),sok=await saveShared(S.meeting);
   _lok=lok;/* V5.31.1 N-1: 帶出 try 外供收尾判斷 */
   // NAS sync: push this meeting (non-blocking)
@@ -7011,7 +7047,12 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
      改成:只清 dirty 與快照,**畫面原地不動**。想看成品自己按「檢視」。 */
   if(_lok&&!(opts&&opts.silent)){
     setTimeout(()=>{
-      S._snapshot=null;_dirty=false;
+      /* V5.45.0 A-4:期間有新修改就不清 dirty、不收合、不顯示已儲存 */
+      if(_editGen!==_genAtSave)return;
+      /* V5.45.0 B-1:快照改成「剛存好的狀態」而非 null ——
+         原本清成 null 之後「放棄編輯」找不到快照可還原,
+         想放棄的修改留在 S.meeting,之後任何儲存都會把它寫進去。 */
+      S._snapshot=JSON.stringify(S.meeting);_dirty=false;
       const smRec2=document.getElementById('rec-save-msg');if(smRec2)smRec2.innerHTML='';
       _syncAbandonBtnLabel();
       _collapseAllCases();/* V5.43.2:把個管師習慣的「存好了」訊號還回來 */
@@ -10093,8 +10134,20 @@ function doImportTlAi(){
       }).join('');
     }
   }else{
-    const cont=document.getElementById('cases-list');
-    if(typeof renderCasesInner==='function'&&cont)renderCasesInner();
+    /* V5.45.0 C-1:`cases-list` 這個元素**全檔不存在** —— cont 永遠是 null,
+       所以個案卡片套用 AI 判讀後**畫面永遠不更新**(資料其實寫進去了,
+       使用者會以為沒生效而重按)。V5.42.4 只修好了 events 分支。
+       比照 events 只重繪該癌別容器 —— 不呼叫 renderCasesInner(它會用磁碟版
+       覆蓋合併會議的未存修改,見審核 A-3)。 */
+    const cc=document.getElementById('div-cases-'+_tlAiCid);
+    if(cc){
+      const sec2=S.meeting.sections[_tlAiCid]||{};
+      const vm2=S.viewMode;
+      cc.innerHTML=(sec2.cases||[]).map(function(c2,i2){
+        try{return vm2?caseViewHTML(_tlAiCid,i2,c2,'cases'):caseHTML(_tlAiCid,i2,c2,'cases');}
+        catch(e){console.error('[render case]',e);return '';}
+      }).join('');
+    }
   }
 }
 /* ════ V5.44.0:AI 匯入提示詞分成三種 ════
