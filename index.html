@@ -1421,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.44.0';
+const VERSION='V5.44.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -8532,6 +8532,39 @@ async function genHTMLSlides(opts){
         if(_d.length)sections.push({lbl:'死亡資訊',txt:_d.join('\n')});
       }
       if(c.cc)sections.push({lbl:trackLabel==='必要事件'?'病程經過':'現病史',txt:c.cc});
+      /* ════ V5.44.1:必要提報的臨床資料原本完全沒有進投影片 ════
+         個管師回報「有寫必要事件提報的欄位,但 HTML 沒有顯示」——
+         `_trackSlide` 是 V5.0.0 為「醫療小組」寫的,只渲染 5 個文字欄位;
+         V5.42.0 把必要事件改用**完整個案結構**之後,events 仍走這條 →
+         **過去病史、病理、檢查、治療、癌指數、NGS、病程時序全部不見**。
+         而那些正是死亡病例討論要呈現的內容(事件發生到死亡的過程)。
+         **這是坑 #60 的又一次**:換了資料結構,但沒問「原本讀它的人跟上了沒」——
+         編輯畫面跟上了(caseHTML)、DOCX 跟上了,**投影片沒有**。
+         團隊卡片(team)沒有這些欄位,所以這段對它是 no-op,不受影響。 */
+      if(trackLabel==='必要事件'){
+        var _phTxt=[(c.phChips||[]).map(function(x){return x+'(+)';}).join(' '),c.ph||''].filter(Boolean).join('  ');
+        if(_phTxt)sections.push({lbl:'過去病史',txt:_phTxt});
+
+        var _fmtRows=function(arr,withName){
+          return (arr||[]).map(function(x){
+            var head=withName&&x.name?(x.name+(x.date?'（'+x.date+'）':'')):(x.date||'');
+            var txt=(x.content||'').trim();
+            return (head?head+(txt?'\n':''):'')+txt;
+          }).filter(function(t){return t.trim();}).join('\n\n');
+        };
+        var _pa=_fmtRows(c.pathologies,false);if(_pa)sections.push({lbl:'病理',txt:_pa});
+        var _ex=_fmtRows((c.exams||[]).slice().sort(function(a,b){return (a.date||'').localeCompare(b.date||'');}),true);
+        if(_ex)sections.push({lbl:'檢查',txt:_ex});
+        var _tx=_fmtRows(c.treatments,true);if(_tx)sections.push({lbl:'治療',txt:_tx});
+        var _mk=(c.markers||[]).map(function(x){
+          return (x.name?x.name+'：':'')+(x.content||'');
+        }).filter(function(t){return t.trim();}).join('\n');
+        if(_mk)sections.push({lbl:'癌指數',txt:_mk});
+        var _gn=_fmtRows(c.genomics,true);if(_gn)sections.push({lbl:'基因檢測',txt:_gn});
+        var _tl=(c.timeline||[]).filter(function(t){return t&&(t.date||t.label);})
+          .map(function(t){return (t.date||'')+(t.label?'　'+t.label:'');}).join('\n');
+        if(_tl)sections.push({lbl:'病程時序',txt:_tl});
+      }
       if(c.familyHistory)sections.push({lbl:'家族史',txt:c.familyHistory});
       if(c.discussion)sections.push({lbl:'討論方向',txt:c.discussion});
       if(c.summary)sections.push({lbl:'摘要',txt:c.summary});
