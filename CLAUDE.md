@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.48.0 | **必要提報專項批次 2**(坑#77):(**EV-6 影響全部癌別**)「上一場」用 `idx.find()` 而 `mdt_idx` 自 V5.31.0 依日期新→舊,**預先建好下個月時,前期追蹤帶入的是下個月那場**;改 filter 早於本場再取最近;(EV-7)必要事件匯入跳過整理,抽 `_normalizeImported()` 共用(去空白、性別 M/F、時序類型白名單轉 other 並保留原代碼),`_importWarn` 匯入後彙整顯示;(R-4)剩餘 5 個入口補 `_confirmLeave`;`openMtgSchedule` 補 `_resetEditState` |
 | V5.47.1 | **必要提報專項審核批次 1**(坑#76):(**EV-1 P0**)檢查類型 `onExamTypeChange` 是 inline onchange,內部寫死 `.cases` → **改到同序號個案討論**,V5.42.0 起存在;加 type 參數,自訂欄補 `dataset.ty`;(EV-2)檢視按「編輯」展開錯卡;(EV-3)新增必要事件收合;(EV-4)刪除不確認;(EV-5)上一場只有必要事件時**永遠不帶入**。**`audit-render.js` 加「逐一操作不得改到他卡」**(29 元件 0 污染) |
 | V5.47.0 | **複審批次 2**(坑#75):(R-6)必要提報提示詞的時序類型**手寫**,與 `TL_TYPES` 只有三個重疊 → AI 產出的手術/化療/進展全變「其他」;改由程式產生,`_EVENT_PROMPT` 改函式;(R-10)死亡病例選單欄位加**白名單**,不在選項的清空並列 `_importWarn`;(R-4)換會議/回首頁/開設定/換使用者五個入口加 `_confirmLeave()`(有未存修改先問);(R-5)自動存檔加「會議畫面仍顯示 + 紀錄編輯模式」兩條件,不再把已離開的會議寫進清單 |
 | V5.46.1 | **複審批次 1**(坑#74):(**R-1 P0**)`buildTimelineRows` 的 `type` 只改了兩個重繪呼叫點,**主渲染路徑沒改** → 必要事件時序列帶 `data-ty="cases"`,打字與刪除作用到同索引個案;type 改必填(漏傳當場 console.error);(**R-2 P0**)快照放在有 gen 檢查的 setTimeout 內 → 存檔後 1.2 秒內打字,「放棄編輯」把**已存內容也倒回**且 version 倒退;改為寫入成功當下更新;(R-3)`renderEditor()` 不再清 `_dirty`,改由 `_resetEditState()` 在 6 個換會議入口呼叫;(R-8)else 分支也加 gen 檢查。**`audit-render.js` 加兩項:整卡 data-ty 覆蓋率、存檔→改→放棄往返** |
@@ -519,6 +520,17 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#77 排序方向改了,下游的 `find()` 沒跟著改 —— 「上一場」變成「最新一場」(V5.48.0 EV-6)** 🔴
+- `autoImportPrevFollowups` 用 `idx.find(...)` 找上一場,依賴 `mdt_idx` 的順序
+- **V5.31.0 把 `mdt_idx` 改成依日期由新到舊排序**,此後 `find` 拿到的是「日期最新的那一場」,**不是「本場之前的上一場」**
+- 個管師預先建好 11 月的會議(排程模式就是為此設計的),再建 10 月時,**前期追蹤帶入的是 11 月那場的內容,9 月的個案與必要事件全部漏掉**
+- **影響全部癌別**,不只必要提報 —— 而且從 V5.31.0 到 V5.47.1 共 17 個版本沒人發現,因為「預先建下個月」跟「回頭補上個月」很少同時發生
+- 修法:先 `filter` 出**日期早於本場**的,再排序取最近一場。不再依賴 `idx` 的順序
+- **教訓**:改一個資料結構的排序方向時,要 grep 所有用 `find()`/`[0]`/`[length-1]` 取「第一個」或「最後一個」的地方 ——
+  它們隱含了一個「第一個就是我要的」的假設,排序一變全錯,而且**不報錯**
+- 同版 **EV-7**:必要事件的 JSON 匯入跳過個案分支的整套整理(去空白、性別正規化),而 R-6 改了提示詞但**匯入端沒有正規化** —— AI 不照做時沒有防線;
+  `_importWarn` **宣告了、寫了、沒人讀**(坑 T-1 的形狀)。抽 `_normalizeImported()` 兩分支共用,匯入完成後彙整警告顯示並刪掉
 
 **#76 inline `on*` 屬性裡的函式參數,data-ty 覆蓋率檢查看不到(V5.47.1 EV-1)** 🔴
 - 檢查類型的 `<select>` 同時掛了兩個處理器:委派的 `data-action="updstruct"`(有 `data-ty`,正確)與
@@ -1297,6 +1309,8 @@ print("caseHTML 殘留 'cases':", "✓ 0" if _b.count("'cases'")==0 else f"⚠�
 **其餘待辦(批次 C)**:P0-5 NAS 備份檔名未含使用者識別(三台共用 10 份輪替 → 實際只留 3 天)、P1-3 `getNetworkTime` 封網時每次儲存阻塞 10 秒、P1-4 `readForm` 前三欄無 null guard 且允許空日期(空日期會共用同一組 section key 互相覆蓋)、P1-5 NAS 檔名用本地時間(全系統唯一漏網)、P1-6 渲染錯誤靜默吞掉導致個案卡片空白、P2-1 inline onclick 217 處、P2-2 `escA` 不跳脫單引號且 7 處欄位未跳脫(臨床文字常含 `<`)、P2-3 docx 走 CDN 無 SRI(封網即失效)、P2-4 使用者切換非權限控管(需寫入 USER_GUIDE)。
 
 ## 十一、一句話總結
+
+V5.48.0 必要提報專項批次 2(坑 #77)。**EV-6 影響全部癌別,而且潛伏了 17 個版本**:`autoImportPrevFollowups` 用 `idx.find(...)` 找「上一場」,依賴 `mdt_idx` 的順序 —— 但 **V5.31.0 把 `mdt_idx` 改成依日期由新到舊排序**,此後 `find` 拿到的是「日期最新的那一場」而不是「本場之前的上一場」。個管師預先建好 11 月的會議(排程模式就是為此設計的),再建 10 月時,**前期追蹤帶入的是 11 月那場的內容,9 月的個案與必要事件全部漏掉**;沒人發現是因為「預先建下個月」跟「回頭補上個月」很少同時發生。修法:先 `filter` 出日期早於本場的再排序取最近,不再依賴 `idx` 的順序。**教訓**:改一個資料結構的排序方向時,要 grep 所有用 `find()`/`[0]`/`[length-1]` 取「第一個」的地方 —— 它們隱含「第一個就是我要的」的假設,排序一變全錯,而且**不報錯**。**EV-7**:必要事件的 JSON 匯入直接 `createItem` 後 return,跳過個案分支的去空白與癌指數去重;而 R-6 改了提示詞但**匯入端沒有正規化**,AI 不照做時沒有防線;`_importWarn` 宣告了、寫了、沒人讀(坑 T-1 的形狀)。抽 `_normalizeImported()`(去空白、性別「男/male」→M、時序類型不在 `TL_TYPES` 的轉 `other` 並把原代碼保留在 label 前綴),兩分支都先過它;匯入完成後彙整 `_importWarn` 用 alert 顯示、顯示後 delete。**R-4 剩餘入口**:`openMtgById`/`openMtgSchedule`/`openHistory`/`openNewModal`/`startNewMtgForCancer` 補 `_confirmLeave`,共 10 個入口;`openMtgSchedule` 補 `_resetEditState`(R-3 的遺漏點,否則排程模式沿用上一場的 dirty 與快照,按「放棄編輯」會被換成上一場的內容)。實測:已有 11 月會議時建 10 月,前期追蹤 `["C1","D1"]`,不含 NOV;病歷號去空白、「男」→M、`prog`→`other|[prog] 進展`、`dx` 不動;`createEvent` 產生警告。實作過程中我在 EV-6 留了一段 `if(false){...}` 死碼,自己抓到清掉(坑 #56)。屬 c+1。
 
 V5.47.1 必要提報專項審核批次 1(坑 #76)。個管師說「**必要提報那邊問題多**」,審核於是把必要事件區塊 84 個可操作元件**逐一實際點擊或輸入**,再比對個案討論有沒有被動到 —— 結果 83 個乾淨,**1 個 P0**。**EV-1**:檢查類型的 `<select>` 同時掛了委派的 `data-action="updstruct"`(有 `data-ty`,正確)與 inline 的 `onchange="onExamTypeChange(...)"`(**沒有 type 參數**,內部寫死 `.cases[caseIdx]`);必要事件卡片上改檢查類型 → **改到同序號個案討論的檢查名稱**,選「其他」時動態插入的自訂欄也沒設 `dataset.ty`。**V5.42.0 起就存在,四輪審核沒抓到**,因為個案討論卡片自己剛好寫對。這是坑 #68 的**第四個**漏網點,也是最隱蔽的 —— 前三個都是委派元件,`data-ty` 覆蓋率檢查抓得到;**這個是 inline 屬性,參數藏在字串裡,檢查看不到**。**審核給的檢查更根本**:逐一操作每個 input/select/textarea,斷言個案討論的 JSON 不變 —— 委派、inline、動態插入全部涵蓋;已加進 `audit-render.js`,29 個元件 0 個污染。四個 P1 正是個管師感受到的四件事:**EV-2** 檢視卡片按「編輯」展開的是同序號個案(`editSingleCase` 寫死 `cases`),個管師會直接在別人的卡片上打字;**EV-3** 新增必要事件的卡片是收合的(`addItem` 只對 cases 展開),游標落在看不見的欄位,像按了沒反應,個管師會連按好幾次;**EV-4** 刪除必要事件不確認(`delItem` 只對 cases 問),一張填滿死因與改善方案的卡片按一次 × 就沒了;**EV-5** `autoImportPrevFollowups` 的 `if(!sources.length)return` 讓「上一場只有必要事件、沒有個案」時 events 帶入**永遠執行不到** —— 正是 V5.42.0 E-1 要防的漏追,而且 ongoing 前期追蹤也一起漏。批次 2 待做:EV-6(「上一場」會選到日期較晚的會議,影響全部癌別)、EV-7(必要事件 JSON 匯入跳過整套整理、`_importWarn` 從未顯示)、R-4 剩餘入口、`openMtgSchedule` 的 `_resetEditState`。屬 c+1。
 

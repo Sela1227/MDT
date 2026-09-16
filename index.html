@@ -1421,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.47.1';
+const VERSION='V5.48.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -2312,7 +2312,8 @@ function calCreateMtg(cid,date){
 async function openSettings(){
   if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
   loadGhTokenStatus();loadCfTokenStatus();/* V5.41.0 */showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
-function openHistory(){
+async function openHistory(){
+  if(!(await _confirmLeave()))return;/* V5.48.0 R-4 */
   showView('history');setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
   document.getElementById('nav-history').classList.add('on');
@@ -2536,7 +2537,8 @@ function renderHistory(){
 
 
 function closeNewModal(){document.getElementById('new-modal').classList.remove('open')}
-function openNewModal(preDate){
+async function openNewModal(preDate){
+  if(!(await _confirmLeave()))return;/* V5.48.0 R-4 */
   const el=document.getElementById('nm-date');
   if(el)el.value=preDate||'';
   // Populate cancer select with user's cancers
@@ -2642,7 +2644,8 @@ async function openFromSb(cid){
   const mobT=document.getElementById('mob-page-title');if(mobT)mobT.textContent=cids.map(id=>CFG[id]?.name).filter(Boolean).join('+');
   showView('cancer');
 }
-function startNewMtgForCancer(){
+async function startNewMtgForCancer(){
+  if(!(await _confirmLeave()))return;/* V5.48.0 R-4 */
   const cids=S.cids;
   S.meeting=newMeetingObj(S.user.id,cids);_resetEditState();/* V5.46.1 R-3+R-2:新會議也要有快照 */
   // Pre-fill date from calendar month if available
@@ -2666,6 +2669,7 @@ async function _loadMtg(id){
   return shared&&shared.version>=local.version?shared:local;
 }
 async function openMtgById(id,editMode=false){
+  if(!(await _confirmLeave()))return;/* V5.48.0 R-4 */
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
   _resetEditState();/* V5.46.1 R-3:換了一場會議 → 重設編輯狀態 */
@@ -2681,8 +2685,9 @@ async function openMtgSmart(id){
   else{await openMtgRecord(id,true);} // true = editMode
 }
 async function openMtgSchedule(id){
+  if(!(await _confirmLeave()))return;/* V5.48.0 R-4 */
   const m=await _loadMtg(id);if(!m)return;
-  S.meeting=m;S.cids=m.cids;S.viewMode=false;S.meetingMode='schedule';
+  S.meeting=m;_resetEditState();/* V5.48.0 R-3 遺漏點:排程模式也要重設,否則沿用上一場的 dirty 與快照 */S.cids=m.cids;S.viewMode=false;S.meetingMode='schedule';
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
   renderEditor();restoreImgFolderHandle();showView('meeting');
 }
@@ -6635,9 +6640,15 @@ function autoImportPrevFollowups(cids){
   try{const idx=getIdx();
   cids.forEach(function(cid){
     if(!S.meeting.sections[cid])S.meeting.sections[cid]={followups:[],cases:[],team:[],events:[],special:[]};
-    const prev=idx.find(function(mi){
-      return mi.id!==S.meeting.id&&(mi.cids||[]).includes(cid);
-    });
+    /* ════ V5.48.0 EV-6(影響全部癌別)════
+       mdt_idx 自 V5.31.0 起**依日期由新到舊排序**,所以 find 找到的是「日期最新的那一場」,
+       不是「本場之前的上一場」。個管師預先建好 11 月的會議(排程模式就是為此設計的),
+       再建 10 月時,前期追蹤帶入的是 11 月那場的內容 —— 9 月的個案與必要事件全部漏掉。
+       改成:只看日期早於本場的,再取最近的一場。 */
+    const _curD=String(S.meeting.date||'');
+    const prev=idx.filter(function(mi){
+      return mi.id!==S.meeting.id&&(mi.cids||[]).includes(cid)&&String(mi.date||'')<_curD;
+    }).sort(function(a,b){return String(b.date||'').localeCompare(String(a.date||''));})[0];
     if(!prev)return;
     const m=loadLocal(prev.id);if(!m)return;
     const sec=(m.sections||{})[cid]||{};
@@ -10663,6 +10674,28 @@ async function _exportCaseJSONWithImagesZip(result){
     showSaveToast(msg);
   }
 }
+/* ════ V5.48.0 EV-7:匯入前的共用整理 ════
+   個案分支原本有去空白、癌指數去重;必要事件分支直接 createItem 什麼都沒做。
+   AI 輸出常見瑕疵:病歷號前後空白(比對與搜尋會失敗)、gender 寫「男」(檢視卡片會顯示成 F)、
+   時序 type 不在 TL_TYPES(R-6 改了提示詞但 AI 不照做時沒有防線)。
+   兩個分支共用,**不動原本個案分支的其餘邏輯**。 */
+function _normalizeImported(d){
+  if(!d||typeof d!=='object')return d;
+  if(d.chartNo!==undefined)d.chartNo=String(d.chartNo||'').trim();
+  if(d.name!==undefined)d.name=String(d.name||'').trim();
+  const g=String(d.gender||'').trim();
+  d.gender=/^(m|male|男)$/i.test(g)?'M':/^(f|female|女)$/i.test(g)?'F':'';
+  if(Array.isArray(d.timeline)){
+    const ids=TL_TYPES.map(function(t){return t.id;});
+    d.timeline=d.timeline.map(function(t){
+      if(!t||typeof t!=='object')return t;
+      if(ids.indexOf(t.type)>=0)return t;
+      /* 不在清單的類型 → other,原始代碼保留在 label 前綴,讓個管師看得到 AI 原本填了什麼 */
+      return Object.assign({},t,{type:'other',label:(t.type?'['+t.type+'] ':'')+(t.label||'')});
+    });
+  }
+  return d;
+}
 function importCaseJSON(inputEl){
   const file=inputEl.files[0];if(!file)return;
   inputEl.value='';
@@ -10687,6 +10720,7 @@ function importCaseJSON(inputEl){
          做法不是加兩顆匯入按鈕(那會讓摺疊區再多兩顆),
          而是讓 **JSON 自己宣告** —— 三種提示詞各自要求 AI 輸出對應的 `_target`。
          沒有 `_target` 就當 cases(向後相容,舊的 JSON 照樣能用)。 */
+      _normalizeImported(d);/* V5.48.0 EV-7:兩個分支都先整理 */
       const _tg=(d._target==='team'||d._target==='events')?d._target:'cases';
       if(_tg!=='cases'){
         /* team 走 createTeamItem(11 欄);events 走 createEvent(個案全欄 + 死亡病例欄位) */
@@ -10729,6 +10763,20 @@ function importCaseJSON(inputEl){
     if(imported){
       markDirty();
       showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));
+      /* V5.48.0 EV-7:彙整 _importWarn 並顯示,顯示後刪掉 —— 它是暫時提示,不該存進資料
+         (原本宣告了、寫了、沒人讀,坑 T-1 的形狀)。 */
+      (function(){
+        const warns=[];
+        Object.keys(S.meeting.sections||{}).forEach(function(c2){
+          (S.meeting.sections[c2].events||[]).forEach(function(ev,k){
+            if(ev._importWarn&&ev._importWarn.length){
+              warns.push('必要事件 '+(ev.chartNo||'#'+(k+1))+':'+ev._importWarn.join('、')+' 不在選項中,已留空');
+              delete ev._importWarn;
+            }
+          });
+        });
+        if(warns.length)setTimeout(function(){alert('匯入完成,但以下欄位需要人工確認:\n\n'+warns.join('\n'));},300);
+      })();
       // Directly append new cards without renderCasesInner (avoids loadMergedSections overwrite)
       // Group newly added cases by cid
       const addedByCid={};
