@@ -1421,7 +1421,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.45.0';
+const VERSION='V5.46.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1989,7 +1989,7 @@ function delStruct(cid,i,field,rowIdx,type){
   markDirty();
   if(field==='timeline'){
     const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+i);
-    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,i,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);[...tmp.childNodes].forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
+    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,i,c,_ty);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);[...tmp.childNodes].forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
     const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+_ty+'-'+i);
     if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
     return;
@@ -2681,7 +2681,15 @@ async function openMtgSchedule(id){
 async function openMtgRecord(id,editMode=false){
   const m=await _loadMtg(id);if(!m)return;
   S.meeting=m;S.cids=m.cids;S.activeCid=m.cids.find(function(c){return S.user?.cancers.includes(c);})||m.cids[0];S.viewMode=!editMode;S.meetingMode='record';
-  if(m.cids.length>1)m.cids.forEach(cid=>{const s=loadSec(cid,m.date);if(s)m.sections[cid]=s});
+  /* ════ V5.46.0 根治方案甲:停用 mdt_sec_*(審核 A-1/A-2/A-3/B-2)════
+     原本這一行會用 `mdt_sec_{cid}_{date}` **覆蓋**剛從 `mdt_m_` 讀進來的 sections。
+     問題是 `mdt_sec_` 有三個致命性質:
+       ① **不含會議 ID** —— 同日同癌別的兩場會議共用同一把 key(A-2)
+       ② **不隨 NAS 同步** —— 另一台同步進來的新版,一開啟就被本機舊的蓋掉(A-1)
+       ③ **會被重繪重讀** —— 任何 renderEditor() 都把未存的修改換成磁碟版(A-3)
+     而 `saveMeeting` 本來就會 `saveLocal(S.meeting)`,**`mdt_m_` 已含完整 sections** ——
+     `mdt_sec_` 只是第二份副本。依坑 #61,同一件事的第二份實作應該刪掉。
+     個管師實際遇到的是 A-3:「刪掉病程時序的一列,存檔重開又出現」。 */
   m._loadedDate=m.date;/* V5.19.1: 記住載入當下的日期,儲存時才知道使用者有沒有改過日期 */
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
   renderEditor();restoreImgFolderHandle();showView('meeting');
@@ -3250,13 +3258,40 @@ function loadSec(cid,date){
 function delSec(cid,date){localStorage.removeItem(secKey(cid,date))}
 
 // Load all section data for a merged meeting into S.meeting.sections
-function loadMergedSections(){
-  if(!S.meeting||S.cids.length<=1)return;
-  S.cids.forEach(cid=>{
-    const saved=loadSec(cid,S.meeting.date);
-    if(saved)S.meeting.sections[cid]=saved;
-  });
+/* V5.46.0 方案甲:改為空實作。保留函式本身,因為 renderCasesInner 等 6 處會呼叫它,
+   一次刪掉呼叫端風險較高;留個空殼最單純,下一版再收掉。
+   ⚠ **不要把它改回讀 mdt_sec_** —— 那正是 A-1/A-3 的來源。 */
+/* ════ V5.46.0 方案甲步驟三:一次性遷移 ════
+   極少數情況下 `mdt_m_` 的某個癌別分區是空的、而 `mdt_sec_` 有內容
+   (例如 V5.19.1 之前改過日期、或某次 saveLocal 因配額失敗但 saveSec 成功)。
+   **只有 mdt_m_ 那一段是空的才採用 sec** —— 其餘一律以 mdt_m_ 為準,
+   因為它才是含會議 ID、會跟 NAS 同步的那一份。
+   不動 version、不動 touchedAt,避免把舊資料推成「比別台新」。
+   舊的 mdt_sec_ key **暫不刪除**,保留一版作為退路。 */
+function migrateSecToMtg(){
+  try{
+    if(localStorage.getItem('mdt_mig_sec_v1'))return;
+    let n=0;
+    getIdx().forEach(function(e){
+      if((e.cids||[]).length<2)return;
+      const m=loadLocal(e.id);if(!m||!m.sections)return;
+      let changed=false;
+      e.cids.forEach(function(cid){
+        const sec=loadSec(cid,m.date);
+        if(!sec)return;
+        const cur=m.sections[cid];
+        const empty=!cur||!['cases','followups','team','events','special']
+          .some(function(k){return (cur[k]||[]).length;});
+        if(empty){m.sections[cid]=sec;changed=true;}
+      });
+      if(changed){try{localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));n++;}catch(err){}}
+    });
+    localStorage.setItem('mdt_mig_sec_v1','1');
+    if(n)console.log('[V5.46.0] 分區資料遷移:'+n+' 場合併會議');
+  }catch(e){console.warn('migrateSecToMtg:',e);}
 }
+
+function loadMergedSections(){/* V5.46.0:停用,見 openMtgRecord 的說明 */}
 
 // Save one cancer's section separately
 /* ════ V5.34.0 ④ 儲存合併(個管師:能少一個鈕就少一個)════
@@ -5373,6 +5408,9 @@ function confirmCopyMtg(){
   copy.savedAt='';
   copy.savedBy=S.user?S.user.name:'';
   copy.createdBy=S.user?S.user.id:'';
+  /* V5.46.0 B-2:深拷貝連帶複製了 _loadedDate(來源日期)。
+     方案甲之後雖然不再有 delSec 的破壞,但這個殘留值沒有意義,清掉比較乾淨。 */
+  delete copy._loadedDate;
   // Save the copy
   saveLocal(copy);
   closeCopyMtgDialog();
@@ -6931,45 +6969,11 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
      不改 key 結構(那要 migration、風險高),改成:
      (1) 儲存前偵測衝突,明確警告讓使用者決定;
      (2) 確認新 key 寫入成功後,才清掉舊日期留下的孤兒 key(順序不可反)。 */
-  if(S.cids.length>1){
-    const d=S.meeting.date||'';
-    const _oldD=S.meeting._loadedDate||'';
-    /* (1) 日期被改過 → 檢查新日期是否已有同癌別的「別場」會議 */
-    if(_oldD&&d&&_oldD!==d){
-      const _clash=getIdx().filter(function(e){
-        return e.id!==S.meeting.id && e.date===d && (e.cids||[]).some(function(c){return S.cids.indexOf(c)>=0;});
-      });
-      if(_clash.length){
-        const _names=_clash.map(function(e){
-          return (e.cids||[]).map(function(c){return CFG[c]?.name||c;}).join('+');
-        }).join('、');
-        if(!confirm('注意：'+d+' 已經有另一場會議（'+_names+'），使用到相同的癌別。\n\n'
-          +'本系統的分區資料是以「癌別＋日期」儲存，若繼續儲存，\n'
-          +'那一場的個案資料會被這場覆蓋。\n\n'
-          +'建議：改用其他日期，或先處理掉那一場會議。\n\n'
-          +'仍要繼續儲存嗎？')){
-          showSaveToast('已取消儲存（日期衝突）');
-          return;
-        }
-      }
-    }
-    S.cids.forEach(function(cid){
-      const sec=S.meeting.sections[cid];if(sec)saveSec(cid,d,sec);
-    });
-    /* (2) 新 key 都寫入成功後,才清掉舊日期的孤兒(順序不可反,否則失敗會兩邊都沒有) */
-    if(_oldD&&d&&_oldD!==d){
-      const _allOk=S.cids.every(function(cid){
-        return !S.meeting.sections[cid] || loadSec(cid,d)!==null;
-      });
-      if(_allOk){
-        S.cids.forEach(function(cid){try{delSec(cid,_oldD);}catch(e){}});
-        console.log('[V5.19.1] 會議日期由 '+_oldD+' 改為 '+d+'，已清除舊日期的分區資料');
-      }else{
-        console.warn('[V5.19.1] 新日期分區資料寫入未完全成功，保留舊日期資料 '+_oldD+' 以免遺失');
-      }
-    }
-    S.meeting._loadedDate=d;/* 更新基準,避免同一次編輯重複觸發 */
-  }
+  /* V5.46.0 方案甲:原本這裡會把每個癌別的 sections 另存一份到 mdt_sec_,
+     並在改日期時做衝突偵測與舊 key 清理。整段移除 ——
+     `saveLocal(S.meeting)` 本來就存了完整 sections(含會議 ID、會同步 NAS),
+     那才是唯一該有的那一份。日期衝突偵測也隨之不必要(不再有共用 key)。 */
+
   /* V5.31.1 N-8: version 遞增移到衝突檢查**之後** —— 原本在檢查前遞增,
      每按一次「取消」version 就憑空 +1;而 version 是 NAS 同步的衝突仲裁依據,
      被灌水後同步時會無條件壓過其他機器上真正較新的版本。 */
@@ -11413,20 +11417,24 @@ function importTimelineFromTreatments(cid,idx,type){
     markDirty();
     document.body.removeChild(modal);
     const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+idx);
-    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,idx,c);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);tmp.childNodes.forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
+    if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,idx,c,_ty);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);tmp.childNodes.forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
     const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+_ty+'-'+idx);
     if(svgEl)svgEl.innerHTML=c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
   };
 }
 
-function buildTimelineRows(cid,idx,c){
+/* ⚠ V5.46.0:這支也會產生 data-action 元素,**必須帶 data-ty** ——
+   V5.42.4(坑 #68)只補了 `addStruct` 產生的那批,這支是漏網的。
+   少了 data-ty,必要事件卡片上的時序列會去讀寫同索引的個案討論。 */
+function buildTimelineRows(cid,idx,c,type){
+  const _ty=type?type:"cases";
   return ((c.timeline||[]).map(function(tl,ti){
     const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'"'+(t.id===tl.type?' selected':'')+'>'+t.label+'</option>';}).join('');
     return '<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-      +'<select data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="type" style="width:108px;font-size:13px;padding:5px 7px">'+opts+'</select>'
-      +'<input type="date" value="'+escA(tl.date||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="date" style="width:148px">'
-      +'<input placeholder="自訂說明（空白用預設）" value="'+escA(tl.label||'')+'" data-action="updstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
-      +'<button class="delbtn" data-action="delstruct" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" style="margin-left:auto">×</button>'
+      +'<select data-action="updstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="type" style="width:108px;font-size:13px;padding:5px 7px">'+opts+'</select>'
+      +'<input type="date" value="'+escA(tl.date||'')+'" data-action="updstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="date" style="width:148px">'
+      +'<input placeholder="自訂說明（空白用預設）" value="'+escA(tl.label||'')+'" data-action="updstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
+      +'<button class="delbtn" data-action="delstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" style="margin-left:auto">×</button>'
       +'</div></div>';
   }).join(''));
 }
@@ -12059,7 +12067,8 @@ document.addEventListener('change',function(e){
 });
 
 /* ════ Init ════ */
-loadAll();loadAICfg();_assertConfigConsistency();/* V5.13.6: 啟動時檢查癌別代碼與預設會議室一致性(只在 console 警告,不阻斷) */renderLogin();
+loadAll();loadAICfg();
+  try{migrateSecToMtg();}catch(e){console.warn('migrate:',e);}/* V5.46.0 方案甲步驟三 */_assertConfigConsistency();/* V5.13.6: 啟動時檢查癌別代碼與預設會議室一致性(只在 console 警告,不阻斷) */renderLogin();
 // Show version on login page
 const lgVer=document.getElementById('lg-ver');
 if(lgVer)lgVer.textContent=VERSION;
