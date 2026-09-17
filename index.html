@@ -1431,7 +1431,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.50.1';
+const VERSION='V5.51.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1803,6 +1803,9 @@ function loadLocal(id){
        只在記憶體清,不主動寫回 —— 使用者存檔時自然帶過去,
        避免「只是開啟看一下」就改動 localStorage(那會讓 NAS 同步的 version 判斷變複雜)。 */
     try{cleanTimelineGhosts(m);}catch(e){}
+    /* V5.51.1:特殊議程影像補 _root 標記(修之前選的那批沒有)。
+       特殊議程只能從根目錄選,所以 fromFolder 且無 subFolder 的一律是根目錄。 */
+    try{_tagSpecialRootImgs(m);}catch(e){}
     return m;
   }catch(e){return null;}
 }
@@ -3830,7 +3833,7 @@ async function _auditOneImg(img,chartNo,rootHandle,ctx){
   const cno=String(chartNo||'').trim();
   if(!cno)return{level:'risk',code:'NO_CHART',note:'個案沒有病歷號 —— 無法確認這張圖屬於誰'};
 
-  const r=await verifyImgOwnership(img.name,(img.subFolder||'').trim(),cno,{size:img.size});
+  const r=await verifyImgOwnership(img.name,(img.subFolder||'').trim(),cno,{size:img.size,allowRoot:!!img._root});
 
   /* 稽核獨有:失敗時檢查根目錄有沒有同名檔 —— 這是「掛錯病人」的具體證據 */
   let extra='';
@@ -4188,6 +4191,10 @@ async function verifyImgOwnership(name,subFolder,chartNo,opts){
     /* 資料夾改過名 → 用病歷號重新定位(前綴比對,病歷號須完整,見 V5.29.0) */
     const re=await _resolveSubFolder(imgFolderHandle,cno);
     if(re){scan=re.handle;usedName=re.name;relocated=true;}
+  }
+  if(!scan&&!sub&&!cno&&opts.allowRoot){
+    /* V5.51.1:特殊議程影像 —— 沒病人、沒病歷號、本來就在根目錄。允許直接找。 */
+    scan=imgFolderHandle;usedName='';
   }
   if(!scan){
     if(!sub&&!cno){
@@ -5040,7 +5047,12 @@ function pickSpecialImgs(cid,si){
       overlay.querySelector('#spi-cancel').onclick=function(){document.body.removeChild(overlay);};
       overlay.querySelector('#spi-ok').onclick=function(){
         var checked=[...overlay.querySelectorAll('input:checked')].map(function(x){return x.value;});
-        d.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,dataUrl:''};});
+        /* V5.51.1:特殊議程的影像從**根目錄**選,沒有病人子資料夾也沒有病歷號。
+           V5.32 的 verifyImgOwnership 規定「絕不退回根目錄」(避免載到別的病人的同名檔)——
+           那條規則是為病人影像設計的,特殊議程沒有病人,規則不適用。
+           標 _root:true 讓驗證端知道這張本來就在根目錄。
+           **從 V5.32 起特殊議程的影像就載不了**,只是沒人用到;個管師拿它當必要事件的影像替代方案才踩到。 */
+        d.images=checked.map(function(fn){return{name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,dataUrl:'',_root:true};});
         markDirty();document.body.removeChild(overlay);
         var cont=document.getElementById('special-img-area-'+cid+'-'+si);
         if(cont)cont.innerHTML=buildSpecialImgArea(cid,si,d);
@@ -5412,12 +5424,14 @@ function openPostMtgPanel(){
   document.getElementById('postmtg-panel').style.display='flex';
 }
 
-function closePostMtgPanel(){
-  /* V5.49.0 B-7:面板裡打的東西沒存就關,原本直接消失。
-     面板有「存檔關閉」按鈕,但個管師也可能按 × 或點外面。
-     只在面板內有未寫回的內容時才問。 */
+function closePostMtgPanel(force){
+  /* V5.49.0 B-7:面板裡打的東西沒存就關,原本直接消失。只在面板內有未寫回的內容時才問。
+     V5.51.0 Q1:savePostMtg 寫回資料後**沒更新 defaultValue**,接著呼叫這裡,
+     被判定為「有未寫回的內容」→ 每次正常「存檔關閉」都跳「尚未存檔,確定=放棄」——
+     內容與事實相反,久了變警告疲勞(坑 #59)。存檔路徑用 force 跳過確認。 */
   const panel=document.getElementById('postmtg-panel');
   if(!panel){return;}
+  if(force){panel.style.display='none';return;}
   let changed=false;
   panel.querySelectorAll('textarea[data-action],select[data-action]').forEach(function(el){
     if(el.tagName==='TEXTAREA'&&el.value!==el.defaultValue)changed=true;
@@ -5485,8 +5499,25 @@ function savePostMtg(){
     if(c)c.followNext=false;
   });
   markDirty();
+  /* ════ V5.51.0 N-1(P1)════
+     面板寫回資料後,**卡片的 DOM 還是舊值**。個管師之後在卡片上補一個字,
+     oninput 把「舊值 + 一字」寫回去 → 面板存的會議結論**無聲消失**。
+     必要事件的結案狀態也一樣:面板選了「已結案」,卡片下拉仍顯示「待討論」。
+     寫回後重繪有動到的區塊,讓卡片跟資料一致。只重繪容器、不整頁 renderEditor(坑 #62)。 */
+  S.cids.forEach(function(cid){
+    const sec=S.meeting.sections[cid]||{};const vm=S.viewMode;
+    [['cases',function(c,i){return vm?caseViewHTML(cid,i,c,'cases'):caseHTML(cid,i,c,'cases');}],
+     ['events',function(c,i){return vm?caseViewHTML(cid,i,c,'events'):caseHTML(cid,i,c,'events',{noImages:true});}],
+     ['team',function(c,i){return vm?teamViewHTML(cid,i,c,'team'):teamHTML(cid,i,c,'team',true);}],
+     ['followups',function(c,i){return followupHTML(cid,i,c,'followups');}]
+    ].forEach(function(pair){
+      const ty=pair[0],fn=pair[1];
+      const cont=document.getElementById('div-'+ty+'-'+cid);if(!cont)return;
+      cont.innerHTML=(sec[ty]||[]).map(function(c,i){try{return fn(c,i);}catch(e){console.error('[postmtg rerender '+ty+']',e);return '';}}).join('');
+    });
+  });
   saveMeeting();
-  closePostMtgPanel();
+  closePostMtgPanel(true);/* V5.51.0 Q1:存檔路徑不經過確認 */
 }
 
 function openCopyMtgDialog(){
@@ -6009,6 +6040,16 @@ const _CASE_SCHEMA_KEYS=Object.keys(createCase('__probe__',{}));
 /* V5.42.5 E-1:清掉 V5.42.4 以前雙重 push 留下的空殼列。
    特徵:timeline 裡出現 {name,date,content} 形狀(正確的是 {type,date,label}),
    而且三個欄位都是空的。只清「形狀不對且完全空白」的,有內容的一律保留。 */
+function _tagSpecialRootImgs(m){
+  if(!m||!m.sections)return;
+  Object.keys(m.sections).forEach(function(cid){
+    (m.sections[cid].special||[]).forEach(function(sp){
+      (sp.images||[]).forEach(function(img){
+        if(img&&img.fromFolder&&!String(img.subFolder||'').trim()&&!img._root)img._root=true;
+      });
+    });
+  });
+}
 function cleanTimelineGhosts(m){
   if(!m||!m.sections)return 0;
   let n=0;
@@ -6675,18 +6716,48 @@ function _offerCopyFromHistory(inp){
         ['cases','events'].forEach(function(t2){
           ((m.sections[c2]||{})[t2]||[]).forEach(function(c){
             if(String(c.chartNo||'').trim()!==chartNo)return;
-            if(!best||String(m.date||'')>String(best.date||''))best={date:m.date,cid:c2,ty:t2,item:c,title:m.title||''};
+            /* V5.51.0 Q2:只取本場之前的(EV-6 同一形狀);沒有才退而取之後的,並在對話框標明 */
+            const isPrior=String(m.date||'')<String(S.meeting.date||'');
+            const cand={date:m.date,cid:c2,ty:t2,item:c,title:m.title||'',prior:isPrior};
+            if(!best){best=cand;return;}
+            if(cand.prior&&!best.prior){best=cand;return;}
+            if(cand.prior===best.prior&&String(m.date||'')>String(best.date||''))best=cand;
           });
         });
       });
     });
     if(!best)return;
+    /* ════ V5.51.0 Q3(P1)════
+       這是本系統第一次會「跨病人搬運臨床資料」的功能,辨識資訊必須足夠。
+       個管師少打一碼剛好是另一位病人時,原本對話框只有日期與癌別,無從判斷 ——
+       按下去另一位病人的病史/檢查/病理/治療/時序整批進來,再進投影片與會議記錄。
+       ①對話框顯示病歷號、遮蔽姓名、性別/年齡、診斷前 40 字
+       ②本卡已填姓名且與歷史不同 → 不問,改提醒 */
+    const curName=String(cur.name||'').trim(),histName=String(best.item.name||'').trim();
+    if(curName&&histName&&curName!==histName){
+      showSaveToast('病歷號 '+chartNo+' 在 '+best.date+' 的紀錄姓名為 '+maskName(histName)+'，與本卡不同，請確認');
+      return;
+    }
     const cname=CFG[best.cid]?.name||best.cid;
     const label=best.ty==='events'?'必要提報':'個案討論';
-    if(!confirm('這位病人在 '+best.date+' '+cname+'（'+label+'）討論過。\n\n要把那次的臨床資料複製過來嗎？\n（病史、檢查、病理、治療、時序；不含影像）\n\n確定 = 複製\n取消 = 全新個案')){return;}
+    const who=chartNo+'　'+(histName?maskName(histName):'（無姓名）')
+      +(best.item.gender?'　'+best.item.gender:'')+(best.item.age?'/'+best.item.age:'');
+    const dx=String(best.item.diagnosis||'').replace(/\s+/g,' ').slice(0,40)||'（無診斷）';
+    const when=best.date+' '+cname+'（'+label+'）'+(best.prior?'':'\n⚠ 這是日期在本場之後的會議');
+    if(!confirm('找到同病歷號的紀錄：\n\n　'+who+'\n　'+dx+'\n　'+when+'\n\n確認是同一位病人，要複製臨床資料嗎？\n（病史、檢查、病理、治療、時序；不含影像）\n\n確定 = 複製\n取消 = 全新個案')){return;}
+    /* V5.51.0 Q4:基本資料**只填空白的**,不覆蓋個管師親手輸入的 —— 否則病歷號打錯時(Q3)
+       正確的姓名會被換成另一位病人的,錯誤更難被發現。
+       年齡/ECOG/衰弱量表會隨時間變(死亡病例通常是數年後),**不複製**。 */
+    const _FILL_IF_EMPTY={name:1,gender:1,doctors:1,doctor:1};
+    const _SKIP={age:1,ecog:1,cfs:1};
     _COPY_FIELDS.forEach(function(k){
+      if(_SKIP[k])return;
       const v=best.item[k];
       if(v===undefined||v===null)return;
+      if(_FILL_IF_EMPTY[k]){
+        const empty=Array.isArray(cur[k])?!cur[k].some(function(x){return String(x||'').trim();}):!String(cur[k]||'').trim();
+        if(!empty)return;
+      }
       cur[k]=Array.isArray(v)?JSON.parse(JSON.stringify(v)):(typeof v==='object'?JSON.parse(JSON.stringify(v)):v);
     });
     /* 討論方向、摘要、決策不帶 —— 那是「這一場」要討論的 */
@@ -8511,7 +8582,7 @@ async function genHTMLSlides(opts){
         if(img.fromFolder&&!img.dataUrl&&!_pathImgCache[_ck]){
           try{
             /* V5.32.0: 產出端帶入 chartNo 做歸屬驗證;失敗原因記進 QA */
-            const _vr=await verifyImgOwnership(img.name,(img.subFolder||'').trim(),_chartNo,{size:img.size});
+            const _vr=await verifyImgOwnership(img.name,(img.subFolder||'').trim(),_chartNo,{size:img.size,allowRoot:!!img._root});/* V5.51.1 */
             const file=_vr.file;
             if(!file){_imgFailNotes[_ck]=_vr.note;}
             if(!file){console.warn('無法讀取影像(檔名可能含特殊字元或不存在):',_ck);continue;}
@@ -10801,7 +10872,7 @@ async function _exportCaseJSONWithImagesZip(result){
         /* V5.32.0(設計書項目 7):原本這裡也有靜默 fallback —— 而且後果比投影片更久:
            **會把別人的影像打包進備份 zip**,之後還原、寄出、上 NAS 都帶著錯的圖。
            改走 verifyImgOwnership,驗證不過就當作讀取失敗(列進 failedImgs)。 */
-        const _vr=await verifyImgOwnership(t.img.name,t.img.subFolder,t.chartNo,{size:t.img.size});
+        const _vr=await verifyImgOwnership(t.img.name,t.img.subFolder,t.chartNo,{size:t.img.size,allowRoot:!!t.img._root});
         if(!_vr.file){
           console.warn('備份收圖:歸屬驗證未通過,略過',t.fileName,_vr.note);
           failedImgs.push(t.chartFolder+'/'+t.fileName+'（'+_vr.note+'）');
