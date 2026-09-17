@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.52.0 | **開放必要事件影像**(坑#82):`buildGenericImgArea` 10 個 `data-action` 補 `data-ty`(三種字串上下文,改了四次才對齊);`_imgOwner` 加 `ty`;6 個輔助函式(`imgDel`/`imgClear`/`imgSetCaption`/`_moveImage`/`imgToggleBrk`/`imgApplyLayout`)與 `imgMove`/`imgReorder`/`delImg` 加 `ty`;6 個 handler 的 `.cases[idx]` 改讀 `dataset.ty`;5 個 `build*ImgArea` 傳 `ty`;10 處 `noImages:true` 移除。實測 8 種影像操作在必要事件卡片上都只動 events、cases 不變 |
 | V5.51.1 | **特殊議程影像從 V5.32 起載不了**(坑#81):`verifyImgOwnership` 的「絕不退回根目錄」是為病人影像設計的,特殊議程本來就從根目錄選;加 `_root` 標記與 `allowRoot`,舊資料在 `loadLocal` 補標。個管師拿特殊議程當必要事件的影像替代方案才踩到 —— **必要事件的影像需求是真的**,要開放還有 6 個 handler 寫死 `.cases[` |
 | V5.51.0 | **複審批次 1+2**(坑#80):(**N-1 P1**)會後填寫面板寫回後卡片 DOM 沒更新,卡片補一字就把面板結論蓋掉;寫回後重繪各區塊;(**Q1 P1**)B-7 的副作用,`savePostMtg` 後 `closePostMtgPanel` 誤判為未存,每次都跳「確定=放棄」;加 `force`;(**Q3 P1**)EV-11 對話框補病歷號/遮蔽姓名/性別年齡/診斷,本卡已填姓名且不同就不問;(Q4)基本資料只填空白、age/ecog/cfs 不複製;(Q2)只取本場之前的紀錄(EV-6 同形狀) |
 | V5.50.1 | B-5 依個管師決定改為**延後**:`zoomPwdByMonth` 設定沒填就退回 `_LEGACY_ZOOM`,功能不受影響;三組密碼仍在公開程式碼裡(已知且接受)。B-4 記錄:「HTML 分享」按鈕從未被用過,個管師用 Git Pusher。兩項列入「十之四、已決定延後的項目」 |
@@ -526,6 +527,21 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#82 同一份 HTML 產生器裡混用模板字串與串接字串,批次插入屬性時跳脫層級各不相同(V5.52.0)** 🔴
+- `buildGenericImgArea` 是 V5.14.0 把五種影像統一的核心,裡面**三種字串上下文並存**:
+  | 上下文 | 正確寫法 |
+  |---|---|
+  | 反引號模板 | `data-ty="${_ty}"` |
+  | 單引號串接 | `data-ty="'+_ty+'"` |
+  | 單引號串接內再有一層(`\'+cid+\'`) | `data-ty="\'+_ty+\'"` |
+- 我用一支正則對 10 個 `data-action` 批次補 `data-ty`,**寫法統一成 `${_ty}`** —— 4 個串接上下文的變成字面文字 `${_ty}`
+- 改成 `'+_ty+'` 之後,又有 3 個在**雙層跳脫**上下文的變成字面文字 `'+_ty+'`
+- **前後改了四次才對齊**,每次都是實跑才看到 `imgmove='+_ty+'` 這種渲染結果
+- 更糟的是**兩處 `parseInt` 誤植**:正則把 `,xxx.dataset.ty` 插進了 `parseInt(xxx.dataset.idx` 的括號裡 → radix 變成 `'events'` → 索引變 NaN。`node --check` 過、jshint 過,**只有實際按下去才發現刪到 cases**
+- **這是坑 #67 的變體**:不只是「單引號裡的 `${}` 不插值」,而是**同一段程式碼裡三種上下文並存,批次替換必定至少錯一種**
+- 做法(這次學到的):**批次插入前先對每個插入點印出同行的 `cid` 怎麼寫,插入時逐一複製 `cid` 的跳脫層級** —— `cid` 在那個位置已經是對的,照抄就對
+- 另一個檢查:**任何插進函式呼叫參數的正則,替換後要驗證括號配對** —— `parseInt(a,b.dataset.ty)` 這種形狀就是錯位
 
 **#81 為一種資料設計的安全規則,套到另一種沒有那個風險的資料上(V5.51.1)** ✅
 - V5.32 的 `verifyImgOwnership` 規定「**絕不退回根目錄**」—— 那是為**病人影像**設計的,避免載到別的病人的同名檔案
@@ -1371,6 +1387,8 @@ print("script 內 </script 字面值:", "✓ 0" if not _bad else f"⚠️ {len(_
 ---
 
 ## 十一、一句話總結
+
+V5.52.0 開放必要事件影像(坑 #82)。個管師說「開放影像」—— V5.42.0 先關掉的原因是影像流程有 8 處寫死 `.cases[`,而那是前十輪最脆弱的地方。現在必要事件那條線已被四輪專項審核跑過,而且個管師已經在用特殊議程當替代方案(坑 #81),需求是真的。改動範圍:`buildGenericImgArea` 的 10 個 `data-action` 全部補 `data-ty`;`_imgOwner(kind,cid,i,ty)` 加 ty,`holder==='cases'&&ty==='events'` 時改讀 events(special 不受影響);6 個輔助函式與 `imgMove`/`imgReorder`/`delImg` 加 ty 並一路傳到底;6 個 handler(`pickpathfolder`/`addpathimg`/`picksurgfolder`/`pickimgfolder`/`addmammoimg`×2)的 `.cases[idx]` 改讀 `dataset.ty`;5 個 `build*ImgArea(cid,i,d,ty)` 把 ty 塞進 cfg;10 處 `noImages:true` 移除,`_noImg` 機制保留但不再傳入。**過程中踩了坑 #82**:`buildGenericImgArea` 裡三種字串上下文並存(反引號模板、單引號串接、單引號串接內再一層跳脫),我用一支正則批次補 `data-ty`,**寫法統一成 `${_ty}` → 4 個串接的變字面**;改成 `'+_ty+'` → 3 個雙層跳脫的變字面;**改了四次才對齊**,每次都是實跑看到 `imgmove='+_ty+'` 才知道。更糟的是兩處 `parseInt` 誤植 —— 正則把 `,xxx.dataset.ty` 插進 `parseInt(...)` 括號裡,radix 變 `'events'`、索引變 NaN,**按必要事件的「刪除影像」刪到 cases**,而 `node --check` 與 jshint 全過。教訓:**批次插入前先印出每個插入點同行的 `cid` 怎麼寫,逐一複製它的跳脫層級**;**插進函式參數的替換,做完要驗證括號配對**。實測 8 種操作(data-ty 覆蓋/刪/移/改說明/分頁點/每頁張數/清除/內嵌開關)在必要事件卡片上都只動 events、cases 不變;`audit-render.js` 的 EV-1 現在涵蓋影像按鈕(55 個元素 0 污染)。屬 a+1。
 
 V5.51.1 特殊議程影像修復(坑 #81)。個管師傳兩張截圖:「0297777 粘○文必要事件提報」是一張**特殊議程**卡片(類別「其他」)選了 5 張影像,產出前檢查說「影像 0/5 張已載入 → 沒有記錄病人資料夾,也沒有病歷號可比對」。**她在用特殊議程當必要事件的影像替代方案** —— 因為 V5.42.0 我把必要事件的影像先關掉了。查證:`pickSpecialImgs` 從**根目錄**直接列檔案,存的是 `{name,fromFolder:true}` 沒有 `subFolder`;而 V5.32 的 `verifyImgOwnership` 規定「絕不退回根目錄」(避免載到別的病人的同名檔),`!sub&&!cno` 就回 `NO_OWNER`。**從 V5.32 起特殊議程的影像就載不了**,整整 19 個版本沒人發現。那條規則是為**病人影像**設計的;特殊議程沒有病人、沒有病歷號,「載到別的病人的檔案」這個風險不存在,規則不該套上去。修法:選圖時標 `_root:true`,驗證加 `opts.allowRoot`(只在明確傳入時生效,病人影像的規則不變),三處呼叫端補上;舊資料(她已選的那 5 張)在 `loadLocal` 時補標 —— 特殊議程只能從根目錄選,所以 `fromFolder` 且無 `subFolder` 的一律是根目錄。實測:無 `allowRoot` 仍回 `NO_OWNER`、有 `allowRoot` 找到檔案、遷移只標根目錄的。**連帶的決策點**:個管師已經在用替代方案,代表必要事件的影像需求是真的;要開放的話,影像流程還有 6 個 handler 寫死 `.cases[` 要先改 —— 那正是 V5.42.0 先關掉的原因,現在必要事件那條線已經被四輪專項審核跑過,風險比當時低很多。屬 c+1。
 

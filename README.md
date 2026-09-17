@@ -111,6 +111,36 @@
 
 ## 版本歷程
 
+### V5.52.0
+**開放必要事件影像(新增坑 #82)**
+
+V5.42.0 先關掉,因為影像流程有 8 處寫死 `.cases[`。現在必要事件那條線已被四輪專項審核跑過,而且個管師已在用特殊議程當替代方案 —— 需求是真的。
+
+#### 改動
+
+| 層 | 內容 |
+|---|---|
+| HTML 產生 | `buildGenericImgArea` 10 個 `data-action` 補 `data-ty`;5 個 `build*ImgArea` 傳 `ty` |
+| 資料存取 | `_imgOwner` 加 `ty`;6 個輔助函式 + `imgMove`/`imgReorder`/`delImg` 一路傳到底 |
+| Handler | 6 處 `.cases[idx]` 改讀 `dataset.ty` |
+| 開關 | 10 處 `noImages:true` 移除 |
+
+#### 坑 #82:三種字串上下文並存,批次替換改了四次才對
+
+`buildGenericImgArea` 裡有反引號模板、單引號串接、單引號串接內再一層跳脫。一支正則統一補 `${_ty}` → 4 個變字面;改 `'+_ty+'` → 3 個雙層的變字面。
+
+更糟的是兩處 `parseInt` 誤植:`parseInt(x.dataset.idx,x.dataset.ty)` → radix 變 `'events'` → **按必要事件的「刪除影像」刪到個案討論**。`node --check` 與 jshint 全過。
+
+> **教訓**:批次插入前先看每個插入點同行的 `cid` 怎麼寫,照抄它的跳脫層級。插進函式參數的替換要驗證括號配對。
+
+#### 實測
+
+```
+8 種影像操作(刪/移/改說明/分頁/每頁張數/清除/內嵌/data-ty 覆蓋)
+→ 必要事件卡片上都只動 events、cases 不變 ✅
+audit-render.js EV-1:55 個元素 0 污染 ✅
+```
+
 ### V5.51.1
 **特殊議程影像從 V5.32 起載不了(新增坑 #81)**
 

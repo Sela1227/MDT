@@ -30,7 +30,7 @@ setTimeout(()=>{
   console.log('\n=== 渲染後未插值殘留掃描 ===');
   const targets=[
     ["caseHTML(cases)","caseHTML('head_neck',0,s.cases[0],'cases',undefined)"],
-    ["caseHTML(events)","caseHTML('head_neck',0,s.events[0],'events',{noImages:true})"],
+    ["caseHTML(events)","caseHTML('head_neck',0,s.events[0],'events')"],
     ["caseViewHTML(cases)","caseViewHTML('head_neck',0,s.cases[0],'cases')"],
     ["caseViewHTML(events)","caseViewHTML('head_neck',0,s.events[0],'events')"],
     ["followupHTML","followupHTML('head_neck',0,s.followups[0],'followups')"],
@@ -118,7 +118,7 @@ setTimeout(()=>{
       +"treatments:[{name:'Op',date:'2026-01-03',content:'t'}],markers:[{name:'CEA',content:'5'}],"
       +"genomics:[{name:'EGFR',date:'2026-01-04',content:'g'}],"
       +"timeline:[{type:'dx',date:'2026-01-05',label:'x'}],phChips:['DM']},{});"
-      +"var d=document.createElement('div');d.innerHTML=caseHTML('head_neck',0,ev,'events',{noImages:true});"
+      +"var d=document.createElement('div');d.innerHTML=caseHTML('head_neck',0,ev,'events');"
       +"var bad=[];d.querySelectorAll('[data-action][data-cid]').forEach(function(el){"
       +"  if(el.dataset.action==='togglecase')return;"
       +"  if(el.dataset.ty!=='events')bad.push(el.dataset.action+'='+(el.dataset.ty||'(無)'));});"
@@ -157,7 +157,7 @@ setTimeout(()=>{
       +"s.events=s.events||[];"
       +"s.events.push(createItem('head_neck','events',{chartNo:'E0',exams:[{name:'MRI',date:'2026-02-01',content:'y'}],timeline:[{type:'dx',date:'2026-02-01',label:'e'}]},{}));"
       +"var host=document.createElement('div');host.id='div-events-head_neck';document.body.appendChild(host);"
-      +"host.innerHTML=caseHTML('head_neck',0,s.events[0],'events',{noImages:true});"
+      +"host.innerHTML=caseHTML('head_neck',0,s.events[0],'events');"
       +"var snap=JSON.stringify(s.cases[0]);var bad=[];var n=0;"
       +"host.querySelectorAll('input,select,textarea').forEach(function(el){"
       +"  if(el.type==='date'||el.type==='checkbox'||el.type==='file')return;"
