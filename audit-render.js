@@ -12,7 +12,7 @@ const dom=new JSDOM(fs.readFileSync('/home/claude/index.html','utf8'),{
     const ce=w.console.error; w.console.error=(...a)=>{errs.push('console.error: '+a.join(' '));};
   }
 });
-setTimeout(()=>{
+setTimeout(async ()=>{
   const w=dom.window, run=c=>w.eval(c);
   console.log('VERSION =', run('typeof VERSION!=="undefined"?VERSION:"?"'));
   console.log('載入期間錯誤:', errs.length);
@@ -172,6 +172,25 @@ setTimeout(()=>{
     console.log('  操作了',o.操作,'個元件 | 改到個案討論的:',o.污染.length,o.污染.length?'🔴 '+o.污染.join(', '):'✅');
     if(o.污染.length)bad++;
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));}
+
+  // ── [V5.53.0] I-1/I-2:必要事件與 NGS 影像必須進投影片 ──
+  console.log('\n=== [I-1/I-2] 影像進投影片 ===');
+  try{
+    const PX='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    run("S.meeting.date='2026-10-01';S.viewMode=false;S.meetingMode='record';var fd=document.getElementById('f-date');if(fd)fd.value='2026-10-01';"
+      +"var s=S.meeting.sections['head_neck'];"
+      +"s.cases=[createItem('head_neck','cases',{chartNo:'C0',name:'甲',diagnosis:'dx',discussion:'d',genomicsImages:[{name:'cg.png',dataUrl:'"+PX+"',caption:'C_NGS'}]},{})];"
+      +"s.events=[createItem('head_neck','events',{chartNo:'E0',name:'乙',diagnosis:'dx',cc:'x',"
+      +"pathologyImages:[{name:'ep.png',dataUrl:'"+PX+"',caption:'E病理'}],surgicalImages:[{name:'es.png',dataUrl:'"+PX+"',caption:'E手術'}],"
+      +"genomicsImages:[{name:'eg.png',dataUrl:'"+PX+"',caption:'E_NGS'}],images:[{name:'er.png',dataUrl:'"+PX+"',caption:'E相關'}]},{})];"
+      +"S.meeting.version=1;saveLocal(S.meeting);_dirty=false;");
+    w.URL.createObjectURL=()=>'blob:x';w.URL.revokeObjectURL=()=>{};
+    const html=String(await run("genHTMLSlides()")||'');
+    const chk=[['C_NGS','C_NGS'],['E病理','E病理'],['E手術','E手術'],['E_NGS','E_NGS'],['E相關','E相關']];
+    let miss=[];chk.forEach(function(c){if(html.indexOf(c[1])<0)miss.push(c[0]);});
+    console.log('  投影片長度',html.length,'| 缺少:',miss.length?'🔴 '+miss.join(','):'✅ 無');
+    if(miss.length||!html.length)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
 
   console.log('\n=== 總計錯誤 ===');
   console.log('  ', errs.length, errs.length?'':'✅');

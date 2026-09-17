@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.53.0 | **必要事件影像產出端 + NGS 影像修復**(坑#83):(**I-1**)`_trackSlide` 沒有影像輸出,87 行影像組裝抽成 `_buildImgOut()` 讓個案與必要事件共用;(**I-2**)**個案 NGS 影像從 V5.30.0 起沒進投影片**(預載漏 `genomicsImages`);(**I-3**)檢查影像/重新綁定加 events;(**I-4**)`_needsFolder`/狀態列/NAS 備份改走 `_forEachMeetingImg()` 列舉器。六個獨立列舉迴圈收斂成一個。`audit-render.js` 加「影像進投影片」檢查 |
 | V5.52.0 | **開放必要事件影像**(坑#82):`buildGenericImgArea` 10 個 `data-action` 補 `data-ty`(三種字串上下文,改了四次才對齊);`_imgOwner` 加 `ty`;6 個輔助函式(`imgDel`/`imgClear`/`imgSetCaption`/`_moveImage`/`imgToggleBrk`/`imgApplyLayout`)與 `imgMove`/`imgReorder`/`delImg` 加 `ty`;6 個 handler 的 `.cases[idx]` 改讀 `dataset.ty`;5 個 `build*ImgArea` 傳 `ty`;10 處 `noImages:true` 移除。實測 8 種影像操作在必要事件卡片上都只動 events、cases 不變 |
 | V5.51.1 | **特殊議程影像從 V5.32 起載不了**(坑#81):`verifyImgOwnership` 的「絕不退回根目錄」是為病人影像設計的,特殊議程本來就從根目錄選;加 `_root` 標記與 `allowRoot`,舊資料在 `loadLocal` 補標。個管師拿特殊議程當必要事件的影像替代方案才踩到 —— **必要事件的影像需求是真的**,要開放還有 6 個 handler 寫死 `.cases[` |
 | V5.51.0 | **複審批次 1+2**(坑#80):(**N-1 P1**)會後填寫面板寫回後卡片 DOM 沒更新,卡片補一字就把面板結論蓋掉;寫回後重繪各區塊;(**Q1 P1**)B-7 的副作用,`savePostMtg` 後 `closePostMtgPanel` 誤判為未存,每次都跳「確定=放棄」;加 `force`;(**Q3 P1**)EV-11 對話框補病歷號/遮蔽姓名/性別年齡/診斷,本卡已填姓名且不同就不問;(Q4)基本資料只填空白、age/ecog/cfs 不複製;(Q2)只取本場之前的紀錄(EV-6 同形狀) |
@@ -527,6 +528,17 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#83 「列舉所有影像」有六份各自實作,每一份都只看 cases、全部漏 NGS(V5.53.0)** 🔴
+- `_needsFolder`、預載迴圈、`_collectAuditRows`、`rebindMeetingImages`、`updateFolderStatusBar`、`backupToNAS` —— **六個地方各寫一遍** `for(const c of sec.cases)`
+- 後果一:**個案的 NGS 影像從 V5.30.0 起就沒進投影片**(預載清單漏了 `genomicsImages`),22 個版本沒人發現 —— NGS 影像多半是內嵌上傳所以沒感覺
+- 後果二:V5.52.0 開放必要事件影像,**只做了編輯端**;六個列舉迴圈沒一個看 `events` → 選了圖,投影片一張都沒有、檢查影像看不到、NAS 不備份、連「要不要授權資料夾」都不會問
+- 後果三:`_trackSlide`(必要事件投影片)**根本沒有影像輸出邏輯** —— 那 87 行在個案 callback 內,外面拿不到
+- **這是坑 #29(V5.11.2 只修 cases 漏 special)與坑 #81 的第三次**。坑 #61 說「同一件事的第二份實作要刪掉」—— 這裡有**六份**
+- 修法:`_forEachMeetingImg(m,cids,cb)` 成為全系統唯一的影像列舉器(cases+events 五種影像+special),六處全改走它;
+  影像組裝抽成 `_buildImgOut(_ck,c,cid,meta,color)`,個案與必要事件都呼叫,key 用 `ci-N`/`ev-N` 區隔
+- **已加 `audit-render.js` 檢查**:產出投影片,斷言必要事件四種影像與個案 NGS 的 caption 都在裡面 —— 這條會抓 #29/#81/#83 這一整類
+- 教訓:**新增一種資料(影像種類/卡片種類)時,先 grep 所有「列舉這種資料」的地方**,通常不只一處。而且要問「有沒有一個地方是列舉器,其他地方都該呼叫它」
 
 **#82 同一份 HTML 產生器裡混用模板字串與串接字串,批次插入屬性時跳脫層級各不相同(V5.52.0)** 🔴
 - `buildGenericImgArea` 是 V5.14.0 把五種影像統一的核心,裡面**三種字串上下文並存**:
@@ -1387,6 +1399,8 @@ print("script 內 </script 字面值:", "✓ 0" if not _bad else f"⚠️ {len(_
 ---
 
 ## 十一、一句話總結
+
+V5.53.0 必要事件影像產出端 + NGS 影像修復(坑 #83)。審核判定 V5.52.0「只做了編輯端」:必要事件選了圖,**投影片上一張都沒有**(I-1)、檢查影像與重新綁定都看不到(I-3)、資料夾提示與 NAS 備份也不看(I-4);更嚴重的是 **I-2:個案的 NGS 影像從 V5.30.0 起就沒進投影片**,22 個版本沒人發現 —— 預載清單當年加 `genomicsImages` 時漏了,NGS 影像多半是內嵌上傳所以沒感覺。根因只有一個:**「列舉這場會議所有影像」有六份各自實作**(`_needsFolder`/預載/`_collectAuditRows`/`rebindMeetingImages`/`updateFolderStatusBar`/`backupToNAS`),每一份都只寫 `sec.cases`,部分還漏 NGS —— 坑 #29 與 #81 的第三次,坑 #61「第二份實作要刪掉」這裡有六份。修法:①`_forEachMeetingImg(m,cids,cb)` 成為唯一列舉器(cases+events 五種影像+special),六處全改走它;②`_trackSlide` 根本沒有影像輸出邏輯,那 87 行在個案 callback 內外面拿不到 —— 抽成 `_buildImgOut(_ck,c,cid,meta,color)` 讓兩邊呼叫,key 用 `ci-N`/`ev-N` 區隔,必要事件的內嵌頁接在主頁後;③`_collectAuditRows`/`rebindMeetingImages` 的 `sec.cases` 改 `[...cases,...events]`;④NAS 備份的 key 從 `'cases['+ki+']'` 改 `_tyN+'['+ki+']'` 並補 `genomicsImages`。過程踩了兩次:抽出 `_buildImgOut` 時 `'ci-'+caseIndex`→`_ck` 的替換在一處跳脫上下文(`\'ci-'+caseIndex`)變成 `\_ck`,`node --check` 抓到;預載區塊的括號切少一個,也是 `node --check` 抓到。測試時 `genHTMLSlides` 因「請先儲存」早退,`saveLocal` 後才過。實測:投影片 58KB,C_NGS/E病理/E手術/E_NGS/E相關 全部在裡面,列舉器總數 6、events 4,只有個案 NGS 是資料夾影像時 `_needsFolder` 為 true。**已固化進 `audit-render.js`**:產出投影片斷言五個 caption 都在。屬 a+1。
 
 V5.52.0 開放必要事件影像(坑 #82)。個管師說「開放影像」—— V5.42.0 先關掉的原因是影像流程有 8 處寫死 `.cases[`,而那是前十輪最脆弱的地方。現在必要事件那條線已被四輪專項審核跑過,而且個管師已經在用特殊議程當替代方案(坑 #81),需求是真的。改動範圍:`buildGenericImgArea` 的 10 個 `data-action` 全部補 `data-ty`;`_imgOwner(kind,cid,i,ty)` 加 ty,`holder==='cases'&&ty==='events'` 時改讀 events(special 不受影響);6 個輔助函式與 `imgMove`/`imgReorder`/`delImg` 加 ty 並一路傳到底;6 個 handler(`pickpathfolder`/`addpathimg`/`picksurgfolder`/`pickimgfolder`/`addmammoimg`×2)的 `.cases[idx]` 改讀 `dataset.ty`;5 個 `build*ImgArea(cid,i,d,ty)` 把 ty 塞進 cfg;10 處 `noImages:true` 移除,`_noImg` 機制保留但不再傳入。**過程中踩了坑 #82**:`buildGenericImgArea` 裡三種字串上下文並存(反引號模板、單引號串接、單引號串接內再一層跳脫),我用一支正則批次補 `data-ty`,**寫法統一成 `${_ty}` → 4 個串接的變字面**;改成 `'+_ty+'` → 3 個雙層跳脫的變字面;**改了四次才對齊**,每次都是實跑看到 `imgmove='+_ty+'` 才知道。更糟的是兩處 `parseInt` 誤植 —— 正則把 `,xxx.dataset.ty` 插進 `parseInt(...)` 括號裡,radix 變 `'events'`、索引變 NaN,**按必要事件的「刪除影像」刪到 cases**,而 `node --check` 與 jshint 全過。教訓:**批次插入前先印出每個插入點同行的 `cid` 怎麼寫,逐一複製它的跳脫層級**;**插進函式參數的替換,做完要驗證括號配對**。實測 8 種操作(data-ty 覆蓋/刪/移/改說明/分頁點/每頁張數/清除/內嵌開關)在必要事件卡片上都只動 events、cases 不變;`audit-render.js` 的 EV-1 現在涵蓋影像按鈕(55 個元素 0 污染)。屬 a+1。
 

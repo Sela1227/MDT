@@ -1431,7 +1431,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.52.0';
+const VERSION='V5.53.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3921,7 +3921,8 @@ async function rebindMeetingImages(opts){
   try{
     for(const cid of S.cids){
       const sec=(S.meeting.sections&&S.meeting.sections[cid])||{};
-      for(const c of (sec.cases||[])){
+      /* V5.53.0 I-3:必要事件也要綁定 */
+      for(const c of [...(sec.cases||[]),...(sec.events||[])]){
         const cno=String(c.chartNo||'').trim();
         if(!cno)continue;
         for(const kind of ['path','surg','related','mammo','genomics']){
@@ -4017,7 +4018,8 @@ async function _collectAuditRows(btn){
   };
   for(const cid of S.cids){
     const sec=(S.meeting.sections&&S.meeting.sections[cid])||{};
-    for(const c of (sec.cases||[])){
+    /* V5.53.0 I-3:必要事件也要檢查 —— 原本只看 cases,V5.52.0 開放影像後這裡沒跟上 */
+    for(const c of [...(sec.cases||[]),...(sec.events||[])]){
       const cno=String(c.chartNo||'').trim();
       for(const kind of ['path','surg','related','mammo','genomics']){
         const K=IMG_KINDS[kind];if(!K)continue;
@@ -5201,14 +5203,18 @@ async function backupToNAS(){
       for(var ci=0;ci<cids.length;ci++){
         var sec=(m.sections||{})[cids[ci]];
         if(!sec)continue;
-        var cases=sec.cases||[];
+        /* V5.53.0 I-4:cases 與 events 都要備份影像,且補上 NGS(原本漏了) */
+        var _arrs=[['cases',sec.cases||[]],['events',sec.events||[]]];
+        for(var ai=0;ai<_arrs.length;ai++){
+        var _tyN=_arrs[ai][0],cases=_arrs[ai][1];
         for(var ki=0;ki<cases.length;ki++){
           var c=cases[ki];
           var allImgs=[
-            ...(c.pathologyImages||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].pathologyImages['+j+']'};}),
-            ...(c.surgicalImages||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].surgicalImages['+j+']'};}),
-            ...(c.images||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].images['+j+']'};}),
-            ...((c.mammo&&c.mammo.images)||[]).map(function(x,j){return{img:x,key:'cases['+ki+'].mammo.images['+j+']'};})
+            ...(c.pathologyImages||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].pathologyImages['+j+']'};}),
+            ...(c.surgicalImages||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].surgicalImages['+j+']'};}),
+            ...(c.images||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].images['+j+']'};}),
+            ...(c.genomicsImages||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].genomicsImages['+j+']'};}),
+            ...((c.mammo&&c.mammo.images)||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].mammo.images['+j+']'};})
           ];
           for(var ii=0;ii<allImgs.length;ii++){
             var entry=allImgs[ii];
@@ -5228,6 +5234,7 @@ async function backupToNAS(){
             if(src)mImgs[entry.key]=src;
           }
         }
+        }/* V5.53.0:_arrs 迴圈閉合 */
       }
       if(Object.keys(mImgs).length)images[idx[mi].id]=mImgs;
     }
@@ -6384,14 +6391,9 @@ function updateFolderStatusBar(){
   } else if(_pendingFolderHandle){
     h='<button onclick="reAuthFolder()" style="background:#e8f4f8;color:#2a6;border:1px solid #b8ddb8;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px;font-weight:600">📂 點此恢復授權：'+escA(_pendingFolderHandle.name)+'</button>';
   } else {
-    const needs=S.meeting&&S.cids.some(function(cid){
-      return(S.meeting.sections[cid]?.cases||[]).some(function(c){
-        return(c.pathologyImages||[]).some(function(i){return i.fromFolder;})
-          ||(c.surgicalImages||[]).some(function(i){return i.fromFolder;})
-          ||(c.images||[]).some(function(i){return i.fromFolder;})
-          ||(c.mammo&&(c.mammo.images||[]).some(function(i){return i.fromFolder;}));
-      });
-    });
+    /* V5.53.0 I-4:改走列舉器 —— 原本只看 cases、漏 NGS、漏 special */
+    let needs=false;
+    if(S.meeting)_forEachMeetingImg(S.meeting,S.cids,function(img){if(img&&img.fromFolder)needs=true;});
     const style=needs
       ?'background:#fff3cd;color:#856404;border:1px solid #ffc107;font-weight:600'
       :'background:none;border:1px solid var(--blt);color:var(--fog)';
@@ -8493,6 +8495,32 @@ async function buildSlidesHTMLOnly(){
 let _lastSlidesHTML=null;
 /* V5.20.0 重構⑥:opts.download=false 只回傳 HTML 不下載;opts.silent=true 跳過 QA 預檢對話框
    (HTML 分享等自動流程用)。無參數呼叫維持原行為(下載 + 顯示預檢),既有按鈕零影響。 */
+/* ════ V5.53.0 I-2/I-3/I-4:會議影像的唯一列舉器 ════
+   原本有六個獨立迴圈各自列舉影像(_needsFolder / 預載 / 檢查影像 / 重新綁定 / 資料夾狀態列 / NAS 備份),
+   **每一個都只看 sec.cases,而且每一個都漏了 genomicsImages** ——
+   個案的 NGS 影像從 V5.30.0 起就沒進投影片、沒被檢查、沒被綁定、沒被備份,整整 22 個版本。
+   V5.52.0 開放必要事件影像後,events 也全部漏掉。
+   以後任何「所有影像」的需求都走這裡,新增一種影像或一種卡片只改這一處(坑 #61)。
+   cb(img, ctx) 其中 ctx={cid,ty,idx,item,kind,chartNo}。 */
+function _forEachMeetingImg(m,cids,cb){
+  (cids||[]).forEach(function(cid){
+    const sec=((m||{}).sections||{})[cid]||{};
+    ['cases','events'].forEach(function(ty){
+      (sec[ty]||[]).forEach(function(c,idx){
+        const base={cid:cid,ty:ty,idx:idx,item:c,chartNo:c.chartNo||''};
+        (c.pathologyImages||[]).forEach(function(img){cb(img,Object.assign({kind:'path'},base));});
+        (c.surgicalImages||[]).forEach(function(img){cb(img,Object.assign({kind:'surg'},base));});
+        (c.images||[]).forEach(function(img){cb(img,Object.assign({kind:'related'},base));});
+        (c.genomicsImages||[]).forEach(function(img){cb(img,Object.assign({kind:'genomics'},base));});
+        if(c.mammo)(c.mammo.images||[]).forEach(function(img){cb(img,Object.assign({kind:'mammo'},base));});
+      });
+    });
+    (sec.special||[]).forEach(function(sp,idx){
+      (sp.images||[]).forEach(function(img){cb(img,{cid:cid,ty:'special',idx:idx,item:sp,kind:'special',chartNo:''});});
+    });
+  });
+}
+
 async function genHTMLSlides(opts){
   opts=opts||{};
   const _doDownload=(opts.download!==false);
@@ -8545,18 +8573,108 @@ async function genHTMLSlides(opts){
       report:report||''};
     return list.length;
   };
+  /* ════ V5.53.0 I-1:影像按鈕與內嵌頁的組裝抽成共用 ════
+     原本這 87 行在個案 callback 內,_trackSlide(必要事件用)在外面拿不到 ——
+     V5.52.0 開放必要事件影像只做了編輯端,**產出端一張都不會出現**(審核 I-1)。
+     抽出來讓兩邊呼叫。_ck 是影像視窗的 key(個案 'ci-N'、必要事件 'ev-N')。 */
+  const _buildImgOut=function(_ck,c,cid,_imgMeta,caColor){
+      var _emb=(c.embed||{});
+      var _embedImgSlides=function(kind,imgs,label){
+        if(!_emb[kind])return [];
+        var list=(imgs||[]).map(function(img){
+          return{caption:img.caption||img.name||'',
+                 src:img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'',
+                 pageBreak:!!img.pageBreak};
+        }).filter(function(x){return !!x.src;});
+        if(!list.length)return [];
+        var grps=[];
+        list.forEach(function(im,gi){if(gi===0||im.pageBreak)grps.push([]);grps[grps.length-1].push(im);});
+        var out=[];
+        grps.forEach(function(g){
+          var gn=g.length;
+          var cols=gn<=1?1:(gn<=4?2:3),rows=gn<=2?1:(gn<=6?2:Math.ceil(gn/3));
+          var gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
+          var ih=g.map(function(im){
+            return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
+              +'<img src="'+im.src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
+              +(im.caption?'<div class="img-cap">'+escA(im.caption)+'</div>':'')+'</div>';
+          }).join('');
+          var cap=(gn===1&&g[0].caption)?escA(g[0].caption):'';
+          out.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
+            +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
+            +'<span class="cno">'+escA(c.chartNo||'')+'</span>'
+            +'<span class="cnm">'+escA(c.name?maskName(c.name):'')+'</span>'
+            +(cap?'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9)">'+cap+'</span>':'')
+            +'<span class="cat">'+escA(label)+(gn>1?'（'+gn+' 張）':'')+'</span></div></div>'
+            +'<div style="'+gSt+'">'+ih+'</div>'
+            +'</section>');
+        });
+        return out;/* V5.27.3: 只回傳,由呼叫端決定何時 push */
+      };
+      /* 先累積三種圖片(回傳實際載得到的張數),再據此組按鈕 */
+      var _nPatho=_pushImgWin(_ck,'patho','病理影像','病理染色',_imgMeta,c.pathologyImages);
+      var _nSurg =_pushImgWin(_ck,'surg','手術照片','手術照片',_imgMeta,c.surgicalImages);
+      var _nRel  =_pushImgWin(_ck,'related','影像','影像',_imgMeta,c.images);
+      var _nGen  =_pushImgWin(_ck,'genomics','NGS 報告影像','NGS',_imgMeta,c.genomicsImages);/* V5.30.0 */
+      /* V5.26.2 修:此段原本寫在 slides.push() **之後** —— 但按鈕是在 push 之前組裝的,
+         導致組按鈕時 _nTl 還是 undefined(var 提升),時序圖按鈕根本不會出現。
+         必須跟四種影像的 _pushImgWin 一樣,在組按鈕**之前**算好。
+         (V5.15.0 曾為同樣理由寫過「先累積再組按鈕」的註解,這次改時序圖時漏掉了) */
+      var _nTl=0;
+      if(c.showTimeline&&(c.timeline||[]).length){
+        _tlWinData[_ck]={chartNo:_imgMeta.chartNo,name:_imgMeta.name,
+          caName:_imgMeta.caName,caColor:caColor,
+          events:c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
+            .map(function(e){return{date:e.date,type:e.type,label:e.label,
+              pivot:!!(e._ai&&e._ai.pivot),resp:(e._ai&&e._ai.response)||'',
+              basis:(e._ai&&e._ai.basis)||''};})};
+        _nTl=c.timeline.length;
+      }
+      /* V5.15.1: 乳攝也改同一模式(原本是獨立投影片:左報告右圖)。
+         報告文字帶進檢視器當第一頁(個管師選擇 B:個案頁不動);限乳癌且有報告或圖才建立 */
+      var _mammoRep=(cid==='breast'&&c.mammo)?((c.mammo.date?c.mammo.date+'\n':'')+(c.mammo.report||'')).trim():'';
+      var _nMammo=(cid==='breast'&&c.mammo)
+        ?_pushImgWin(_ck,'mammo','乳房攝影','乳房攝影',_imgMeta,c.mammo.images,_mammoRep)
+        :0;
+      /* 按鈕要顯示的數量:有報告但沒圖時也要能點開,所以用「圖數 or (有報告則 1)」 */
+      var _mammoBtnN=_nMammo||(_mammoRep?1:0);
+      /* V5.27.0: 夾在投影片的類型不出按鈕(避免同一批圖既在投影片又在分頁) */
+      var _mkImgBtn=function(type,icon,label,n){
+        if(_emb[type])return '';
+        return n>0?(' <button class="patho-btn" onclick="openImgWindow(\''+_ck+'::'+type+'\')" title="開新分頁查看'+label+'">'+icon+' '+label+'('+n+')</button>'):'';
+      };
+      /* V5.27.0: 四種影像若設為「夾在投影片」,在此產出獨立影像頁
+         V5.27.2 順序(個管師指定,依臨床時序而非程式碼順序):
+           乳房攝影(篩檢/初始影像)→ 相關影像(分期)→ 手術照片(術中所見)→ 病理影像(術後病理)
+         原本是「病理→手術→相關→乳攝」,剛好與臨床邏輯相反(病理最後才有卻排第一) */
+      /* V5.27.3 修:原本在這裡直接 push,導致影像頁排在個案文字頁**之前**
+         (翻頁變成 乳攝→影像→手術→病理→病人資料,完全顛倒)。
+         根因:V5.27.0 為了讓按鈕拿到張數,把產生器放在組按鈕之前 ——
+         但它同時也負責 push,「算張數」與「排版位置」兩件事該分開。
+         改成先收集,等個案文字頁 push 完再接上。 */
+      var _embSlides=[];
+      if(cid==='breast'&&c.mammo)_embSlides=_embSlides.concat(_embedImgSlides('mammo',c.mammo.images,'乳房攝影'));
+      _embSlides=_embSlides.concat(_embedImgSlides('related',c.images,'影像'));
+      _embSlides=_embSlides.concat(_embedImgSlides('surg',c.surgicalImages,'手術照片'));
+      _embSlides=_embSlides.concat(_embedImgSlides('patho',c.pathologyImages,'病理影像'));
+      _embSlides=_embSlides.concat(_embedImgSlides('genomics',c.genomicsImages,'NGS 報告影像'));/* V5.30.0 */
+      /* V5.27.2: 按鈕順序與夾投影片順序一致(乳攝→影像→手術→病理),視覺與臨床時序同步 */
+      var _pathoBtn=_mkImgBtn('mammo','📸','乳房攝影',_mammoBtnN)
+                   +_mkImgBtn('related','🖼','影像',_nRel)
+                   +_mkImgBtn('surg','📷','手術照片',_nSurg)
+                   +_mkImgBtn('patho','🔬','病理影像',_nPatho)
+                   +_mkImgBtn('genomics','🧬','NGS 報告',_nGen)/* V5.30.0 */
+                   +((_nTl>0&&!_emb.timeline)?(' <button class="patho-btn" onclick="openTimelineWindow(\''+_ck+'\')" title="開新分頁查看病程時序圖">📈 病程時序('+_nTl+')</button>'):'');/* V5.25.0 / V5.27.0 互斥 */
+      return {btns:_pathoBtn,embSlides:_embSlides,emb:_emb,nTl:_nTl};
+  };
+
   // Check if any folder-based images exist without dataUrl
   // Check if any folder-based images need re-authorization
   /* V5.11.2 修坑 #29: 原本只檢查 cases,漏了特殊議程(special)→ 若只有特殊議程有資料夾圖,
      連「要不要授權資料夾」都不會問,圖自然載不到 */
   const _hasFolderImg=function(arr){return(arr||[]).some(function(i){return i.fromFolder&&!i.dataUrl;});};
-  const _needsFolder=S.cids.some(function(cid){
-    const _sec=m.sections[cid]||{};
-    return(_sec.cases||[]).some(function(c){
-      return _hasFolderImg(c.pathologyImages)||_hasFolderImg(c.surgicalImages)||_hasFolderImg(c.images)
-        ||(c.mammo&&_hasFolderImg(c.mammo.images));
-    })||(_sec.special||[]).some(function(sp){return _hasFolderImg(sp.images);});
-  });
+  let _needsFolder=false;/* V5.53.0:改走列舉器,涵蓋 events 與 NGS */
+  _forEachMeetingImg(m,S.cids,function(img){if(img&&img.fromFolder&&!img.dataUrl)_needsFolder=true;});
   if(_needsFolder&&!imgFolderHandle){
     if(confirm('此次會議包含來自資料夾的影像，需要授權資料夾才能嵌入投影片。\n\n點確認選擇資料夾，點取消略過（圖片將不顯示）')){
       try{const h=await window.showDirectoryPicker({mode:'read'});await setImgFolder(h);}catch(e){}
@@ -8599,20 +8717,14 @@ async function genHTMLSlides(opts){
       }
     };
     for(const cid of cids){
-      const _sec=m.sections[cid]||{};
-      // Load all fromFolder images into cache: pathology, surgical, related, mammo
-      for(const c of (_sec.cases||[])){
-        await _loadImgsToCache([
-          ...(c.pathologyImages||[]),
-          ...(c.surgicalImages||[]),
-          ...(c.images||[]),
-          ...((c.mammo&&c.mammo.images)||[])
-        ],c.chartNo);
-      }
-      /* V5.11.2 修 bug: 特殊議程的圖片也要載入(這行就是本版修的漏洞) */
-      for(const sp of (_sec.special||[])){
-        await _loadImgsToCache(sp.images,'')/* V5.32.1: 特殊議程投影片影像無歸屬病人 */;
-      }
+      /* V5.53.0 I-2:改走列舉器 —— 原本手列四種、漏 NGS、只看 cases。依 (ty,idx) 分組載入。 */
+      const _grp={};
+      _forEachMeetingImg(m,[cid],function(img,ctx){
+        const k=ctx.ty+'#'+ctx.idx;
+        if(!_grp[k])_grp[k]={imgs:[],chartNo:ctx.chartNo};
+        _grp[k].imgs.push(img);
+      });
+      for(const k of Object.keys(_grp)){await _loadImgsToCache(_grp[k].imgs,_grp[k].chartNo);}
     }
   }
   const sc='</'+'script>';
@@ -8754,93 +8866,8 @@ async function genHTMLSlides(opts){
       /* V5.27.0: 通用「夾在投影片」產生器 —— 依 pageBreak 分組,每組一頁 grid 排版。
          沿用特殊議程影像頁的版型,確保四種影像視覺一致。
          回傳實際產出的頁數;embed=false 時不產任何投影片(改走按鈕)。 */
-      var _emb=(c.embed||{});
-      var _embedImgSlides=function(kind,imgs,label){
-        if(!_emb[kind])return [];
-        var list=(imgs||[]).map(function(img){
-          return{caption:img.caption||img.name||'',
-                 src:img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'',
-                 pageBreak:!!img.pageBreak};
-        }).filter(function(x){return !!x.src;});
-        if(!list.length)return [];
-        var grps=[];
-        list.forEach(function(im,gi){if(gi===0||im.pageBreak)grps.push([]);grps[grps.length-1].push(im);});
-        var out=[];
-        grps.forEach(function(g){
-          var gn=g.length;
-          var cols=gn<=1?1:(gn<=4?2:3),rows=gn<=2?1:(gn<=6?2:Math.ceil(gn/3));
-          var gSt='flex:1;overflow:hidden;display:grid;grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows+',1fr);gap:1vw;padding:2vh 2.5vw;box-sizing:border-box;';
-          var ih=g.map(function(im){
-            return'<div style="overflow:hidden;display:flex;flex-direction:column;align-items:center;min-height:0">'
-              +'<img src="'+im.src+'" style="flex:1;width:100%;min-height:0;object-fit:contain;border-radius:4px">'
-              +(im.caption?'<div class="img-cap">'+escA(im.caption)+'</div>':'')+'</div>';
-          }).join('');
-          var cap=(gn===1&&g[0].caption)?escA(g[0].caption):'';
-          out.push('<section class="slide img-slide" style="--ca:'+caColor+'">'
-            +'<div class="ch" style="border-bottom:5px solid '+caColor+'"><div class="cht">'
-            +'<span class="cno">'+escA(c.chartNo||'')+'</span>'
-            +'<span class="cnm">'+escA(c.name?maskName(c.name):'')+'</span>'
-            +(cap?'<span style="flex:1;text-align:center;font-size:clamp(13px,1.5vw,20px);font-weight:700;color:rgba(255,255,255,.9)">'+cap+'</span>':'')
-            +'<span class="cat">'+escA(label)+(gn>1?'（'+gn+' 張）':'')+'</span></div></div>'
-            +'<div style="'+gSt+'">'+ih+'</div>'
-            +'</section>');
-        });
-        return out;/* V5.27.3: 只回傳,由呼叫端決定何時 push */
-      };
-      /* 先累積三種圖片(回傳實際載得到的張數),再據此組按鈕 */
-      var _nPatho=_pushImgWin('ci-'+caseIndex,'patho','病理影像','病理染色',_imgMeta,c.pathologyImages);
-      var _nSurg =_pushImgWin('ci-'+caseIndex,'surg','手術照片','手術照片',_imgMeta,c.surgicalImages);
-      var _nRel  =_pushImgWin('ci-'+caseIndex,'related','影像','影像',_imgMeta,c.images);
-      var _nGen  =_pushImgWin('ci-'+caseIndex,'genomics','NGS 報告影像','NGS',_imgMeta,c.genomicsImages);/* V5.30.0 */
-      /* V5.26.2 修:此段原本寫在 slides.push() **之後** —— 但按鈕是在 push 之前組裝的,
-         導致組按鈕時 _nTl 還是 undefined(var 提升),時序圖按鈕根本不會出現。
-         必須跟四種影像的 _pushImgWin 一樣,在組按鈕**之前**算好。
-         (V5.15.0 曾為同樣理由寫過「先累積再組按鈕」的註解,這次改時序圖時漏掉了) */
-      var _nTl=0;
-      if(c.showTimeline&&(c.timeline||[]).length){
-        _tlWinData['ci-'+caseIndex]={chartNo:_imgMeta.chartNo,name:_imgMeta.name,
-          caName:_imgMeta.caName,caColor:caColor,
-          events:c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
-            .map(function(e){return{date:e.date,type:e.type,label:e.label,
-              pivot:!!(e._ai&&e._ai.pivot),resp:(e._ai&&e._ai.response)||'',
-              basis:(e._ai&&e._ai.basis)||''};})};
-        _nTl=c.timeline.length;
-      }
-      /* V5.15.1: 乳攝也改同一模式(原本是獨立投影片:左報告右圖)。
-         報告文字帶進檢視器當第一頁(個管師選擇 B:個案頁不動);限乳癌且有報告或圖才建立 */
-      var _mammoRep=(cid==='breast'&&c.mammo)?((c.mammo.date?c.mammo.date+'\n':'')+(c.mammo.report||'')).trim():'';
-      var _nMammo=(cid==='breast'&&c.mammo)
-        ?_pushImgWin('ci-'+caseIndex,'mammo','乳房攝影','乳房攝影',_imgMeta,c.mammo.images,_mammoRep)
-        :0;
-      /* 按鈕要顯示的數量:有報告但沒圖時也要能點開,所以用「圖數 or (有報告則 1)」 */
-      var _mammoBtnN=_nMammo||(_mammoRep?1:0);
-      /* V5.27.0: 夾在投影片的類型不出按鈕(避免同一批圖既在投影片又在分頁) */
-      var _mkImgBtn=function(type,icon,label,n){
-        if(_emb[type])return '';
-        return n>0?(' <button class="patho-btn" onclick="openImgWindow(\'ci-'+caseIndex+'::'+type+'\')" title="開新分頁查看'+label+'">'+icon+' '+label+'('+n+')</button>'):'';
-      };
-      /* V5.27.0: 四種影像若設為「夾在投影片」,在此產出獨立影像頁
-         V5.27.2 順序(個管師指定,依臨床時序而非程式碼順序):
-           乳房攝影(篩檢/初始影像)→ 相關影像(分期)→ 手術照片(術中所見)→ 病理影像(術後病理)
-         原本是「病理→手術→相關→乳攝」,剛好與臨床邏輯相反(病理最後才有卻排第一) */
-      /* V5.27.3 修:原本在這裡直接 push,導致影像頁排在個案文字頁**之前**
-         (翻頁變成 乳攝→影像→手術→病理→病人資料,完全顛倒)。
-         根因:V5.27.0 為了讓按鈕拿到張數,把產生器放在組按鈕之前 ——
-         但它同時也負責 push,「算張數」與「排版位置」兩件事該分開。
-         改成先收集,等個案文字頁 push 完再接上。 */
-      var _embSlides=[];
-      if(cid==='breast'&&c.mammo)_embSlides=_embSlides.concat(_embedImgSlides('mammo',c.mammo.images,'乳房攝影'));
-      _embSlides=_embSlides.concat(_embedImgSlides('related',c.images,'影像'));
-      _embSlides=_embSlides.concat(_embedImgSlides('surg',c.surgicalImages,'手術照片'));
-      _embSlides=_embSlides.concat(_embedImgSlides('patho',c.pathologyImages,'病理影像'));
-      _embSlides=_embSlides.concat(_embedImgSlides('genomics',c.genomicsImages,'NGS 報告影像'));/* V5.30.0 */
-      /* V5.27.2: 按鈕順序與夾投影片順序一致(乳攝→影像→手術→病理),視覺與臨床時序同步 */
-      var _pathoBtn=_mkImgBtn('mammo','📸','乳房攝影',_mammoBtnN)
-                   +_mkImgBtn('related','🖼','影像',_nRel)
-                   +_mkImgBtn('surg','📷','手術照片',_nSurg)
-                   +_mkImgBtn('patho','🔬','病理影像',_nPatho)
-                   +_mkImgBtn('genomics','🧬','NGS 報告',_nGen)/* V5.30.0 */
-                   +((_nTl>0&&!_emb.timeline)?(' <button class="patho-btn" onclick="openTimelineWindow(\'ci-'+caseIndex+'\')" title="開新分頁查看病程時序圖">📈 病程時序('+_nTl+')</button>'):'');/* V5.25.0 / V5.27.0 互斥 */
+      var _io=_buildImgOut('ci-'+caseIndex,c,cid,_imgMeta,caColor);
+      var _pathoBtn=_io.btns,_embSlides=_io.embSlides;
       slides.push('<section class="slide case" style="--ca:'+caColor+';">'
         +'<div class="ch">'
         +'<div class="cht">'
@@ -8875,8 +8902,16 @@ async function genHTMLSlides(opts){
 
     // ── Team / Events ── V5.0.0: 每筆一張投影片(類個案討論),含 5 個討論欄位
     // V5.0.1: 字級加 clamp 響應式,配合投影機現場觀看
-    function _trackSlide(c,trackLabel){
+    function _trackSlide(c,trackLabel,idx){
       var drs=getDoctorStr(c)||'—';
+      /* ════ V5.53.0 I-1:必要事件的影像進投影片 ════
+         V5.52.0 開放編輯端的影像,但這裡沒接 —— 個管師選了圖,投影片上一張都沒有。
+         必要事件用與個案相同的 _buildImgOut,key 用 'ev-N' 與個案的 'ci-N' 區隔。 */
+      var _evImg=null;
+      if(trackLabel==='必要事件'){
+        var _evMeta={chartNo:c.chartNo||'',name:c.name?maskName(c.name):'',caName:ca.name,caColor:caColor};
+        _evImg=_buildImgOut('ev-'+(idx||0),c,cid,_evMeta,caColor);
+      }
       var dxLine=c.diagnosis?('<div class="cdx">'+escA(c.diagnosis).replace(/\n/g,'<br>')+'</div>'):'';
       var dm=(c.age||c.gender)?caseDemo(c):'';
       var sections=[];
@@ -8943,14 +8978,15 @@ async function genHTMLSlides(opts){
         +' <span class="cn">'+escA(c.name?maskName(c.name):'')+'</span>'
         +(dm?' <span class="cd">'+escA(dm)+'</span>':'')
         +' <span class="cdr">VS '+escA(drs)+'</span>'
-        +'<span class="cat">'+trackLabel+'</span></div>'
+        +'<span class="cat">'+trackLabel+'</span>'+(_evImg?_evImg.btns:'')+'</div>'
         +dxLine
         +'</div>'
         +'<div class="cb"><div style="padding:3vh 5vw;overflow:auto;max-height:100%">'+body+'</div></div>'
-        +'</section>';
+        +'</section>'
+        +(_evImg&&_evImg.embSlides.length?_evImg.embSlides.join(''):'');/* V5.53.0:內嵌頁接在主頁後 */
     }
     team.forEach(function(c){slides.push(_trackSlide(c,'醫療小組'));});
-    events.forEach(function(c){slides.push(_trackSlide(c,'必要事件'));});
+    events.forEach(function(c,ei){slides.push(_trackSlide(c,'必要事件',ei));});/* V5.53.0:傳 idx 給影像 key */
   });
   // Flush deferred pathology slides (when grouping enabled)
   _deferredPath.forEach(function(sl){slides.push(sl);});

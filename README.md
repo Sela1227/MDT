@@ -111,6 +111,38 @@
 
 ## 版本歷程
 
+### V5.53.0
+**必要事件影像產出端 + NGS 影像修復(新增坑 #83)**
+
+審核判定 V5.52.0「只做了編輯端」。
+
+#### 根因只有一個:六份各自實作的影像列舉
+
+| 位置 | 看 events? | 看 NGS? |
+|---|---|---|
+| `_needsFolder` | ❌ | ❌ |
+| 預載迴圈 | ❌ | ❌ |
+| `_trackSlide` | ❌ **完全沒有影像輸出** | — |
+| `_collectAuditRows` | ❌ | ✅ |
+| `rebindMeetingImages` | ❌ | ✅ |
+| `updateFolderStatusBar` | ❌ | ❌ |
+| `backupToNAS` | ❌ | ❌ |
+
+**I-2:個案的 NGS 影像從 V5.30.0 起就沒進投影片** —— 22 個版本沒人發現。
+
+#### 修法
+
+- `_forEachMeetingImg(m,cids,cb)` 成為唯一列舉器(cases + events 五種影像 + special),六處全改走它
+- 87 行影像組裝抽成 `_buildImgOut()`,個案與必要事件共用
+
+#### 實測
+
+```
+投影片 58KB:C_NGS ✅  E病理 ✅  E手術 ✅  E_NGS ✅  E相關 ✅
+列舉器:總數 6、events 4 ✅
+audit-render.js 加「影像進投影片」檢查 ✅
+```
+
 ### V5.52.0
 **開放必要事件影像(新增坑 #82)**
 
