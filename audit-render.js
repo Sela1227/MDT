@@ -56,7 +56,9 @@ setTimeout(async ()=>{
     const v=run("(function(){var s=S.meeting.sections['head_neck'];var d=document.createElement('div');"
       +"d.innerHTML=caseHTML('head_neck',0,s."+ty+"[0],'"+ty+"',"+(ty==='events'?"{noImages:true}":"undefined")+");"
       +"var e=d.querySelector('[data-action=\"caseflag\"]');return e?e.dataset.ty:'(無)';})()");
-    console.log('  '+ty+': "'+v+'" '+(v===ty?'✅':'🔴'));
+    /* V5.59.0 N-12:必要事件本來就沒有討論原因旗標(EV-9),期望值是「(無)」;原本永遠紅燈 → 警告疲勞(坑 #59) */
+    const _exp={cases:'cases',events:'(無)'}[ty];
+    console.log('  '+ty+': "'+v+'" '+(v===_exp?'✅':'🔴'));
   });
 
   // ── 打字往返測試(A-1 回歸)──
@@ -205,6 +207,14 @@ setTimeout(async ()=>{
       +"pivots:m.pivots.length,summaryLess:m.nodes.length<f.nodes.length,noSpine:noDz.spine===null,"
       +"svg:tlRender(m,'compact','#000').length>100});})()"));
     const chk=[['x 單調',r.mono],['spine x0<x1',r.spineOk],['未定日期 1',r.undated===1],['bar 1',r.bars===1],['gap ≥1',r.gaps>=1],['pivot 1',r.pivots===1],['summary<full',r.summaryLess],['無疾病不畫 spine',r.noSpine],['svg 產出',r.svg]];
+    /* V5.58.0 N-1/N-3/N-6:典型案例(診斷→手術→化療×2→放療→免疫→CT→復發)Summary 要有 4 個治療、hidden=1;診斷→手術→5年復發要有 gap;bar 不重畫節點 */
+    const r2=JSON.parse(run("(function(){"
+      +"var ev=[{type:'dx',date:'2024-01-05'},{type:'surgery',date:'2024-02-01'},{type:'chemo',date:'2024-03-01'},{type:'chemo',date:'2024-03-22'},{type:'rt',date:'2024-05-01'},{type:'systemic',date:'2024-07-01'},{type:'imaging',date:'2024-09-01'},{type:'recurrence',date:'2025-06-01'}];"
+      +"var m=tlLayout(ev,{view:'summary',width:1200});"
+      +"var m3=tlLayout([{type:'dx',date:'2019-01-01'},{type:'surgery',date:'2019-02-01'},{type:'recurrence',date:'2024-06-01'}],{view:'summary',width:1200});"
+      +"var m6=tlLayout([{type:'dx',date:'2024-01-01'},{type:'chemo',date:'2024-02-01',endDate:'2024-06-01'}],{view:'summary'});"
+      +"return JSON.stringify({tx:m.nodes.filter(function(n){return n.layer==='treatment';}).length,hidden:m.hidden,gaps3:m3.gaps.length,barNodes:m6.nodes.filter(function(n){return n.layer==='treatment';}).length,bars6:m6.bars.length});})()"));
+    chk.push(['N-1 療程顯示',r2.tx>=4&&r2.hidden===1],['N-3 空窗啟動',r2.gaps3===1],['N-6 bar 不重畫',r2.barNodes===0&&r2.bars6===1]);
     let fail=chk.filter(c=>!c[1]).map(c=>c[0]);
     console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
     if(fail.length)bad++;

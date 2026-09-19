@@ -162,6 +162,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.59.0 | **Hybrid 驗證批次:第二、三優先 + TL-1 正式**。`tlRender`:同層相鄰 <70px 標籤上下交錯、首尾節點 anchor start/end、cluster 行數依層間距上限超過顯示「+N 筆」、pivot 節點 `<title>` 顯示 AI basis、療效 ↑→↓ 標記;`tlLayout`:非空窗部分極短時空窗擴大填滿(審核 4.2);N-11 `_nTl` 只數有效日期、`TL_BANDS` 不再注入、`TL_TYPES` 不重複注入;N-13 註解移出 onclick;N-14 文字頁顯示 endDate 區間;AI 療效規則納入 systemic/intervention;N-12 audit 假紅燈修;**TL-1 正式**:內嵌時序頁 `<section class="slide tl-slide">` + `DOMContentLoaded` 填 SVG + 開關放回 + 按鈕互斥。總測 18 項 |
+| V5.58.0 | **Hybrid 驗證批次:第一優先八項**(坑#85):(**N-1 P0**)Summary 隱藏所有無 endDate 的治療而 UI 填不到 → 過濾改一律顯示,列產生器加 endDate 欄(療程類)與 ★摘要/⚑轉折;(N-2)type select 加空白選項並高亮;(N-3)空窗改依所有已顯示事件的佔用區間;(N-4)AI 對應先 id 後「日期且唯一」、寫 `_ai.sig`、`updStruct` 改 date/type 清 `_ai`、提示詞帶 id;(N-5)key 與 pivot 分離;(N-6)bar 不重畫節點;(N-8)`__caseTL`/`__caseImgs` 跳脫 `<`;(N-9)新列/帶入補 id;handler checkbox 讀 `checked` |
 | V5.57.0 | **Hybrid timeline 批次 2b:投影片端**。`_tlWinData` 傳完整事件(id/endDate/key/_ai)+discussion+deathDate;`_tlInjectSrc()` 用 `.toString()` 在反引號外把 TL_TYPES/_normTlDate/tlLayout/tlRender 注入 extraJs;`openTimelineWindow` 13KB 舊 Event-band → 2.5KB 新版(同源視窗直接交函式,Summary/Full 切換鈕)。**驗收 #9:主程式與投影片端 tlLayout 輸出 deep-equal ✅**。舊 Event-band 完全淘汰 |
 | V5.56.0 | **Hybrid timeline 批次 2a**:資料模型 v2(`id`/`endDate`/`datePrec`/`key`/`src`/`_ai.sig`,`createCase` 保留、`loadLocal` 記憶體補 id);`TL_TYPES` 加 `layer` 與 5 個新類型(ned/progression/death/systemic/intervention);`_normTlDate`(民國/`YYYY/M/D`/`YYYY-MM`);**`tlLayout(events,opts)` 純函式**(正規化→Summary 過濾→semi-proportional 空窗壓縮→同日 cluster→treatment bar→spine)+ **`tlRender(model,theme,ca)`**(compact);5 處 `renderTimelineSVG` 呼叫改走它,舊蛇形圖定義**淘汰**。`audit-render.js` 加 9 條純函式斷言。**2b 待做**:投影片端換 slide theme + 內嵌時序頁 + 注入 extraJs |
 | V5.55.0 | **治療事件軸專項審核批次 1(止血)**(坑#84):(**TL-4 P1**)RT 分類 regex 的 `\b` 是 0x08 控制字元,`RT`/`60 Gy` 全判成其他;(**TL-2 P0**)帶入的 `a.date.localeCompare` 在 null 時拋錯,每按一次重複一批;統一 `_tlCmp`;(**TL-1 P0**)勾「夾在投影片」時序從投影片消失,移除開關一律出按鈕;(TL-3)新增事件預設 dx 改空;(TL-9)必要事件時序文字排序+類型。**打包檢查加控制字元掃描**。批次 2-3(Hybrid timeline 轉型)待決策 |
@@ -532,6 +534,15 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#85 寫了過濾規則,但沒檢查「使用者有沒有辦法讓資料滿足這條規則」(V5.58.0 N-1)** 🔴
+- `tlLayout` 的 Summary 過濾寫成 `layer==='treatment'&&e.endDate` —— 而**編輯畫面根本沒有 endDate 欄位**,「從治療記錄帶入」也不產生
+- 結果所有既有與新輸入的化療/放療/全身治療,在**預設投影片上全部消失**,頁尾還把它們稱為「例行事件」;Hybrid 三大層之一的 Treatment 永遠是空的,**比舊版更糟**(舊 Event-band 至少會畫治療)
+- 而且與決策 3「endDate 選填,**沒填畫單點**」直接衝突 —— 我在 tlLayout 註解寫了決策 3,程式卻寫成「沒填就不畫」
+- 兩份審核都列為 P0,實測典型案例 Summary 只剩「診斷、手術、復發」,隱藏 5 筆其中 4 筆是治療
+- 修法三件:①過濾改 `layer==='treatment'` 一律顯示 ②列產生器加 endDate 欄(療程類才顯示)與 ★摘要/⚑轉折勾選 ③N-5 把 `key`(列入摘要)與 `pivot`(轉折)分開
+- **教訓**:每一條「有 X 才顯示」的規則,要問「使用者在 UI 上填得到 X 嗎」。填不到的條件等於「永遠不顯示」
+- 同版:**N-2** TL-3 修一半 —— 資料改 `type:''` 但 select 沒空白選項,瀏覽器預選第一項「診斷確立」,畫面與資料不一致且**改不過來**(選同值不觸發 change);**N-3** 空窗判斷只看相鄰疾病節點,「診斷→一串治療→多年後復發」永遠不壓縮;**N-4** `_ai.sig` 全檔沒人寫入是死碼,AI 對應仍用日期;**N-6** bar 與節點畫兩次;**N-8** `__caseTL` 的 `JSON.stringify` 不跳脫 `<`(B-8 同形狀第二份);**N-9** 新列沒 id
 
 **#84 JS 字串裡的 `\b` 變成了 0x08 backspace 控制字元,語法合法但語意全錯(V5.55.0 TL-4)** 🔴
 - `importTimelineFromTreatments` 的 RT 分類 regex `/\brt\b|…|\bgy\b|gray/` —— 檔案裡的 `\b` **是 0x08 控制字元**,不是 regex 字界
@@ -1441,6 +1452,10 @@ print("主程式控制字元:", "✓ 0" if not _bad else f"⚠️ {len(_bad)} �
 ---
 
 ## 十一、一句話總結
+
+V5.59.0 Hybrid 驗證批次:第二、三優先 + TL-1 正式修法。主任說「先作一作,再一次測」—— 把兩份審核的第二優先(視覺)、第三優先(語意)與 TL-1 正式修法一次做完,最後總測 18 項。**視覺**(`tlRender`):同層相鄰節點 <70px 時標籤上下交錯(`lastUp[layer]` 翻轉,12 週期化療實測 y 種類 2);首尾節點 x<60 或 >W-60 時 anchor 改 start/end 避免裁切;cluster 行數依層間距算上限,超過顯示「· +N 筆」;pivot 節點與圓點加 `<title>` 顯示 `_ai.basis`(原本有存沒地方看);AI 療效以 ↑→↓ 標在節點左上(評估日版本 TL-5d 留待);bar 標籤也做首尾 anchor。**`tlLayout`**(審核 4.2):只有兩個節點中間一段長空窗時 `realSpan≈0`,整張圖擠在左側 —— 非空窗部分極短(<60 天)時把多餘寬度分給空窗,「2020 診斷→2025 復發」從 x=[36,90] 變 [36,984]。**收尾**:N-11 `_nTl` 只數有效日期(與圖上節點一致)、`TL_BANDS` 隨舊引擎不再注入、`window.TL_TYPES` 不重複注入;N-13 註解從 `onclick` 屬性移回程式碼行(註解含雙引號就會提早結束屬性);N-14 必要事件文字頁顯示 `2024-03-01～2024-07-01`;AI 療效判讀規則從 chemo/surgery/rt 擴為含 systemic/intervention(提示詞與匯入端);N-12 `audit-render.js` 的 caseflag 期望值改「events 應為(無)」,消掉永遠紅燈。**TL-1 正式修法**:`_buildImgOut` 在 `_emb.timeline&&_nTl>0` 時產出 `<section class="slide tl-slide" data-tlkey>`,投影片端 `DOMContentLoaded` 找 `.tl-host` 用注入的 `tlRender('slide')` 填 SVG;卡片的 `embedToggle(...'timeline'...)` 放回;按鈕與內嵌頁互斥(V5.27.0 原則)。總測:視覺 5 項(交錯、首尾、basis、療效、+N)、收尾 5 項、內嵌頁 6 項(有頁/互斥/載入填圖/含 bar/含議題/不勾出按鈕/開關存在)、deep-equal 回歸 —— 過程中兩項是測試預期錯(6 化療間距 100px 本來就不需交錯;空窗擴張後末節點不在右緣本來就是 middle),換真實密度與邊緣資料後全過。屬 a+1。
+
+V5.58.0 Hybrid 驗證批次(坑 #85)。兩份審核(內部 + 外部)結論一致:「骨架做對了,但 Summary 把所有療程藏起來,不建議上線」。**N-1 是我自己寫錯的 P0**:`tlLayout` 過濾寫 `layer==='treatment'&&e.endDate`,而編輯畫面根本沒有 endDate 欄位、帶入也不產生 —— 所有化療/放療/全身治療在預設投影片上全部消失,頁尾還稱它們「例行事件」;而我在同一支函式的註解裡寫了決策 3「沒填畫單點」,程式卻寫成「沒填就不畫」。**教訓:每一條「有 X 才顯示」的規則,要問「使用者在 UI 上填得到 X 嗎」**。八項一次修:①過濾改一律顯示,實測典型案例 Summary 治療節點 4、hidden 1 ②`buildTimelineRows`(唯一的列產生器)加空白選項(N-2,空類型高亮)、endDate 欄(療程類才顯示)、★摘要/⚑轉折勾選;改 type 時重繪列讓 endDate 欄跟著出現 ③N-3 空窗改依「所有已顯示事件的佔用區間」合併後找間隙,「診斷→手術→5 年後復發」現在會壓縮 ④N-4 `doImportTlAi` 先 id 後「日期且唯一」、寫入 `_ai.sig`(原本全檔沒人寫是死碼)、`updStruct` 改 date/type 時 `delete _ai`、`tlAiPrompt` 事件清單帶 `"id"` 並要求原樣照抄 ⑤N-5 `pivot` 只看 `e.pivot||_ai.pivot`,`key` 只影響 Summary 過濾 ⑥N-6 `isBar` 的事件不進 `nodes` ⑦N-8 `__caseTL`/`__caseImgs` 的 `JSON.stringify` 後 `replace(/</g,'\\u003c')`,實測說明含 script 結尾標籤投影片仍正常 ⑧N-9 `addStruct` 與帶入的新列 `_tlNewId()`;handler checkbox 改讀 `el.checked`(原本 `el.value` 永遠是 "on")。`audit-render.js` 加 N-1/N-3/N-6 三條。**未做**(審核第二/三優先):gap 前後標籤避碰、首尾裁切、AI response 在評估日畫、內嵌時序頁、DOCX 表格、`_nTl` 計數。屬 c+1。
 
 V5.57.0 Hybrid timeline 批次 2b:投影片端。三步:①`_tlWinData[_ck]` 從「簡化成 {date,type,label,pivot,resp,basis}」改成 `JSON.parse(JSON.stringify(c.timeline))` 完整事件,加 `discussion` 與 `deathDate` —— 舊格式丟掉 id/endDate/key/sig,新引擎沒這些就退化成舊圖;②`_tlInjectSrc()` 把 `TL_TYPES`(JSON)與三個函式(`.toString()`)串成字串,**接在反引號外**(坑 #48:模板字串會吃掉 `\d` 這種跳脫),注入點在 `window.__caseTL=…;` 之後;tlcore 寫的時候已避開反引號、`${`、script 結尾標籤;③`openTimelineWindow` 13211 字元的舊 Event-band 換成 2580 字元:`window.open` 後**直接把函式與資料交給同源子視窗**(`w.tlLayout=window.tlLayout`),不經字串序列化,子視窗的 `__tlRedraw`/`__tlToggle` 提供 Summary/Full 切換(決策 1:Summary 預設)。**驗收 #9(審核第八節)**:jsdom 載入產出的投影片,對同一份 timeline 分別在主程式與投影片端跑 `tlLayout`,`JSON.stringify` 結果**完全相同** —— 同一份原始碼保證這點,這是「修一次版面要修兩套」(坑 #61 事件軸版)的根治。舊 Event-band 連 V5.25.0 的設計原則註解一起清掉(設計原則已移至 tlcore)。**2c 待做**:TL-1 正式修法(內嵌時序頁 + 放回開關)、TL-5(a)(b) AI 判讀以 id 對應與三鍵對話框、TL-13 JSON 匯出補 showTimeline/embed/events、TL-15 QA 預檢、DOCX 時序表格(TL-10)。屬 a+1。
 
