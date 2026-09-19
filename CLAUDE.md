@@ -162,6 +162,9 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.57.0 | **Hybrid timeline 批次 2b:投影片端**。`_tlWinData` 傳完整事件(id/endDate/key/_ai)+discussion+deathDate;`_tlInjectSrc()` 用 `.toString()` 在反引號外把 TL_TYPES/_normTlDate/tlLayout/tlRender 注入 extraJs;`openTimelineWindow` 13KB 舊 Event-band → 2.5KB 新版(同源視窗直接交函式,Summary/Full 切換鈕)。**驗收 #9:主程式與投影片端 tlLayout 輸出 deep-equal ✅**。舊 Event-band 完全淘汰 |
+| V5.56.0 | **Hybrid timeline 批次 2a**:資料模型 v2(`id`/`endDate`/`datePrec`/`key`/`src`/`_ai.sig`,`createCase` 保留、`loadLocal` 記憶體補 id);`TL_TYPES` 加 `layer` 與 5 個新類型(ned/progression/death/systemic/intervention);`_normTlDate`(民國/`YYYY/M/D`/`YYYY-MM`);**`tlLayout(events,opts)` 純函式**(正規化→Summary 過濾→semi-proportional 空窗壓縮→同日 cluster→treatment bar→spine)+ **`tlRender(model,theme,ca)`**(compact);5 處 `renderTimelineSVG` 呼叫改走它,舊蛇形圖定義**淘汰**。`audit-render.js` 加 9 條純函式斷言。**2b 待做**:投影片端換 slide theme + 內嵌時序頁 + 注入 extraJs |
+| V5.55.0 | **治療事件軸專項審核批次 1(止血)**(坑#84):(**TL-4 P1**)RT 分類 regex 的 `\b` 是 0x08 控制字元,`RT`/`60 Gy` 全判成其他;(**TL-2 P0**)帶入的 `a.date.localeCompare` 在 null 時拋錯,每按一次重複一批;統一 `_tlCmp`;(**TL-1 P0**)勾「夾在投影片」時序從投影片消失,移除開關一律出按鈕;(TL-3)新增事件預設 dx 改空;(TL-9)必要事件時序文字排序+類型。**打包檢查加控制字元掃描**。批次 2-3(Hybrid timeline 轉型)待決策 |
 | V5.54.0 | 個管師需求:基因檢測區塊加「產出時顯示」勾選。`showGenomics` 三態:未設(舊資料)→有資料才顯示、勾→顯示(沒資料寫「無」)、沒勾→不顯示。`_gnShow(c)` 統一判斷,投影片個案/必要事件/DOCX 三處套用;`createCase` 白名單補欄位(否則 createItem 會丟掉)。實作踩了一次:handler 的正則 `[^}]*` 停在內層 `}`,把新 handler 插進 `if(updtlshow){}` 裡永遠不執行,click 實測抓到 |
 | V5.53.0 | **必要事件影像產出端 + NGS 影像修復**(坑#83):(**I-1**)`_trackSlide` 沒有影像輸出,87 行影像組裝抽成 `_buildImgOut()` 讓個案與必要事件共用;(**I-2**)**個案 NGS 影像從 V5.30.0 起沒進投影片**(預載漏 `genomicsImages`);(**I-3**)檢查影像/重新綁定加 events;(**I-4**)`_needsFolder`/狀態列/NAS 備份改走 `_forEachMeetingImg()` 列舉器。六個獨立列舉迴圈收斂成一個。`audit-render.js` 加「影像進投影片」檢查 |
 | V5.52.0 | **開放必要事件影像**(坑#82):`buildGenericImgArea` 10 個 `data-action` 補 `data-ty`(三種字串上下文,改了四次才對齊);`_imgOwner` 加 `ty`;6 個輔助函式(`imgDel`/`imgClear`/`imgSetCaption`/`_moveImage`/`imgToggleBrk`/`imgApplyLayout`)與 `imgMove`/`imgReorder`/`delImg` 加 `ty`;6 個 handler 的 `.cases[idx]` 改讀 `dataset.ty`;5 個 `build*ImgArea` 傳 `ty`;10 處 `noImages:true` 移除。實測 8 種影像操作在必要事件卡片上都只動 events、cases 不變 |
@@ -529,6 +532,18 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#84 JS 字串裡的 `\b` 變成了 0x08 backspace 控制字元,語法合法但語意全錯(V5.55.0 TL-4)** 🔴
+- `importTimelineFromTreatments` 的 RT 分類 regex `/\brt\b|…|\bgy\b|gray/` —— 檔案裡的 `\b` **是 0x08 控制字元**,不是 regex 字界
+- 後果:`RT` → 其他、`Adjuvant RT 60 Gy` → 其他;`SBRT` 靠另一個關鍵字才命中。**「從治療記錄帶入」對放療的判定實際上是壞的**
+- 推測來源:某次 `str_replace` 把 `\\b` 寫成 `\b` 送進 JS 字串,Python 的 `'\b'` 就是 backspace
+- **`node --check` 過、jshint 過** —— 語法合法,只是 regex 裡多了一個永遠不會匹配的字元
+- 修法:改用 `(^|[^a-z])(cc)?rt([^a-z]|$)` 明確寫字界,並補中文/常見寫法(放射、Proton、質子、brachy、`\d\s*c?gy`)
+- **已加打包檢查**:`grep -P '[\x00-\x08\x0B\x0C\x0E-\x1F]' index.html` 排除函式庫行後必須為 0
+- 同版 **TL-2**:`a.date.localeCompare(b.date)` 在 date 為 null 時拋 TypeError;帶入先 push 再 sort,拋錯後 markDirty/關窗/重繪全沒執行,**每按一次重複一批**;手動新增是 `''` 所以手測永遠測不到。統一 `_tlCmp`(沒日期排最後、不拋錯)取代 3 種寫法共 17 處
+- **TL-1**:全檔沒有時序頁產生器,勾了「夾在投影片」時序就從投影片**完全消失**;移除開關、一律出按鈕
+- **TL-3**:新增事件預設 `type:'dx'`,忘了改的每一列都變假診斷;改空
+- **TL-9**:必要事件投影片的時序文字未排序、無類型
 
 **#83 「列舉所有影像」有六份各自實作,每一份都只看 cases、全部漏 NGS(V5.53.0)** 🔴
 - `_needsFolder`、預載迴圈、`_collectAuditRows`、`rebindMeetingImages`、`updateFolderStatusBar`、`backupToNAS` —— **六個地方各寫一遍** `for(const c of sec.cases)`
@@ -1271,6 +1286,14 @@ print("caseHTML 殘留 'cases':", "✓ 0" if _b.count("'cases'")==0 else f"⚠�
 # node --check 抓不到:它用 regex 抽 script,要 </script> 帶 > 才算結尾;HTML parser 不管後面接什麼。
 _bad=[m.start() for m in re.finditer(r'</script', h) if h[m.start():m.start()+9]!='</script>']
 print("script 內 </script 字面值:", "✓ 0" if not _bad else f"⚠️ {len(_bad)} 處 L{[h[:b].count(chr(10))+1 for b in _bad]}")
+
+# ════ V5.55.0 加:主程式不得含控制字元(坑 #84)════
+# JS 字串裡的 \b 被寫成 0x08,語法合法但 regex 永遠不匹配。node --check 與 jshint 都抓不到。
+# 排除 L1371/L1380(壓縮函式庫,裡面的是合法字串內容)
+import subprocess
+_r=subprocess.run(['grep','-n','-P',r'[\x00-\x08\x0B\x0C\x0E-\x1F]','index.html'],capture_output=True,text=True)
+_bad=[l for l in _r.stdout.splitlines() if not l.startswith(('1371:','1380:'))]
+print("主程式控制字元:", "✓ 0" if not _bad else f"⚠️ {len(_bad)} 行 {[l.split(':')[0] for l in _bad]}")
 ```
 
 版本號命名 V**x.y.z**(嚴格進位,**第二/三碼最大就是 9**):
@@ -1389,6 +1412,24 @@ print("script 內 </script 字面值:", "✓ 0" if not _bad else f"⚠️ {len(_
 
 **其餘待辦(批次 C)**:P0-5 NAS 備份檔名未含使用者識別(三台共用 10 份輪替 → 實際只留 3 天)、P1-3 `getNetworkTime` 封網時每次儲存阻塞 10 秒、P1-4 `readForm` 前三欄無 null guard 且允許空日期(空日期會共用同一組 section key 互相覆蓋)、P1-5 NAS 檔名用本地時間(全系統唯一漏網)、P1-6 渲染錯誤靜默吞掉導致個案卡片空白、P2-1 inline onclick 217 處、P2-2 `escA` 不跳脫單引號且 7 處欄位未跳脫(臨床文字常含 `<`)、P2-3 docx 走 CDN 無 SRI(封網即失效)、P2-4 使用者切換非權限控管(需寫入 USER_GUIDE)。
 
+## 十之五、病程時序 Hybrid 轉型 —— 五項決策(2026-09-19,主任定案)
+
+依「MDT V5.53.0 內部審核|治療事件軸專項(整合版)」第七節,五題全部採審核建議:
+
+| # | 問題 | 決定 | 實作含意 |
+|---|---|---|---|
+| 1 | 投影片預設顯示 | **Summary view** | `tlLayout(…,{view:'summary'})` 為投影片預設;只留疾病類 type、有 endDate 的治療、手術/介入、`_ai.pivot`、個管師勾 `key` 五者之一。例行 CT、癌指數、週期細節、追蹤不出現。Full view 由按鈕切換 |
+| 2 | 轉折點由誰標 | **兩者皆可** | 個管師勾選 `key`/手動標 pivot,與 AI 判讀 `_ai.pivot`(一律標示「AI」)並存。AI 不改寫原始事件 |
+| 3 | endDate 是否必填 | **選填** | 沒填就畫單點,不推估結束日。「帶入」時同 regimen 連續多筆(C1~C6)自動提議合併成 bar,由個管師確認(O-4) |
+| 4 | Today's question 來源 | **直接取「討論方向」** | `opts.discussion=c.discussion`,不新增欄位 |
+| 5 | chemo 類型 | **保留,新增 systemic 並存** | `TL_TYPES` 加 `systemic`(免疫/標靶/荷爾蒙,regimen 寫 label)、`ned`、`progression`、`death`、`intervention`;chemo 與 systemic 同層(Treatment)。舊資料不遷移 |
+
+**批次 2(Hybrid 基礎)可以開始**:資料模型 v2(`id`/`endDate`/`datePrec`/`key`/`src`)+ `loadLocal` 時補 `id`(只在記憶體)、`tlLayout`/`tlRender` 純函式、淘汰 `renderTimelineSVG` 與舊 Event-band、TL-5(c)/TL-12/TL-13/TL-15/TL-16。
+**批次 3(臨床語意)**:Disease journey 層、treatment bar、同日 cluster、轉折點視覺、semi-proportional 時間尺度、Summary/Full 雙模式、療效 `assessedDate`(TL-5d)、DOCX 圖片。
+**驗收**:審核第八節 15 條 regression tests 併入 `audit-render.js`;編輯預覽與投影片對同一份資料的 `tlLayout` 輸出必須 deep-equal。
+
+---
+
 ## 十之四、個管師已決定延後的項目(2026-09-16)
 
 | 項目 | 決定 | 現況 | 要處理時 |
@@ -1400,6 +1441,12 @@ print("script 內 </script 字面值:", "✓ 0" if not _bad else f"⚠️ {len(_
 ---
 
 ## 十一、一句話總結
+
+V5.57.0 Hybrid timeline 批次 2b:投影片端。三步:①`_tlWinData[_ck]` 從「簡化成 {date,type,label,pivot,resp,basis}」改成 `JSON.parse(JSON.stringify(c.timeline))` 完整事件,加 `discussion` 與 `deathDate` —— 舊格式丟掉 id/endDate/key/sig,新引擎沒這些就退化成舊圖;②`_tlInjectSrc()` 把 `TL_TYPES`(JSON)與三個函式(`.toString()`)串成字串,**接在反引號外**(坑 #48:模板字串會吃掉 `\d` 這種跳脫),注入點在 `window.__caseTL=…;` 之後;tlcore 寫的時候已避開反引號、`${`、script 結尾標籤;③`openTimelineWindow` 13211 字元的舊 Event-band 換成 2580 字元:`window.open` 後**直接把函式與資料交給同源子視窗**(`w.tlLayout=window.tlLayout`),不經字串序列化,子視窗的 `__tlRedraw`/`__tlToggle` 提供 Summary/Full 切換(決策 1:Summary 預設)。**驗收 #9(審核第八節)**:jsdom 載入產出的投影片,對同一份 timeline 分別在主程式與投影片端跑 `tlLayout`,`JSON.stringify` 結果**完全相同** —— 同一份原始碼保證這點,這是「修一次版面要修兩套」(坑 #61 事件軸版)的根治。舊 Event-band 連 V5.25.0 的設計原則註解一起清掉(設計原則已移至 tlcore)。**2c 待做**:TL-1 正式修法(內嵌時序頁 + 放回開關)、TL-5(a)(b) AI 判讀以 id 對應與三鍵對話框、TL-13 JSON 匯出補 showTimeline/embed/events、TL-15 QA 預檢、DOCX 時序表格(TL-10)。屬 a+1。
+
+V5.56.0 Hybrid timeline 批次 2a。主任五題定案後選 A「現在開始」。這版建立架構基礎,**投影片端還沒換**(2b)。**資料模型 v2**:每筆事件 `{id,type,date,endDate,datePrec,label,key,src,_ai}`;`createCase` 白名單保留全部欄位(否則 createItem 會丟掉,V5.54.0 的教訓);`loadLocal` 時 `_tlEnsureIds` 只在記憶體補 id,存檔才寫回(與 `cleanTimelineGhosts` 同原則,不讓「只是打開看」改動 version 判斷)。**`TL_TYPES` 加 `layer`**(disease/procedure/treatment/evidence/minor)與五個新類型 —— 決策 5 保留 chemo 與 systemic 同層;`TL_SIZE` 同步後發現已無人用(舊圖淘汰後),留著待 2b 清。**`_normTlDate`**(TL-12):民國 3 位數年 +1911、`YYYY/M/D`、`YYYY-MM` 補 -01 並標 `month`。**`tlLayout(events,opts)` 純函式**:①正規化剔除無效日期→`undated`②Summary 過濾(決策 1:疾病類/有 endDate 的治療/手術介入/pivot/key 五者之一)③semi-proportional —— 疾病階段間 >180 天且中間無其他事件的空窗壓縮成 54px 並標 `// 2.8 yr //`④同日 cluster 合一節點⑤treatment bar(決策 3:沒 endDate 畫單點)⑥spine 只在有疾病事件時畫、中性灰、紅色只給復發/進展/轉移節點(審核 §1.2 原則 3)⑦`_ai.sig` 不符不採用(TL-5c)⑧`deathDate` 自動成 death 節點(O-3)⑨`question` 取 `discussion`(決策 4)。**`tlRender(model,theme,ca)`** 只負責畫,compact 190px 高四泳道,pivot 畫雙環+垂直虛線+「AI」標示。5 處 `renderTimelineSVG` 呼叫全改走 `tlRender(tlLayout(...,{view:'summary'}),'compact')`,**舊蛇形圖定義 3614 字元淘汰** —— 編輯預覽與檢視卡片從此同一套(TL-8)。純函式 14 條單元測試 13 過,第 6 條是測試預期錯(summary 本來就過濾切片);jsdom 實跑編輯/檢視 svg、今日議題、bar、id 全過。`audit-render.js` 固化 9 條斷言。**2b**:`extraJs` 注入 `tlLayout.toString()`(注意 `</script>` 要拆),投影片 `openTimelineWindow` 與內嵌頁改用 slide theme,淘汰舊 Event-band;**驗收**:同一份資料編輯端與投影片端 `tlLayout` 輸出 deep-equal。屬 a+1。
+
+V5.55.0 治療事件軸專項審核批次 1(坑 #84)。審核判定「現行程式不建議以目前狀態上線事件軸功能」—— 顯示方向要轉成 Hybrid timeline(Disease journey + 關鍵事件 + Treatment bar + Today's question),但轉型前先止血。這版做批次 1:**TL-4** 是最特別的 —— RT 分類 regex `/\brt\b|…/` 在檔案裡的 `\b` **是 0x08 backspace 控制字元**,`RT`、`Adjuvant RT 60 Gy` 全判成其他,`node --check` 與 jshint 都過(語法合法,只是 regex 多了個永遠不匹配的字元);推測是某次 `str_replace` 把 `\\b` 寫成 `\b`。改用明確字界並補中文/Proton/質子/brachy/`\d\s*c?gy`,13/13 通過;**打包檢查加 `grep -P` 控制字元掃描**(排除壓縮函式庫的 2 行)。**TL-2(P0)**:帶入的 `a.date.localeCompare(b.date)` 在 date 為 null 時拋 TypeError,先 push 再 sort 導致 markDirty/關窗/重繪全沒執行、**每按一次重複一批**;AI JSON 省略 date 或 EV-11 複製都會產生 null,手動新增是 `''` 所以手測永遠測不到;統一 `_tlCmp`(沒日期排最後、不拋錯)取代 3 種寫法共 17 處。**TL-1(P0)**:全檔沒有時序頁產生器,勾了「夾在投影片」時序就從投影片**完全消失**,README V5.27.0 的「病理手術時序全夾(2 頁 + 0 顆)」就是這個缺陷;移除時序的 embedToggle、`_buildImgOut` 一律出按鈕。**TL-3**:`addStruct` 新增事件預設 `type:'dx'`,忘了改的每一列都變成疾病層上的假診斷;改空。**TL-9**:必要事件投影片的時序文字未排序、無類型、空說明只剩日期;排序、帶 `[類型]`、空日期標「（未填日期）」。實測全過。**批次 2-3 需要決策**(審核第七節五個問題):Summary view 是否為預設、轉折點由誰標、endDate 是否必填、Today's question 取討論方向、chemo 是否保留。屬 c+1。
 
 V5.54.0 基因檢測「產出時顯示」勾選。個管師的需求兩句話:「可以勾選要不要顯示基因檢測;如果有勾、沒作,就寫『無』」。照 `showTimeline` 的模式做 —— 卡片基因檢測標題旁加勾選框(`data-action="updgenshow"`,帶 `data-ty`),`showGenomics` 三態:**未設定(舊資料)→ 有資料才顯示**(向後相容,不改變現有投影片)、**勾了 → 顯示,沒資料寫「無」**(那是「已確認未做」的結論,跟留白不同)、**沒勾 → 不顯示**(即使有資料)。`_gnShow(c)` 統一判斷,投影片個案 `mkRow`、必要事件 `_trackSlide` 的 `sections.push`、DOCX 的 `addRow` 三處套用。踩了兩次:①`createCase` 是白名單建構,`showGenomics` 沒加進去就被 `createItem` 丟掉 —— 實測 `_gnShow` 結果 `[false,true,false,true]` 才發現;②handler 用正則在 `updtlshow` 後插入,`[^}]*` 停在內層 `if(c){...}` 的 `}`,新 handler 被插進 `if(updtlshow){}` 區塊裡**永遠不執行**,`cb.click()` 實測抓到(第一次用 `change` 事件測也是錯的,handler 在 `click` 監聽器)。實測五種情境投影片全對,兩種卡片勾選都正確寫入且 dirty。屬 c+1。
 

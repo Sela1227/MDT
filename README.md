@@ -111,6 +111,78 @@
 
 ## 版本歷程
 
+### V5.57.0
+**Hybrid timeline 批次 2b:投影片端**
+
+| 步 | 改動 |
+|---|---|
+| ① | `_tlWinData` 傳完整事件(id/endDate/key/_ai)+ discussion + deathDate |
+| ② | `_tlInjectSrc()` 用 `.toString()` 在反引號外注入四個核心到 extraJs |
+| ③ | `openTimelineWindow` 13KB 舊 Event-band → 2.5KB 新版,同源子視窗直接交函式,Summary/Full 切換 |
+
+**驗收 #9 ✅**:jsdom 載入產出的投影片,主程式與投影片端對同一份資料的 `tlLayout` 輸出 **deep-equal**。同一份原始碼保證「修一次版面不用修兩套」。
+
+### V5.56.0
+**Hybrid timeline 批次 2a:架構基礎**
+
+主任五題定案(Summary 預設、轉折點 AI+手動、endDate 選填、Today's question 取討論方向、chemo 保留)後選「現在開始」。
+
+#### 資料模型 v2
+
+```js
+{id, type, date, endDate, datePrec, label, key, src, _ai:{pivot,sig,…}}
+```
+
+`TL_TYPES` 加 `layer`(disease/procedure/treatment/evidence/minor)與五個新類型。`_normTlDate` 處理民國年、`YYYY/M/D`、`YYYY-MM`。
+
+#### `tlLayout` 純函式 + `tlRender`
+
+```
+正規化 → Summary 過濾 → 空窗壓縮 → 同日 cluster → treatment bar → spine → question
+```
+
+編輯預覽與檢視卡片改走它,**舊蛇形圖淘汰**。
+
+#### 實測
+
+```
+純函式 14 條(民國正規化、bar、gap、cluster、pivot、sig、deathDate…)✅
+jsdom 編輯/檢視 svg、今日議題、bar、id ✅
+audit-render.js 固化 9 條 ✅
+```
+
+#### 2b 待做
+
+投影片端換 slide theme、內嵌時序頁、注入 extraJs、淘汰舊 Event-band。
+
+### V5.55.0
+**治療事件軸專項審核批次 1:止血(新增坑 #84)**
+
+審核判定「現行程式不建議以目前狀態上線事件軸功能」—— 顯示方向要轉成 Hybrid timeline,但轉型前先止血。
+
+#### TL-4 ⭐ RT 分類的 `\b` 是 0x08 控制字元
+
+```
+/\brt\b|…|\bgy\b|gray/    ← 檔案裡的 \b 是 backspace,不是 regex 字界
+```
+
+`RT`、`Adjuvant RT 60 Gy` 全判成「其他」。**`node --check` 與 jshint 都過** —— 語法合法,只是 regex 多了個永遠不匹配的字元。
+
+改用明確字界並補中文/Proton/brachy/`\d\s*c?gy`。**打包檢查加控制字元掃描。**
+
+#### 其餘止血
+
+| # | 問題 | 修法 |
+|---|---|---|
+| **TL-2** P0 | 帶入時 `a.date.localeCompare` 在 null 拋錯,**每按一次重複一批** | 統一 `_tlCmp`,取代 17 處 |
+| **TL-1** P0 | 勾「夾在投影片」時序**完全消失**(沒有時序頁產生器) | 移除開關,一律出按鈕 |
+| TL-3 | 新增事件預設 dx,忘了改就變假診斷 | 改空 |
+| TL-9 | 必要事件時序文字未排序、無類型 | 排序 + `[類型]` |
+
+#### 批次 2-3:Hybrid timeline 轉型(待決策)
+
+審核第七節列了五個需要個管師/主任決定的問題。
+
 ### V5.54.0
 **基因檢測「產出時顯示」勾選**
 

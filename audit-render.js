@@ -192,6 +192,24 @@ setTimeout(async ()=>{
     if(miss.length||!html.length)bad++;
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
 
+  // ── [V5.56.0] tlLayout 純函式(審核第八節 #7/#8/#11/#12/#13/#14)──
+  console.log('\n=== [Hybrid TL] tlLayout 純函式 ===');
+  try{
+    const r=JSON.parse(run("(function(){"
+      +"var ev=[{type:'dx',date:'2023-01-10'},{type:'chemo',date:'2023-04-01',endDate:'2023-08-15',label:'FOLFOX'},{type:'ned',date:'2023-09-01'},"
+      +"{type:'follow',date:'2024-09-01'},{type:'recurrence',date:'2026-06-20',_ai:{pivot:true,sig:'recurrence|2026-06-20'}},{type:'other',date:null}];"
+      +"var m=tlLayout(ev,{view:'summary',width:700,discussion:'q'});var f=tlLayout(ev,{view:'full',width:700});"
+      +"var xs=m.nodes.map(function(n){return n.x;});var mono=xs.every(function(x,i){return i===0||x>=xs[i-1];});"
+      +"var noDz=tlLayout([{type:'imaging',date:'2024-01-01'}],{});"
+      +"return JSON.stringify({mono:mono,spineOk:m.spine&&m.spine.x0<m.spine.x1,undated:m.undated.length,bars:m.bars.length,gaps:m.gaps.length,"
+      +"pivots:m.pivots.length,summaryLess:m.nodes.length<f.nodes.length,noSpine:noDz.spine===null,"
+      +"svg:tlRender(m,'compact','#000').length>100});})()"));
+    const chk=[['x 單調',r.mono],['spine x0<x1',r.spineOk],['未定日期 1',r.undated===1],['bar 1',r.bars===1],['gap ≥1',r.gaps>=1],['pivot 1',r.pivots===1],['summary<full',r.summaryLess],['無疾病不畫 spine',r.noSpine],['svg 產出',r.svg]];
+    let fail=chk.filter(c=>!c[1]).map(c=>c[0]);
+    console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
+    if(fail.length)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
+
   console.log('\n=== 總計錯誤 ===');
   console.log('  ', errs.length, errs.length?'':'✅');
   process.exit(bad?1:0);
