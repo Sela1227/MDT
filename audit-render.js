@@ -12,7 +12,7 @@ const dom=new JSDOM(fs.readFileSync('/home/claude/index.html','utf8'),{
     const ce=w.console.error; w.console.error=(...a)=>{errs.push('console.error: '+a.join(' '));};
   }
 });
-setTimeout(()=>{
+setTimeout(async ()=>{
   const w=dom.window, run=c=>w.eval(c);
   console.log('VERSION =', run('typeof VERSION!=="undefined"?VERSION:"?"'));
   console.log('載入期間錯誤:', errs.length);
@@ -30,7 +30,7 @@ setTimeout(()=>{
   console.log('\n=== 渲染後未插值殘留掃描 ===');
   const targets=[
     ["caseHTML(cases)","caseHTML('head_neck',0,s.cases[0],'cases',undefined)"],
-    ["caseHTML(events)","caseHTML('head_neck',0,s.events[0],'events',{noImages:true})"],
+    ["caseHTML(events)","caseHTML('head_neck',0,s.events[0],'events')"],
     ["caseViewHTML(cases)","caseViewHTML('head_neck',0,s.cases[0],'cases')"],
     ["caseViewHTML(events)","caseViewHTML('head_neck',0,s.events[0],'events')"],
     ["followupHTML","followupHTML('head_neck',0,s.followups[0],'followups')"],
@@ -108,6 +108,89 @@ setTimeout(()=>{
     const o=JSON.parse(r);
     Object.keys(o).forEach(k=>console.log('  '+k+': '+(o[k]?'✅':'🔴')));
   }catch(e){ console.log('  🔴 '+e.message.slice(0,150)); }
+
+  // ── [V5.46.1] R-1 那一類:整張卡片的 data-ty 覆蓋率 ──
+  console.log('\n=== [坑#68/R-1] 必要事件卡片 data-ty 覆蓋率 ===');
+  try{
+    const r=run("(function(){var s=S.meeting.sections['head_neck'];"
+      +"var ev=createItem('head_neck','events',{chartNo:'E9',"
+      +"pathologies:[{date:'2026-01-01',content:'p'}],exams:[{name:'CT',date:'2026-01-02',content:'e'}],"
+      +"treatments:[{name:'Op',date:'2026-01-03',content:'t'}],markers:[{name:'CEA',content:'5'}],"
+      +"genomics:[{name:'EGFR',date:'2026-01-04',content:'g'}],"
+      +"timeline:[{type:'dx',date:'2026-01-05',label:'x'}],phChips:['DM']},{});"
+      +"var d=document.createElement('div');d.innerHTML=caseHTML('head_neck',0,ev,'events');"
+      +"var bad=[];d.querySelectorAll('[data-action][data-cid]').forEach(function(el){"
+      +"  if(el.dataset.action==='togglecase')return;"
+      +"  if(el.dataset.ty!=='events')bad.push(el.dataset.action+'='+(el.dataset.ty||'(無)'));});"
+      +"return JSON.stringify({total:d.querySelectorAll('[data-action][data-cid]').length,bad:bad.slice(0,8)});})()");
+    const o=JSON.parse(r);
+    console.log('  帶 data-cid 的元素:',o.total,'| data-ty≠events:',o.bad.length,o.bad.length?'🔴 '+o.bad.join(', '):'✅');
+    if(o.bad.length)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));}
+
+  // ── [V5.46.1] R-2:存檔 → 立即修改 → 放棄,放棄後應等於磁碟 ──
+  console.log('\n=== [R-2] 存檔→立即修改→放棄 往返 ===');
+  try{
+    const r=run("(function(){var s=S.meeting.sections['head_neck'];"
+      +"S.meeting.date='2026-10-01';S.viewMode=false;"
+      +"s.cases[0].discussion='A1';_editGen++;"
+      +"var json=JSON.stringify(S.meeting);saveLocal(S.meeting);S._snapshot=json;"  /* 模擬 _doSave 成功當下 */
+      +"s.cases[0].discussion='A2';markDirty();"                               /* 1.2 秒內再改 */
+      +"if(S._snapshot){S.meeting=JSON.parse(S._snapshot);}"                    /* 放棄編輯 */
+      +"var mem=S.meeting.sections['head_neck'].cases[0].discussion;"
+      +"var disk=loadLocal(S.meeting.id).sections['head_neck'].cases[0].discussion;"
+      +"return JSON.stringify({mem:mem,disk:disk});})()");
+    const o=JSON.parse(r);
+    const ok=o.mem==='A1'&&o.disk==='A1';
+    console.log('  放棄後記憶體='+o.mem+' 磁碟='+o.disk+'  '+(ok?'✅ 已存的 A1 保住了':'🔴'));
+    if(!ok)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));}
+
+  // ── [V5.47.1] EV-1 那一類:逐一操作必要事件卡片的每個元件,個案討論不得被改到 ──
+  //    比 data-ty 覆蓋率更根本 —— 委派、inline on*、動態插入的元素全部涵蓋
+  console.log('\n=== [EV-1] 逐一操作必要事件卡片,個案討論不得被改到 ===');
+  try{
+    const r=run("(function(){"
+      +"var s=S.meeting.sections['head_neck'];"
+      +"while(s.cases.length)s.cases.pop();while((s.events||[]).length)s.events.pop();"
+      +"s.cases.push(createItem('head_neck','cases',{chartNo:'C0',exams:[{name:'CT',date:'2026-01-01',content:'x'}],timeline:[{type:'dx',date:'2026-01-01',label:'c'}]},{}));"
+      +"s.events=s.events||[];"
+      +"s.events.push(createItem('head_neck','events',{chartNo:'E0',exams:[{name:'MRI',date:'2026-02-01',content:'y'}],timeline:[{type:'dx',date:'2026-02-01',label:'e'}]},{}));"
+      +"var host=document.createElement('div');host.id='div-events-head_neck';document.body.appendChild(host);"
+      +"host.innerHTML=caseHTML('head_neck',0,s.events[0],'events');"
+      +"var snap=JSON.stringify(s.cases[0]);var bad=[];var n=0;"
+      +"host.querySelectorAll('input,select,textarea').forEach(function(el){"
+      +"  if(el.type==='date'||el.type==='checkbox'||el.type==='file')return;"
+      +"  if(el.tagName==='SELECT'){if(el.options.length<2)return;el.selectedIndex=el.selectedIndex===0?1:0;el.dispatchEvent(new Event('change',{bubbles:true}));}"
+      +"  else{el.value='probe';el.dispatchEvent(new Event('input',{bubbles:true}));}"
+      +"  n++;"
+      +"  if(JSON.stringify(s.cases[0])!==snap){bad.push((el.dataset.action||el.tagName)+'/'+(el.dataset.field||el.dataset.key||el.name||''));s.cases[0]=JSON.parse(snap);}"
+      +"});"
+      +"host.remove();"
+      +"return JSON.stringify({操作:n,污染:bad.slice(0,6)});})()");
+    const o=JSON.parse(r);
+    console.log('  操作了',o.操作,'個元件 | 改到個案討論的:',o.污染.length,o.污染.length?'🔴 '+o.污染.join(', '):'✅');
+    if(o.污染.length)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));}
+
+  // ── [V5.53.0] I-1/I-2:必要事件與 NGS 影像必須進投影片 ──
+  console.log('\n=== [I-1/I-2] 影像進投影片 ===');
+  try{
+    const PX='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    run("S.meeting.date='2026-10-01';S.viewMode=false;S.meetingMode='record';var fd=document.getElementById('f-date');if(fd)fd.value='2026-10-01';"
+      +"var s=S.meeting.sections['head_neck'];"
+      +"s.cases=[createItem('head_neck','cases',{chartNo:'C0',name:'甲',diagnosis:'dx',discussion:'d',genomicsImages:[{name:'cg.png',dataUrl:'"+PX+"',caption:'C_NGS'}]},{})];"
+      +"s.events=[createItem('head_neck','events',{chartNo:'E0',name:'乙',diagnosis:'dx',cc:'x',"
+      +"pathologyImages:[{name:'ep.png',dataUrl:'"+PX+"',caption:'E病理'}],surgicalImages:[{name:'es.png',dataUrl:'"+PX+"',caption:'E手術'}],"
+      +"genomicsImages:[{name:'eg.png',dataUrl:'"+PX+"',caption:'E_NGS'}],images:[{name:'er.png',dataUrl:'"+PX+"',caption:'E相關'}]},{})];"
+      +"S.meeting.version=1;saveLocal(S.meeting);_dirty=false;");
+    w.URL.createObjectURL=()=>'blob:x';w.URL.revokeObjectURL=()=>{};
+    const html=String(await run("genHTMLSlides()")||'');
+    const chk=[['C_NGS','C_NGS'],['E病理','E病理'],['E手術','E手術'],['E_NGS','E_NGS'],['E相關','E相關']];
+    let miss=[];chk.forEach(function(c){if(html.indexOf(c[1])<0)miss.push(c[0]);});
+    console.log('  投影片長度',html.length,'| 缺少:',miss.length?'🔴 '+miss.join(','):'✅ 無');
+    if(miss.length||!html.length)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
 
   console.log('\n=== 總計錯誤 ===');
   console.log('  ', errs.length, errs.length?'':'✅');
