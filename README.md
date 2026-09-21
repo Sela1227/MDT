@@ -111,6 +111,213 @@
 
 ## 版本歷程
 
+### V5.62.0
+**B-4 根治:HTML 分享改走 Worker**
+
+主任實機測試:`Failed to fetch`。V5.50.0 的預測正確 —— Cloudflare 管理 API 不開 CORS,**那顆按鈕從 V5.41.0 起就沒成功過**。
+
+改成當時提的方案 B:
+
+```
+PUT https://share.selaginella.io/api/upload?name=<fname>
+X-Upload-Key: <上傳金鑰>
+Content-Type: text/html
+body: HTML 字串
+```
+
+網頁只帶上傳金鑰(外流換掉就好),CF API Token 從網頁完全移除。Worker 端由主任在 Dashboard 部署。
+
+#### ⚠️ 未決:分享網址不需登入
+
+`share.selaginella.io` 上的頁面任何人拿到網址就能開,檔名好猜,內容含病歷號。建議 Cloudflare Access 或上傳前去識別化。
+
+### V5.61.0
+**Hybrid timeline 收尾三項 —— 七個版本完成**
+
+| # | 改動 |
+|---|---|
+| **TL-5d** | AI 療效畫在**評估日**:提示詞要求 `assessedDate`,`tlLayout` 把 resp 掛到評估日節點 |
+| **TL-10** | DOCX 補病程時序;必要事件補過去病史/病理/檢查/治療/癌指數(原本只有死亡資訊) |
+| **TL-15** | QA 預檢五條:未勾產出/無有效日期/類型未選/晚於會議日/晚於死亡日,個案與必要事件都跑 |
+
+實測 11/11。
+
+#### Hybrid timeline 歷程
+
+| 版本 | 內容 |
+|---|---|
+| V5.55.0 | 批次 1 止血(0x08 控制字元、null 日期拋錯、夾投影片消失) |
+| V5.56.0 | 2a 資料模型 v2 + `tlLayout`/`tlRender` |
+| V5.57.0 | 2b 投影片端,deep-equal 驗收 |
+| V5.58.0 | 驗證批次:Summary 藏治療(P0)等八項 |
+| V5.59.0 | 視覺收尾 + TL-1 正式 |
+| V5.60.0 | 收斂批次:bar 語意等 12 項 |
+| V5.61.0 | 收尾三項 |
+
+### V5.60.0
+**Hybrid 收斂批次(新增坑 #86)**
+
+兩份審核判定「架構成立,進入收斂階段」。三批 12 項一次做完。
+
+#### M-3 ⭐ 治療一填結束日期,轉折/療效就消失
+
+V5.58.0 修「bar 畫兩次」時讓 bar 事件不進 `nodes`,但 pivot 環、AI 療效、basis 只畫在節點上。**填得越完整,圖上資訊越少。**
+
+修法:`bars` 帶上臨床語意,轉折環畫起點、療效箭頭畫終點。
+
+> **教訓**:修「畫兩次」時,要問「被拿掉的那一份帶著什麼別的東西」。
+
+#### M-1:坑 #68 第五次
+
+`addStruct` 自己手寫一列 HTML。抽 `_tlRowHTML()` 成唯一產生器。
+
+#### 其餘
+
+| # | 改動 |
+|---|---|
+| P1-2 | bar 空說明用類型名 |
+| P1-3 | `createCase` 補 `pivot` |
+| P1-4 | 提示詞範例補 id;同日無 id 不 silent skip |
+| M-5 | 空窗寬度改連續函數(逐日推移跳動 2px) |
+| P1-5/6 | cluster title、Full view 加高 |
+| P2-1/2/3 | gap label 上移、勾選即時重繪、endDate 驗證 |
+| M-6 | EV-11 複製換 id 剝 `_ai` |
+
+總測 17/17。
+
+### V5.59.0
+**Hybrid 驗證批次:視覺收尾 + TL-1 正式修法**
+
+| 類 | 改動 |
+|---|---|
+| 視覺 | 標籤上下交錯、首尾 anchor、cluster「+N 筆」、basis tooltip、療效 ↑→↓、空窗自適應寬度 |
+| 收尾 | `_nTl` 只數有效日期、死碼清理、註解移出 onclick、文字頁顯示區間、AI 療效納入 systemic |
+| **TL-1 正式** | 內嵌時序頁 `tl-slide`,`DOMContentLoaded` 填 SVG,開關放回,按鈕互斥 |
+
+總測 18 項通過;主程式與投影片 `tlLayout` deep-equal 維持。
+
+### V5.58.0
+**Hybrid 驗證批次:第一優先八項(新增坑 #85)**
+
+兩份審核結論一致:骨架對了,但 **Summary 把所有療程藏起來**,不建議上線。
+
+#### N-1 ⭐ 我自己寫錯的 P0
+
+```js
+if(e.layer==='treatment'&&e.endDate)return true;   // 而 UI 根本沒有 endDate 欄位
+```
+
+所有化療/放療/全身治療在預設投影片上**全部消失**。同一支函式的註解寫了決策 3「沒填畫單點」,程式卻寫成「沒填就不畫」。
+
+> **教訓**:每一條「有 X 才顯示」的規則,要問「使用者在 UI 上填得到 X 嗎」。
+
+#### 八項修正
+
+| # | 改動 |
+|---|---|
+| N-1 | 療程一律顯示;列產生器加 **endDate 欄**(療程類才顯示)、**★摘要 / ⚑轉折** 勾選 |
+| N-2 | type select 加空白選項,空類型高亮 |
+| N-3 | 空窗改依所有已顯示事件的佔用區間 —— 「診斷→手術→5 年後復發」現在會壓縮 |
+| N-4 | AI 對應先 id 後日期;寫 `_ai.sig`;改 date/type 清 `_ai`;提示詞帶 id |
+| N-5 | `key`(列入摘要)與 `pivot`(轉折)分離 |
+| N-6 | bar 不重畫節點 |
+| N-8 | `__caseTL` 跳脫 `<` |
+| N-9 | 新列補 id;checkbox 讀 `checked` |
+
+#### 實測
+
+```
+典型案例 Summary 治療節點 4、hidden 1 ✅  |  5 年空窗壓縮 ✅  |  bar 不重畫 ✅
+空白選項 ✅  endDate 欄 ✅  ★/⚑ ✅  新列 id ✅  改日期清 _ai ✅  script 標籤跳脫 ✅
+```
+
+### V5.57.0
+**Hybrid timeline 批次 2b:投影片端**
+
+| 步 | 改動 |
+|---|---|
+| ① | `_tlWinData` 傳完整事件(id/endDate/key/_ai)+ discussion + deathDate |
+| ② | `_tlInjectSrc()` 用 `.toString()` 在反引號外注入四個核心到 extraJs |
+| ③ | `openTimelineWindow` 13KB 舊 Event-band → 2.5KB 新版,同源子視窗直接交函式,Summary/Full 切換 |
+
+**驗收 #9 ✅**:jsdom 載入產出的投影片,主程式與投影片端對同一份資料的 `tlLayout` 輸出 **deep-equal**。同一份原始碼保證「修一次版面不用修兩套」。
+
+### V5.56.0
+**Hybrid timeline 批次 2a:架構基礎**
+
+主任五題定案(Summary 預設、轉折點 AI+手動、endDate 選填、Today's question 取討論方向、chemo 保留)後選「現在開始」。
+
+#### 資料模型 v2
+
+```js
+{id, type, date, endDate, datePrec, label, key, src, _ai:{pivot,sig,…}}
+```
+
+`TL_TYPES` 加 `layer`(disease/procedure/treatment/evidence/minor)與五個新類型。`_normTlDate` 處理民國年、`YYYY/M/D`、`YYYY-MM`。
+
+#### `tlLayout` 純函式 + `tlRender`
+
+```
+正規化 → Summary 過濾 → 空窗壓縮 → 同日 cluster → treatment bar → spine → question
+```
+
+編輯預覽與檢視卡片改走它,**舊蛇形圖淘汰**。
+
+#### 實測
+
+```
+純函式 14 條(民國正規化、bar、gap、cluster、pivot、sig、deathDate…)✅
+jsdom 編輯/檢視 svg、今日議題、bar、id ✅
+audit-render.js 固化 9 條 ✅
+```
+
+#### 2b 待做
+
+投影片端換 slide theme、內嵌時序頁、注入 extraJs、淘汰舊 Event-band。
+
+### V5.55.0
+**治療事件軸專項審核批次 1:止血(新增坑 #84)**
+
+審核判定「現行程式不建議以目前狀態上線事件軸功能」—— 顯示方向要轉成 Hybrid timeline,但轉型前先止血。
+
+#### TL-4 ⭐ RT 分類的 `\b` 是 0x08 控制字元
+
+```
+/\brt\b|…|\bgy\b|gray/    ← 檔案裡的 \b 是 backspace,不是 regex 字界
+```
+
+`RT`、`Adjuvant RT 60 Gy` 全判成「其他」。**`node --check` 與 jshint 都過** —— 語法合法,只是 regex 多了個永遠不匹配的字元。
+
+改用明確字界並補中文/Proton/brachy/`\d\s*c?gy`。**打包檢查加控制字元掃描。**
+
+#### 其餘止血
+
+| # | 問題 | 修法 |
+|---|---|---|
+| **TL-2** P0 | 帶入時 `a.date.localeCompare` 在 null 拋錯,**每按一次重複一批** | 統一 `_tlCmp`,取代 17 處 |
+| **TL-1** P0 | 勾「夾在投影片」時序**完全消失**(沒有時序頁產生器) | 移除開關,一律出按鈕 |
+| TL-3 | 新增事件預設 dx,忘了改就變假診斷 | 改空 |
+| TL-9 | 必要事件時序文字未排序、無類型 | 排序 + `[類型]` |
+
+#### 批次 2-3:Hybrid timeline 轉型(待決策)
+
+審核第七節列了五個需要個管師/主任決定的問題。
+
+### V5.54.0
+**基因檢測「產出時顯示」勾選**
+
+個管師:「可以勾選要不要顯示基因檢測;如果有勾、沒作,就寫『無』。」
+
+| `showGenomics` | 投影片 / DOCX |
+|---|---|
+| 未設定(舊資料) | 有資料才顯示(向後相容) |
+| 勾 | 顯示;沒資料寫「**無**」 |
+| 沒勾 | 不顯示 |
+
+「無」與留白不同 —— 前者是「已確認未做」的結論。
+
+實作踩了兩次:`createCase` 白名單漏欄位;handler 正則插進了錯的區塊。都是實測抓到。
+
 ### V5.53.0
 **必要事件影像產出端 + NGS 影像修復(新增坑 #83)**
 

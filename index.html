@@ -1199,20 +1199,19 @@ textarea{resize:vertical}
     <div style="padding:16px 0">
       <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">投影片分享</div>
       <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">設定後可將 HTML 投影片上傳到分享空間，產生可傳給醫師的連結（數秒生效）。</div>
-      <!-- V5.41.0:分享改走 Cloudflare KV。與 P0-9 相同的保管原則。 -->
+      <!-- V5.62.0:改走 Worker 上傳端點。網頁只帶「上傳金鑰」,CF API Token 不再出現在網頁裡。 -->
       <div style="padding:9px 12px;background:#EFF4F7;border-left:3px solid var(--acc);border-radius:2px;font-size:12px;line-height:1.75;margin-bottom:12px">
         <b>請注意</b><br>
-        • 上傳的投影片<b>含完整病歷號</b>，知道網址的人就能開啟。<b>請勿轉貼到公開群組。</b><br>
+        • 上傳的投影片<b>含完整病歷號</b>，知道網址的人就能開啟，<b>不需登入</b>。<b>請勿轉貼到公開群組。</b><br>
         • 已分享的內容由 <b>林醫師統一管理與清除</b>；本系統只負責上傳。<br>
-        • API Token <b>只存在這台電腦、不會進入備份檔</b>；還原備份後需重新填入一次。
+        • 上傳金鑰<b>只存在這台電腦、不會進入備份檔</b>；還原備份後需重新填入一次。
       </div>
 
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-    <input type="password" id="cf-token-input" placeholder="Cloudflare API Token（由林醫師提供）" style="flex:1;font-size:12px;font-family:monospace">
-    <button class="btn btn-a btn-sm" onclick="saveCfToken()">儲存</button>
-    <button class="btn btn-b btn-sm" onclick="clearCfToken()">清除</button>
+    <input type="password" id="upload-key" placeholder="上傳金鑰（由林醫師提供）" style="flex:1;font-size:12px;font-family:monospace">
+    <button class="btn btn-a btn-sm" onclick="saveUploadKey()">儲存</button>
   </div>
-  <div id="cf-token-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
+  <div id="upload-key-status" style="font-size:11px;color:var(--textlt);margin-bottom:16px"></div>
 
       <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">Zoom 會議密碼</div>
       <div style="font-size:12px;color:var(--textlt);margin-bottom:10px">三組季密碼。<b>目前可不填</b>（系統會用預設值）；填了就以這裡為準，只存在這台電腦、不進備份。</div>
@@ -1384,18 +1383,295 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 
 /* ════ DEFAULT CONFIG ════ */
 const DEFAULT_LOCS=['彰濱-8樓 圓桌會議室','彰濱-8樓 美蒂琪','彰濱-2樓 185會議室','彰濱-1F 人文藝術館會議室','彰濱-7F 愛書人會議室','彰濱-3樓 甲狀腺會議室'];
+/* V5.55.0 TL-2:全系統唯一的時序比較器 —— 沒日期排最後、不拋錯。
+   原本兩處 a.date.localeCompare(b.date) 在 date 為 null/undefined 時拋 TypeError,
+   「從治療記錄帶入」先 push 再 sort,拋錯後 markDirty/關窗/重繪全沒執行,每按一次重複一批。
+   AI JSON 省略 date、EV-11 複製都會產生 null;手動新增是 '' 所以手測永遠測不到。 */
+function _tlCmp(a,b){
+  var x=(a&&a.date)||'',y=(b&&b.date)||'';
+  if(!x&&!y)return 0;if(!x)return 1;if(!y)return -1;
+  return String(x).localeCompare(String(y));
+}
+/* ════ V5.56.0 Hybrid timeline 資料模型 v2 ════
+   layer 決定畫在哪一層(審核 §2.1),type 只管分層、不推論語意:
+     disease   = 疾病旅程主軸(dx/ned/recurrence/metastasis/progression/death)
+     procedure = 單次處置(surgery/intervention)
+     treatment = 療程,有 endDate 就畫 bar(chemo/systemic/rt);chemo 與 systemic 同層(決策 5)
+     evidence  = 病理/影像
+     minor     = 追蹤/其他,Summary view 不顯示 */
 const TL_TYPES=[
-  {id:'dx',         label:'診斷確立', color:'#C0392B'},
-  {id:'biopsy',     label:'切片/病理', color:'#8E44AD'},
-  {id:'chemo',      label:'化療',     color:'#2980B9'},
-  {id:'surgery',    label:'手術',     color:'#E67E22'},
-  {id:'rt',         label:'放療',     color:'#27AE60'},
-  {id:'imaging',    label:'影像評估', color:'#5D6D7E'},
-  {id:'follow',     label:'追蹤評估', color:'#16A085'},
-  {id:'recurrence', label:'復發',     color:'#D35400'},
-  {id:'metastasis', label:'轉移確認', color:'#7F8C8D'},
-  {id:'other',      label:'其他',     color:'#95A5A6'}
+  {id:'dx',          label:'診斷確立', color:'#C0392B', layer:'disease'},
+  {id:'ned',         label:'無疾病證據', color:'#2E8B57', layer:'disease'},
+  {id:'recurrence',  label:'復發',     color:'#D35400', layer:'disease'},
+  {id:'metastasis',  label:'轉移確認', color:'#7F8C8D', layer:'disease'},
+  {id:'progression', label:'疾病進展', color:'#B03A2E', layer:'disease'},
+  {id:'death',       label:'死亡',     color:'#2C3E50', layer:'disease'},
+  {id:'surgery',     label:'手術',     color:'#E67E22', layer:'procedure'},
+  {id:'intervention',label:'介入治療', color:'#CA6F1E', layer:'procedure'},
+  {id:'chemo',       label:'化療',     color:'#2980B9', layer:'treatment'},
+  {id:'systemic',    label:'全身治療', color:'#1F618D', layer:'treatment'},
+  {id:'rt',          label:'放療',     color:'#27AE60', layer:'treatment'},
+  {id:'biopsy',      label:'切片/病理', color:'#8E44AD', layer:'evidence'},
+  {id:'imaging',     label:'影像評估', color:'#5D6D7E', layer:'evidence'},
+  {id:'follow',      label:'追蹤評估', color:'#16A085', layer:'minor'},
+  {id:'other',       label:'其他',     color:'#95A5A6', layer:'minor'}
 ];
+const TL_LAYER_OF=function(t){var c=TL_TYPES.find(function(x){return x.id===t;});return c?c.layer:'minor';};
+function _tlNewId(){return 'tl_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);}
+/* TL-12:日期正規化。接受 YYYY-MM-DD / YYYY/M/D / YYYY.M.D / 3 位數年(民國+1911)/ YYYY-MM(補 -01 並標 month)。
+   無法辨識回 {date:'',prec:''},由呼叫端決定保留原文。 */
+function _normTlDate(raw){
+  var t=String(raw||'').trim();if(!t)return{date:'',prec:''};
+  var m=t.match(/^(\d{2,4})[-/.年](\d{1,2})(?:[-/.月](\d{1,2}))?/);
+  if(!m)return{date:'',prec:''};
+  var y=parseInt(m[1],10),mo=parseInt(m[2],10),d=m[3]?parseInt(m[3],10):0;
+  if(y<1000)y+=1911;
+  if(mo<1||mo>12)return{date:'',prec:''};
+  var prec=d?'day':'month';if(!d)d=1;
+  if(d<1||d>31)return{date:'',prec:''};
+  var p=function(n){return(n<10?'0':'')+n;};
+  return{date:y+'-'+p(mo)+'-'+p(d),prec:prec};
+}
+/* 舊資料補 id —— 只在記憶體,存檔時才寫回(與 cleanTimelineGhosts 同原則) */
+function _tlEnsureIds(m){
+  if(!m||!m.sections)return;
+  Object.keys(m.sections).forEach(function(cid){
+    ['cases','events'].forEach(function(ty){
+      (m.sections[cid][ty]||[]).forEach(function(c){
+        (c.timeline||[]).forEach(function(t){if(t&&typeof t==='object'&&!t.id)t.id=_tlNewId();});
+      });
+    });
+  });
+}
+
+/* ════ V5.56.0 Hybrid timeline layout engine ════
+   純函式:不碰 window/DOM。主程式(編輯預覽/檢視卡片)與投影片(2b 注入 extraJs)共用同一套核心,只切換 theme。
+   審核第八節驗收:編輯預覽與投影片對同一份資料的 tlLayout 輸出必須 deep-equal。
+
+   opts:{view:'summary'|'full', width, discussion, deathDate, today}
+   回傳:{lanes, nodes, bars, gaps, pivots, question, undated, dateMin, dateMax, xOf}
+   決策(2026-09-19):Summary 為投影片預設;轉折點 AI 與手動並存;endDate 選填沒填畫單點;
+   Today's question 取 discussion;chemo 與 systemic 同層。 */
+function tlLayout(events,opts){
+  opts=opts||{};
+  var view=opts.view==='full'?'full':'summary';
+  var W=opts.width||720;
+  var LAYER=function(t){var c=TL_TYPES.find(function(x){return x.id===t;});return c?c.layer:'minor';};
+  var DAY=86400000;
+  var toT=function(d){var m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?Date.UTC(+m[1],+m[2]-1,+m[3]):NaN;};
+
+  /* 1. 正規化 + 剔除無效日期 */
+  var ok=[],undated=[];
+  (events||[]).forEach(function(e,i){
+    if(!e||typeof e!=='object')return;
+    var nd=_normTlDate(e.date);
+    var ne={id:e.id||('tmp'+i),type:e.type||'other',date:nd.date,endDate:_normTlDate(e.endDate).date,
+      datePrec:e.datePrec||nd.prec||'day',label:String(e.label||''),key:!!e.key,
+      layer:LAYER(e.type||'other'),_ai:e._ai||null};
+    /* TL-5c:_ai 簽章不符就不採用 */
+    if(ne._ai&&ne._ai.sig&&ne._ai.sig!==(ne.type+'|'+ne.date))ne._ai=null;
+    /* V5.58.0 N-5:key(列入摘要)與 pivot(轉折點)是兩件事 —— 個管師想讓某張 CT 進摘要,不該多一條紅色警示線 */
+    ne.pivot=!!(e.pivot||(ne._ai&&ne._ai.pivot));
+    if(!ne.date){undated.push(ne);return;}
+    ne.t=toT(ne.date);ne.tEnd=ne.endDate?toT(ne.endDate):NaN;
+    ok.push(ne);
+  });
+  /* 必要事件:deathDate 自動成為疾病層終點(O-3) */
+  if(opts.deathDate){
+    var dd=_normTlDate(opts.deathDate).date;
+    if(dd&&!ok.some(function(e){return e.type==='death';})){
+      ok.push({id:'auto_death',type:'death',date:dd,endDate:'',datePrec:'day',label:'',key:false,layer:'disease',_ai:null,pivot:false,t:toT(dd),tEnd:NaN,auto:true});
+    }
+  }
+  ok.sort(function(a,b){return a.t-b.t;});
+
+  /* 2. Summary 過濾:疾病類 / 有 endDate 的治療 / 手術介入 / pivot / key 五者之一 */
+  var shown=ok.filter(function(e){
+    if(view==='full')return true;
+    if(e.layer==='disease')return true;
+    if(e.layer==='procedure')return true;
+    if(e.layer==='treatment')return true;/* V5.58.0 N-1:決策 3「沒填畫單點」—— 原本寫成沒填就不畫,療程層在預設投影片上永遠是空的 */
+    if(e.pivot)return true;
+    if(e.key)return true;/* V5.58.0 N-5:列入摘要 */
+    return false;
+  });
+
+  /* 3. 時間尺度:semi-proportional —— 疾病階段之間 >180 天的空窗壓縮成固定寬 */
+  var GAP_DAYS=180,GAP_W=54,PAD=36;
+  var tMin=shown.length?shown[0].t:0,tMax=tMin;
+  shown.forEach(function(e){if(e.t>tMax)tMax=e.t;if(!isNaN(e.tEnd)&&e.tEnd>tMax)tMax=e.tEnd;});
+  /* V5.58.0 N-3:空窗改依「所有已顯示事件的佔用區間」—— 原本只看相鄰疾病節點且中間無事件,
+     「診斷 → 一串治療 → 多年後復發」這種最常見的形狀永遠不壓縮(真正的空白在最後一次治療與復發之間)。 */
+  var occ=shown.map(function(e){return[e.t,isNaN(e.tEnd)?e.t:e.tEnd];}).sort(function(a,b){return a[0]-b[0];});
+  var merged=[];occ.forEach(function(iv){if(merged.length&&iv[0]<=merged[merged.length-1][1]+DAY){if(iv[1]>merged[merged.length-1][1])merged[merged.length-1][1]=iv[1];}else merged.push([iv[0],iv[1]]);});
+  var gaps=[];
+  for(var i=1;i<merged.length;i++){
+    var span=(merged[i][0]-merged[i-1][1])/DAY;
+    if(span>GAP_DAYS)gaps.push({from:merged[i-1][1],to:merged[i][0],days:Math.round(span)});
+  }
+  var compressed=gaps.reduce(function(a,g){return a+(g.to-g.from);},0);
+  var realSpan=Math.max(1,(tMax-tMin)-compressed);
+  /* V5.59.0(審核 4.2):只有兩個節點中間一段長空窗時,realSpan≈0,整張圖擠在左側。
+     非空窗部分不到總寬一半時,把多出來的寬度分給空窗(仍標示壓縮,只是不再只有 54px)。 */
+  var usable=W-PAD*2-gaps.length*GAP_W;
+  if(gaps.length){
+    /* V5.60.0 M-5:原本 realSpan<60 天是二元條件,手術日期差 4 天整張圖翻轉。改連續:非空窗越短,空窗分得越多,設上下限 */
+    var share=Math.min(0.45,0.15+0.3*Math.exp(-realSpan/(DAY*120)));
+    var gapTotal=Math.max(gaps.length*GAP_W,(W-PAD*2)*share);
+    GAP_W=gapTotal/gaps.length;usable=W-PAD*2-gapTotal;
+  }
+  var xOf=function(t){
+    if(isNaN(t))return NaN;
+    var x=t-tMin;
+    var gapsBefore=0,inGap=null;
+    gaps.forEach(function(g){
+      if(t>=g.to){x-=(g.to-g.from);gapsBefore++;}
+      else if(t>g.from&&t<g.to){inGap=g;}
+    });
+    if(inGap){x=inGap.from-tMin;gaps.forEach(function(g){if(g.to<=inGap.from)x-=(g.to-g.from);});}
+    return PAD+(x/realSpan)*usable+gapsBefore*GAP_W+(inGap?GAP_W/2:0);
+  };
+  gaps.forEach(function(g){g.x0=xOf(g.from);g.x1=xOf(g.from)+GAP_W;g.label=g.days>=365?(Math.round(g.days/365*10)/10)+' yr':Math.round(g.days/30)+' mo';});
+
+  /* 4. 同日 cluster:同 date 合成一個節點 */
+  /* V5.58.0 N-6:已成為 bar 的治療不再另畫節點與標籤(原本 FOLFOX 會同時出現在 bar 上和節點下) */
+  var isBar=function(e){return e.layer==='treatment'&&!isNaN(e.tEnd)&&e.tEnd>e.t;};
+  var byDate={};shown.forEach(function(e){if(isBar(e))return;(byDate[e.date]=byDate[e.date]||[]).push(e);});
+  var nodes=Object.keys(byDate).sort().map(function(d){
+    var items=byDate[d];
+    var lay=items.some(function(e){return e.layer==='disease';})?'disease':
+            items.some(function(e){return e.layer==='procedure';})?'procedure':
+            items.some(function(e){return e.layer==='treatment';})?'treatment':
+            items.some(function(e){return e.layer==='evidence';})?'evidence':'minor';
+    return{date:d,x:xOf(items[0].t),layer:lay,items:items,pivot:items.some(function(e){return e.pivot;}),
+      ai:items.some(function(e){return e._ai&&e._ai.pivot;}),death:items.some(function(e){return e.type==='death';})};
+  });
+  /* V5.61.0 TL-5d:療效畫在評估日 —— 有 assessedDate 且對得到節點時,把 resp 掛到那個節點,原事件不再畫 */
+  var respAt={};
+  shown.forEach(function(e){
+    if(e._ai&&e._ai.response&&e._ai.assessedDate){
+      var ad=_normTlDate(e._ai.assessedDate).date;
+      if(ad&&byDate[ad]){respAt[ad]={resp:e._ai.response,from:e.date,fromLabel:e.label||''};e._respMoved=true;}
+    }
+  });
+  nodes.forEach(function(n){if(respAt[n.date])n.respAt=respAt[n.date];});
+  /* 5. Treatment bars */
+  /* V5.60.0 M-3:bar 帶上轉折/療效/依據 —— 原本療程一填結束日就變 bar,pivot 與 AI 判讀全消失,填得越完整資訊越少 */
+  var bars=shown.filter(isBar)
+    .map(function(e){return{id:e.id,type:e.type,label:e.label,x0:xOf(e.t),x1:xOf(e.tEnd),date:e.date,endDate:e.endDate,
+      pivot:e.pivot,ai:!!(e._ai&&e._ai.pivot),resp:(e._ai&&e._ai.response)||'',basis:(e._ai&&e._ai.basis)||'',respMoved:!!e._respMoved};});
+  /* 6. 疾病 spine:只在有 ≥1 疾病事件時畫,從第一到最後一個疾病節點 */
+  var dzNodes=nodes.filter(function(n){return n.layer==='disease';});
+  var spine=dzNodes.length?{x0:dzNodes[0].x,x1:dzNodes[dzNodes.length-1].x}:null;
+
+  return{view:view,width:W,nodes:nodes,bars:bars,gaps:gaps,spine:spine,
+    pivots:nodes.filter(function(n){return n.pivot;}).map(function(n){return n.date;}).concat(bars.filter(function(b){return b.pivot;}).map(function(b){return b.date;})),
+    question:String(opts.discussion||'').trim(),undated:undated,
+    dateMin:shown.length?shown[0].date:'',dateMax:shown.length?shown[shown.length-1].date:'',
+    hidden:ok.length-shown.length};
+}
+
+/* theme:'compact'(卡片/編輯預覽)| 'slide'(投影片,2b)。只負責畫,不做時間計算。 */
+function tlRender(model,theme,caColor){
+  theme=theme||'compact';var ca=caColor||'#4A7C8E';
+  var W=model.width,SL=theme==='slide';
+  var FULL=model.view==='full';
+  var H=(SL?300:190)+(FULL?(SL?70:40):0);/* V5.60.0 P1-6:Full view 加高,minor 層不撞今日議題 */
+  var Y={disease:SL?70:44,procedure:SL?125:80,treatment:SL?170:112,evidence:SL?215:144,minor:SL?250:168};
+  var F=SL?14:10,FL=SL?12:9;
+  var esc=function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
+  var col=function(t){var c=TL_TYPES.find(function(x){return x.id===t;});return c?c.color:'#95A5A6';};
+  var lbl=function(t){var c=TL_TYPES.find(function(x){return x.id===t;});return c?c.label:'其他';};
+  var o=[];
+  o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;font-family:inherit;max-width:'+W+'px">');
+  /* 泳道底線 */
+  ['disease','procedure','treatment','evidence'].forEach(function(l){
+    if(l==='evidence'&&model.view==='summary'&&!model.nodes.some(function(n){return n.layer==='evidence';}))return;
+    o.push('<line x1="24" x2="'+(W-24)+'" y1="'+Y[l]+'" y2="'+Y[l]+'" stroke="#E2E7EB" stroke-width="1"/>');
+    var nm={disease:'疾病',procedure:'處置',treatment:'療程',evidence:'證據'}[l];
+    o.push('<text x="4" y="'+(Y[l]+3)+'" font-size="'+FL+'" fill="#9BAAB6">'+nm+'</text>');
+  });
+  /* 空窗 */
+  model.gaps.forEach(function(g){
+    o.push('<rect x="'+g.x0+'" y="'+(Y.disease-14)+'" width="'+(g.x1-g.x0)+'" height="'+(Y.evidence-Y.disease+28)+'" fill="#F5F6F8"/>');
+    o.push('<text x="'+((g.x0+g.x1)/2)+'" y="'+(SL?16:12)+'" font-size="'+FL+'" fill="#637281" text-anchor="middle">// '+esc(g.label)+' //</text>');/* V5.60.0 P2-1:移到最上緣,不與疾病層標籤共用走廊 */
+  });
+  /* 疾病 spine:中性灰;紅色只留給復發/進展/轉移的節點 */
+  if(model.spine)o.push('<line x1="'+model.spine.x0+'" x2="'+model.spine.x1+'" y1="'+Y.disease+'" y2="'+Y.disease+'" stroke="#8A97A3" stroke-width="'+(SL?3:2)+'"/>');
+  /* Treatment bars:同色系,標籤區分 */
+  model.bars.forEach(function(b){
+    var yb=Y.treatment;
+    /* V5.60.0 M-3:bar 的轉折環畫在起點、療效箭頭畫在終點(較接近評估時點,TL-5d 過渡做法) */
+    if(b.pivot){o.push('<line x1="'+b.x0+'" x2="'+b.x0+'" y1="'+(Y.disease-10)+'" y2="'+(Y.evidence+8)+'" stroke="#C0392B" stroke-width="1" stroke-dasharray="3 2"/>');
+      o.push('<circle cx="'+b.x0+'" cy="'+yb+'" r="'+(SL?9:7)+'" fill="none" stroke="#C0392B" stroke-width="1.5">'+(b.basis?'<title>AI 判讀依據：'+esc(b.basis)+'</title>':'')+'</circle>');}
+    o.push('<rect x="'+b.x0+'" y="'+(yb-6)+'" width="'+Math.max(4,b.x1-b.x0)+'" height="12" rx="3" fill="'+col(b.type)+'" opacity=".85">'+(b.basis?'<title>'+esc(b.basis)+'</title>':'')+'</rect>');
+    if(b.ai)o.push('<text x="'+(b.x0+2)+'" y="'+(yb-9)+'" font-size="'+(FL-1)+'" fill="#C0392B" font-weight="600">AI</text>');
+    if(b.resp&&!b.respMoved){var rs={better:['↑','#2E8B57','有效'],stable:['→','#637281','穩定'],worse:['↓','#C0392B','惡化']}[b.resp];
+      if(rs)o.push('<text x="'+(b.x1+3)+'" y="'+(yb+4)+'" font-size="'+F+'" fill="'+rs[1]+'" font-weight="700"><title>AI 療效判讀：'+rs[2]+'</title>'+rs[0]+'</text>');}
+    var bx=(b.x0+b.x1)/2,ba=bx<(SL?90:60)?'start':bx>W-(SL?90:60)?'end':'middle';
+    /* V5.60.0 P1-2:空說明用類型名,不能要求聽眾靠顏色猜 */
+    var bl=b.label||lbl(b.type);
+    o.push('<text x="'+(ba==='start'?b.x0:ba==='end'?b.x1:bx)+'" y="'+(yb+(SL?24:20))+'" font-size="'+FL+'" fill="#2C3540" text-anchor="'+ba+'">'+esc(bl.slice(0,SL?24:14))+'</text>');
+  });
+  /* 節點(cluster)
+     V5.59.0 視覺收尾(審核第二優先):①同層相鄰節點太近 → 標籤上下交錯 ②首尾節點標籤改 anchor 避免裁切
+     ③cluster 行數上限依層間距算,超過顯示「+N」④pivot 節點加 <title> 顯示 AI basis ⑤AI 療效以 ↑→↓ 標在節點旁 */
+  var LANE_GAP=SL?45:32,LINE_H=F+2;
+  var MAX_LINES=Math.max(1,Math.floor((LANE_GAP-(SL?14:10))/LINE_H));
+  var MIN_DX=SL?110:70;
+  var lastX={},lastUp={},stagger={};/* 同層相鄰太近 → 上下交錯 */
+  model.nodes.forEach(function(n){
+    var lx=lastX[n.layer],up=false;
+    if(lx!==undefined&&n.x-lx<MIN_DX)up=!lastUp[n.layer];
+    stagger[n.date+'|'+n.layer]=up;lastX[n.layer]=n.x;lastUp[n.layer]=up;
+  });
+  model.nodes.forEach(function(n){
+    var y=Y[n.layer],r=n.layer==='disease'?(SL?7:5):(SL?5:4);
+    var main=n.items[0];
+    var alert=n.items.some(function(e){return e.type==='recurrence'||e.type==='progression'||e.type==='metastasis';});
+    var fill=n.death?'#2C3E50':alert?'#C0392B':n.layer==='disease'?ca:col(main.type);
+    /* ② 首尾 anchor */
+    var anchor=n.x<(SL?90:60)?'start':n.x>W-(SL?90:60)?'end':'middle';
+    var tx=anchor==='start'?n.x-r:anchor==='end'?n.x+r:n.x;
+    var up=!!stagger[n.date+'|'+n.layer];
+    /* ④ basis tooltip;⑥ cluster 全部事件也放進 title(V5.60.0 P1-5) */
+    var basis=n.items.map(function(e){return e._ai&&e._ai.basis?e._ai.basis:'';}).filter(Boolean).join('；');
+    var allNames=n.items.map(function(e){return lbl(e.type)+(e.label?' '+e.label:'');});
+    var titleAll=n.items.length>1?'<title>'+esc(allNames.join('\n'))+'</title>':'';
+    if(n.pivot){o.push('<line x1="'+n.x+'" x2="'+n.x+'" y1="'+(Y.disease-10)+'" y2="'+(Y.evidence+8)+'" stroke="#C0392B" stroke-width="1" stroke-dasharray="3 2"/>');
+      o.push('<circle cx="'+n.x+'" cy="'+y+'" r="'+(r+4)+'" fill="none" stroke="#C0392B" stroke-width="1.5">'+(basis?'<title>AI 判讀依據：'+esc(basis)+'</title>':'')+'</circle>');}
+    o.push('<circle cx="'+n.x+'" cy="'+y+'" r="'+r+'" fill="'+fill+'">'+(basis?'<title>'+esc(basis)+'</title>':titleAll)+'</circle>');
+    if(n.ai)o.push('<text x="'+(n.x+r+2)+'" y="'+(y-r)+'" font-size="'+(FL-1)+'" fill="#C0392B" font-weight="600">AI</text>');
+    /* ⑤ 療效:↑有效 →穩定 ↓惡化(AI 判讀,標在該事件旁;評估日版本待 TL-5d) */
+    var resp=n.respAt?n.respAt.resp:n.items.map(function(e){return e._respMoved?'':(e._ai&&e._ai.response);}).filter(Boolean)[0];/* V5.61.0 TL-5d */
+    if(resp){var rs={better:['↑','#2E8B57','有效'],stable:['→','#637281','穩定'],worse:['↓','#C0392B','惡化']}[resp];
+      if(rs)o.push('<text x="'+(n.x-r-2)+'" y="'+(y-r)+'" font-size="'+F+'" fill="'+rs[1]+'" font-weight="700" text-anchor="end"><title>AI 療效判讀：'+rs[2]+'</title>'+rs[0]+'</text>');}
+    /* ③ 行數上限 */
+    var all=n.items.map(function(e){return (n.items.length>1?'· ':'')+lbl(e.type)+(e.label?' '+e.label.slice(0,SL?18:12):'');});
+    /* V5.60.0 P1-5/M-2:Summary 維持上限;Full view 保留主事件名稱,其餘進 <title> */
+    var lines=FULL?all.slice(0,Math.max(MAX_LINES,2)):all.slice(0,MAX_LINES);
+    if(all.length>lines.length){lines[lines.length-1]=all[lines.length-1]+'…+'+(all.length-lines.length)+' 筆';}
+
+    /* ① 交錯:up 時標籤放節點上方 */
+    var ty0=up?(y-r-FL-4-(lines.length-1)*LINE_H):(y+r+F+2);
+    lines.forEach(function(t,k){o.push('<text x="'+tx+'" y="'+(ty0+k*LINE_H)+'" font-size="'+F+'" fill="#2C3540" text-anchor="'+anchor+'">'+esc(t)+'</text>');});
+    var dy=up?(y+r+FL+2):(y-r-3);
+    o.push('<text x="'+tx+'" y="'+dy+'" font-size="'+FL+'" fill="#637281" text-anchor="'+anchor+'">'+esc(n.date.slice(0,7).replace('-','/'))+'</text>');
+  });
+  /* Today's question */
+  if(model.question){
+    var qy=H-(SL?18:12);
+    o.push('<text x="'+(W-24)+'" y="'+qy+'" font-size="'+F+'" fill="'+ca+'" font-weight="600" text-anchor="end">▸ 今日議題：'+esc(model.question.slice(0,SL?40:28))+'</text>');
+  }
+  /* 隱藏數與未定日期 */
+  var foot=[];
+  if(model.hidden)foot.push('另 '+model.hidden+' 筆例行事件（Full view 顯示）');
+  if(model.undated.length)foot.push(model.undated.length+' 筆未填日期');
+  if(foot.length)o.push('<text x="24" y="'+(H-4)+'" font-size="'+(FL-1)+'" fill="#9BAAB6">'+esc(foot.join('　'))+'</text>');
+  o.push('</svg>');
+  return o.join('');
+}
+
 const DEFAULT_EXAM_TYPES=['CT','MRI','Bone scan','SONO','Breast SONO','PET-CT','X-Ray','Echo','Endoscopy','Lab'];
 let EXAM_TYPES=[...DEFAULT_EXAM_TYPES];
 
@@ -1431,7 +1707,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.53.0';
+const VERSION='V5.62.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1806,6 +2082,7 @@ function loadLocal(id){
     /* V5.51.1:特殊議程影像補 _root 標記(修之前選的那批沒有)。
        特殊議程只能從根目錄選,所以 fromFolder 且無 subFolder 的一律是根目錄。 */
     try{_tagSpecialRootImgs(m);}catch(e){}
+    try{_tlEnsureIds(m);}catch(e){}/* V5.56.0 */
     return m;
   }catch(e){return null;}
 }
@@ -1993,8 +2270,22 @@ function updStruct(cid,i,field,idx,key,val,type){
   if(!c[field])c[field]=[];if(!c[field][idx])c[field][idx]={};
   c[field][idx][key]=val;markDirty();
   if(field==='timeline'){
+    const row=c[field][idx];
+    /* V5.58.0 N-4:改了 date 或 type,AI 判讀就作廢(sig 機制原本沒人寫入,是死碼) */
+    if((key==='date'||key==='type')&&row._ai){delete row._ai;}
+    /* V5.60.0 P2-3:結束早於開始 → 標紅提示,不再靜默退化成單點 */
+    if(key==='date'||key==='endDate'){
+      const sd=_normTlDate(row.date).date,ed=_normTlDate(row.endDate).date;
+      const inp=document.querySelector('[data-action="updstruct"][data-field="timeline"][data-key="endDate"][data-cid="'+cid+'"][data-caseidx="'+i+'"][data-rowid="'+idx+'"]');
+      if(inp){const bad=sd&&ed&&ed<sd;inp.style.borderColor=bad?'var(--err)':'';inp.title=bad?'結束日期不可早於開始日期':'結束日期（選填，填了畫成一條 bar）';}
+    }
+    /* V5.58.0:改 type 要重繪列 —— endDate 欄只在療程類顯示 */
+    if(key==='type'){
+      const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+i);
+      if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,i,c,_ty);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);[...tmp.childNodes].forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
+    }
     const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+_ty+'-'+i);
-    if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
+    if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?tlRender(tlLayout(c.timeline,{view:'summary',width:700,discussion:c.discussion,deathDate:c.deathDate}),'compact',CFG[cid]?.color||'#4A7C8E'):'';
   }
 }
 function delStruct(cid,i,field,rowIdx,type){
@@ -2012,7 +2303,7 @@ function delStruct(cid,i,field,rowIdx,type){
     const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+i);
     if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,i,c,_ty);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);[...tmp.childNodes].forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
     const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+_ty+'-'+i);
-    if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
+    if(svgEl)svgEl.innerHTML=c.timeline&&c.timeline.length?tlRender(tlLayout(c.timeline,{view:'summary',width:700,discussion:c.discussion,deathDate:c.deathDate}),'compact',CFG[cid]?.color||'#4A7C8E'):'';
     return;
   }
   const listId=field==='pathologies'?('pathlist-'+cid+'-'+_ty+'-'+i)
@@ -2066,19 +2357,13 @@ function addStruct(cid,i,field,type){
   if(field==='timeline'){
     if(!c.timeline)c.timeline=[];
     const newIdx=c.timeline.length;
-    c.timeline.push({type:'dx',date:'',label:''});
+    c.timeline.push({id:_tlNewId(),/* V5.58.0 N-9 */type:'',/* V5.55.0 TL-3:原本預設 dx,忘了改類型的每一列都變成假診斷 */date:'',label:''});
     markDirty();
     // Append only the new row (don't re-render all rows)
     const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+i);
     if(tlEl){
       const tmp=document.createElement('div');
-      const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'">'+t.label+'</option>';}).join('');
-      tmp.innerHTML='<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-        +'<select data-action="updstruct" data-ty="'+_ty+'" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="type" style="width:108px;font-size:13px;padding:5px 7px">'+opts+'</select>'
-        +'<input type="date" value="" data-action="updstruct" data-ty="'+_ty+'" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="date" style="width:148px">'
-        +'<input placeholder="自訂說明（空白用預設）" value="" data-action="updstruct" data-ty="'+_ty+'" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
-        +'<button class="delbtn" data-action="delstruct" data-ty="'+_ty+'" data-cid="'+cid+'" data-caseidx="'+i+'" data-field="timeline" data-rowid="'+newIdx+'" style="margin-left:auto">×</button>'
-        +'</div></div>';
+      tmp.innerHTML=_tlRowHTML(cid,i,c.timeline[newIdx],newIdx,_ty);/* V5.60.0 M-1:改用唯一產生器 */
       tlEl.appendChild(tmp.firstElementChild);
     }
     return;
@@ -2329,7 +2614,7 @@ function calCreateMtg(cid,date){
 
 async function openSettings(){
   if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
-  loadGhTokenStatus();loadCfTokenStatus();/* V5.41.0 */loadZoomPwdStatus();/* V5.50.0 */showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
+  loadGhTokenStatus();loadUploadKeyStatus();/* V5.62.0 */loadZoomPwdStatus();/* V5.50.0 */showView('settings');renderLocsTab();renderDrsTab();renderCancerCfgList();applyAICfg();setMNav('mnav-settings','設定');setSbActive(null);document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));document.getElementById('nav-settings').classList.add('on');setTimeout(renderLsUsage,100);setTimeout(updateNasStatus,100);}
 async function openHistory(){
   if(!(await _confirmLeave()))return;/* V5.48.0 R-4 */
   showView('history');setSbActive(null);
@@ -4330,48 +4615,8 @@ function updDr(cid,type,i,idx,val){
   item.doctors[idx]=val;markDirty();
 }
 
-/* ── View mode card renderers ── */
-function renderTimelineSVG(events,caColor,mode){
-  if(!events||!events.length)return '';
-  var sorted=events.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');});
-  var n=sorted.length,perRow=5,rowCount=Math.ceil(n/perRow);
-  var W=860,padX=55,labelH=35,rowH=100,totalH=rowCount*rowH+50,usableW=W-2*padX;
-  var TL_SIZE={dx:14,surgery:14,recurrence:12,metastasis:11,chemo:9,rt:9,biopsy:9,follow:7,imaging:7,other:7};
-  var pos=[];
-  for(var i=0;i<n;i++){
-    var r=Math.floor(i/perRow),posInRow=i%perRow,ltr=r%2===0;
-    var rowStart=r*perRow,rowEnd=Math.min(n,(r+1)*perRow),rowItems=rowEnd-rowStart;
-    var rowEvs=sorted.slice(rowStart,rowEnd);
-    var parsedMs=rowEvs.map(function(ev){var d=new Date(ev.date||'');return isNaN(d.getTime())?null:d.getTime();});
-    var validMs=parsedMs.filter(function(d){return d!==null;});
-    var minD=validMs.length?Math.min.apply(null,validMs):0,maxD=validMs.length?Math.max.apply(null,validMs):0,span=maxD-minD;
-    var t=parsedMs[posInRow]===null||span===0?(rowItems===1?0.5:posInRow/(rowItems-1)):0.04+((parsedMs[posInRow]-minD)/span)*0.92;
-    var rowTop=r*rowH+10,lineY=ltr?rowTop+labelH+14:rowTop+14,x=ltr?padX+t*usableW:W-padX-t*usableW;
-    pos.push({x:Math.round(x),y:Math.round(lineY),r:r,ltr:ltr});
-  }
-  var pathD='';
-  for(var i=0;i<n;i++){
-    var p=pos[i];
-    if(i===0){pathD+='M '+p.x+' '+p.y;}
-    else{var prev=pos[i-1];if(prev.r===p.r){pathD+=' L '+p.x+' '+p.y;}else{var dy=p.y-prev.y,ar=Math.abs(dy)/2,sw=prev.ltr?1:0;pathD+=' A '+ar+' '+ar+' 0 0 '+sw+' '+p.x+' '+p.y;}}
-  }
-  var isDark=mode==='slide';
-  var lineClr=isDark?'rgba(255,255,255,.22)':'#c0cad4';
-  var txtClr=isDark?'#fff':'#2a3540';
-  var dtClr=isDark?'rgba(255,255,255,.58)':'#637281';
-  var nodes='',labels='',diffs='';
-  for(var i=0;i<n;i++){
-    var ev=sorted[i],p=pos[i];
-    var cfg=TL_TYPES.find(function(t){return t.id===ev.type;})||TL_TYPES[TL_TYPES.length-1];
-    var nr=TL_SIZE[ev.type]||9,lbl=escA(ev.label||cfg.label),dt=escA(ev.date||'');
-    nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+(nr+5)+'" fill="'+cfg.color+'" opacity=".18"/>';
-    nodes+='<circle cx="'+p.x+'" cy="'+p.y+'" r="'+nr+'" fill="'+cfg.color+'" stroke="'+(isDark?'#1a2530':'#fff')+'" stroke-width="2.5"/>';
-    if(p.ltr){labels+='<text x="'+p.x+'" y="'+(p.y-nr-16)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';labels+='<text x="'+p.x+'" y="'+(p.y-nr-4)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';}
-    else{labels+='<text x="'+p.x+'" y="'+(p.y+nr+15)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+txtClr+'">'+lbl+'</text>';labels+='<text x="'+p.x+'" y="'+(p.y+nr+27)+'" text-anchor="middle" font-size="9.5" fill="'+dtClr+'">'+dt+'</text>';}
-    if(i<n-1&&pos[i].r===pos[i+1].r){var d1=new Date(ev.date||''),d2=new Date(sorted[i+1].date||'');if(!isNaN(d1.getTime())&&!isNaN(d2.getTime())){var days=Math.round((d2-d1)/86400000);if(days>0){var mx=(p.x+pos[i+1].x)/2,ddy=p.ltr?p.y+nr+12:p.y-nr-7;diffs+='<text x="'+mx+'" y="'+ddy+'" text-anchor="middle" font-size="9" fill="'+dtClr+'" opacity=".72">+'+days+'d</text>';}}}
-  }
-  return '<svg viewBox="0 0 '+W+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'+(isDark?'<rect width="'+W+'" height="'+totalH+'" fill="#1a2530" rx="8"/>':'')+'<path d="'+pathD+'" fill="none" stroke="'+lineClr+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+nodes+labels+diffs+'</svg>';
-}
+/* V5.56.0:renderTimelineSVG(舊蛇形圖)已淘汰,改用 tlLayout/tlRender。編輯預覽與投影片從此用同一套核心(審核 TL-8、坑 #61)。 */
+
 /* V5.42.0:加 type 讓必要提報也能用同一張檢視卡片。
    檢視模式是唯讀的(不寫回資料),所以不像編輯模式要參數化每個 upd();
    要處理的只有兩件事:DOM id 不能撞、死亡病例的專屬欄位要顯示。 */
@@ -4411,7 +4656,7 @@ ${chips}
 ${hasRec?`<div class="vc-rec">${row('摘要',d.summary)}${row('結論',d.decision)}</div>`:''}
 ${(d.surgicalImages||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">手術照片</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.surgicalImages||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'照片'+(j+1))}</span><button data-action="previewsurgimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" data-subfolder="${escA(img.subFolder||'')}" data-chartno="${escA((d&&d.chartNo)||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
 ${(d.images||[]).length?`<div class="vc-r" style="background:var(--surface)"><span class="vc-l" style="align-self:flex-start;padding-top:2px">影像</span><div class="vc-v" style="display:flex;flex-direction:column;gap:3px">${(d.images||[]).map((img,j)=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--fog-xlt);font-size:11px;min-width:16px">${j+1}.</span><span style="font-size:12px;color:var(--fog)">${escA(img.caption||img.name||'影像'+(j+1))}</span><button data-action="previewrelatedimg" data-name="${escA(img.name||'')}" data-dataurl="${escA(img.dataUrl||'')}" data-subfolder="${escA(img.subFolder||'')}" data-chartno="${escA((d&&d.chartNo)||'')}" style="background:none;border:1px solid var(--border);border-radius:2px;font-size:10px;color:var(--textlt);cursor:pointer;padding:1px 7px;white-space:nowrap">預覽</button></div>`).join('')}</div></div>`:''}
-${(d.timeline&&d.timeline.length)?'<div class=\"vc-r\" style=\"background:var(--surface)\"><span class=\"vc-l\" style=\"align-self:flex-start;padding-top:2px\">事件軸</span><div class=\"vc-v\">'+renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view')+'</div></div>':''}
+${(d.timeline&&d.timeline.length)?'<div class=\"vc-r\" style=\"background:var(--surface)\"><span class=\"vc-l\" style=\"align-self:flex-start;padding-top:2px\">事件軸</span><div class=\"vc-v\">'+tlRender(tlLayout(d.timeline,{view:'summary',width:700,discussion:d.discussion,deathDate:d.deathDate}),'compact',CFG[cid]?.color||'#4A7C8E')+'</div></div>':''}
 ${_isEv?[
   row('死亡日期',d.deathDate),
   row('死亡地點',d.deathPlace),
@@ -4530,6 +4775,13 @@ function casesPane(cid){
    **漏改任何一處都不會報錯,只會安靜地寫到錯的區塊**,等產投影片才發現內容不見
    (坑 #55 的形狀),所以打包檢查加了一條:caseHTML 內不得殘留寫死的 'cases'。
    type 省略時為 'cases',既有呼叫端完全不受影響。 */
+/* V5.54.0:「產出時顯示基因檢測」的判斷。個管師:「可以勾選要不要顯示基因檢測;如果有勾、沒作,就寫『無』」。
+   未設定(舊資料)→ 有資料才顯示(向後相容);設了 → 依勾選。 */
+function _gnShow(c){
+  if(!c)return false;
+  if(c.showGenomics===undefined||c.showGenomics===null)return (c.genomics||[]).length>0;
+  return !!c.showGenomics;
+}
 function caseHTML(cid,i,d,type,opts){
   const _ty=type?type:"cases";
   /* V5.52.0:必要事件影像已開放,noImages 機制保留但不再傳入。
@@ -4711,7 +4963,7 @@ function caseHTML(cid,i,d,type,opts){
     <div id="marklist-${cid}-${_ty}-${i}">${markerRows}</div>
   </div>
   <!-- V5.30.0: 基因檢測(個管師指定放癌指數下方)。結構同癌指數,可手動輸入或 AI 匯入 -->
-  <div class="fg full"><div class="field-hdr"><label>基因檢測</label>${addBtn('genomics')}</div>
+  <div class="fg full"><div class="field-hdr"><label>基因檢測</label>${addBtn('genomics')}<label style="margin-left:auto;font-size:11px;font-weight:normal;color:var(--textmd);cursor:pointer;display:inline-flex;align-items:center;gap:4px"><input type="checkbox" data-action="updgenshow" data-ty="${_ty}" data-cid="${cid}" data-caseidx="${i}"${_gnShow(d)?' checked':''} style="width:14px;height:14px;cursor:pointer">產出時顯示</label></div>
     <div id="genlist-${cid}-${_ty}-${i}">${genomicsRows}</div>
   </div>
   ${_noImg?"":`<div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>NGS 報告影像</label>${embedToggle(cid,i,'genomics',d,_ty)}</div>
@@ -4734,7 +4986,7 @@ function caseHTML(cid,i,d,type,opts){
       <button class="btn btn-b btn-sm" onclick="importTimelineFromTreatments('${cid}',${i},'${_ty}')" style="font-size:11px">⬇ 從治療記錄帶入</button>
     </div>
     <div id="tllist-${cid}-${_ty}-${i}">${buildTimelineRows(cid,i,d,_ty)}</div>
-    <div id="tl-svg-preview-${cid}-${_ty}-${i}" style="margin-top:8px">${(d.timeline&&d.timeline.length)?renderTimelineSVG(d.timeline,CFG[cid]?.color||'#4A7C8E','view'):''}</div>
+    <div id="tl-svg-preview-${cid}-${_ty}-${i}" style="margin-top:8px">${(d.timeline&&d.timeline.length)?tlRender(tlLayout(d.timeline,{view:'summary',width:700,discussion:d.discussion,deathDate:d.deathDate}),'compact',CFG[cid]?.color||'#4A7C8E'):''}</div>
   </div>
 
   ${_isEv?`
@@ -5175,7 +5427,7 @@ async function testNasBackup(){
 }
 
 /* V5.45.0 A-5:永不進備份的 key。`mdt_ai` 是 V5.37.0 以前的舊格式,同樣含金鑰。 */
-const _NEVER_BACKUP=/^mdt_(ai_key|cf_token|ai|zoom_pwd)$/;/* V5.50.0 B-5 */
+const _NEVER_BACKUP=/^mdt_(ai_key|cf_token|ai|zoom_pwd|upload_key)$/;/* V5.62.0 *//* V5.50.0 B-5 */
 async function backupToNAS(){
   if(!nasHandle)return;
   try{
@@ -5942,8 +6194,13 @@ function createCase(cid,data,opts){
     pathologyImages:_arr(data.pathologyImages),/* ← 匯入原本缺 */
     surgicalImages:_arr(data.surgicalImages),  /* ← 匯入原本缺 */
     flags:_arr(data.flags),                     /* ← 匯入原本缺 */
-    timeline:_arr(data.timeline),
-    showTimeline:!!data.showTimeline,/* V5.25.0: 逐案決定是否產病程時序圖 */
+    timeline:_arr(data.timeline).map(function(t){/* V5.56.0 v2:保留 id/endDate/datePrec/key/src/_ai */
+      if(!t||typeof t!=='object')return t;
+      return{id:t.id||_tlNewId(),type:t.type||'',date:t.date||'',endDate:t.endDate||'',datePrec:t.datePrec||'',
+        label:t.label||'',key:!!t.key,pivot:!!t.pivot,/* V5.60.0 P1-3:手動轉折原本沒進白名單,經 createCase 就掉 */src:t.src||null,_ai:t._ai||undefined};
+    }),
+    showTimeline:!!data.showTimeline,
+    showGenomics:(data.showGenomics===undefined||data.showGenomics===null)?undefined:!!data.showGenomics,/* V5.54.0 *//* V5.25.0: 逐案決定是否產病程時序圖 */
     /* V5.27.0: 逐案、逐類型決定「夾在投影片」還是「開新分頁」。
        預設 false = 開新分頁(維持 V5.15.0 起的行為,既有會議不受影響) */
     embed:(data.embed&&typeof data.embed==='object')?{
@@ -6304,75 +6561,63 @@ function loadGhTokenStatus(){}
    clearGhToken / getSharedSlides / saveSharedSlides)—— 分享改走 Cloudflare 後
    它們全部成了「沒人走的路徑」。依坑 #61 的原則:留著就是同一件事的第二份實作,
    遲早會有人改了一邊忘了另一邊。**P0-6 / P0-7 兩項個資列管也因此關閉。** */
-const CF_ACCOUNT_ID='0b6e4749bcc0c4f9a989293b6f518ae7';
-const CF_NAMESPACE_ID='2c941f7dd17e43bd9224c966aeec4876';
+/* V5.62.0:CF_ACCOUNT_ID 已淘汰,網頁不再直打 CF API */
+/* V5.62.0:CF_NAMESPACE_ID 已淘汰,網頁不再直打 CF API */
 const CF_BASE_URL='https://share.selaginella.io';
 
-function getCfToken(){return localStorage.getItem('mdt_cf_token')||'';}
-function saveCfToken(){
-  const t=(document.getElementById('cf-token-input')||{}).value;
-  const v=(t||'').trim();
-  if(!v){alert('請輸入 API Token');return;}
-  localStorage.setItem('mdt_cf_token',v);
-  const el=document.getElementById('cf-token-status');
-  if(el){el.textContent='✓ 已儲存（只存在這台電腦，不會進入備份檔）';el.style.color='var(--ok)';}
-  const inp=document.getElementById('cf-token-input');if(inp)inp.value='';
+/* V5.62.0:上傳金鑰(取代 CF API Token)。不進備份、不進匯出。 */
+function getUploadKey(){try{return (localStorage.getItem('mdt_upload_key')||'').trim();}catch(e){return '';}}
+function saveUploadKey(){
+  const v=((document.getElementById('upload-key')||{}).value||'').trim();
+  if(v)localStorage.setItem('mdt_upload_key',v);else localStorage.removeItem('mdt_upload_key');
+  loadUploadKeyStatus();showSaveToast(v?'上傳金鑰已儲存':'上傳金鑰已清除');
 }
+function loadUploadKeyStatus(){
+  const el=document.getElementById('upload-key-status');if(!el)return;
+  const k=getUploadKey();
+  el.textContent=k?'\u2713 已設定（只存在這台電腦）':'尚未設定，「HTML 分享」會無法上傳';
+  el.style.color=k?'var(--ok)':'var(--warn)';
+  const i=document.getElementById('upload-key');if(i)i.value=k;
+}
+function getCfToken(){return localStorage.getItem('mdt_cf_token')||'';}
+/* V5.62.0:saveCfToken 已淘汰(上傳改走 Worker,不再需要 CF API Token) */
 function clearCfToken(){
   localStorage.removeItem('mdt_cf_token');
   const el=document.getElementById('cf-token-status');
   if(el){el.textContent='已清除';el.style.color='var(--textlt)';}
 }
-function loadCfTokenStatus(){
-  const el=document.getElementById('cf-token-status');if(!el)return;
-  if(getCfToken()){el.textContent='✓ 已設定（只存在這台電腦，不會進入備份檔）';el.style.color='var(--ok)';}
-  else{el.textContent='尚未設定，無法使用「HTML 分享」';el.style.color='var(--textlt)';}
-}
+/* V5.62.0:loadCfTokenStatus 已淘汰(上傳改走 Worker,不再需要 CF API Token) */
 
 /* 上傳到 KV。key 就是檔名;同名會直接覆蓋(維持原本 GitHub 的行為)。
    metadata 供 Worker 的清單頁顯示標題、大小與上傳時間。 */
 async function uploadSlidesToCloudflare(htmlContent, fname){
-  const token=getCfToken();
-  if(!token){alert('請先到「設定 → 系統 → 投影片分享」填入 Cloudflare API Token');return;}
-
-  /* 從 HTML 取 <title> 當清單頁的標題 */
-  let title=fname.replace(/\.[^.]+$/,'');
-  const tm=htmlContent.slice(0,8192).match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  if(tm&&tm[1].trim())title=tm[1].trim().slice(0,120);
-
-  const blob=new Blob([htmlContent],{type:'text/html; charset=utf-8'});
-  const meta={title:title,size:blob.size,uploaded:new Date().toISOString().slice(0,19)};
-
-  const fd=new FormData();
-  fd.append('value',blob);
-  fd.append('metadata',JSON.stringify(meta));
-
-  const url='https://api.cloudflare.com/client/v4/accounts/'+CF_ACCOUNT_ID
-    +'/storage/kv/namespaces/'+CF_NAMESPACE_ID+'/values/'+encodeURIComponent(fname);
-
-  const resp=await fetch(url,{
-    method:'PUT',
-    headers:{'Authorization':'Bearer '+token},
-    body:fd
-  });
-
-  if(!resp.ok){
-    /* 比照 V5.27.4 的教訓:依狀態碼給對應建議,不要一律說「請確認 Token 權限」 */
-    let msg='';
-    try{
-      const j=await resp.json();
-      msg=(j.errors||[]).map(function(e){return '['+(e.code||'')+'] '+(e.message||'');}).join('; ');
-    }catch(e){}
+  /* ════ V5.62.0 B-4 根治:改打自己的 Worker,不再直打 api.cloudflare.com ════
+     V5.41.0 選了方案 A(直打 API),V5.50.0 審核 B-4 預測 CORS 會擋,V5.62.0 實機確認:
+     `Failed to fetch` —— Cloudflare 管理 API 不開 CORS,從 sela1227.github.io 發的請求送出前就被 Chrome 攔掉。
+     Git Pusher 能上傳是因為桌面程式不受此限,**所以那顆按鈕從 V5.41.0 起就沒成功過**。
+     就算能通也不該這樣做:網頁裡的 CF token 按 F12 就看得到,而那把 token 能動整個 KV。
+     現在:網頁只帶「上傳金鑰」(Worker 的 UPLOAD_KEY 機密),外流換掉就好;
+     Worker 一樣寫入 title/uploaded metadata,Git Pusher 的清單照常顯示。 */
+  const key=getUploadKey();
+  if(!key){alert('請先到「設定 → 系統 → 投影片分享」填入上傳金鑰（由林醫師提供）');return;}
+  const url=CF_BASE_URL+'/api/upload?name='+encodeURIComponent(fname);
+  let resp;
+  try{
+    resp=await fetch(url,{method:'PUT',headers:{'X-Upload-Key':key,'Content-Type':'text/html; charset=utf-8'},body:htmlContent});
+  }catch(e){
+    throw new Error('無法連線到分享空間（'+(e&&e.message||e)+'）\n\n→ 請確認網路；院內網路若擋 '+CF_BASE_URL.replace(/^https?:\/\//,'')+' 會無法上傳。');
+  }
+  let data=null;try{data=await resp.json();}catch(e){}
+  if(!resp.ok||!data||!data.ok){
     let hint='';
-    if(resp.status===401||resp.status===403)hint='Token 無效、過期或權限不足（需要 Workers KV Storage: Edit）。';
-    else if(resp.status===404)hint='找不到 KV 命名空間，請回報（設定可能已變更）。';
+    if(resp.status===401||resp.status===403)hint='上傳金鑰錯誤或已更換，請向林醫師索取新的。';
+    else if(resp.status===400)hint='檔名不合法（不可含路徑）。';
     else if(resp.status===413)hint='檔案過大，KV 單筆上限 25 MB。含大量影像時容易超過。';
     else if(resp.status===429)hint='請求過於頻繁，稍候再試。';
-    else hint='請確認網路連線；院內網路若擋 api.cloudflare.com 會無法上傳。';
-    throw new Error((msg||('HTTP '+resp.status))+'\n\n→ '+hint);
+    else hint='分享空間回應異常，請回報。';
+    throw new Error(((data&&data.error)||('HTTP '+resp.status))+'\n\n→ '+hint);
   }
-
-  return CF_BASE_URL+'/'+encodeURIComponent(fname);
+  return data.url||(CF_BASE_URL+'/'+encodeURIComponent(fname));
 }
 
 /* ⚠ V5.41.0 起已無呼叫端(分享改走 Cloudflare)。保留作為相容層與歷史參考;
@@ -6768,6 +7013,8 @@ function _offerCopyFromHistory(inp){
         if(!empty)return;
       }
       cur[k]=Array.isArray(v)?JSON.parse(JSON.stringify(v)):(typeof v==='object'?JSON.parse(JSON.stringify(v)):v);
+      /* V5.60.0 M-6:時序複製過來要換 id(避免兩場會議共用)、剝掉 _ai(那是幾年前的判讀) */
+      if(k==='timeline'&&Array.isArray(cur[k]))cur[k].forEach(function(t){if(t&&typeof t==='object'){t.id=_tlNewId();delete t._ai;}});
     });
     /* 討論方向、摘要、決策不帶 —— 那是「這一場」要討論的 */
     markDirty();
@@ -7562,7 +7809,7 @@ async function genPPTX(){
   /* V5.30.0: 基因檢測緊接癌指數之後(個管師指定位置) */
   var gnS=(c.genomics||[]).filter(function(x){return ((x.name||'')+(x.content||'')).trim();})
     .map(function(x){return (x.name?x.name+'：':'')+(x.content||'')+(x.date?'（'+x.date+'）':'');}).join('\n');
-  if(gnS)addRow('基因檢測',gnS);
+  if(_gnShow(c))addRow('基因檢測',gnS||'無');/* V5.54.0:依勾選,無資料寫「無」 */
       }
 
       // 討論議題 chips(底部)
@@ -7639,6 +7886,13 @@ async function genPPTX(){
    mode='deck'  (新「Word 簡報」,取代 PPTX):會前個案資料簡報,一案一頁,完整臨床欄位
    刻意重用 genDOCX 而非另寫函式:mkBlock/mkCaseHdr/mkSecHdr 等視覺 helper 共用,
    以後改 Word 樣式只要改一處,兩種產出自動一致(避免複製 200 行 helper 造成雙份維護) */
+/* V5.61.0 TL-10:DOCX 病程時序文字(與必要事件投影片文字頁同格式)*/
+function _tlDocxText(c){
+  return (c.timeline||[]).filter(function(t){return t&&(t.date||t.label||t.type);}).slice().sort(_tlCmp)
+    .map(function(t){var cfg=TL_TYPES.find(function(x){return x.id===t.type;});
+      return (t.date||'（未填日期）')+(t.endDate?'～'+t.endDate:'')+'　['+(cfg?cfg.label:'其他')+']'+(t.label?' '+t.label:'')
+        +(t.pivot||(t._ai&&t._ai.pivot)?'　⚑轉折':'')+(t._ai&&t._ai.response?'　'+({better:'↑有效',stable:'→穩定',worse:'↓惡化'}[t._ai.response]||''):'');}).join('\n');
+}
 async function genDOCX(mode){
   mode=mode||'record';
   const isDeck=(mode==='deck');
@@ -7944,6 +8198,8 @@ async function genDOCX(mode){
             /* 舊資料相容:單一字串 c.treatment 走原邏輯 */
             children.push(mkBlock('\u6cbb\u7642',c.treatment,false,{contentSize:10}));
           }
+          /* V5.61.0 TL-10:DOCX 病程時序(原本 genDOCX 內 0 處 timeline) */
+          if(c.showTimeline){var _tlT=_tlDocxText(c);if(_tlT)children.push(mkBlock('\u75c5\u7a0b\u6642\u5e8f',_tlT,false,{contentSize:10}));}
 
           /* V5.13.0: 簡報模式(會前資料)不出「討論摘要/決策結論」— 那是會後才填的;
              改出「討論方向」與「癌指數」,對齊原 PPTX 個案頁 */
@@ -8003,6 +8259,16 @@ async function genDOCX(mode){
           ].filter(Boolean).join('\n');
           if(_dInfo)children.push(mkBlock('\u6b7b\u4ea1\u8cc7\u8a0a',_dInfo,false));
           if(ev.cc){children.push(mkBlock('\u75c5\u7a0b\u7d93\u904e',ev.cc,false));}
+          /* V5.61.0 TL-10:DOCX 是癌委會看的版本,必要事件原本只有死亡資訊/病程/摘要/決策/改善 —— 病理/檢查/治療/時序全沒有(坑 #71 的 DOCX 版) */
+          var _phT=[(ev.phChips||[]).map(function(x){return x+'(+)';}).join(' '),ev.ph||''].filter(Boolean).join('  ');
+          if(_phT)children.push(mkBlock('\u904e\u53bb\u75c5\u53f2',_phT,false));
+          var _rows=function(arr,withName){return (arr||[]).map(function(x){var h=withName&&x.name?(x.name+(x.date?'（'+x.date+'）':'')):(x.date||'');var t=(x.content||'').trim();return (h?h+(t?'：':''):'')+t;}).filter(function(t){return t.trim();}).join('\n');};
+          var _pa=_rows(ev.pathologies,false);if(_pa)children.push(mkBlock('\u75c5\u7406',_pa,false));
+          var _ex=_rows(ev.exams,true);if(_ex)children.push(mkBlock('\u6aa2\u67e5',_ex,false));
+          var _tx=_rows(ev.treatments,true);if(_tx)children.push(mkBlock('\u6cbb\u7642',_tx,false));
+          var _mk=(ev.markers||[]).map(function(x){return (x.name?x.name+'：':'')+(x.content||'');}).filter(function(t){return t.trim();}).join('\n');
+          if(_mk)children.push(mkBlock('\u764c\u6307\u6578',_mk,false));
+          var _tlT=_tlDocxText(ev);if(_tlT)children.push(mkBlock('\u75c5\u7a0b\u6642\u5e8f',_tlT,false));
           if(ev.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',ev.summary,false));}
           if(ev.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',ev.decision,false,{emphasis:true}));}
           if(ev.improveNeeded){
@@ -8521,6 +8787,15 @@ function _forEachMeetingImg(m,cids,cb){
   });
 }
 
+/* V5.57.0:把 Hybrid timeline 核心序列化成可注入投影片的字串。
+   驗收(審核第八節 #9):投影片端與編輯端對同一份資料的 tlLayout 輸出 deep-equal —— 同一份原始碼保證這點。
+   ⚠ 這四個函式的原始碼不可含反引號、${、script 結尾標籤(坑 #48/#79),tlcore 寫的時候已避開。 */
+function _tlInjectSrc(){
+  return 'window.TL_TYPES='+JSON.stringify(TL_TYPES)+';'
+    +'window._normTlDate='+_normTlDate.toString()+';'
+    +'window.tlLayout='+tlLayout.toString()+';'
+    +'window.tlRender='+tlRender.toString()+';';
+}
 async function genHTMLSlides(opts){
   opts=opts||{};
   const _doDownload=(opts.download!==false);
@@ -8539,7 +8814,19 @@ async function genHTMLSlides(opts){
      背景:原本讀不到的圖片直接 `if(!src)return''` 靜默略過 —— 使用者不會知道少了一張,
      這跟坑 #29(無聲不產出)、坑 #33(謊報成功)是同一類「無聲失敗」。
      改法:全程累計「應該有幾張 / 實際載到幾張」,產出前把落差與其他風險一次攤開讓使用者決定。 */
-  const _qa={expectImgs:0,loadedImgs:0,missing:[],noDiscussion:[],bigPages:[],longText:[]};
+  const _qa={expectImgs:0,loadedImgs:0,missing:[],noDiscussion:[],bigPages:[],longText:[],tl:[]}/* V5.61.0 TL-15 */
+  /* V5.61.0 TL-15:事件軸預檢 —— 個案與必要事件都要跑(必要事件多一條「晚於死亡日」) */
+  const _qaTl=function(c){
+        const tl=c.timeline||[];if(!tl.length)return;
+        const who=(c.chartNo||'')+' '+(c.name?maskName(c.name):'');
+        const valid=tl.filter(function(t){return t&&_normTlDate(t.date).date;}).length;
+        if(!c.showTimeline)_qa.tl.push(who+'：有 '+tl.length+' 筆事件但未勾「產出時包含病程時序圖」');
+        else if(!valid)_qa.tl.push(who+'：已勾產出但沒有任何一筆有效日期');
+        const noType=tl.filter(function(t){return t&&!t.type;}).length;if(noType)_qa.tl.push(who+'：'+noType+' 筆事件類型未選');
+        const mdate=String(m.date||'');
+        const late=tl.filter(function(t){var d=_normTlDate(t&&t.date).date;return d&&mdate&&d>mdate;}).length;if(late)_qa.tl.push(who+'：'+late+' 筆事件日期晚於會議日');
+        if(c.deathDate){const dd=_normTlDate(c.deathDate).date;const afterD=tl.filter(function(t){var d=_normTlDate(t&&t.date).date;return d&&dd&&d>dd&&t.type!=='death';}).length;if(afterD)_qa.tl.push(who+'：'+afterD+' 筆事件日期晚於死亡日');}
+        };;
   /* V5.19.0 #2 Case Navigator:產 slides 時順手記錄「這一頁是誰」,產出的 HTML 內建目錄可直接跳頁 */
   const _slideMeta=[];
   const _qaCountImgs=function(imgs,who){
@@ -8622,13 +8909,11 @@ async function genHTMLSlides(opts){
          (V5.15.0 曾為同樣理由寫過「先累積再組按鈕」的註解,這次改時序圖時漏掉了) */
       var _nTl=0;
       if(c.showTimeline&&(c.timeline||[]).length){
-        _tlWinData[_ck]={chartNo:_imgMeta.chartNo,name:_imgMeta.name,
-          caName:_imgMeta.caName,caColor:caColor,
-          events:c.timeline.slice().sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
-            .map(function(e){return{date:e.date,type:e.type,label:e.label,
-              pivot:!!(e._ai&&e._ai.pivot),resp:(e._ai&&e._ai.response)||'',
-              basis:(e._ai&&e._ai.basis)||''};})};
-        _nTl=c.timeline.length;
+        /* V5.57.0 2b:傳完整事件(id/endDate/key/_ai 都要),投影片端用同一套 tlLayout —— 不再簡化成舊 Event-band 格式 */
+          _tlWinData[_ck]={chartNo:_imgMeta.chartNo,name:_imgMeta.name,
+            caName:_imgMeta.caName,caColor:caColor,discussion:c.discussion||'',deathDate:c.deathDate||'',
+            events:JSON.parse(JSON.stringify(c.timeline||[]))};
+          _nTl=c.timeline.filter(function(t){return t&&_normTlDate(t.date).date;}).length;/* V5.59.0 N-11:只數有效日期,與圖上節點一致 */
       }
       /* V5.15.1: 乳攝也改同一模式(原本是獨立投影片:左報告右圖)。
          報告文字帶進檢視器當第一頁(個管師選擇 B:個案頁不動);限乳癌且有報告或圖才建立 */
@@ -8657,13 +8942,24 @@ async function genHTMLSlides(opts){
       _embSlides=_embSlides.concat(_embedImgSlides('related',c.images,'影像'));
       _embSlides=_embSlides.concat(_embedImgSlides('surg',c.surgicalImages,'手術照片'));
       _embSlides=_embSlides.concat(_embedImgSlides('patho',c.pathologyImages,'病理影像'));
-      _embSlides=_embSlides.concat(_embedImgSlides('genomics',c.genomicsImages,'NGS 報告影像'));/* V5.30.0 */
+      _embSlides=_embSlides.concat(_embedImgSlides('genomics',c.genomicsImages,'NGS 報告影像'));
+      /* ════ V5.59.0 TL-1 正式修法:內嵌時序頁 ════
+         勾「夾在投影片」時產出一頁 <section class="slide tl-slide">,DOMContentLoaded 由注入的 tlRender 填 SVG。
+         按鈕與內嵌頁互斥(與影像相同,V5.27.0 原則)。 */
+      if(_emb.timeline&&_nTl>0){
+        _embSlides.push('<section class="slide tl-slide" data-tlkey="'+_ck+'" style="--ca:'+caColor+';">'
+          +'<div class="ch"><div class="cht"><span class="ci">'+escA(_imgMeta.chartNo||'')+'</span> <span class="cn">'+escA(_imgMeta.name||'')+'</span>'
+          +'<span class="cat">病程時序</span></div></div>'
+          +'<div class="cb" style="padding:2vh 3vw"><div class="tl-host" data-tlkey="'+_ck+'" style="width:100%"></div></div>'
+          +'</section>');
+      }/* V5.30.0 */
       /* V5.27.2: 按鈕順序與夾投影片順序一致(乳攝→影像→手術→病理),視覺與臨床時序同步 */
       var _pathoBtn=_mkImgBtn('mammo','📸','乳房攝影',_mammoBtnN)
                    +_mkImgBtn('related','🖼','影像',_nRel)
                    +_mkImgBtn('surg','📷','手術照片',_nSurg)
                    +_mkImgBtn('patho','🔬','病理影像',_nPatho)
                    +_mkImgBtn('genomics','🧬','NGS 報告',_nGen)/* V5.30.0 */
+                   /* V5.55.0 TL-1:全檔沒有時序頁產生器,勾了「夾在投影片」時序就從投影片消失;一律出按鈕。V5.59.0 N-13:註解移出 onclick 屬性 */
                    +((_nTl>0&&!_emb.timeline)?(' <button class="patho-btn" onclick="openTimelineWindow(\''+_ck+'\')" title="開新分頁查看病程時序圖">📈 病程時序('+_nTl+')</button>'):'');/* V5.25.0 / V5.27.0 互斥 */
       return {btns:_pathoBtn,embSlides:_embSlides,emb:_emb,nTl:_nTl};
   };
@@ -8824,7 +9120,9 @@ async function genHTMLSlides(opts){
         mkRow('過去病史',escA(ph||'').replace(/\n/g,'<br>')),
         fhRow,
         markersHtml?mkRow('癌指數',markersHtml):'',
-      (c.genomics||[]).length?mkRow('基因檢測',(c.genomics||[]).map(function(gn){
+      /* V5.54.0:依勾選顯示;勾了但沒資料寫「無」 */
+      (_gnShow(c)&&!(c.genomics||[]).length)?mkRow('基因檢測','<div class="vc-r"><span class="vc-v">無</span></div>'):'',
+      (_gnShow(c)&&(c.genomics||[]).length)?mkRow('基因檢測',(c.genomics||[]).map(function(gn){
         return '<div class="vc-r"><span class="vc-k">基因檢測</span><span class="vc-v">'+(gn.name?'<b>'+escA(gn.name)+'：</b> ':'')+escA(gn.content||'')+'</span></div>';
       }).join('')):'',
         mkRow('病理',paths),
@@ -8854,6 +9152,7 @@ async function genHTMLSlides(opts){
       var _imgMeta={chartNo:c.chartNo||'',name:c.name?maskName(c.name):'',caName:ca.name,caColor:caColor};
       /* V5.19.0 #7: 個案層級的預檢 —— 沒填討論方向、內文可能超頁 */
       if(!(c.discussion||'').trim())_qa.noDiscussion.push((c.chartNo||'')+' '+(c.name?maskName(c.name):''));
+      _qaTl(c);/* V5.61.0 TL-15 */
       var _txtLen=[(c.cc||''),(c.ph||''),(c.diagnosis||''),
         (c.pathologies||[]).map(function(x){return x.content||'';}).join(''),
         (c.exams||[]).map(function(x){return x.content||'';}).join(''),
@@ -8949,16 +9248,18 @@ async function genHTMLSlides(opts){
           }).filter(function(t){return t.trim();}).join('\n\n');
         };
         var _pa=_fmtRows(c.pathologies,false);if(_pa)sections.push({lbl:'病理',txt:_pa});
-        var _ex=_fmtRows((c.exams||[]).slice().sort(function(a,b){return (a.date||'').localeCompare(b.date||'');}),true);
+        var _ex=_fmtRows((c.exams||[]).slice().sort(_tlCmp),true);
         if(_ex)sections.push({lbl:'檢查',txt:_ex});
         var _tx=_fmtRows(c.treatments,true);if(_tx)sections.push({lbl:'治療',txt:_tx});
         var _mk=(c.markers||[]).map(function(x){
           return (x.name?x.name+'：':'')+(x.content||'');
         }).filter(function(t){return t.trim();}).join('\n');
         if(_mk)sections.push({lbl:'癌指數',txt:_mk});
-        var _gn=_fmtRows(c.genomics,true);if(_gn)sections.push({lbl:'基因檢測',txt:_gn});
-        var _tl=(c.timeline||[]).filter(function(t){return t&&(t.date||t.label);})
-          .map(function(t){return (t.date||'')+(t.label?'　'+t.label:'');}).join('\n');
+        var _gn=_fmtRows(c.genomics,true);if(_gnShow(c))sections.push({lbl:'基因檢測',txt:_gn||'無'});/* V5.54.0 */
+        /* V5.55.0 TL-9:排序、帶類型、空日期標示 —— 原本順序顛倒且看不出是什麼事件 */
+        var _tl=(c.timeline||[]).filter(function(t){return t&&(t.date||t.label||t.type);}).slice().sort(_tlCmp)
+          .map(function(t){var cfg=TL_TYPES.find(function(x){return x.id===t.type;});
+            return (t.date||'（未填日期）')+(t.endDate?'～'+t.endDate:'')+'　['+(cfg?cfg.label:'其他')+']'+(t.label?' '+t.label:'');}).join('\n');/* V5.59.0 N-14 */
         if(_tl)sections.push({lbl:'病程時序',txt:_tl});
       }
       if(c.familyHistory)sections.push({lbl:'家族史',txt:c.familyHistory});
@@ -8986,7 +9287,7 @@ async function genHTMLSlides(opts){
         +(_evImg&&_evImg.embSlides.length?_evImg.embSlides.join(''):'');/* V5.53.0:內嵌頁接在主頁後 */
     }
     team.forEach(function(c){slides.push(_trackSlide(c,'醫療小組'));});
-    events.forEach(function(c,ei){slides.push(_trackSlide(c,'必要事件',ei));});/* V5.53.0:傳 idx 給影像 key */
+    events.forEach(function(c,ei){_qaTl(c);/* V5.61.0 TL-15 */slides.push(_trackSlide(c,'必要事件',ei));});/* V5.53.0:傳 idx 給影像 key */
   });
   // Flush deferred pathology slides (when grouping enabled)
   _deferredPath.forEach(function(sl){slides.push(sl);});
@@ -9532,251 +9833,60 @@ document.addEventListener('touchend',function(e){
 var _t0=null;document.addEventListener('touchstart',function(e){if(e.touches.length===2)_t0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
 document.addEventListener('touchmove',function(e){if(e.touches.length===2&&_t0){var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);var slide=document.querySelectorAll('.slide')[c];if(slide&&slide.classList.contains('img-slide')){_zoom=Math.max(1,Math.min(8,_zoom*(d/_t0)));_t0=d;_zoomImg();}e.preventDefault();}},{passive:false});
 /* V5.2.1: 病理影像資料 + 新分頁開啟函數 */
-window.__caseImgs=`+JSON.stringify(_imgWinData)+`;
-window.__caseTL=`+JSON.stringify(_tlWinData)+`;
-/* ════ V5.25.0 病程時序圖檢視器(Event-band Timeline)════
-   設計原則(重要,寫死在這裡以免日後違反):
-   **只用結構化資料(date/type)決定視覺結構,絕不從 label 自由文字推論
-     疾病狀態、因果、治療反應或重要性。** —— 這條是為了防止坑 #30 換形式重演。
-   五個 clinical band 的分法與順序是刻意的:疾病→證據→全身治療→局部治療→其他,
-   不是照資料庫 type 順序排。recurrence/metastasis 屬「疾病事件」不可與 follow 混軌。 */
-window.TL_BANDS=[
-  {key:'disease',label:'疾病事件',sub:'診斷 / 復發 / 轉移',types:['dx','recurrence','metastasis']},
-  {key:'evidence',label:'檢查證據',sub:'影像 / 病理',types:['biopsy','imaging']},
-  {key:'systemic',label:'全身治療',sub:'系統性治療',types:['chemo']},
-  {key:'local',   label:'局部治療',sub:'手術 / 放療 / 介入',types:['surgery','rt']},
-  {key:'other',   label:'追蹤 / 其他',sub:'追蹤 / 其他事件',types:['follow','other']}
-];
-window.TL_TYPES=`+JSON.stringify(TL_TYPES)+`;
+window.__caseImgs=`+JSON.stringify(_imgWinData).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')+`;/* V5.58.0 N-8:事件說明含 script 結尾標籤會讓整份投影片 JS 失效(B-8 同一形狀第二份) */
+window.__caseTL=`+JSON.stringify(_tlWinData).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')+`;/* V5.58.0 N-8:事件說明含 script 結尾標籤會讓整份投影片 JS 失效(B-8 同一形狀第二份) */
+/* V5.57.0 2b:Hybrid timeline 核心注入 —— 用 toString() 串接在反引號外(坑 #48),主程式與投影片同一份原始碼 */
+`+_tlInjectSrc()+`
+/* V5.57.0:舊 Event-band 檢視器(V5.25.0)已淘汰,改用注入的 tlLayout/tlRender。設計原則移至 tlcore 註解。 */
+/* V5.59.0 N-11:TL_BANDS 隨舊 Event-band 淘汰,不再注入 */
+/* V5.59.0 N-11:TL_TYPES 已由 _tlInjectSrc 注入,不重複 */
 /* V5.15.0: 原 openPathoWindow 通用化 — 病理/手術/影像共用同一個檢視器(含放大鏡與導覽),
    key 為 'ci-N::type';標題與分類標籤改由資料帶入 */
+/* V5.59.0 TL-1:內嵌時序頁 —— 載入後把每個 .tl-host 填成 slide theme SVG */
+document.addEventListener('DOMContentLoaded',function(){
+  var hosts=document.querySelectorAll('.tl-host[data-tlkey]');
+  for(var i=0;i<hosts.length;i++){
+    var k=hosts[i].getAttribute('data-tlkey'),d=window.__caseTL&&window.__caseTL[k];
+    if(!d||!window.tlLayout)continue;
+    try{hosts[i].innerHTML=window.tlRender(window.tlLayout(d.events,{view:'summary',width:1600,discussion:d.discussion,deathDate:d.deathDate}),'slide',d.caColor);}
+    catch(e){hosts[i].textContent='時序圖產生失敗：'+(e&&e.message||e);}
+  }
+});
 window.openTimelineWindow=function(caseId){
+  /* ════ V5.57.0 2b:改用 Hybrid timeline(tlLayout/tlRender slide theme)════
+     舊 Event-band(V5.25.0~V5.26.3,13KB)淘汰 —— 它與編輯端的蛇形圖是兩套渲染器,
+     V5.25~V5.26.3 的修正只修到這一份(審核 TL-8、坑 #61 的事件軸版)。
+     現在主程式與投影片同一份原始碼,Summary 為預設(決策 1),可切換 Full。 */
   var d=window.__caseTL&&window.__caseTL[caseId];
   if(!d){alert('找不到這個個案的病程時序資料。');return;}
-  var w;try{w=window.open('','_blank');}catch(e){w=null;}
-  if(!w){alert('瀏覽器擋下了新分頁,請允許本頁的彈出視窗後再試一次。');return;}
-  var caC=d.caColor||'#4A7C8E';
-  var evs=(d.events||[]).slice();
-  var TB=window.TL_BANDS,TT=window.TL_TYPES;
-  var cfgOf=function(t){for(var i=0;i<TT.length;i++){if(TT[i].id===t)return TT[i];}return TT[TT.length-1];};
-  var bandOf=function(t){for(var i=0;i<TB.length;i++){if(TB[i].types.indexOf(t)>=0)return i;}return TB.length-1;};
-  var esc=function(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');};
-  var ms=function(x){var t=new Date(x||'');return isNaN(t.getTime())?null:t.getTime();};
-  var md=function(x){var v=String(x||'');return v.length>=10?v.slice(5).replace('-','/'):v;};
-  var DAY=86400000;
-
-  /* ════════════════════════════════════════════════════════════════
-     V5.26.0 核心原則(外部審稿指出我前一版違反了自己定的規則):
-     **節點永遠忠於真正日期,文字可以避讓,節點不能避讓。**
-     前一版用 layout() 強制節點間隔 240px,導致「圖上的水平距離不再代表時間距離」
-     —— 這比標籤重疊嚴重得多,是 timeline 的根本錯誤。
-     本版改成:node 用真實日期座標;只移動 label,並以引線(leader line)連回節點。
-     另外移除「全身治療相鄰事件自動箭頭」—— 資料只有 date 沒有 endDate,
-     那個箭頭是視覺憑空生出的語意(會被讀成「持續到」或「後線銜接」),屬臨床誤導。
-     ════════════════════════════════════════════════════════════════ */
-
-  /* 時間壓縮:只有真正長空窗才壓(審稿建議 45→90 天,避免畫面破碎) */
-  var GAP_DAYS=90,GAP_W=110;
-  var pts=evs.map(function(e){return ms(e.date);}).filter(function(t){return t!==null;}).sort(function(a,b){return a-b;});
-  var segs=[];
-  for(var i=1;i<pts.length;i++){
-    if((pts[i]-pts[i-1])/DAY>GAP_DAYS)segs.push({a:pts[i-1],b:pts[i],days:Math.round((pts[i]-pts[i-1])/DAY)});
-  }
-  var t0=pts.length?pts[0]:0,t1=pts.length?pts[pts.length-1]:1;
-  var realSpan=(t1-t0)||1;
-  var compressed=segs.reduce(function(a,g){return a+(g.b-g.a);},0);
-  var flowSpan=(realSpan-compressed)||1;
-  var W=1680,padL=250,padR=140,headH=104;/* V5.26.3: padL 200→250,讓軌名與副標有足夠空間 */
-  var usableW=W-padL-padR-segs.length*GAP_W;
-  var xOf=function(t){
-    if(t===null)return padL;
-    var x=padL,acc=0;
-    for(var i=0;i<segs.length;i++){
-      if(t>=segs[i].b){acc+=(segs[i].b-segs[i].a);x+=GAP_W;}
-      else if(t>segs[i].a){return Math.round(x+((segs[i].a-t0-acc)/flowSpan)*usableW+GAP_W*((t-segs[i].a)/(segs[i].b-segs[i].a)));}
-    }
-    return Math.round(x+((t-t0-acc)/flowSpan)*usableW);
-  };
-
-  /* V5.26.3: SVG text 不會自動換行。長標籤(如完整病理描述)要手動斷成 2 行,
-     第 2 行超出才截斷加「…」,並用 <title> 讓滑鼠移過去看全文。
-     以字元寬估算(中文≈1、英數≈0.55),不精準但足夠決定斷點。 */
-  var wUnit=function(ch){return /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(ch)?1:0.55;};
-  var wrap2=function(txt,maxU){
-    txt=String(txt||'');
-    var l1='',l2='',u=0,i2=0;
-    for(;i2<txt.length;i2++){var c2=txt[i2],cu=wUnit(c2);if(u+cu>maxU)break;l1+=c2;u+=cu;}
-    if(i2>=txt.length)return[l1,'',false];
-    u=0;
-    for(;i2<txt.length;i2++){var c3=txt[i2],cu3=wUnit(c3);if(u+cu3>maxU)break;l2+=c3;u+=cu3;}
-    var cut=(i2<txt.length);
-    if(cut)l2=l2.replace(/.$/,'')+'…';
-    return[l1,l2,cut];
-  };
-  /* 標籤避讓:node 不動,只算 label 要放第幾層(0=最近,1=更遠…)
-     只有真的會碰撞才錯開(審稿:交錯是 collision handling,不是 index 的固定樣式) */
-  var LBL_W=150;
-  var tierOf=function(list){
-    var tiers=[],occupied=[];
-    list.forEach(function(o,k){
-      var x=o.x,t=0;
-      while(true){
-        var hit=false;
-        for(var q=0;q<occupied.length;q++){
-          if(occupied[q].t===t&&Math.abs(occupied[q].x-x)<LBL_W){hit=true;break;}
-        }
-        if(!hit)break;
-        t++;
-        if(t>3){t=0;break;}
-      }
-      occupied.push({x:x,t:t});tiers.push(t);
-    });
-    return tiers;
-  };
-
-  /* ── 版面 ── */
-  var _dzCount=evs.filter(function(e){return bandOf(e.type)===0;}).length;
-  /* V5.26.3: 疾病軸沒有事件時仍保留(不隱藏)—— 隱藏會讓「該填卻沒填」靜靜消失,
-     而個管師需要知道要補「診斷確立」。但大幅縮小高度,不讓空的東西佔最大空間。 */
-  var DZ_TOP=headH+30,DZ_H=(_dzCount?126:72);
-  var laneH=118,axisH=70,noteH=20;/* V5.26.0: 正式版移除底部說明區,只留少量下邊距 */
-  var used={};evs.forEach(function(e){used[bandOf(e.type)]=true;});
-  var lanes=[];for(var i=0;i<TB.length;i++){if(TB[i].key!=='disease'&&used[i])lanes.push({i:i,def:TB[i]});}
-  var LANE_TOP=DZ_TOP+DZ_H;
-  var H=headH+30+DZ_H+lanes.length*laneH+axisH+noteH;
-  var svg='<rect width="'+W+'" height="'+H+'" fill="#0f161c"/>';
-
-  /* ══ 疾病軸:全圖唯一真正的 timeline(不用背景色塊,靠線本身建立權重)══ */
-  var dzEvs=evs.filter(function(e){return bandOf(e.type)===0;});
-  var dzY=DZ_TOP+DZ_H/2+16,DZC='#E74C3C';
-  svg+='<text x="34" y="'+(DZ_TOP+30)+'" font-size="22" font-weight="700" fill="#e8eff5">疾病軸</text>';
-  var dzPl=dzEvs.map(function(e){return{o:e,x:xOf(ms(e.date))};});
-  var lx0=dzPl.length?dzPl[0].x:padL,lx1=dzPl.length?dzPl[dzPl.length-1].x:(W-padR);
-  var prev=lx0;
-  segs.forEach(function(g){
-    var ga=xOf(g.a),gb=xOf(g.b);
-    if(ga>prev)svg+='<line x1="'+prev+'" y1="'+dzY+'" x2="'+ga+'" y2="'+dzY+'" stroke="'+DZC+'" stroke-width="5.5" stroke-linecap="round"/>';
-    svg+='<line x1="'+ga+'" y1="'+dzY+'" x2="'+gb+'" y2="'+dzY+'" stroke="#5d6e7b" stroke-width="3" stroke-dasharray="9 8"/>';
-    var mo=Math.max(1,Math.round(g.days/30));
-    svg+='<text x="'+((ga+gb)/2)+'" y="'+(dzY+26)+'" text-anchor="middle" font-size="15" fill="#8296a6">'+mo+' 個月</text>';
-    prev=gb;
-  });
-  if(_dzCount){
-    svg+='<line x1="'+prev+'" y1="'+dzY+'" x2="'+(lx1+40)+'" y2="'+dzY+'" stroke="'+DZC+'" stroke-width="5.5" stroke-linecap="round"/>';
-    svg+='<path d="M '+(lx1+40)+' '+(dzY-10)+' L '+(lx1+66)+' '+dzY+' L '+(lx1+40)+' '+(dzY+10)+' Z" fill="'+DZC+'"/>';
-  }else{
-    /* 無疾病事件:淡虛線 + 明確提示(不畫箭頭,空軸畫箭頭很奇怪) */
-    svg+='<line x1="'+padL+'" y1="'+dzY+'" x2="'+(W-padR)+'" y2="'+dzY+'" stroke="#3a4854" stroke-width="2" stroke-dasharray="8 8"/>';
-    svg+='<text x="'+((padL+W-padR)/2)+'" y="'+(dzY-14)+'" text-anchor="middle" font-size="16" fill="#6d8190">尚無疾病事件記錄（建議補上「診斷確立」等事件）</text>';
-  }
-  var dzT=tierOf(dzPl);
-  dzPl.forEach(function(q,qi){
-    var e=q.o,x=q.x,tr=dzT[qi];
-    var ly=dzY-46-tr*40;
-    if(tr>0)svg+='<line x1="'+x+'" y1="'+(dzY-20)+'" x2="'+x+'" y2="'+(ly+8)+'" stroke="'+DZC+'" stroke-width="1.2" opacity=".5"/>';
-    svg+='<circle cx="'+x+'" cy="'+dzY+'" r="18" fill="'+DZC+'" opacity=".26"/>';
-    svg+='<circle cx="'+x+'" cy="'+dzY+'" r="12" fill="'+DZC+'" stroke="#0f161c" stroke-width="3.5"/>';
-    svg+='<circle cx="'+x+'" cy="'+dzY+'" r="5" fill="#fff"/>';
-    var dlab=e.label||cfgOf(e.type).label,dwp=wrap2(dlab,15);
-    var dxp=Math.max(x,padL+52);
-    var dt2=(dwp[1]?'<tspan x="'+dxp+'" dy="24">'+esc(dwp[1])+'</tspan>':'');
-    svg+='<text x="'+dxp+'" y="'+ly+'" text-anchor="middle" font-size="22" font-weight="700" fill="#ffffff">'
-      +'<title>'+esc(dlab)+'</title>'+esc(dwp[0])+dt2+'</text>';
-    svg+='<text x="'+dxp+'" y="'+(ly+(dwp[1]?44:20))+'" text-anchor="middle" font-size="15" fill="'+DZC+'">'+esc(md(e.date))+'</text>';
-  });
-
-  /* ══ supporting lanes:共用同一時間座標,但不另建 timeline(無自身 baseline)══ */
-  var ICON={evidence:'M7 2h6l1 5-4 13-4-13z',systemic:'M6 3h8v5l-4 12-4-12z',local:'M4 16 16 4l4 4L8 20z',other:'M5 3h12v18H5z'};
-  lanes.forEach(function(b,bi){
-    var y0=LANE_TOP+bi*laneH,y=y0+laneH/2+6;
-    svg+='<line x1="30" y1="'+y0+'" x2="'+(W-40)+'" y2="'+y0+'" stroke="#1e2a34" stroke-width="1"/>';
-    svg+='<path d="'+(ICON[b.def.key]||ICON.other)+'" transform="translate(34,'+(y-26)+') scale(1.45)" fill="#55697a" opacity=".8"/>';
-    svg+='<text x="84" y="'+(y-6)+'" font-size="18" font-weight="700" fill="#9fb4c3">'+esc(b.def.label)+'</text>';
-    svg+='<text x="84" y="'+(y+15)+'" font-size="12.5" fill="#5f7383">'+esc(b.def.sub||'')+'</text>';
-    var list=evs.filter(function(e){return bandOf(e.type)===b.i;})
-      .map(function(e){return{o:e,x:xOf(ms(e.date))};});
-    var tiers=tierOf(list);
-    list.forEach(function(q,qi){
-      var e=q.o,x=q.x,cfg=cfgOf(e.type),tr=tiers[qi];
-      /* V5.26.3 修:事件標籤是 text-anchor=middle,靠左的事件會往左延伸撞進軌名區(x<padL)。
-         給標籤 x 一個下限,只移文字不移節點(節點仍在真實日期,引線會斜著連過去) */
-      var lblX=Math.max(x,padL+90);/* V5.26.3: 下限拉大,確保長標籤置中後不入侵軌名區 */
-      var ly=y-30-tr*38;
-      /* 引線:節點在真實日期,標籤往上錯開時用細線連回來 */
-      svg+='<line x1="'+x+'" y1="'+(y-11)+'" x2="'+lblX+'" y2="'+(ly+7)+'" stroke="'+cfg.color+'" stroke-width="1.2" opacity=".45"/>';
-      svg+='<circle cx="'+x+'" cy="'+y+'" r="9.5" fill="'+cfg.color+'"/>';
-      /* V5.26.3: 標籤 x 加下限,避免 text-anchor=middle 往左延伸壓到軌名區 */
-      var lxp=Math.max(x,padL+52);
-      var lab=e.label||cfg.label,wp=wrap2(lab,17);
-      var t2=(wp[1]?'<tspan x="'+lxp+'" dy="19">'+esc(wp[1])+'</tspan>':'');
-      svg+='<text x="'+lxp+'" y="'+ly+'" text-anchor="middle" font-size="17" font-weight="600" fill="#d6e2ec">'
-        +'<title>'+esc(lab)+'</title>'+esc(wp[0])+t2+'</text>';
-      svg+='<text x="'+lxp+'" y="'+(ly+(wp[1]?36:17))+'" text-anchor="middle" font-size="13" fill="#7d92a2">'+esc(md(e.date))+'</text>';
-      if(e.resp){
-        var RM={better:{s:'↑ 有效',c:'#27AE60'},stable:{s:'→ 穩定',c:'#C8A93A'},worse:{s:'↓ 惡化',c:'#E74C3C'},na:{s:'— 無法評估',c:'#7F8C8D'}};
-        var rm=RM[e.resp]||RM.na;
-        svg+='<rect x="'+(x-54)+'" y="'+(y+16)+'" width="108" height="23" rx="11.5" fill="'+rm.c+'" opacity=".2"/>';
-        svg+='<text x="'+x+'" y="'+(y+32)+'" text-anchor="middle" font-size="13.5" font-weight="700" fill="'+rm.c+'">'+esc(rm.s)+' <tspan font-size="10" opacity=".85">AI</tspan></text>';
-      }
-    });
-  });
-
-  /* ══ 底部時間軸:只負責月份定位(gap 已在疾病軸標過,不重複)══ */
-  var ay=LANE_TOP+lanes.length*laneH+30;
-  svg+='<line x1="'+padL+'" y1="'+ay+'" x2="'+(W-padR/2)+'" y2="'+ay+'" stroke="#2a3742" stroke-width="1.5"/>';
-  var MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  /* V5.26.3: 跨度短(≤2 個月)時只有 1-2 個月刻度,軸線顯得空。
-     改成依跨度決定:短跨度用「月/日」逐事件標,長跨度用月份 */
-  var spanMon=(t1-t0)/DAY/30;
-  var ticks={};
-  if(spanMon<=2){
-    evs.forEach(function(e){var t=ms(e.date);if(t===null)return;var dd=new Date(t);
-      ticks[e.date]={t:t,y:dd.getFullYear(),m:dd.getMonth(),d:dd.getDate(),day:true};});
-  }else{
-    evs.forEach(function(e){var t=ms(e.date);if(t===null)return;var dd=new Date(t);
-      ticks[dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')]={t:t,y:dd.getFullYear(),m:dd.getMonth()};});
-  }
-  var keys=Object.keys(ticks).sort(),lastY=null,yearMarks=[];
-  keys.forEach(function(k){
-    var o=ticks[k],x=xOf(o.t);
-    svg+='<line x1="'+x+'" y1="'+(ay-6)+'" x2="'+x+'" y2="'+(ay+6)+'" stroke="#3a4854" stroke-width="1.5"/>';
-    svg+='<text x="'+x+'" y="'+(ay+26)+'" text-anchor="middle" font-size="15" fill="#8ca0b0">'
-      +(o.day?(MON[o.m]+' '+o.d):MON[o.m])+'</text>';
-    if(o.y!==lastY){yearMarks.push({x:x,y:o.y});lastY=o.y;}
-  });
-  /* 年份分組:只在該年第一個月份上方標一次(取代原本 2025-10 + OCT 的重複) */
-  yearMarks.forEach(function(m2){
-    svg+='<text x="'+m2.x+'" y="'+(ay-18)+'" text-anchor="middle" font-size="16" font-weight="700" fill="#6b8090">'+m2.y+'</text>';
-  });
-
-  var months=Math.max(1,Math.round((t1-t0)/DAY/30));
-  var title=esc(d.chartNo+' '+d.name)+'　病程時序';
-  var usedT={};evs.forEach(function(e){usedT[e.type||'other']=1;});
-  var lg=TT.filter(function(t){return usedT[t.id];})
-    .map(function(t){return '<span><i style="background:'+t.color+'"></i>'+esc(t.label)+'</span>';}).join('');
-  var html='<!DOCTYPE html><html lang="zh-TW"><head><meta charset="utf-8">'
-    +'<meta name="viewport" content="width=device-width,initial-scale=1">'
-    +'<title>'+title+'</title><style>'
-    +'*{margin:0;padding:0;box-sizing:border-box}'
-    +'html,body{width:100%;min-height:100%;background:#0f161c;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif}'
-    +'.th{background:linear-gradient(90deg,'+caC+' 0%,#2c4250 100%);padding:1.7vh 2.4vw;display:flex;align-items:center;gap:1.4vw;font-size:clamp(15px,1.7vw,25px);position:sticky;top:0;z-index:5}'
-    +'.thi{font-weight:700}.thn{font-weight:700}'
-    +'.thm{margin-left:auto;font-size:.78em;opacity:.9;display:flex;gap:1.4vw;align-items:center}'
-    +'.now{background:#F0B429;color:#20303c;font-weight:700;padding:.28em .8em;border-radius:20px;font-size:.85em;white-space:nowrap}'
-    +'.tw{padding:2vh 1.6vw 1vh}svg{width:100%;height:auto;display:block}'
-    +'.lg{display:flex;flex-wrap:wrap;gap:.7vw 1.8vw;margin:0 1.6vw 3vh;padding:1.3vh 1.6vw;font-size:clamp(12px,1.05vw,16px);color:#a3b6c4;background:#141d25;border-radius:8px}'
-    +'.lg i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:middle}'
-    +'@media(max-width:700px){.th{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;padding:12px 16px}'
-    +'.thm{grid-column:1/-1;margin-left:0;justify-content:space-between;font-size:13px;gap:8px}}'
+  var w;try{w=window.open('','_blank');}catch(e){}
+  if(!w){alert('瀏覽器擋了彈出視窗,請允許此網站的彈出視窗後再試。');return;}
+  var esc=function(t){return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var html='<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>病程時序 '+esc(d.chartNo)+'</title>'
+    +'<style>body{margin:0;padding:20px 28px;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#fff;color:#2C3540}'
+    +'.hd{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:4px solid '+d.caColor+';padding-bottom:10px;margin-bottom:16px}'
+    +'.hd .ci{font-size:28px;font-weight:700;letter-spacing:.5px}.hd .cn{font-size:22px}.hd .ca{font-size:14px;color:#637281;background:#EFF1F4;padding:3px 10px;border-radius:3px}'
+    +'.hd button{margin-left:auto;font-size:14px;padding:6px 14px;border:1px solid #9BAAB6;background:#fff;border-radius:4px;cursor:pointer}.hd button:hover{background:#EFF1F4}'
+    +'#tl{width:100%}#tl svg{width:100%;height:auto}'
+    +'.ft{margin-top:14px;font-size:12px;color:#9BAAB6}'
     +'</style></head><body>'
-    +'<div class="th"><span class="thi">'+esc(d.chartNo)+'</span><span class="thn">'+esc(d.name)+'</span>'
-    +'<span class="thm"><span>'+esc(d.caName)+'</span><span>病程 '+months+' 個月 · '+evs.length+' 筆事件</span>'
-    +(evs.length?'<span class="now">最新 '+esc(md(evs[evs.length-1].date||''))+'</span>':'')+'</span></div>'
-    +'<div class="tw"><svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">'+svg+'</svg></div>'
-    +'<div class="lg">'+lg+'</div>'
+    +'<div class="hd"><span class="ci">'+esc(d.chartNo)+'</span><span class="cn">'+esc(d.name)+'</span><span class="ca">'+esc(d.caName)+'</span>'
+    +'<button id="tg" onclick="window.__tlToggle()">顯示完整病程</button></div>'
+    +'<div id="tl"></div>'
+    +'<div class="ft">Summary 只顯示診斷/主要治療/轉折/現況;完整病程含例行檢查與追蹤。轉折點標示「AI」者為 AI 判讀,原始事件未改寫。</div>'
     +'</body></html>';
-  try{w.document.open();w.document.write(html);w.document.close();}
-  catch(e){alert('無法開啟時序圖視窗:'+(e&&e.message?e.message:e));}
+  try{
+    w.document.open();w.document.write(html);w.document.close();
+    w.TL_TYPES=window.TL_TYPES;w._normTlDate=window._normTlDate;w.tlLayout=window.tlLayout;w.tlRender=window.tlRender;
+    w.__d=d;w.__view='summary';
+    w.__tlRedraw=function(){
+      var m=w.tlLayout(w.__d.events,{view:w.__view,width:1500,discussion:w.__d.discussion,deathDate:w.__d.deathDate});
+      w.document.getElementById('tl').innerHTML=w.tlRender(m,'slide',w.__d.caColor);
+      w.document.getElementById('tg').textContent=w.__view==='summary'?'顯示完整病程':'只看摘要';
+    };
+    w.__tlToggle=function(){w.__view=w.__view==='summary'?'full':'summary';w.__tlRedraw();};
+    w.__tlRedraw();
+  }catch(e){alert('無法開啟時序圖視窗:'+(e&&e.message?e.message:e));}
 };
 window.openImgWindow=function(caseId){
   /* V5.24.1: 原本 if(!data)return 是**無聲失敗** —— 按鈕有顯示張數卻點了沒反應時,
@@ -10010,6 +10120,7 @@ window.openImgWindow=function(caseId){
     if(_qa.noDiscussion.length)_tips.push(_qa.noDiscussion.length+' 案未填討論方向');
     if(_qa.longText.length)_tips.push(_qa.longText.length+' 案內容較長');
     if(_qa.bigPages.length)_tips.push('有影像頁超過 6 張');
+    if(_qa.tl.length)_tips.push('事件軸 '+_qa.tl.length+' 項提醒：'+_qa.tl.slice(0,3).join('；')+(_qa.tl.length>3?'…':''));/* V5.61.0 TL-15 */
     if(_w.length){
       const _msg='產出前檢查\n'
         +'──────────────────────\n'
@@ -10368,12 +10479,12 @@ function tlAiPrompt(cid,i,type){
   if((c.treatments||[]).length)ctx+='治療：\n'+(c.treatments||[]).map(function(x){return'  '+(x.date||'')+' '+(x.name||'')+' '+(x.content||'');}).join('\n')+'\n';
   const evList=evs.map(function(e){
     const cfg=TL_TYPES.find(function(t){return t.id===e.type;})||TL_TYPES[TL_TYPES.length-1];
-    return'  {"date":"'+(e.date||'')+'","type":"'+(e.type||'')+'","label":"'+String(e.label||cfg.label).replace(/"/g,'\'')+'"}';
+    return'  {"id":"'+(e.id||'')+'","date":"'+(e.date||'')+'","type":"'+(e.type||'')+'","label":"'+String(e.label||cfg.label).replace(/"/g,'\'')+'"}';
   }).join(',\n');
   return`你是 MDT 病程分析助理。請根據以下臨床資料，判讀事件清單中每一筆的「病程意義」，輸出 JSON。
 
 【輸出格式絕對規則】
-- 只輸出 JSON 物件，第一個字必須是「{」，最後一個字必須是「}」
+- 每筆輸出必須帶 "id"，**原樣照抄**事件清單裡的 id，不可自創、不可省略（系統靠 id 對應，同一天有多筆事件時只有 id 能分辨）\n- 只輸出 JSON 物件，第一個字必須是「{」，最後一個字必須是「}」
 - 不要加 markdown 圍籬（不要寫 \`\`\`json）
 - 不要加任何說明文字、前言、結語
 
@@ -10390,7 +10501,8 @@ function tlAiPrompt(cid,i,type){
    - false 的典型：例行追蹤影像、同一療程的持續用藥、無變化的檢查
    - 判斷依據寫在 basis（15 字內，引用資料中的事實）
 
-2. response（治療反應）：**僅對治療類事件**（type 為 chemo/surgery/rt）判讀
+2. response（治療反應）：**僅對治療類事件**（type 為 chemo/systemic/surgery/intervention/rt）判讀
+   - 若判讀為 better/stable/worse，**必須同時輸出 "assessedDate"**：證實這個反應的那筆檢查或病理的日期（必須是事件清單中某一筆的 date）。無法指出評估日者，response 填 "na"
    - "better"：治療後腫瘤縮小、癌指數下降、影像改善
    - "stable"：無明顯變化
    - "worse"：治療後仍進展、新病灶、癌指數上升
@@ -10400,8 +10512,8 @@ function tlAiPrompt(cid,i,type){
 【輸出格式】
 {
   "events": [
-    {"date":"2026-03-05","pivot":false,"response":"stable","basis":"AFP 3.62→3.12 無明顯變化"},
-    {"date":"2026-06-20","pivot":true,"basis":"新發骨轉移"}
+    {"id":"（原樣照抄清單裡的 id）","date":"2026-03-05","pivot":false,"response":"stable","basis":"AFP 3.62→3.12 無明顯變化"},
+    {"id":"（原樣照抄）","date":"2026-06-20","pivot":true,"basis":"新發骨轉移"}
   ]
 }
 - date 必須與下方事件清單完全一致（用來對應）
@@ -10451,10 +10563,18 @@ function doImportTlAi(){
   let nPivot=0,nResp=0,unmatched=[];
   const pend=[];
   arr.forEach(function(r){
-    const d=(r&&r.date||'').trim();if(!d)return;
-    const ev=(c.timeline||[]).find(function(x){return(x.date||'').trim()===d;});
+    /* V5.58.0 N-4:先用 id 對應,找不到才退回「日期且唯一」—— 同日兩筆(切片+診斷)原本全寫到第一筆 */
+    const byId={};(c.timeline||[]).forEach(function(x){if(x&&x.id)byId[x.id]=x;});
+    let ev=r&&r.id&&byId[r.id]?byId[r.id]:null;
+    const d=(r&&r.date||'').trim();
+    if(!ev&&d){
+      const same=(c.timeline||[]).filter(function(x){return(x.date||'').trim()===d;});
+      if(same.length===1)ev=same[0];
+      else if(same.length>1){unmatched.push(d+'（同日 '+same.length+' 筆，AI 未回 id，已略過）');return;}/* V5.60.0 P1-4:不可 silent skip */
+    }
+    if(!ev){if(d)unmatched.push(d);return;}
     if(!ev){unmatched.push(d);return;}
-    const item={ev:ev,pivot:r.pivot===true,resp:(r.response&&RESP[r.response])?r.response:'',basis:String(r.basis||'').slice(0,40)};
+    const item={ev:ev,pivot:r.pivot===true,resp:(r.response&&RESP[r.response])?r.response:'',basis:String(r.basis||'').slice(0,40),assessedDate:(r&&r.assessedDate)||''};
     if(item.pivot)nPivot++;
     if(item.resp)nResp++;
     pend.push(item);
@@ -10479,6 +10599,8 @@ function doImportTlAi(){
     x.ev._ai=x.ev._ai||{};
     x.ev._ai.pivot=x.pivot;
     x.ev._ai.basis=x.basis;
+    x.ev._ai.sig=(x.ev.type||'')+'|'+(_normTlDate(x.ev.date).date);/* V5.58.0 N-4:簽章,type/date 改了即失效 */
+    if(x.assessedDate)x.ev._ai.assessedDate=_normTlDate(x.assessedDate).date;else delete x.ev._ai.assessedDate;/* V5.61.0 TL-5d */
     if(useAll&&x.resp)x.ev._ai.response=x.resp;else delete x.ev._ai.response;
   });
   markDirty();closeTlAi();
@@ -11770,7 +11892,7 @@ function importTimelineFromTreatments(cid,idx,type){
     var type='other';
     if(/chemo|化療|cisplatin|carboplatin|oxaliplatin|taxol|tegafur|xeloda|capecitabine|5.fu/.test(kw))type='chemo';
     else if(/surg|手術|resect|excision|切除|lumpectomy|mastectomy|rarp|orchiectomy|prostatectomy/.test(kw))type='surgery';
-    else if(/rt|放療|radiation|radiotherapy|imrt|vmat|sbrt|srs|3dcrt|igrt|gy|gray/.test(kw))type='rt';
+    else if(/(^|[^a-z])(cc)?rt([^a-z]|$)|放療|放射|radiation|radiotherapy|imrt|vmat|sbrt|sabr|srs|srt|igrt|3dcrt|proton|質子|brachy|近接|gamma ?knife|\d\s*c?gy(?![a-z])/.test(kw)/* V5.55.0 TL-4:原本 \b 是 0x08 控制字元,RT/60Gy 全判成其他 */)type='rt';
     if(!existing.has(type+'_'+t.date))
       cands.push({type:type,date:t.date,label:(t.name||'').slice(0,24)||type,_src:'治療'});
   });
@@ -11782,7 +11904,7 @@ function importTimelineFromTreatments(cid,idx,type){
         cands.push({type:'imaging',date:e.date,label:(e.name||'影像評估').slice(0,24),_src:'檢查'});
   });
   if(!cands.length){showSaveToast('沒有可帶入的事件(已全部匯入或無相關記錄)');/* V5.32.4 */return;}
-  cands.sort(function(a,b){return a.date.localeCompare(b.date);});
+  cands.sort(_tlCmp);
   const modal=document.createElement('div');
   modal.className='dyn-overlay';/* V5.38.0 F-5:Esc 與點背景可關 */
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
@@ -11809,14 +11931,14 @@ function importTimelineFromTreatments(cid,idx,type){
     const checked=[...modal.querySelectorAll('input:checked')].map(function(cb){return cands[parseInt(cb.value)];});
     if(!checked.length){alert('請勾選至少一筆');return;}
     if(!c.timeline)c.timeline=[];
-    checked.forEach(function(ev){c.timeline.push({type:ev.type,date:ev.date,label:ev.label});});
-    c.timeline.sort(function(a,b){return a.date.localeCompare(b.date);});
+    checked.forEach(function(ev){c.timeline.push({id:_tlNewId(),/* V5.58.0 N-9 */type:ev.type,date:ev.date,label:ev.label});});
+    c.timeline.sort(_tlCmp);
     markDirty();
     document.body.removeChild(modal);
     const tlEl=document.getElementById('tllist-'+cid+'-'+_ty+'-'+idx);
     if(tlEl){const tmp=document.createElement('div');tmp.innerHTML=buildTimelineRows(cid,idx,c,_ty);while(tlEl.firstChild)tlEl.removeChild(tlEl.firstChild);tmp.childNodes.forEach(function(n){tlEl.appendChild(n.cloneNode(true));});}
     const svgEl=document.getElementById('tl-svg-preview-'+cid+'-'+_ty+'-'+idx);
-    if(svgEl)svgEl.innerHTML=c.timeline.length?renderTimelineSVG(c.timeline,CFG[cid]?.color||'#4A7C8E','view'):'';
+    if(svgEl)svgEl.innerHTML=c.timeline.length?tlRender(tlLayout(c.timeline,{view:'summary',width:700,discussion:c.discussion,deathDate:c.deathDate}),'compact',CFG[cid]?.color||'#4A7C8E'):'';
   };
 }
 
@@ -11832,15 +11954,30 @@ function buildTimelineRows(cid,idx,c,type){
      改成當場 console.error,下次漏傳會立刻現形。 */
   if(type!=='cases'&&type!=='events'){console.error('[buildTimelineRows] type 必填,收到:',type);type='cases';}
   const _ty=type;
-  return ((c.timeline||[]).map(function(tl,ti){
-    const opts=TL_TYPES.map(function(t){return '<option value="'+t.id+'"'+(t.id===tl.type?' selected':'')+'>'+t.label+'</option>';}).join('');
+  return ((c.timeline||[]).map(function(tl,ti){return _tlRowHTML(cid,idx,tl,ti,_ty);}).join(''));
+}
+/* V5.60.0 M-1:單列 HTML 唯一產生器 —— 原本 addStruct 自己手寫一列(坑 #68 第五次),
+   新增的列沒有空白選項、沒有 endDate、沒有 ★/⚑,要等重繪才對。 */
+function _tlRowHTML(cid,idx,tl,ti,_ty){
+  {
+    /* V5.58.0 N-2:加空白選項 —— 資料 type:'' 時瀏覽器會預選第一項「診斷確立」,畫面與資料不一致,
+       想改成 dx 時選同一個值不觸發 change,改不過來。空類型時高亮提示。 */
+    const opts='<option value=""'+(tl.type?'':' selected')+'>— 類型 —</option>'
+      +TL_TYPES.map(function(t){return '<option value="'+t.id+'"'+(t.id===tl.type?' selected':'')+'>'+t.label+'</option>';}).join('');
+    const A='data-action="updstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'"';
+    const isTx=TL_LAYER_OF(tl.type)==='treatment';
     return '<div class="struct-row" style="position:relative"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-      +'<select data-action="updstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="type" style="width:108px;font-size:13px;padding:5px 7px">'+opts+'</select>'
-      +'<input type="date" value="'+escA(tl.date||'')+'" data-action="updstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="date" style="width:148px">'
-      +'<input placeholder="自訂說明（空白用預設）" value="'+escA(tl.label||'')+'" data-action="updstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
+      +'<select '+A+' data-key="type" style="width:108px;font-size:13px;padding:5px 7px'+(tl.type?'':';border-color:var(--warn);background:var(--warn-bg)')+'">'+opts+'</select>'
+      +'<input type="date" value="'+escA(tl.date||'')+'" '+A+' data-key="date" style="width:148px" title="開始日期">'
+      /* V5.58.0 N-1:endDate 欄,療程類型才顯示;填了就畫成 bar,沒填畫單點(決策 3) */
+      +(isTx?'<span style="font-size:11px;color:var(--textlt)">～</span><input type="date" value="'+escA(tl.endDate||'')+'" '+A+' data-key="endDate" style="width:148px" title="結束日期（選填，填了畫成一條 bar）">':'')
+      +'<input placeholder="自訂說明（空白用預設）" value="'+escA(tl.label||'')+'" '+A+' data-key="label" style="flex:1;min-width:80px;font-size:12px;padding:5px 8px">'
+      /* V5.58.0 N-5:★列入摘要 與 ⚑轉折 是兩件事 */
+      +'<label style="font-size:11px;color:var(--textmd);display:inline-flex;align-items:center;gap:2px;cursor:pointer" title="勾了就會出現在摘要視圖（例如重要的 CT/病理）"><input type="checkbox" '+A+' data-key="key"'+(tl.key?' checked':'')+' style="width:13px;height:13px">★摘要</label>'
+      +'<label style="font-size:11px;color:var(--err);display:inline-flex;align-items:center;gap:2px;cursor:pointer" title="手動標記轉折點（治療策略因此改變）"><input type="checkbox" '+A+' data-key="pivot"'+(tl.pivot?' checked':'')+' style="width:13px;height:13px">⚑轉折</label>'
       +'<button class="delbtn" data-action="delstruct" data-ty="'+_ty+'" data-cid="'+escA(cid)+'" data-caseidx="'+idx+'" data-field="timeline" data-rowid="'+ti+'" style="margin-left:auto">×</button>'
       +'</div></div>';
-  }).join(''));
+  }
 }
 
 document.addEventListener('click',function(e){
@@ -12136,7 +12273,21 @@ document.addEventListener('click',function(e){
   const updtlshow=e.target.closest('[data-action="updtlshow"]');
   if(updtlshow){
     const c=getSectionItem(updtlshow.dataset.cid,updtlshow.dataset.ty||'cases',parseInt(updtlshow.dataset.caseidx));/* V5.42.0 */
-    if(c){c.showTimeline=!!updtlshow.checked;markDirty();}
+    if(c){c.showTimeline=!!updtlshow.checked;markDirty();
+      /* V5.60.0 P2-2:勾了要立刻出現「夾在投影片」開關,原本要重開會議才看得到 */
+      const _cid=updtlshow.dataset.cid,_ty2=updtlshow.dataset.ty||'cases',_i=parseInt(updtlshow.dataset.caseidx);
+      const cont=document.getElementById('div-'+_ty2+'-'+_cid);
+      if(cont){const arr=S.meeting.sections[_cid][_ty2];const vm=S.viewMode;
+        cont.innerHTML=arr.map(function(c2,i2){try{return vm?caseViewHTML(_cid,i2,c2,_ty2):caseHTML(_cid,i2,c2,_ty2);}catch(e){return '';}}).join('');
+        const nc=document.getElementById('cc-'+_cid+'-'+_ty2+'-'+_i);if(nc){nc.classList.remove('cc-collapsed');const ic=document.getElementById('tgi-'+_cid+'-'+_ty2+'-'+_i);if(ic)ic.textContent='\u25BC';}}
+    }
+    return;
+  }
+  const updgenshow=e.target.closest('[data-action="updgenshow"]');
+  if(updgenshow){
+    const _ty=updgenshow.dataset.ty==='events'?'events':'cases';
+    const c=S.meeting?.sections?.[updgenshow.dataset.cid]?.[_ty]?.[parseInt(updgenshow.dataset.caseidx)];
+    if(c){c.showGenomics=!!updgenshow.checked;markDirty();}
     return;
   }
   const imgmove=e.target.closest('[data-action="imgmove"]');
@@ -12461,13 +12612,13 @@ document.addEventListener('input',function(e){
   const el=e.target.closest('[data-action="updstruct"]');
   if(!el)return;
   const {cid,caseidx,field,rowid,key,ty}=el.dataset;
-  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,el.value,ty);/* V5.42.0 */
+  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,(el.type==='checkbox'?el.checked:el.value),ty);/* V5.42.0;V5.58.0 checkbox 讀 checked */
 });
 document.addEventListener('change',function(e){
   const el=e.target.closest('[data-action="updstruct"]');
   if(!el)return;
   const {cid,caseidx,field,rowid,key,ty}=el.dataset;
-  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,el.value,ty);/* V5.42.0 */
+  updStruct(cid,parseInt(caseidx),field,parseInt(rowid),key,(el.type==='checkbox'?el.checked:el.value),ty);/* V5.42.0;V5.58.0 checkbox 讀 checked */
 });
 
 /* ════ Init ════ */
