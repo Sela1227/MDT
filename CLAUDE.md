@@ -162,6 +162,9 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.62.0 | **B-4 根治**:實機確認 `Failed to fetch`(Cloudflare 管理 API 不開 CORS),那顆按鈕**從 V5.41.0 起就沒成功過**。`uploadSlidesToCloudflare` 改打 `share.selaginella.io/api/upload?name=` + `PUT` + `X-Upload-Key`;設定頁 CF Token 欄換「上傳金鑰」(`mdt_upload_key`,不進備份);`CF_ACCOUNT_ID`/`CF_NAMESPACE_ID`/`saveCfToken`/`loadCfTokenStatus` 淘汰。**Worker 新版 `cloudflare-share/index.js` 一併附在 zip**(KV 綁定 `HTML`、機密 `UPLOAD_KEY`、CORS 只放行 github.io、檔名白名單、常數時間比較;mock KV 12/12),部署見 `DEPLOY.md`。**未決:分享網址不需登入** |
+| V5.61.0 | **Hybrid timeline 收尾三項**:(**TL-5d**)AI 療效畫在評估日 —— 提示詞要求 `assessedDate`(必須是清單中某筆的日期),匯入寫入 `_ai.assessedDate`,`tlLayout` 把 resp 掛到評估日節點、原事件 `_respMoved` 不再畫,bar 同理;(**TL-10**)DOCX 補病程時序(`_tlDocxText`:排序/區間/類型/⚑轉折/↑療效),必要事件補過去病史/病理/檢查/治療/癌指數(原本只有死亡資訊,坑#71 的 DOCX 版);(**TL-15**)QA 預檢 `_qaTl(c)`:未勾產出/已勾無有效日期/類型未選/晚於會議日/晚於死亡日,個案與必要事件都跑。**Hybrid timeline 從 V5.55.0 到 V5.61.0 七個版本全部完成** |
+| V5.60.0 | **Hybrid 收斂批次**(坑#86):(M-3/P1-1)bar 帶 pivot/ai/resp/basis,轉折環畫起點、療效箭頭畫終點;(P1-2)bar 空說明用類型名;(P1-3)`createCase` 補 `pivot`;(P1-4)提示詞範例補 id、同日無 id 列入 unmatched 不 silent skip;(**M-1**)`addStruct` 手寫列改用 `_tlRowHTML()` 唯一產生器;(M-5)空窗寬度改連續函數;(P1-5)cluster 全部事件進 `<title>`;(P1-6)Full view 加高;(P2-1)gap label 移最上緣;(P2-2)勾產出包含後立即重繪;(P2-3)endDate<date 標紅;(M-6)EV-11 複製換 id 剝 `_ai`。總測 17 項 |
 | V5.59.0 | **Hybrid 驗證批次:第二、三優先 + TL-1 正式**。`tlRender`:同層相鄰 <70px 標籤上下交錯、首尾節點 anchor start/end、cluster 行數依層間距上限超過顯示「+N 筆」、pivot 節點 `<title>` 顯示 AI basis、療效 ↑→↓ 標記;`tlLayout`:非空窗部分極短時空窗擴大填滿(審核 4.2);N-11 `_nTl` 只數有效日期、`TL_BANDS` 不再注入、`TL_TYPES` 不重複注入;N-13 註解移出 onclick;N-14 文字頁顯示 endDate 區間;AI 療效規則納入 systemic/intervention;N-12 audit 假紅燈修;**TL-1 正式**:內嵌時序頁 `<section class="slide tl-slide">` + `DOMContentLoaded` 填 SVG + 開關放回 + 按鈕互斥。總測 18 項 |
 | V5.58.0 | **Hybrid 驗證批次:第一優先八項**(坑#85):(**N-1 P0**)Summary 隱藏所有無 endDate 的治療而 UI 填不到 → 過濾改一律顯示,列產生器加 endDate 欄(療程類)與 ★摘要/⚑轉折;(N-2)type select 加空白選項並高亮;(N-3)空窗改依所有已顯示事件的佔用區間;(N-4)AI 對應先 id 後「日期且唯一」、寫 `_ai.sig`、`updStruct` 改 date/type 清 `_ai`、提示詞帶 id;(N-5)key 與 pivot 分離;(N-6)bar 不重畫節點;(N-8)`__caseTL`/`__caseImgs` 跳脫 `<`;(N-9)新列/帶入補 id;handler checkbox 讀 `checked` |
 | V5.57.0 | **Hybrid timeline 批次 2b:投影片端**。`_tlWinData` 傳完整事件(id/endDate/key/_ai)+discussion+deathDate;`_tlInjectSrc()` 用 `.toString()` 在反引號外把 TL_TYPES/_normTlDate/tlLayout/tlRender 注入 extraJs;`openTimelineWindow` 13KB 舊 Event-band → 2.5KB 新版(同源視窗直接交函式,Summary/Full 切換鈕)。**驗收 #9:主程式與投影片端 tlLayout 輸出 deep-equal ✅**。舊 Event-band 完全淘汰 |
@@ -534,6 +537,18 @@ V5.26.3 | 時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」�
 - **apple-touch-icon 特例**:iOS 會自己在 apple-touch-icon 上加圓角遮罩。若圖已透明圓角,iOS 加遮罩時透明區會變黑/裝置背景色。所以 apple-touch-icon 要做成「**霧藍底滿版不透明**」(填 logo 背景色到四角),讓 iOS 自己切圓角
 - 教訓:AI 生圖的 logo 拿來當 app icon 前,先檢查是不是 RGB 白底;是的話用圓角遮罩切透明(深色背景才不露白角),或在生圖 prompt 就要求透明背景
 - 預防:換 logo 後 `python3 -c "from PIL import Image; im=Image.open('favicon/android-chrome-192x192.png'); print(im.mode, im.getpixel((1,1)))"` — 若 mode=RGB 或角落 alpha≠0,要處理透明
+
+**#86 治療一填結束日期就變 bar,而 bar 的渲染路徑沒有帶臨床語意 —— 填得越完整,圖上資訊越少(V5.60.0 M-3/P1-1)** 🔴
+- V5.58.0 N-6 修「bar 與節點畫兩次」時,讓 `isBar` 的事件**不進 `nodes`**;但 pivot 環、AI 療效箭頭、basis tooltip 全部只在 `nodes` 的渲染裡
+- 後果:同一筆 `{chemo, endDate, pivot:true, _ai:{response:'better'}}`,**填了結束日期就失去轉折環與 ↑**;拿掉結束日期又全部回來
+- 而 V5.58.0 才鼓勵使用者填 endDate、AI 療效判讀又**只對治療類事件做** —— 兩者一組合,療效判讀幾乎永遠看不到
+- 兩份審核都列第一優先:「使用者越認真補完整療程日期,圖上反而越少 clinical meaning,與 Hybrid 設計目的相反」
+- 修法:`bars` 物件帶 `pivot/ai/resp/basis`,`pivots` 也從 bars 收;`tlRender` 在 bar 起點畫轉折環、終點畫療效箭頭(較接近評估時點,TL-5d 過渡)、basis 進 `<title>`
+- **教訓**:修「畫兩次」的時候,要問「被拿掉的那一份帶著什麼別的東西」。N-6 只看到「標籤重複」,沒看到節點上還掛著 pivot/AI
+- 同版 **M-1 是坑 #68 第五次**:`addStruct` 的 timeline 分支自己手寫一列 HTML,V5.58.0 N-2 只改了 `buildTimelineRows` —— 新增的列沒空白選項、沒 endDate、沒 ★/⚑,「新增」正是空類型最常發生的入口。抽 `_tlRowHTML()` 成唯一產生器
+- **P1-3**:`createCase` 白名單漏 `pivot`(V5.58.0 加欄位時沒補進白名單,V5.54.0 showGenomics 同一形狀)
+- **P1-4**:提示詞正文要求帶 id,**範例卻沒有** —— LLM 優先模仿範例;`doImportTlAi` 的 `if(!ev)return;` 擋在 `unmatched.push` 前面,同日無 id 的直接 silent skip
+- **M-5**:V5.59.0 空窗擴大用 `realSpan<60 天` 二元條件,手術日期差 4 天整張圖翻轉;改連續函數 `share=min(0.45, 0.15+0.3·e^(-realSpan/120d))`,逐日推移 x 最大跳動 2px
 
 **#85 寫了過濾規則,但沒檢查「使用者有沒有辦法讓資料滿足這條規則」(V5.58.0 N-1)** 🔴
 - `tlLayout` 的 Summary 過濾寫成 `layer==='treatment'&&e.endDate` —— 而**編輯畫面根本沒有 endDate 欄位**,「從治療記錄帶入」也不產生
@@ -1300,10 +1315,10 @@ print("script 內 </script 字面值:", "✓ 0" if not _bad else f"⚠️ {len(_
 
 # ════ V5.55.0 加:主程式不得含控制字元(坑 #84)════
 # JS 字串裡的 \b 被寫成 0x08,語法合法但 regex 永遠不匹配。node --check 與 jshint 都抓不到。
-# 排除 L1371/L1380(壓縮函式庫,裡面的是合法字串內容)
+# 排除壓縮函式庫行(以 !function( 開頭或 >5000 字元),裡面的控制字元是合法字串內容。**不要用行號**,刪一行就漂
 import subprocess
 _r=subprocess.run(['grep','-n','-P',r'[\x00-\x08\x0B\x0C\x0E-\x1F]','index.html'],capture_output=True,text=True)
-_bad=[l for l in _r.stdout.splitlines() if not l.startswith(('1371:','1380:'))]
+_bad=[l for l in _r.stdout.splitlines() if not (re.match(r'^\d+:!function\(',l) or len(l)>5000)]  # V5.62.0:改用內容特徵排除函式庫,行號會漂移
 print("主程式控制字元:", "✓ 0" if not _bad else f"⚠️ {len(_bad)} 行 {[l.split(':')[0] for l in _bad]}")
 ```
 
@@ -1446,12 +1461,18 @@ print("主程式控制字元:", "✓ 0" if not _bad else f"⚠️ {len(_bad)} �
 | 項目 | 決定 | 現況 | 要處理時 |
 |---|---|---|---|
 | **B-5** Zoom 密碼在公開程式碼裡 | 「先不要管,但記下來」 | V5.50.1 加了 `_LEGACY_ZOOM` 退路,設定沒填就用舊值。**三組密碼仍在 GitHub Pages 上** | ①三台填「設定→系統→Zoom 會議密碼」②Zoom 後台重新產生三組 ③刪 `_LEGACY_ZOOM` 與 `||_LEGACY_ZOOM.qN` |
-| **B-4** MDT 的「HTML 分享」直打 Cloudflare API,瀏覽器 CORS 極可能擋 | 「目前還沒有人用,先這樣。我自己用 Git Pusher,個管不愛用」 | 那顆按鈕**從未被用過**,可能從 V5.41.0 起就是壞的但沒人發現 | 若日後要讓個管師從系統上傳:Worker 加 `/upload` 端點(index.html 只放上傳密碼,不放 CF token);若確定不用:**依減法原則移除那顆按鈕與 `uploadSlidesToCloudflare`** —— 沒人走的路徑該刪(坑#61) |
+| ~~**B-4**~~ | **V5.62.0 結案** | 實機確認 `Failed to fetch`(CORS),V5.50.0 的預測正確。改打 Worker `/api/upload` + `X-Upload-Key`,CF token 從網頁移除 | Worker `cloudflare-share/index.js` 已寫好(mock KV 12/12),部署步驟見 `cloudflare-share/DEPLOY.md`。**未決:分享網址不需登入,病歷號公開** —— 建議 Cloudflare Access 或上傳前去識別化 |
 | **A-5 / B-5 人工** | — | AI Key、CF Token、Zoom 密碼三樣都曾出現在備份或公開程式碼 | **換掉**。程式已不再外流,但舊的已流出 |
 
 ---
 
 ## 十一、一句話總結
+
+V5.62.0 B-4 根治。主任實機測試「HTML 分享」按鈕:`Failed to fetch` —— 確認了 V5.50.0 審核 B-4 的預測:Cloudflare 管理 API(`api.cloudflare.com`)不開 CORS,從 `sela1227.github.io` 發的請求在送出前就被 Chrome 攔掉;Git Pusher 能上傳是因為桌面程式不受此限。**所以 V5.41.0 選方案 A 做出來的那顆按鈕,從來沒有成功過** —— 而且錯誤訊息被包成「請確認網路連線」,看起來像網路問題。就算能通也不該那樣做:網頁裡的 CF token 按 F12 就看得到,而那把 token 能動整個 KV。現在改成 V5.41.0 當時提的方案 B:網頁改打自己的 Worker `/api/upload?name=<fname>`,`PUT` + `X-Upload-Key` header + `Content-Type: text/html`,body 直接是 HTML 字串(不再組 FormData);回應 `{ok,url,error}`,401/403 提示「金鑰錯誤或已更換」、400「檔名不合法」、413「超過 25 MB」;**網頁只帶上傳金鑰**(Worker 端的 `UPLOAD_KEY` 機密,外流換掉就好),CF API Token 從網頁完全移除。設定頁 CF Token 欄換成「上傳金鑰」(`mdt_upload_key`,加進 `_NEVER_BACKUP`),`CF_ACCOUNT_ID`/`CF_NAMESPACE_ID` 常數與 `saveCfToken`/`loadCfTokenStatus` 淘汰,`getCfToken` 留著供舊路徑相容。Worker 端(新 `index.js` + Dashboard 設 `UPLOAD_KEY` 機密)由主任部署,並提醒要覆蓋到本機 `cloudflare-share\src\` 免得 wrangler 重部署蓋回舊版。mock fetch 實測:網址/方法/header/body 正確、回傳 url 正確、401 訊息正確、無金鑰 alert、金鑰不進備份。**未決的資安問題**(主任的顧問也點出):`share.selaginella.io` 上的頁面**任何人拿到網址就能開、不需登入**,檔名 `日期_癌別_MDT.html` 很好猜,而內容含病歷號與可識別病情 —— 這等於把病人資料放在公開網址上。建議 Cloudflare Access(限定信箱登入,免費 50 人內)或上傳前去識別化;已寫進設定頁提醒與說明書。屬 c+1。
+
+V5.61.0 Hybrid timeline 收尾三項。主任說「直接導入」—— 原本建議等個管師用過再排的 TL-5d/TL-10/TL-15 一次做完。**TL-5d(療效畫在評估日)**:整合版 §1.6 的語意問題 —— 3/1 開始化療、5/1 CT 才證實 PR,圖上卻把「有效」畫在 3/1。提示詞加規則「判讀為 better/stable/worse 時**必須同時輸出 assessedDate**,必須是清單中某筆的 date,無法指出者填 na」;`doImportTlAi` 的 `item` 帶 `assessedDate`、寫入時 `_normTlDate` 後存 `_ai.assessedDate`;`tlLayout` 在建 nodes 後掃 `shown`,有 `assessedDate` 且對得到節點的把 `{resp,from,fromLabel}` 掛到那個節點的 `respAt`、原事件標 `_respMoved`;`tlRender` 節點優先畫 `respAt`,`_respMoved` 的不畫,bar 也帶 `respMoved`。實測 FOLFOX(3/1)+CT PR(5/1):↑ 畫在 x=658、CT 節點 x=664。**TL-10(DOCX 時序)**:`genDOCX` 原本 0 處 timeline;抽 `_tlDocxText(c)`(與必要事件投影片文字頁同格式,排序/區間/[類型]/⚑轉折/↑有效),個案在「治療」mkBlock 後、必要事件在「病程經過」後各加一段;**必要事件同時補過去病史/病理/檢查/治療/癌指數** —— 原本 DOCX 的必要事件只有死亡資訊/病程/摘要/決策/改善,L7995 註解自己寫著「DOCX 是癌委會看的版本,不能漏」卻漏了臨床資料(坑 #71 的 DOCX 版,第二次)。**TL-15(QA 預檢)**:`_qa` 加 `tl:[]`,`_qaTl(c)` 五條檢查(有事件未勾產出、已勾但 0 筆有效日期、類型未選、日期晚於會議日、事件晚於死亡日),`_tips` 顯示前 3 項;第一版寫成個案迴圈內的 IIFE,實測「晚於死亡日」沒觸發才發現必要事件走 `_trackSlide` 不經個案迴圈,抽成函式兩邊呼叫。**Hybrid timeline 從 V5.55.0 止血到 V5.61.0 收尾,七個版本、四份審核、全部完成**。屬 c+1。
+
+V5.60.0 Hybrid 收斂批次(坑 #86)。兩份審核判定「架構成立,進入收斂階段,不建議再大改」,一次做完三批 12 項。**第一批(資料與臨床語意)**:M-3/P1-1 是我 V5.58.0 N-6 的副作用 —— 修「bar 與節點畫兩次」時讓 `isBar` 事件不進 `nodes`,但 pivot 環、AI 療效、basis 只畫在節點上,**治療一填結束日期就失去所有臨床語意**;`bars` 帶上 `pivot/ai/resp/basis`,轉折環畫 x0、療效箭頭畫 x1(較接近評估時點)、basis 進 title。P1-2 bar 空說明用 `lbl(type)`(不能要求聽眾靠顏色猜)。P1-3 `createCase` 白名單漏 `pivot`(V5.54.0 showGenomics 同一形狀,第二次)。P1-4 提示詞正文要求 id **範例卻沒有**(LLM 模仿範例),補上;`doImportTlAi` 的 `if(!ev)return;` 擋在 `unmatched.push` 前面,同日無 id 直接 silent skip,改為列入警告「2024-03-01(同日 2 筆,AI 未回 id,已略過)」。**M-1 是坑 #68 第五次**:`addStruct` 的 timeline 分支自己手寫一列 HTML,V5.58.0 N-2 只改了 `buildTimelineRows` —— 抽 `_tlRowHTML()` 成唯一產生器,新增的列現在有空白選項/endDate/★⚑/id。**第二批(顯示)**:M-5 空窗擴大原本 `realSpan<60 天` 二元條件,手術日期差 4 天整張圖翻轉(x 從 306 跳到 610),改連續函數,逐日推移最大跳動 2px;P1-5 cluster 全部事件名進 `<title>`(Full view 保留主事件名 + 「…+N 筆」);P1-6 Full view 加高 40-70px,minor 層不撞今日議題;P2-1 gap label 移到最上緣 y=12。**第三批(操作)**:P2-2 勾「產出時包含病程時序圖」後立即重繪該癌別容器,開關當場出現;P2-3 endDate 早於 date 時輸入框標紅並 title 提示;M-6 EV-11 複製時序時換 id 剝 `_ai`。總測 17 項,兩項一開始 🔴 是測試寫錯(Full view 確實有主事件名;P2-2 的 before 抓到影像區的 setembed),修正測試後全過;`titleAll` 定義順序順手修。`audit-render.js` 純函式 12/12。屬 c+1。
 
 V5.59.0 Hybrid 驗證批次:第二、三優先 + TL-1 正式修法。主任說「先作一作,再一次測」—— 把兩份審核的第二優先(視覺)、第三優先(語意)與 TL-1 正式修法一次做完,最後總測 18 項。**視覺**(`tlRender`):同層相鄰節點 <70px 時標籤上下交錯(`lastUp[layer]` 翻轉,12 週期化療實測 y 種類 2);首尾節點 x<60 或 >W-60 時 anchor 改 start/end 避免裁切;cluster 行數依層間距算上限,超過顯示「· +N 筆」;pivot 節點與圓點加 `<title>` 顯示 `_ai.basis`(原本有存沒地方看);AI 療效以 ↑→↓ 標在節點左上(評估日版本 TL-5d 留待);bar 標籤也做首尾 anchor。**`tlLayout`**(審核 4.2):只有兩個節點中間一段長空窗時 `realSpan≈0`,整張圖擠在左側 —— 非空窗部分極短(<60 天)時把多餘寬度分給空窗,「2020 診斷→2025 復發」從 x=[36,90] 變 [36,984]。**收尾**:N-11 `_nTl` 只數有效日期(與圖上節點一致)、`TL_BANDS` 隨舊引擎不再注入、`window.TL_TYPES` 不重複注入;N-13 註解從 `onclick` 屬性移回程式碼行(註解含雙引號就會提早結束屬性);N-14 必要事件文字頁顯示 `2024-03-01～2024-07-01`;AI 療效判讀規則從 chemo/surgery/rt 擴為含 systemic/intervention(提示詞與匯入端);N-12 `audit-render.js` 的 caseflag 期望值改「events 應為(無)」,消掉永遠紅燈。**TL-1 正式修法**:`_buildImgOut` 在 `_emb.timeline&&_nTl>0` 時產出 `<section class="slide tl-slide" data-tlkey>`,投影片端 `DOMContentLoaded` 找 `.tl-host` 用注入的 `tlRender('slide')` 填 SVG;卡片的 `embedToggle(...'timeline'...)` 放回;按鈕與內嵌頁互斥(V5.27.0 原則)。總測:視覺 5 項(交錯、首尾、basis、療效、+N)、收尾 5 項、內嵌頁 6 項(有頁/互斥/載入填圖/含 bar/含議題/不勾出按鈕/開關存在)、deep-equal 回歸 —— 過程中兩項是測試預期錯(6 化療間距 100px 本來就不需交錯;空窗擴張後末節點不在右緣本來就是 middle),換真實密度與邊緣資料後全過。屬 a+1。
 

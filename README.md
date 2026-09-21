@@ -111,6 +111,82 @@
 
 ## 版本歷程
 
+### V5.62.0
+**B-4 根治:HTML 分享改走 Worker**
+
+主任實機測試:`Failed to fetch`。V5.50.0 的預測正確 —— Cloudflare 管理 API 不開 CORS,**那顆按鈕從 V5.41.0 起就沒成功過**。
+
+改成當時提的方案 B:
+
+```
+PUT https://share.selaginella.io/api/upload?name=<fname>
+X-Upload-Key: <上傳金鑰>
+Content-Type: text/html
+body: HTML 字串
+```
+
+網頁只帶上傳金鑰(外流換掉就好),CF API Token 從網頁完全移除。
+
+**Worker 新版附在 `cloudflare-share/`**:`index.js`(清單頁 + 檔案服務 + `/api/upload`)與 `DEPLOY.md`(五步,Dashboard 裡做)。mock KV 實測 12/12:預檢、CORS 只放行 github.io、錯金鑰 401、`../` 與非 .html 擋 400、metadata 同格式、清單只列 `_MDT`。
+
+#### ⚠️ 未決:分享網址不需登入
+
+`share.selaginella.io` 上的頁面任何人拿到網址就能開,檔名好猜,內容含病歷號。建議 Cloudflare Access 或上傳前去識別化。
+
+### V5.61.0
+**Hybrid timeline 收尾三項 —— 七個版本完成**
+
+| # | 改動 |
+|---|---|
+| **TL-5d** | AI 療效畫在**評估日**:提示詞要求 `assessedDate`,`tlLayout` 把 resp 掛到評估日節點 |
+| **TL-10** | DOCX 補病程時序;必要事件補過去病史/病理/檢查/治療/癌指數(原本只有死亡資訊) |
+| **TL-15** | QA 預檢五條:未勾產出/無有效日期/類型未選/晚於會議日/晚於死亡日,個案與必要事件都跑 |
+
+實測 11/11。
+
+#### Hybrid timeline 歷程
+
+| 版本 | 內容 |
+|---|---|
+| V5.55.0 | 批次 1 止血(0x08 控制字元、null 日期拋錯、夾投影片消失) |
+| V5.56.0 | 2a 資料模型 v2 + `tlLayout`/`tlRender` |
+| V5.57.0 | 2b 投影片端,deep-equal 驗收 |
+| V5.58.0 | 驗證批次:Summary 藏治療(P0)等八項 |
+| V5.59.0 | 視覺收尾 + TL-1 正式 |
+| V5.60.0 | 收斂批次:bar 語意等 12 項 |
+| V5.61.0 | 收尾三項 |
+
+### V5.60.0
+**Hybrid 收斂批次(新增坑 #86)**
+
+兩份審核判定「架構成立,進入收斂階段」。三批 12 項一次做完。
+
+#### M-3 ⭐ 治療一填結束日期,轉折/療效就消失
+
+V5.58.0 修「bar 畫兩次」時讓 bar 事件不進 `nodes`,但 pivot 環、AI 療效、basis 只畫在節點上。**填得越完整,圖上資訊越少。**
+
+修法:`bars` 帶上臨床語意,轉折環畫起點、療效箭頭畫終點。
+
+> **教訓**:修「畫兩次」時,要問「被拿掉的那一份帶著什麼別的東西」。
+
+#### M-1:坑 #68 第五次
+
+`addStruct` 自己手寫一列 HTML。抽 `_tlRowHTML()` 成唯一產生器。
+
+#### 其餘
+
+| # | 改動 |
+|---|---|
+| P1-2 | bar 空說明用類型名 |
+| P1-3 | `createCase` 補 `pivot` |
+| P1-4 | 提示詞範例補 id;同日無 id 不 silent skip |
+| M-5 | 空窗寬度改連續函數(逐日推移跳動 2px) |
+| P1-5/6 | cluster title、Full view 加高 |
+| P2-1/2/3 | gap label 上移、勾選即時重繪、endDate 驗證 |
+| M-6 | EV-11 複製換 id 剝 `_ai` |
+
+總測 17/17。
+
 ### V5.59.0
 **Hybrid 驗證批次:視覺收尾 + TL-1 正式修法**
 
