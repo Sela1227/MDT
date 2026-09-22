@@ -162,6 +162,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.63.1 | 合併會議分開產出:主任定案「出目前切換到的癌別分頁,五種產出都分開」。內容端早就是(`getOutputCid()` V5.x 就有),**只有 `shareHTMLSlides` 的檔名用 `S.cids`(全部)** —— `HN-LY` 的檔名裝著只有 HN 的內容;DOCX 下載檔名同。兩處改 `[getOutputCid()]` |
+| V5.63.0 | **短檔名**:`2026-06-18_HeadNeck-BloodLymph_MDT.html`(39)→ `20260618-HN-LY_MDT.html`(23)。`CANCER_SHORT` 八癌別兩字母縮寫,`_mdtFname(date,cids)` 分享與下載共用,`_MDT` 保留(Worker/Git Pusher 篩選)。第一版 key 寫錯 5 個(用 gi/hbp 而非 digestive/hepatobiliary),測試也用假 id 所以過了 —— 加啟動時 CFG↔CANCER_SHORT 一致性檢查 |
 | V5.62.1 | **緊急修**:`shareHTMLSlides` 的守門仍檢查 `getCfToken()`,填了上傳金鑰照樣被擋 —— **同一個位置、同一個坑(#60),第二次**(V5.41.0 GitHub→CF 改過一次,V5.62.0 CF→金鑰又漏)。`getCfToken` 淘汰 |
 | V5.62.0 | **B-4 根治**:實機確認 `Failed to fetch`(Cloudflare 管理 API 不開 CORS),那顆按鈕**從 V5.41.0 起就沒成功過**。`uploadSlidesToCloudflare` 改打 `share.selaginella.io/api/upload?name=` + `PUT` + `X-Upload-Key`;設定頁 CF Token 欄換「上傳金鑰」(`mdt_upload_key`,不進備份);`CF_ACCOUNT_ID`/`CF_NAMESPACE_ID`/`saveCfToken`/`loadCfTokenStatus` 淘汰。**Worker 新版 `cloudflare-share/index.js` 一併附在 zip**(KV 綁定 `HTML`、機密 `UPLOAD_KEY`、CORS 只放行 github.io、檔名白名單、常數時間比較;mock KV 12/12),部署見 `DEPLOY.md`。**未決:分享網址不需登入** |
 | V5.61.0 | **Hybrid timeline 收尾三項**:(**TL-5d**)AI 療效畫在評估日 —— 提示詞要求 `assessedDate`(必須是清單中某筆的日期),匯入寫入 `_ai.assessedDate`,`tlLayout` 把 resp 掛到評估日節點、原事件 `_respMoved` 不再畫,bar 同理;(**TL-10**)DOCX 補病程時序(`_tlDocxText`:排序/區間/類型/⚑轉折/↑療效),必要事件補過去病史/病理/檢查/治療/癌指數(原本只有死亡資訊,坑#71 的 DOCX 版);(**TL-15**)QA 預檢 `_qaTl(c)`:未勾產出/已勾無有效日期/類型未選/晚於會議日/晚於死亡日,個案與必要事件都跑。**Hybrid timeline 從 V5.55.0 到 V5.61.0 七個版本全部完成** |
@@ -1468,6 +1470,10 @@ print("主程式控制字元:", "✓ 0" if not _bad else f"⚠️ {len(_bad)} �
 ---
 
 ## 十一、一句話總結
+
+V5.63.1 合併會議分開產出。主任:「兩個癌別同一天的,就是分開來,那個會分開作」,追問後定案:出目前切換到的癌別分頁,五種產出都分開。查了才發現**內容端早就是這樣** —— `getOutputCid()` 在合併會議回傳 `S.activeCid`,`genHTMLSlides`/`genDOCX`/`genPrintSheet` 都用它;**只有 `shareHTMLSlides` 的檔名用 `S.cids`(全部)**,DOCX 的 `download()` 檔名也是。所以主任看到的 `20260618-HN-LY_MDT.html` 裡面其實只有頭頸的內容 —— 檔名說謊。改兩處為 `[getOutputCid()||S.cids[0]]`。實測:切到頭頸 → `20260618-HN_MDT.html` 且內容只有 HN-001;切到血淋 → `20260618-LY_MDT.html` 且只有 LY-001。這次錨點第一次沒對上(`const m=S.meeting,cids=S.cids;` 是同一行宣告兩個),用實際文字重做。屬 c+1。
+
+V5.63.0 短檔名。主任看到分享成功後說「網址短一點,設定檔案名稱,短又有意義」。原本 `2026-06-18_HeadNeck-BloodLymph_MDT.html` 39 字,改 `20260618-HN-LY_MDT.html` 23 字:日期去 `-` 保留 8 碼可讀,癌別改兩字母縮寫(`CANCER_SHORT`),`_MDT` 保留 —— Worker 清單頁與 Git Pusher 都靠它篩選,不能動。`_mdtFname(date,cids)` 分享與下載共用,Git Pusher 上傳的自然也是短檔名。**踩了一個測試盲點**:第一版 `CANCER_SHORT` 的 key 寫成 `gi/hbp/gu/gyn`,實際 CFG 是 `digestive/hepatobiliary/urology/gynecology`,5 個錯;**測試用的也是假 id,所以全過** —— 直到印出「CFG 癌別中沒縮寫的」才發現。教訓:**對照表的測試要從真實資料來源(CFG 的 keys)迭代,不要自己編輸入**;已加啟動時 `_assertConfigConsistency` 檢查 CANCER_SHORT 覆蓋全部 CFG。屬 c+1。
 
 V5.62.1 緊急修。主任填好上傳金鑰按「HTML 分享」,跳出「請填入 Cloudflare API Token」—— `shareHTMLSlides` 進入前的守門 `if(!getCfToken())` 沒跟著 V5.62.0 換。**最諷刺的是那行旁邊的註解**:「V5.41.0:守門條件必須跟著換 —— 分享改走 Cloudflare 之後還檢查 GitHub token,個管師填了 CF token 一樣會被擋在門外(坑 #60)」。同一個位置、同一個坑、第二次 —— 我讀了那段註解,改了它下面的函式,沒改註解正上方那一行。教訓:**改一條路徑時,grep 所有「守門檢查」而不只是「執行本體」**;守門通常在呼叫端,不在被呼叫的函式裡。`getCfToken` 已無呼叫端,淘汰。屬 c+1。
 
