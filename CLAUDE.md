@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.62.1 | **緊急修**:`shareHTMLSlides` 的守門仍檢查 `getCfToken()`,填了上傳金鑰照樣被擋 —— **同一個位置、同一個坑(#60),第二次**(V5.41.0 GitHub→CF 改過一次,V5.62.0 CF→金鑰又漏)。`getCfToken` 淘汰 |
 | V5.62.0 | **B-4 根治**:實機確認 `Failed to fetch`(Cloudflare 管理 API 不開 CORS),那顆按鈕**從 V5.41.0 起就沒成功過**。`uploadSlidesToCloudflare` 改打 `share.selaginella.io/api/upload?name=` + `PUT` + `X-Upload-Key`;設定頁 CF Token 欄換「上傳金鑰」(`mdt_upload_key`,不進備份);`CF_ACCOUNT_ID`/`CF_NAMESPACE_ID`/`saveCfToken`/`loadCfTokenStatus` 淘汰。**Worker 新版 `cloudflare-share/index.js` 一併附在 zip**(KV 綁定 `HTML`、機密 `UPLOAD_KEY`、CORS 只放行 github.io、檔名白名單、常數時間比較;mock KV 12/12),部署見 `DEPLOY.md`。**未決:分享網址不需登入** |
 | V5.61.0 | **Hybrid timeline 收尾三項**:(**TL-5d**)AI 療效畫在評估日 —— 提示詞要求 `assessedDate`(必須是清單中某筆的日期),匯入寫入 `_ai.assessedDate`,`tlLayout` 把 resp 掛到評估日節點、原事件 `_respMoved` 不再畫,bar 同理;(**TL-10**)DOCX 補病程時序(`_tlDocxText`:排序/區間/類型/⚑轉折/↑療效),必要事件補過去病史/病理/檢查/治療/癌指數(原本只有死亡資訊,坑#71 的 DOCX 版);(**TL-15**)QA 預檢 `_qaTl(c)`:未勾產出/已勾無有效日期/類型未選/晚於會議日/晚於死亡日,個案與必要事件都跑。**Hybrid timeline 從 V5.55.0 到 V5.61.0 七個版本全部完成** |
 | V5.60.0 | **Hybrid 收斂批次**(坑#86):(M-3/P1-1)bar 帶 pivot/ai/resp/basis,轉折環畫起點、療效箭頭畫終點;(P1-2)bar 空說明用類型名;(P1-3)`createCase` 補 `pivot`;(P1-4)提示詞範例補 id、同日無 id 列入 unmatched 不 silent skip;(**M-1**)`addStruct` 手寫列改用 `_tlRowHTML()` 唯一產生器;(M-5)空窗寬度改連續函數;(P1-5)cluster 全部事件進 `<title>`;(P1-6)Full view 加高;(P2-1)gap label 移最上緣;(P2-2)勾產出包含後立即重繪;(P2-3)endDate<date 標紅;(M-6)EV-11 複製換 id 剝 `_ai`。總測 17 項 |
@@ -1467,6 +1468,8 @@ print("主程式控制字元:", "✓ 0" if not _bad else f"⚠️ {len(_bad)} �
 ---
 
 ## 十一、一句話總結
+
+V5.62.1 緊急修。主任填好上傳金鑰按「HTML 分享」,跳出「請填入 Cloudflare API Token」—— `shareHTMLSlides` 進入前的守門 `if(!getCfToken())` 沒跟著 V5.62.0 換。**最諷刺的是那行旁邊的註解**:「V5.41.0:守門條件必須跟著換 —— 分享改走 Cloudflare 之後還檢查 GitHub token,個管師填了 CF token 一樣會被擋在門外(坑 #60)」。同一個位置、同一個坑、第二次 —— 我讀了那段註解,改了它下面的函式,沒改註解正上方那一行。教訓:**改一條路徑時,grep 所有「守門檢查」而不只是「執行本體」**;守門通常在呼叫端,不在被呼叫的函式裡。`getCfToken` 已無呼叫端,淘汰。屬 c+1。
 
 V5.62.0 B-4 根治。主任實機測試「HTML 分享」按鈕:`Failed to fetch` —— 確認了 V5.50.0 審核 B-4 的預測:Cloudflare 管理 API(`api.cloudflare.com`)不開 CORS,從 `sela1227.github.io` 發的請求在送出前就被 Chrome 攔掉;Git Pusher 能上傳是因為桌面程式不受此限。**所以 V5.41.0 選方案 A 做出來的那顆按鈕,從來沒有成功過** —— 而且錯誤訊息被包成「請確認網路連線」,看起來像網路問題。就算能通也不該那樣做:網頁裡的 CF token 按 F12 就看得到,而那把 token 能動整個 KV。現在改成 V5.41.0 當時提的方案 B:網頁改打自己的 Worker `/api/upload?name=<fname>`,`PUT` + `X-Upload-Key` header + `Content-Type: text/html`,body 直接是 HTML 字串(不再組 FormData);回應 `{ok,url,error}`,401/403 提示「金鑰錯誤或已更換」、400「檔名不合法」、413「超過 25 MB」;**網頁只帶上傳金鑰**(Worker 端的 `UPLOAD_KEY` 機密,外流換掉就好),CF API Token 從網頁完全移除。設定頁 CF Token 欄換成「上傳金鑰」(`mdt_upload_key`,加進 `_NEVER_BACKUP`),`CF_ACCOUNT_ID`/`CF_NAMESPACE_ID` 常數與 `saveCfToken`/`loadCfTokenStatus` 淘汰,`getCfToken` 留著供舊路徑相容。Worker 端(新 `index.js` + Dashboard 設 `UPLOAD_KEY` 機密)由主任部署,並提醒要覆蓋到本機 `cloudflare-share\src\` 免得 wrangler 重部署蓋回舊版。mock fetch 實測:網址/方法/header/body 正確、回傳 url 正確、401 訊息正確、無金鑰 alert、金鑰不進備份。**未決的資安問題**(主任的顧問也點出):`share.selaginella.io` 上的頁面**任何人拿到網址就能開、不需登入**,檔名 `日期_癌別_MDT.html` 很好猜,而內容含病歷號與可識別病情 —— 這等於把病人資料放在公開網址上。建議 Cloudflare Access(限定信箱登入,免費 50 人內)或上傳前去識別化;已寫進設定頁提醒與說明書。屬 c+1。
 

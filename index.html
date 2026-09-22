@@ -1707,7 +1707,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.62.0';
+const VERSION='V5.62.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6415,7 +6415,9 @@ const GH_SLIDES_PATH='slides';
 async function shareHTMLSlides(){
   /* V5.41.0:守門條件必須跟著換 —— 分享改走 Cloudflare 之後還檢查 GitHub token,
      個管師填了 CF token 一樣會被擋在門外(坑 #60:舊路徑關掉後,它的使用者去哪了)。 */
-  if(!getCfToken()){alert('請先到「設定 → 系統 → 投影片分享」填入 Cloudflare API Token');return;}
+  /* V5.62.1:守門改看上傳金鑰 —— V5.62.0 改了 uploadSlidesToCloudflare 內部,這道門沒跟著換,
+     個管師填了金鑰仍被擋在門外。**同一個位置、同一個坑(#60),第二次**。 */
+  if(!getUploadKey()){alert('請先到「設定 → 系統 → 投影片分享」填入上傳金鑰');return;}
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   const btn=document.getElementById('btn-share-slides');
   if(btn){btn.disabled=true;btn.textContent='產生中...';}
@@ -6579,7 +6581,7 @@ function loadUploadKeyStatus(){
   el.style.color=k?'var(--ok)':'var(--warn)';
   const i=document.getElementById('upload-key');if(i)i.value=k;
 }
-function getCfToken(){return localStorage.getItem('mdt_cf_token')||'';}
+/* V5.62.1:getCfToken 已無呼叫端,淘汰 */
 /* V5.62.0:saveCfToken 已淘汰(上傳改走 Worker,不再需要 CF API Token) */
 function clearCfToken(){
   localStorage.removeItem('mdt_cf_token');
