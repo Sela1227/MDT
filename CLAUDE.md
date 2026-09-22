@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.63.2 | 清單顯示**上傳者**:網頁端 `X-Uploader: encodeURIComponent(S.user.name)`(header 不能放中文),Worker 存 `metadata.uploader` 並在清單畫標籤;Worker 排序改**依上傳時間最新在上**(原本依檔名字串,`20260618` 會排在 `2026-09-17` 前面,6 月跑到 9 月上面,個管師找不到剛傳的)。**Worker 要重新部署** |
 | V5.63.1 | 合併會議分開產出:主任定案「出目前切換到的癌別分頁,五種產出都分開」。內容端早就是(`getOutputCid()` V5.x 就有),**只有 `shareHTMLSlides` 的檔名用 `S.cids`(全部)** —— `HN-LY` 的檔名裝著只有 HN 的內容;DOCX 下載檔名同。兩處改 `[getOutputCid()]` |
 | V5.63.0 | **短檔名**:`2026-06-18_HeadNeck-BloodLymph_MDT.html`(39)→ `20260618-HN-LY_MDT.html`(23)。`CANCER_SHORT` 八癌別兩字母縮寫,`_mdtFname(date,cids)` 分享與下載共用,`_MDT` 保留(Worker/Git Pusher 篩選)。第一版 key 寫錯 5 個(用 gi/hbp 而非 digestive/hepatobiliary),測試也用假 id 所以過了 —— 加啟動時 CFG↔CANCER_SHORT 一致性檢查 |
 | V5.62.1 | **緊急修**:`shareHTMLSlides` 的守門仍檢查 `getCfToken()`,填了上傳金鑰照樣被擋 —— **同一個位置、同一個坑(#60),第二次**(V5.41.0 GitHub→CF 改過一次,V5.62.0 CF→金鑰又漏)。`getCfToken` 淘汰 |

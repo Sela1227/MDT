@@ -1,4 +1,6 @@
-# share.selaginella.io Worker 部署(V5.62.0)
+# share.selaginella.io Worker 部署(V5.63.2)
+
+> V5.63.2 更新:清單顯示上傳者、依上傳時間排序。只要重貼 `index.js` 部署,`UPLOAD_KEY` 不用動。
 
 不用 Node.js,全部在 Cloudflare Dashboard 做。約 5 分鐘。
 

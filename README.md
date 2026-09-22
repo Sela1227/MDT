@@ -111,6 +111,11 @@
 
 ## 版本歷程
 
+### V5.63.2
+**清單顯示上傳者 + 排序改上傳時間**
+
+`X-Uploader` header(encodeURIComponent)→ `metadata.uploader` → 清單標籤。排序從檔名字串改為上傳時間降冪,新舊檔名格式混用時不再亂。**Worker 要重新部署。**
+
 ### V5.63.1
 **合併會議分開產出**
 

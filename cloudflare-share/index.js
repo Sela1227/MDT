@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════════
    MDT 投影片分享 Worker — share.selaginella.io
-   V5.62.0(2026-09-21)
+   V5.63.2(2026-09-22,含上傳者)
 
    路由:
      GET  /?k=cbshow          清單頁(最近 10 場,只列檔名含 _MDT 的)
@@ -33,7 +33,7 @@ function corsHeaders(origin) {
   return {
     'Access-Control-Allow-Origin': ok ? origin : 'null',
     'Access-Control-Allow-Methods': 'PUT, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Upload-Key',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Upload-Key, X-Uploader',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin',
   };
@@ -87,7 +87,10 @@ export default {
       let title = name.replace(/\.[^.]+$/, '');
       const tm = html.slice(0, 8192).match(/<title[^>]*>([\s\S]*?)<\/title>/i);
       if (tm && tm[1].trim()) title = tm[1].trim().slice(0, 120);
-      const metadata = { title, size, uploaded: new Date().toISOString().slice(0, 19) };
+      /* V5.63.2:上傳者。網頁端 encodeURIComponent 過,這裡解回來;只留 40 字避免塞垃圾 */
+      let uploader = '';
+      try { uploader = decodeURIComponent(request.headers.get('X-Uploader') || '').trim().slice(0, 40); } catch (e) {}
+      const metadata = { title, size, uploaded: new Date().toISOString().slice(0, 19), uploader };
 
       await env.HTML.put(name, html, { metadata });
       return json({ ok: true, name, url: url.origin + '/' + encodeURIComponent(name), title, size }, 200, ch);
@@ -98,11 +101,14 @@ export default {
       const list = await env.HTML.list({ limit: 1000 });
       const items = (list.keys || [])
         .filter(k => /_MDT\.html$/i.test(k.name))
-        .map(k => ({ name: k.name, title: (k.metadata && k.metadata.title) || k.name.replace(/\.html$/, ''), uploaded: (k.metadata && k.metadata.uploaded) || '' }))
-        .sort((a, b) => b.name.localeCompare(a.name))
+        .map(k => ({ name: k.name, title: (k.metadata && k.metadata.title) || k.name.replace(/\.html$/, ''), uploaded: (k.metadata && k.metadata.uploaded) || '', uploader: (k.metadata && k.metadata.uploader) || '' }))
+        /* V5.63.2:依上傳時間排,最新在上 —— 原本依檔名字串排,新舊格式混用時 20260618 會排在 2026-09-17 前面(0 > -),
+           6 月的跑到 9 月上面,個管師找不到剛上傳的。沒 uploaded 的(很舊的)退回檔名排。 */
+        .sort((a, b) => (b.uploaded || '').localeCompare(a.uploaded || '') || b.name.localeCompare(a.name))
         .slice(0, 10);
       const rows = items.map(i =>
         '<li><a href="/' + encodeURIComponent(i.name) + '">' + esc(i.title) + '</a>' +
+        (i.uploader ? '<span class="u">' + esc(i.uploader) + '</span>' : '') +
         (i.uploaded ? '<span class="t">' + esc(i.uploaded.replace('T', ' ')) + '</span>' : '') + '</li>'
       ).join('');
       const page = '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
@@ -111,9 +117,9 @@ export default {
         '.w{max-width:720px;margin:0 auto;background:#fff;border-radius:6px;padding:24px 28px;box-shadow:0 1px 4px rgba(0,0,0,.06)}' +
         'h1{font-size:20px;margin:0 0 6px;color:#3A4550}.s{font-size:12px;color:#9BAAB6;margin-bottom:18px}' +
         'ul{list-style:none;padding:0;margin:0}li{display:flex;align-items:baseline;gap:12px;padding:12px 4px;border-bottom:1px solid #E2E7EB}' +
-        'a{font-size:16px;color:#4A7C8E;text-decoration:none;flex:1}a:hover{text-decoration:underline}.t{font-size:12px;color:#9BAAB6;white-space:nowrap}' +
+        'a{font-size:16px;color:#4A7C8E;text-decoration:none;flex:1}a:hover{text-decoration:underline}.t{font-size:12px;color:#9BAAB6;white-space:nowrap}.u{font-size:12px;color:#637281;background:#EFF1F4;padding:2px 8px;border-radius:3px;white-space:nowrap}' +
         '.e{padding:24px;text-align:center;color:#9BAAB6}</style></head><body><div class="w">' +
-        '<h1>MDT 投影片</h1><div class="s">最近 10 場 · 點標題開啟 · 內容含病歷號,請勿轉貼</div>' +
+        '<h1>MDT 投影片</h1><div class="s">最近上傳的 10 場(最新在上)· 點標題開啟 · 內容含病歷號,請勿轉貼</div>' +
         (rows ? '<ul>' + rows + '</ul>' : '<div class="e">目前沒有投影片</div>') +
         '</div></body></html>';
       return new Response(page, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, max-age=60', 'X-Robots-Tag': 'noindex' } });

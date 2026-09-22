@@ -1707,7 +1707,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.63.1';
+const VERSION='V5.63.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6612,7 +6612,9 @@ async function uploadSlidesToCloudflare(htmlContent, fname){
   const url=CF_BASE_URL+'/api/upload?name='+encodeURIComponent(fname);
   let resp;
   try{
-    resp=await fetch(url,{method:'PUT',headers:{'X-Upload-Key':key,'Content-Type':'text/html; charset=utf-8'},body:htmlContent});
+    /* V5.63.2:帶上傳者(系統登入的個管師),清單頁顯示「誰傳的」。非 ASCII 要 encodeURIComponent,header 不能直接放中文 */
+    const uploader=encodeURIComponent((S.user&&S.user.name)||'');
+    resp=await fetch(url,{method:'PUT',headers:{'X-Upload-Key':key,'X-Uploader':uploader,'Content-Type':'text/html; charset=utf-8'},body:htmlContent});
   }catch(e){
     throw new Error('無法連線到分享空間（'+(e&&e.message||e)+'）\n\n→ 請確認網路；院內網路若擋 '+CF_BASE_URL.replace(/^https?:\/\//,'')+' 會無法上傳。');
   }
