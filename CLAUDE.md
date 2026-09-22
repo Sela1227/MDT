@@ -162,6 +162,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 關鍵變更 |
 |------|---------|
+| V5.64.1 | 檢視密碼改 **session cookie**(不設 Max-Age,瀏覽器關掉就忘)—— 主任:「每次都要輸入,不要記 30 天」。簽章仍帶 12 小時上限防 cookie 外流 |
 | V5.64.0 | **分享空間檢視密碼**(Worker):機密 `VIEW_PWD`,設了就擋清單頁與所有投影片;cookie 存 `exp.HMAC(VIEW_PWD,exp)`,密碼本身不進 cookie,換密碼舊 cookie 全失效;`POST /auth` 驗後 302 導回,`next` 只允許站內路徑;上傳端點不受影響;沒設就不擋。11/11。設定頁提醒改寫。Cloudflare Access 仍是更嚴謹的選項 |
 | V5.63.2 | 清單顯示**上傳者**:網頁端 `X-Uploader: encodeURIComponent(S.user.name)`(header 不能放中文),Worker 存 `metadata.uploader` 並在清單畫標籤;Worker 排序改**依上傳時間最新在上**(原本依檔名字串,`20260618` 會排在 `2026-09-17` 前面,6 月跑到 9 月上面,個管師找不到剛傳的)。**Worker 要重新部署** |
 | V5.63.1 | 合併會議分開產出:主任定案「出目前切換到的癌別分頁,五種產出都分開」。內容端早就是(`getOutputCid()` V5.x 就有),**只有 `shareHTMLSlides` 的檔名用 `S.cids`(全部)** —— `HN-LY` 的檔名裝著只有 HN 的內容;DOCX 下載檔名同。兩處改 `[getOutputCid()]` |

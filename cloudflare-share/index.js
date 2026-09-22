@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════════
    MDT 投影片分享 Worker — share.selaginella.io
-   V5.64.0(2026-09-22,含上傳者 + 檢視密碼)
+   V5.64.1(2026-09-22,檢視密碼改 session)
 
    路由:
      GET  /?k=cbshow          清單頁(最近 10 場,只列檔名含 _MDT 的)
@@ -11,7 +11,7 @@
    綁定:
      KV   HTML         (Workers 和 Pages → share → 設定 → 綁定)
      機密 UPLOAD_KEY   (設定 → 變數和機密 → 類型選「機密」)
-     機密 VIEW_PWD     (V5.64.0:檢視密碼。沒設就不擋,設了清單頁與所有投影片都要輸入,記 30 天)
+     機密 VIEW_PWD     (V5.64.0:檢視密碼。沒設就不擋,設了清單頁與所有投影片都要輸入;V5.64.1 改瀏覽器關掉就忘)
 
    設計原則:
      - 網頁只帶上傳金鑰,CF API Token 不出現在任何前端(V5.62.0 B-4 根治)
@@ -63,16 +63,17 @@ function safeEqual(a, b) {
    換密碼舊 cookie 全部失效。POST /auth 驗密碼後 Set-Cookie 並導回原網址。
    更嚴謹的做法是 Cloudflare Access(各自信箱、有存取 log),這版先用共用密碼。 */
 const COOKIE = 'mdt_view';
-const TTL_DAYS = 30;
 async function hmac(secret, msg) {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 async function makeCookie(secret) {
-  const exp = Date.now() + TTL_DAYS * 86400000;
+  /* V5.64.1:主任要「每次都要輸入,不要記 30 天」→ session cookie(不設 Max-Age),瀏覽器關掉就忘。
+     簽章仍帶到期時間(伺服器端上限 12 小時),防止有人把 cookie 複製出去長期用。 */
+  const exp = Date.now() + 12 * 3600000;
   const sig = await hmac(secret, String(exp));
-  return COOKIE + '=' + exp + '.' + sig + '; Path=/; Max-Age=' + (TTL_DAYS * 86400) + '; HttpOnly; Secure; SameSite=Lax';
+  return COOKIE + '=' + exp + '.' + sig + '; Path=/; HttpOnly; Secure; SameSite=Lax';
 }
 async function cookieOk(request, secret) {
   const m = (request.headers.get('Cookie') || '').match(new RegExp('(?:^|;\\s*)' + COOKIE + '=(\\d+)\\.([0-9a-f]+)'));
@@ -88,7 +89,7 @@ function loginPage(next, wrong) {
     '.s{font-size:12px;color:#9BAAB6;margin-bottom:18px}input{width:100%;box-sizing:border-box;font-size:16px;padding:10px 12px;border:1px solid #C9D1D8;border-radius:4px;margin-bottom:12px}' +
     'button{width:100%;font-size:15px;padding:10px;background:#4A7C8E;color:#fff;border:none;border-radius:4px;cursor:pointer}button:hover{background:#3D6878}' +
     '.e{color:#C0392B;font-size:13px;margin-bottom:10px}</style></head><body><div class="b">' +
-    '<h1>MDT 投影片</h1><div class="s">輸入一次後 30 天內不用再輸入</div>' +
+    '<h1>MDT 投影片</h1><div class="s">關閉瀏覽器後需重新輸入</div>' +
     (wrong ? '<div class="e">密碼錯誤</div>' : '') +
     '<form method="POST" action="/auth"><input type="hidden" name="next" value="' + esc(next) + '">' +
     '<input type="password" name="pwd" placeholder="檢視密碼" autofocus autocomplete="current-password"><button>開啟</button></form>' +
