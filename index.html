@@ -1202,7 +1202,7 @@ textarea{resize:vertical}
       <!-- V5.62.0:改走 Worker 上傳端點。網頁只帶「上傳金鑰」,CF API Token 不再出現在網頁裡。 -->
       <div style="padding:9px 12px;background:#EFF4F7;border-left:3px solid var(--acc);border-radius:2px;font-size:12px;line-height:1.75;margin-bottom:12px">
         <b>請注意</b><br>
-        • 上傳的投影片<b>含完整病歷號</b>，知道網址的人就能開啟，<b>不需登入</b>。<b>請勿轉貼到公開群組。</b><br>
+        • 上傳的投影片<b>含完整病歷號</b>。分享空間設有<b>檢視密碼</b>（由林醫師提供給醫師），輸入一次記 30 天。<b>請勿轉貼到公開群組。</b><br>
         • 已分享的內容由 <b>林醫師統一管理與清除</b>；本系統只負責上傳。<br>
         • 上傳金鑰<b>只存在這台電腦、不會進入備份檔</b>；還原備份後需重新填入一次。
       </div>
@@ -1707,7 +1707,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.62.0';
+const VERSION='V5.64.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1743,11 +1743,22 @@ const CANCER_EN_CODES={
   hepatobiliary:'HBP',
   urology:'GU',
   gynecology:'Gyn'
+}
+/* V5.63.0:短檔名 —— 主任:「網址短一點,短又有意義」。
+   2026-06-18_HeadNeck-BloodLymph_MDT.html(39 字)→ 20260618-HN-LY_MDT.html(23 字)。
+   _MDT 保留:Worker 清單頁與 Git Pusher 都靠它篩選。日期去掉 - 但保留 8 碼可讀。 */
+const CANCER_SHORT={head_neck:'HN',lymphoma:'LY',thoracic:'CH',breast:'BR',digestive:'GI',hepatobiliary:'HBP',urology:'GU',gynecology:'GY'};/* key 必須與 CFG 一致 —— 第一版寫錯 5 個,靠 fallback 藏住 */
+function _mdtFname(dateStr,cids){
+  const d=String(dateStr||'').replace(/-/g,'');
+  const code=(cids||[]).map(function(id){return CANCER_SHORT[id]||CANCER_EN_CODES[id]||id;}).join('-');
+  return d+'-'+code+'_MDT.html';
 };
 /* V5.13.6: 自動一致性檢查(審稿建議)— DEFAULT_C 的每個癌別 id 都必須有對應英文代碼;
    同理檢查每個癌別的預設 loc 都要存在於 DEFAULT_LOCS(避免 select 找不到 option 存成空值)。
    有問題只在 console 警告,不阻斷啟動。 */
 function _assertConfigConsistency(){
+  /* V5.63.0:CANCER_SHORT 每個 CFG 癌別都要有,否則檔名退回全名(不一致) */
+  Object.keys(CFG).forEach(function(k){if(!CANCER_SHORT[k])console.error('[設定檢查] CANCER_SHORT 缺 '+k);});
   try{
     var missCode=Object.keys(DEFAULT_C).filter(function(id){return !CANCER_EN_CODES[id];});
     if(missCode.length)console.warn('[設定檢查] 這些癌別缺英文代碼(檔名會 fallback):',missCode);
@@ -6084,7 +6095,7 @@ function renderThemeStrip(){
     var lid=opt[0],ltxt=opt[1];
     var isOn=lid===curLang;
     var btn=document.createElement('span');
-    btn.title=lid==='zh'?'中文檔名(2026-05-21_頭頸癌多專科會議.html)':'英文檔名(2026-05-21_HeadNeck_MDT.html)';
+    btn.title=lid==='zh'?'中文檔名(2026-05-21_頭頸癌多專科會議.html)':'英文檔名(20260521-HN_MDT.html)';
     btn.style.cssText='display:inline-block;padding:2px 8px;border-radius:10px;cursor:pointer;font-size:10px;font-weight:600;border:'+(isOn?'1.5px solid var(--acc)':'1px solid var(--blt)')+';background:'+(isOn?'var(--acc)':'transparent')+';color:'+(isOn?'#fff':'var(--textlt)')+';flex-shrink:0';
     btn.textContent=ltxt;
     btn.onclick=function(){
@@ -6415,7 +6426,9 @@ const GH_SLIDES_PATH='slides';
 async function shareHTMLSlides(){
   /* V5.41.0:守門條件必須跟著換 —— 分享改走 Cloudflare 之後還檢查 GitHub token,
      個管師填了 CF token 一樣會被擋在門外(坑 #60:舊路徑關掉後,它的使用者去哪了)。 */
-  if(!getCfToken()){alert('請先到「設定 → 系統 → 投影片分享」填入 Cloudflare API Token');return;}
+  /* V5.62.1:守門改看上傳金鑰 —— V5.62.0 改了 uploadSlidesToCloudflare 內部,這道門沒跟著換,
+     個管師填了金鑰仍被擋在門外。**同一個位置、同一個坑(#60),第二次**。 */
+  if(!getUploadKey()){alert('請先到「設定 → 系統 → 投影片分享」填入上傳金鑰');return;}
   if(!S.meeting?.version){alert('請先儲存會議資料');return;}
   const btn=document.getElementById('btn-share-slides');
   if(btn){btn.disabled=true;btn.textContent='產生中...';}
@@ -6428,7 +6441,7 @@ async function shareHTMLSlides(){
   let _upTip=null;
   try{
     if(readForm()===false)return;
-    const m=S.meeting,cids=S.cids;
+    const m=S.meeting,cids=[getOutputCid()||S.cids[0]];/* V5.63.1:合併會議只出目前分頁 —— 內容早就是(genHTMLSlides 用 getOutputCid),檔名沒跟上,HN-LY 的檔名裝著只有 HN 的內容 */
     /* V5.27.1: 分享網址縮短 —— 原本檔名含中文(如「頭頸癌多專科會議」),
        經 URL 編碼後 9 個中文字會膨脹成 81 個字元,佔網址一大半:
          舊 /slides/2026-06-18_%E9%A0%AD%E9%A0%B8%E7%99%8C%E5%A4%9A%E5%B0%88%E7%A7%91%E6%9C%83%E8%AD%B0.html
@@ -6436,11 +6449,7 @@ async function shareHTMLSlides(){
        改用既有的 CANCER_EN_CODES(HTML 下載的英文檔名選項本來就在用),
        合併會議以 - 連接(+ 會被編碼成 %2B)。舊連結不受影響(檔案仍在);同名仍覆蓋(維持原行為)。 */
     /* 合併會議用 - 連接:+ 會被 URL 編碼成 %2B(3 字元),- 不會被編碼 */
-    const _enCode=cids.map(function(id){return CANCER_EN_CODES[id]||id;}).join('-');
-    /* V5.41.0:檔名補上 _MDT,與「HTML 下載」的格式一致(L9161)——
-       Worker 的清單頁靠 `日期_癌別_MDT.html` 這個格式篩選出會議記錄,
-       不帶 _MDT 的檔案上傳後不會出現在會議室電腦的書籤清單裡。 */
-    const ghFname=m.date+'_'+_enCode+'_MDT.html';
+    const ghFname=_mdtFname(m.date,cids);/* V5.63.0:短檔名 */
     if(!confirm('將上傳「'+ghFname+'」至分享空間\n\n數秒後即可使用連結\n\n確定上傳？'))return;
     if(btn){btn.textContent='上傳中...';}
     _upTip=showStickyToast('正在產生並上傳，請稍候…');/* V5.33.0 W-5:原本 2.2 秒就消失,但含影像時作業要十幾秒 → 中間完全沒回饋,使用者以為當掉會重複按 */
@@ -6579,7 +6588,7 @@ function loadUploadKeyStatus(){
   el.style.color=k?'var(--ok)':'var(--warn)';
   const i=document.getElementById('upload-key');if(i)i.value=k;
 }
-function getCfToken(){return localStorage.getItem('mdt_cf_token')||'';}
+/* V5.62.1:getCfToken 已無呼叫端,淘汰 */
 /* V5.62.0:saveCfToken 已淘汰(上傳改走 Worker,不再需要 CF API Token) */
 function clearCfToken(){
   localStorage.removeItem('mdt_cf_token');
@@ -6603,7 +6612,9 @@ async function uploadSlidesToCloudflare(htmlContent, fname){
   const url=CF_BASE_URL+'/api/upload?name='+encodeURIComponent(fname);
   let resp;
   try{
-    resp=await fetch(url,{method:'PUT',headers:{'X-Upload-Key':key,'Content-Type':'text/html; charset=utf-8'},body:htmlContent});
+    /* V5.63.2:帶上傳者(系統登入的個管師),清單頁顯示「誰傳的」。非 ASCII 要 encodeURIComponent,header 不能直接放中文 */
+    const uploader=encodeURIComponent((S.user&&S.user.name)||'');
+    resp=await fetch(url,{method:'PUT',headers:{'X-Upload-Key':key,'X-Uploader':uploader,'Content-Type':'text/html; charset=utf-8'},body:htmlContent});
   }catch(e){
     throw new Error('無法連線到分享空間（'+(e&&e.message||e)+'）\n\n→ 請確認網路；院內網路若擋 '+CF_BASE_URL.replace(/^https?:\/\//,'')+' 會無法上傳。');
   }
@@ -8323,7 +8334,7 @@ async function genDOCX(mode){
       }]
     });
     const blob=await Packer.toBlob(doc);
-    download(blob,S.cids.map(function(id){return CFG[id]?.name;}).join('_')+'_'+m.date+(isDeck?'_MDT\u500b\u6848\u7c21\u5831':'_MDT\u6703\u8b70\u8a18\u9304')+'.docx');
+    download(blob,cids.map(function(id){return CFG[id]?.name;}).join('_')+'_'+m.date+(isDeck?'_MDT\u500b\u6848\u7c21\u5831':'_MDT\u6703\u8b70\u8a18\u9304')+'.docx');
     setLibStatus(_kind+' \u5df2\u4e0b\u8f09','var(--ok)');setTimeout(function(){setLibStatus('');},3000);
   }catch(e){setLibStatus(_kind+' \u7522\u751f\u932f\u8aa4\uff1a'+e.message,'var(--err)');console.error(e);}
   /* V5.13.0: 還原成按鈕原本的文字(舊版寫死 'DOCX 會議記錄',跟 HTML 上的「DOCX 記錄」不一致,產一次後按鈕文字就變了) */
@@ -10089,8 +10100,7 @@ window.openImgWindow=function(caseId){
   const _fnLang=getHtmlFnameLang();
   let fname;
   if(_fnLang==='en'){
-    const enCodes=cids.map(function(id){return CANCER_EN_CODES[id]||id;}).join('_');
-    fname=m.date+'_'+enCodes+'_MDT.html';
+    fname=_mdtFname(m.date,cids);/* V5.63.0:短檔名,與分享一致 */
   }else{
     fname=m.date+'_'+cids.map(function(id){return CFG[id]?.name||id;}).join('+')+'多專科會議.html';
   }

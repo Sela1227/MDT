@@ -111,6 +111,33 @@
 
 ## 版本歷程
 
+### V5.64.0
+**分享空間檢視密碼**
+
+主任:「有沒有辦法加一道密碼,讓別人有連結也打不開?」Worker 加機密 `VIEW_PWD`:清單頁與所有投影片都要輸入,一次記 30 天。cookie 是 HMAC 簽章不含密碼,換密碼全部失效;偽造 cookie、外部 next、上傳端點都測過。不設就不擋。
+
+### V5.63.2
+**清單顯示上傳者 + 排序改上傳時間**
+
+`X-Uploader` header(encodeURIComponent)→ `metadata.uploader` → 清單標籤。排序從檔名字串改為上傳時間降冪,新舊檔名格式混用時不再亂。**Worker 要重新部署。**
+
+### V5.63.1
+**合併會議分開產出**
+
+內容端早就只出目前分頁(`getOutputCid()`),但 `shareHTMLSlides` 與 DOCX 的**檔名**用全部癌別 —— `20260618-HN-LY_MDT.html` 裡只有頭頸的內容。改成檔名跟內容一致:切到頭頸出 `HN`、切到血淋出 `LY`。
+
+### V5.63.0
+**短檔名**
+
+`2026-06-18_HeadNeck-BloodLymph_MDT.html` → `20260618-HN-LY_MDT.html`。分享與下載共用 `_mdtFname()`,`_MDT` 保留。
+
+第一版 `CANCER_SHORT` 的 key 寫錯 5 個,測試也用假 id 所以通過 —— 加啟動時一致性檢查。
+
+### V5.62.1
+**緊急修:守門沒跟著換**
+
+`shareHTMLSlides` 進入前仍檢查舊的 CF token,個管師填了上傳金鑰照樣被擋。註解旁邊寫著坑 #60「守門條件必須跟著換」—— 同一個位置第二次踩。
+
 ### V5.62.0
 **B-4 根治:HTML 分享改走 Worker**
 
@@ -125,7 +152,9 @@ Content-Type: text/html
 body: HTML 字串
 ```
 
-網頁只帶上傳金鑰(外流換掉就好),CF API Token 從網頁完全移除。Worker 端由主任在 Dashboard 部署。
+網頁只帶上傳金鑰(外流換掉就好),CF API Token 從網頁完全移除。
+
+**Worker 新版附在 `cloudflare-share/`**:`index.js`(清單頁 + 檔案服務 + `/api/upload`)與 `DEPLOY.md`(五步,Dashboard 裡做)。mock KV 實測 12/12:預檢、CORS 只放行 github.io、錯金鑰 401、`../` 與非 .html 擋 400、metadata 同格式、清單只列 `_MDT`。
 
 #### ⚠️ 未決:分享網址不需登入
 
