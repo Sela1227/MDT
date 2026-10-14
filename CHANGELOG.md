@@ -1,0 +1,8069 @@
+# MDT 會議管理系統 — 版本歷程(CHANGELOG)
+
+> **版本歷程的唯一來源**(V5.71.0 起)。原本分散在 README「版本歷程」、CLAUDE.md「七、版本歷程」表格、
+> CLAUDE.md「十一、一句話總結」三處,依版號合併於此,內容未刪減。新版在上。
+> 每版三段:README 原文 → **摘要**(原 CLAUDE 第七節表格)→ **開發敘事**(原 CLAUDE 第十一節)。
+
+
+---
+
+## V5.72.0
+
+**投影片「重複字眼」與前期追蹤標題(主任同意後才改投影片輸出)**
+
+| # | 內容 |
+|---|---|
+| **重複字眼** | 個管反映「都會出現重覆字眼,不少地方有」。原因:投影片「基因檢測」列外層 `mkRow('基因檢測',…)` 已有標籤,每一筆又加 `<span class="vc-k">基因檢測</span>` → 一個病人兩項基因檢測就重複兩次,每個病人都有。刪掉內層標籤。其他輸出(DOCX、Word 簡報、小抄、閱覽卡片、必要事件文字頁)與其他列逐一檢查,無重複;以舊實際投影片掃描(只看標籤)資料本身也無重複類別名 |
+| **Q-3** | 前期追蹤頁 `.th` 標題:CSS 字串 `+ +` 讓規則變 `NaN`,標題從粗體 clamp(18–32px) 變預設 16px。刪行尾 `+`。preflight jshint 白名單 W007 一併移除(剩 8 則) |
+| **驗證** | 新舊投影片逐字比對:差異**只有**這兩處(CSS `NaN`→`.th{…}`、基因檢測兩筆各刪一個標籤)。`audit-render.js` 加回歸測試「表格列標籤不得出現在內容」與「`.th` 規則存在」,並以 V5.71.1 反向驗證兩項都會 🔴 |
+
+**摘要**:投影片基因檢測重複標籤、前期追蹤標題樣式修好。
+
+---
+
+## V5.71.1
+
+**個資檢查補洞 + 文件照實(投影片輸出零變動)**
+
+| # | 內容 |
+|---|---|
+| **S-1** P1 | 「範例病歷號皆虛構」擋不住 JSON 寫法 `"chartNo":"…"`(V5.70.1 被清掉的真實號碼正好就是 JSON 格式)、號碼與姓名間多個空白、四字遮蔽姓名;`audit-render.js`、`test.mjs` 不在掃描範圍。改正則(JS/JSON 兩種、0~3 分隔、`○+`、7~8 碼)、擴大範圍,並加**四種寫法自我測試**(檢查本身漏抓也 🔴)。反向測試:四種寫法 + audit-render.js 內嵌,全部擋下。index.html AI 提示詞裡的 JSON 範例 `1234567` 與 CHANGELOG 6 處一併改 `9000099`。自我測試字串用 `8888888`,**不用真實號碼** |
+| **S-2** | README 技術規格照實:走 CDN 的是 xlsx/pptxgenjs,docx 與 JSZip 內嵌;AI 也支援 OpenAI;「開發規範」改指向 CLAUDE.md |
+| **S-3** | 決策紀錄 Q-3 統一為「延後」;Hybrid 五項決策段落改過去式 |
+| **主任定案** | emoji:狀態符號可用、禁止新增裝飾性 emoji、既有不清理(寫入 CLAUDE 第三節);git 歷史維持現狀;「林○麗 + Breast IDC」為測試資料保留 |
+
+**摘要**:個資檢查補 JSON 寫法與自我測試;README 照實;emoji 規範與 git 歷史定案。
+
+---
+
+## V5.71.0
+
+**R-1 + 真實病歷號清除 + 文件重整(投影片輸出零變動)**
+
+| # | 內容 |
+|---|---|
+| **個資** | 主任確認舊範例病歷號(影像子資料夾命名範例)為真實病歷號;另查到「產生測試資料」12 組病歷號配完整姓名、README 兩組範例,來源不確定。全部換成明顯虛構:`0000001 測○試`、`9000001`~`9000014`、「測試一」~「測試十二」。共 60+ 處;另清除開發敘事中引自截圖的 4 組病歷號+遮蔽姓名(index.html 僅註解、AI 提示詞範例、測試資料,不影響投影片)。**git 歷史仍保留舊內容**,依院內個資規範處理 |
+| **R-1** | Q-1 把「記憶體 base」與「磁碟推送紀錄」綁在同一個 `if(_wlok)`,本機失敗後不關頁再存會跳「和自己衝突」。拆開:NAS 成功就對齊 base;本機也成功才記推送紀錄。雙機測試加一條(共 14 條) |
+| **文件** | ①新增 `CHANGELOG.md`:合併 README 版本歷程(333 版)、CLAUDE 第七節表格(188 列)、第十一節敘事(118 段),遺漏 0;②CLAUDE.md 153 KB → 26 KB:第零節「開工必讀」、第五節資料架構依五類重列(補 `mdt_pushed_`、`rev`、`savedById`)、第七節只留最近 5 版一行、主任定案集中為第十一節「決策紀錄」、第十二節系統現況;③README 275 KB → 4 KB,改為現況說明,**修正「合併會議輸出合併成一份」這句違反設計不變量的描述**;④USER_GUIDE 產出區/填寫會議決議/投影片分享三節對齊畫面,第九節改「變了什麼 → 您要做什麼」;⑤SELA-handoff 標註凍結於 V5.10.5 |
+| **preflight** | 版號改看 CHANGELOG;新增「mdt_ key 都在文件」「USER_GUIDE 無程式用詞」「範例病歷號皆虛構」三項 |
+
+**摘要**:個資清除、R-1、文件拆出 CHANGELOG 並重整 CLAUDE/README/USER_GUIDE。
+
+---
+
+## V5.70.1
+
+**只修非 HTML 三項 —— 投影片輸出零變動**
+
+| # | 問題 → 修法 |
+|---|---|
+| **Q-1** P1 | 本機空間滿時本機失敗、NAS 成功,推送紀錄照記 → 下次開啟拿本機舊版蓋掉 NAS 新版 → 本機也成功才記 |
+| **Q-2** | preflight 沒裝 jshint 仍 ✅「可以打包」→ 改 🔴,要略過得明確 `--no-jshint` |
+| **Q-4** | jshint 只擋未定義名稱 → 再擋 `+ +`、重複宣告、區塊內函式;現存 9 則白名單(內容比對、寫理由、數量寫死) |
+
+雙機測試加 Q-1 三條。
+
+**延後(主任定案)**:Q-3 前期追蹤標題、目錄定位、雙欄功能。見 CLAUDE.md 十之六。
+
+
+**摘要**:**只修非 HTML 三項,投影片輸出零變動**(主任定案)。(**Q-1 P1**)本機空間滿時本機失敗、NAS 成功,推送紀錄照記 → 下次開啟誤判「本機有未推送」→ 拿本機舊版蓋掉 NAS 新版;改成 `_wlok` 為真才記推送紀錄;(**Q-2**)preflight 沒裝 jshint 回 🔴,要略過得明確加 `--no-jshint`;缺 jsdom 說明欄寫清楚;(**Q-4**)jshint 開 `laxbreak`+`-W008` 濾掉 1,044 則刻意寫法,擋 W117/W007/W004/W082,現存 9 則進白名單(原始碼內容比對、寫理由、數量寫死,新增或過期都 🔴)。雙機測試加 Q-1 三條。**延後**:Q-3、目錄定位、雙欄功能
+
+
+**開發敘事**:V5.70.1 只修非 HTML 三項。兩份審核(內部 + 外部 HTML/UI)共 15 項,主任說「先跟我討論再改,尤其 html 產出不要亂動」—— 我先唯讀驗證全部屬實,分成「不碰 HTML」與「會碰 HTML」兩組問;主任第一輪對 Q-3 選直接修、目錄選最小修、範圍選「全部延後只修非 HTML 三項」,答案互相矛盾,**HTML 的事不猜**,再問一次確認為「只修三項、Q-3 與目錄也延後」。**Q-1**:`_doSave` 本機 `saveLocal` 失敗仍呼叫 `writeMtgToNAS`,成功回呼無條件寫 `mdt_pushed_<id>=新 rev` → 本機 rev 仍是舊的 → 下次開啟 M-3 保護判定「本機有未推送」→ 不拉 NAS、設 `_keepMine` → 存檔拿舊版蓋掉 NAS 上其實已存好的新版;呼叫前取 `_wlok=lok`,只有本機也成功才記推送紀錄與更新 base。雙機測試加三條(模擬 `Storage.prototype.setItem` 對 `mdt_m_*` 丟 QuotaExceededError):NAS 有新版、推送紀錄不動、重新開啟拉回新版且不設 keepMine。**Q-2**:上一版剛寫完「jshint 從沒跑過」,preflight 在沒裝 jshint 時卻回 `True` 印「可以打包」—— 同一個錯犯第二次;改成缺工具 = 🔴,要略過得明確 `--no-jshint`。**Q-4**:jshint 完整輸出 1,074 則,`laxbreak`(行首 +,890 則)與 `-W008`(`.7em`,154 則)是刻意寫法關掉;擋 W117 未定義、W007 Confusing plusses(Q-3 就是它)、W004 重複宣告、W082 區塊內函式;現存 9 則都要改 index.html 才能消,放白名單 —— 以原始碼內容比對不用行號、每則寫理由、數量寫死,新增一則或修好沒移除都 🔴。三種環境實測:有 jshint 全過、沒 jshint 🔴、`--no-jshint` 才放行。投影片輸出零變動。新增「十之六、會議 HTML 待辦」,並建議任何 HTML 改動前先做「內容等價測試」當保護網。屬 c+1。
+
+
+---
+
+## V5.70.0
+
+**上線前檢查與坑收斂(程式邏輯不變)**
+
+| 以前 | 現在 |
+|---|---|
+| 打包檢查是 CLAUDE.md 裡的 Python 片段,每次手動拼 | `python3 preflight.py` 一個指令 |
+| `audit-render.js`、`test.mjs` 分開跑 | preflight 一併跑,全 ✅ 才印 zip 指令 |
+| 89 條坑按時間排,1,000 行 | CLAUDE.md 收斂成 **9 條原則**,完整版移到 `PITFALLS.md` |
+
+CLAUDE.md 1,738 → 739 行。
+
+### ⚠️ 發現:jshint 從來沒跑過
+過去每版的「jshint: (空=通過)」是 `grep` 對失敗指令的空輸出 —— **jshint 根本沒安裝**。裝上真跑:0 個未定義名稱。preflight 現在找不到 jshint 會明講「略過」。
+
+> **「沒看到錯誤」和「檢查過沒有錯誤」是兩件事。**
+
+
+**摘要**:**上線前檢查與坑收斂**(程式邏輯不變):①`preflight.py` 成為唯一入口 —— 語法、產出物、字串跳脫 9 項、同步狀態 4 項、設定一致 4 項、jshint、audit-render(含雙機)、Worker test、打包清單,全 ✅ 才印 zip 指令;②CLAUDE.md 第八章 89 條坑收斂成 **9 條原則**(A 一件事一份/B 同步狀態/C 字串跳脫/D 靜態≠執行/E 設定一致/F 條件過濾/G 臨床語意/H 使用者看得到/I 顯式傳值),每條對應 preflight 項目與代表坑號;③完整 89 條移到 `PITFALLS.md`(不刪);④`audit-render.js` 路徑改相對。CLAUDE.md 1738→739 行。**發現 jshint 從未安裝**,過去每版「jshint 通過」都是 grep 空輸出;裝上真跑:0 個未定義名稱
+
+
+**開發敘事**:V5.70.0 上線前檢查與坑收斂(程式邏輯不變)。主任問「上線前測試及坑,可以合併簡化嗎」。①`preflight.py` 成為唯一入口:C 字串跳脫 10 項、B 同步狀態 4 項、E 設定一致 4 項、jshint、audit-render(單機+雙機+斷線+跨會議)、Worker test.mjs、打包清單;全 ✅ 才印 zip 指令,任何 🔴 exit 1;`--quick` 只跑靜態。②89 條坑其實是九種形狀反覆出現,CLAUDE.md 第八章收斂成九條原則表(原則/一句話/preflight 守哪幾項/代表坑號),另列三條跨類提醒;完整 89 條原文搬到 `PITFALLS.md`,不刪(坑號在程式註解裡被引用)。CLAUDE.md 1,738→739 行。③第一次跑 preflight 有兩項 🔴,查了都是**檢查本身的錯**(`DEFAULT_C` 錨點匹配到內嵌 JSZip 的 `DEFAULT_COMPRESSION`、AudioSplitter 檔頭註解有 `<script` 字樣讓區塊切錯、`DEFAULT_C` 格式是 `{id:` 不是 `{name:`),各寫理由修掉。④**最大的發現**:jshint 從來沒安裝過 —— 過去每版報告的「jshint: (空=通過)」是 `grep` 對失敗指令的空輸出,一次都沒真的檢查;`npm i -g jshint` 後真跑,0 個未定義名稱(運氣好)。preflight 現在找不到 jshint 會明講「略過」而不是假裝通過。這跟 V5.69.0 發現 `audit-render.js` 總計不含 `bad` 是同一件事:**「沒看到錯誤」和「檢查過沒有錯誤」是兩件事**。屬 c+1。
+
+
+---
+
+## V5.69.1
+
+**P-1:跨會議狀態殘留**
+
+M-2 的「同號不同 rev」分支沒設 base,殘留上一場的版號 → 上一場版號大就跳過合併,對方區段被覆蓋。「同一個操作,結果取決於使用者剛才開過哪一場」。
+
+補設本機版本;`_loadMtg` 開頭一併清 base(漏設只會多合併一次)。P-2 本機失敗 `return false`;P-3 重複行刪除。
+
+跨會議情境固化進雙機測試,10/10。
+
+
+**摘要**:(**P-1 P1**)M-2 的「同號不同 rev」分支沒設 `_baseRev/_baseVer`,殘留上一場的版號 → 上一場版號大就跳過合併,對方區段被整份覆蓋;補設本機版本,`_loadMtg` 開頭一併清 base(漏設只會多合併一次,安全方向);(P-2)`_doSave` 本機失敗 `return false`、末尾 `return true`,`savePostMtg` 改 `if(!_ok)`;(P-3)重複 removeItem 刪除。**跨會議狀態殘留情境固化進 `audit-render.js`**(先開高版號 X 再開 Y),雙機 10/10
+
+
+**開發敘事**:V5.69.1 P-1 跨會議狀態殘留。審核補測「先開 A 會議、再開 B 會議」抓到:M-2 的「同號不同 rev、無未推送」分支只設 `_pendingNasMerge=true`,**`_baseRev/_baseVer` 完全沒設**,殘留上一場的值。存檔前合併條件 `nas.version>=_baseVer` —— 上一場版號 21、這場 3,合併被跳過,這台整份覆蓋 NAS,楊的 LY 消失;情境列還顯示「存檔時會合併」。一行補設本機版本;更根本的防護是 `_loadMtg` 開頭清 base —— 任何分支漏設只會讓合併「多做一次」(安全方向),不會「被跳過」(覆蓋方向)。P-2:`_doSave` 的 `if(!lok)` 區塊設了 `_dirty=true` 但沒 return,`savePostMtg(true)` 只擋 `_ok===false`,本機容量滿時面板仍顯示已儲存並更新 `defaultValue`,關閉不再警告;加 `return false`/`return true`,條件改 `if(!_ok)`。P-3 重複 removeItem。**審核的重現腳本固化進 `audit-render.js`**(先開 v21 的 X 再開 v3 的 Y,斷言 `_baseVer!==21` 且楊的 LY 保留),雙機 10/10。審核連續四版都在 NAS 同步這塊抓到問題,每次都是「單機/單場測不到」的形狀 —— 這次是跨會議殘留,固化測試的覆蓋面又多一個維度。屬 c+1。
+
+
+---
+
+## V5.69.0
+
+**審核批次:M-1 P0 + S-1 收尾(新增坑 #89)**
+
+三項都是 V5.68.0 S-1 收尾時引入的。
+
+### M-1 ⭐ 推送紀錄跟著推上 NAS → 別台永久不拉
+
+`_pushedRev` 放進會議物件 → B 拉到 A 的推送紀錄 → 誤判自己有未推送 → 從此不再拉。**影響所有會議。**
+
+改獨立 key `mdt_pushed_<id>`;拉下來時對齊;舊欄位剝掉。
+
+> **教訓**:「這台電腦對這份資料的狀態」絕不能放進會被同步的物件。
+
+### M-2 / M-3
+
+| # | 問題 → 修法 |
+|---|---|
+| M-2 | 開啟時衝突視窗把上一場日期寫進這場 → 不彈窗,存檔時分區合併;Esc 不關衝突 |
+| M-3 | `_loadMtg` 覆蓋未推送修改;離線修改跟快照比看不出來 → `_keepMine` |
+
+### 雙機 NAS 模擬固化進 `audit-render.js`
+8 條(S-1、N-1、M-1×3、N-2×2、M-3),含斷線模擬。`總計錯誤` 改含 `bad`。
+
+
+**摘要**:**審核批次**(坑#89):(**M-1 P0**)`_pushedRev` 放進會議物件推上 NAS 讓別台永久不拉 → 改 `mdt_pushed_<id>` 獨立 key,拉下來時對齊,舊欄位剝掉;(**M-2**)開啟時衝突視窗把上一場日期寫進這場 → 不再開啟時彈窗,標 `_pendingNasMerge` 由存檔合併處理,`cf-modal` 排除 Esc;(**M-3**)`_loadMtg` 不覆蓋未推送修改 + `_keepMine` 保留我的區段;(M-5)`savePostMtg(true)` await + `cf-modal` z-index 2100;(M-6)內容狀態只算目前癌別;(M-7)關閉檢查含 radio;(M-8)重開維持模式;(M-9)toast 單一 key 台北日期不進備份。**雙機 NAS 模擬 8 條固化進 `audit-render.js`**,總計含 bad
+
+
+**開發敘事**:V5.69.0 審核批次(坑 #89)。審核判定「不建議上線,修完 M-1/M-2/M-3」—— 三項都是我 V5.68.0 S-1 收尾時引入的。**M-1 是 P0 且影響所有會議**:N-10 把 `_pushedRev` 寫進會議物件,存檔時整個推上 NAS,B 同步拉到 A 的推送紀錄後 `local.rev!==local._pushedRev` 成立,視為自己有未推送 → **從此不再拉這場會議**,側欄/行事曆/前期追蹤帶入全拿舊資料。改獨立 key `mdt_pushed_<id>`;固化測試時又抓到第二形狀:B 從 NAS 拉下來後 rev 變成 NAS 的,但 B 的 pushed 還是自己上次推的 → 一樣誤判 → `saveLocal(fromSync)` 時對齊。**教訓:「這台電腦對這份資料的狀態」絕不能放進會被同步的物件**。**M-2**:N-7 在 `_loadMtg` 開啟時 `return null` 彈衝突視窗,呼叫端沒跑 `renderEditor`/`showView`,畫面還是上一場,選「本機」時 `readForm()` 讀畫面上的日期 → 10/15 那場變 11/19;Esc 還能關視窗讓 S.meeting 與畫面對不上。改成開啟時不彈窗,標 `_pendingNasMerge`(情境列顯示「另一台有不同版本,存檔時會合併」),存檔前的分區合併本來就處理;`cf-modal` 排除全域 Esc。**M-3**:`_loadMtg` 仍直接覆蓋未推送修改;而且離線修改已存進本機,跟快照比看不出來,合併時「我負責但沒改 → 取 NAS」丟掉 → 加 `_keepMine`,unpushed 時我負責的癌別一律保留;同號不同 rev 且 unpushed 也要設;清旗標第一版放 `_resetEditState` 但它在 `_loadMtg` 之後跑,改在 `_loadMtg` 開頭。M-5~M-9 小項:`savePostMtg(true)` 改 `await` 且衝突時不說已儲存、`#cf-modal` z-index 2100 壓過決議面板、內容狀態只算目前癌別並帶癌別名(對齊設計不變量)、關閉面板檢查含 radio 的 `defaultChecked`、同步重開維持原模式、toast 單一 key 台北日期。**審核附錄 A 四段情境 + M-3 併入 `audit-render.js`**(8 條,兩個 jsdom 共用 mock NAS,含斷線模擬),`總計錯誤` 改成含 `bad` —— 原本只算 `errs.length`,前面幾版 `bad++` 都沒計入。test.mjs 23/23。屬 c+1。
+
+
+---
+
+## V5.68.0
+
+**設計不變量 + 審核批次(新增坑 #88)**
+
+### 設計不變量
+合併會議所有文件產出**永遠只出目前分頁癌別**,無合併流程(LINE 通知例外)。已寫進 `getOutputCid` 註解。
+
+### 審核 14 項
+
+| # | 問題 → 修法 |
+|---|---|
+| **N-1** | `savedBy` 改成 id 讓 8 處畫面與歷史篩選壞掉 → 回姓名,另存 `savedById` |
+| **N-2** | 衝突選「本機」無限循環、NAS 永不更新 → NAS 專用衝突處理,選本機對齊 base 後正常存檔 |
+| **N-3** | 性別雙 `selected` 顯示 M、選 M 不觸發 → 單一 selected + teamHTML 空白選項 |
+| N-4/5 | `||'M'` 清除;每日備份可還原 |
+| N-7~11 | S-1 收尾:同號不同 rev 進衝突視窗、合併後重繪、閉包記 rev、未推送不覆蓋、同步後重開 |
+| N-6 | Worker 未設機密回 503 友善頁;DEPLOY 改先加機密 |
+
+### 坑 #88
+`resolveConflict` 是 `async function`,錨點從 `function` 開始 → 孤立 `async` 變 `async /*` → 主程式載入失敗。`node --check` 過,jsdom 才抓到。
+
+雙機模擬 13/13,test.mjs 23/23。
+
+
+**摘要**:**設計不變量**:合併會議所有文件產出永遠只出目前分頁癌別,無合併流程(主任定案,寫進 `getOutputCid` 註解)。**審核批次**(坑#88):(N-1)`savedBy` 回姓名、另存 `savedById`,合併判斷相容舊版;(N-2)`showNasConflict`/`resolveConflict(kind='nas')`,選本機對齊 base 後正常存檔寫 NAS,選 NAS 先 confirm,自動存檔遇衝突不彈窗;(N-3)性別 select 單一 selected、teamHTML 加空白選項;(N-4)四處 `\|\|'M'` 清除;(N-5)`importAllJSON` 接受每日備份格式;(N-7)開會議同號不同 rev 直接衝突視窗、toast 一天一次;(N-8)合併後重繪 + toast;(N-9)閉包記 rev;(N-10)本機有未推送修改不覆蓋;(N-11)同步更新目前會議時重開;(N-13)`escA(savedBy)`;(N-14)`_qa.basic`。Worker:(N-6)未設機密回 503 友善頁、DEPLOY 順序改先加機密;(N-12)死碼移除。雙機模擬 13/13,test.mjs 23/23
+
+
+**開發敘事**:V5.68.0 設計不變量 + 審核批次(坑 #88)。主任兩件事:①「同時開兩個會的,確定 html 不會合在一起作,拿掉合併作的流程」—— 查了發現五種產出早就都用 `getOutputCid()`(目前分頁),沒有合併路徑,LINE 通知維持合併(它是通知不是文件);把這條寫成**設計不變量**進 `getOutputCid` 註解,明講「不要再加全部癌別的產出選項」。②審核 14 項:**N-1 是我 S-1 修法的副作用** —— `savedBy` 從姓名改 id,8 處畫面與歷史篩選當姓名用的全壞(每天都會碰到),改回姓名另存 `savedById`,合併判斷相容舊版電腦寫的姓名。**N-2** 衝突視窗沿用舊版共享資料夾的 `resolveConflict`(只寫共享不寫 NAS、不更新 base),選「本機」每次存檔都再跳、NAS 永遠不更新;新寫 `showNasConflict` + `resolveConflict` 的 `kind==='nas'` 分支:選本機 → `_baseRev=nas.rev` 後走正常存檔(會寫 NAS);選 NAS → 先 `confirm` 再覆蓋;自動存檔遇衝突改常駐提示不彈窗(V5.31.1 N-3 原則);視窗標籤依 kind 換成「NAS 上的版本 / 這台電腦正在編輯的版本」。**N-3** 性別 `(d.gender||'M')==='M'` 在空值時仍成立,兩個 `selected` 瀏覽器取最後一個顯示 M,而且選 M 不觸發 change;改 `d.gender==='M'`,teamHTML 補空白選項。N-4 四處 `||'M'`(匯入/XLSX/JSON 匯出/AI 提示詞)清除。N-5 每日備份 `{version,backupAt,data}` 系統自己讀不回來,`importAllJSON` 開頭轉成匯出格式。N-7~N-11 是 S-1 收尾:開會議同號不同 rev 直接衝突視窗(原本只 toast 但看不到差異)、toast 一天一次、合併後重繪被取代的區段並 toast「已併入某某的修改」、`writeMtgToNAS` 回呼用閉包記 rev/ver/id、推送成功記 `_pushedRev` 讓 `syncWithNAS` 不覆蓋本機未推送的修改、切回分頁同步更新目前會議時重開。Worker N-6:未設 `SESSION_SECRET` 回 503「分享空間維護中」不洩露設定名,DEPLOY.md 改「先加機密再貼程式」。**踩了坑 #88**:`resolveConflict` 原本是 `async function`,我錨點從 `function` 開始,留下孤立 `async` 變 `async /*`,主程式從那行起全部沒定義 —— `node --check` 與 jshint 都過,jsdom 才抓到;打包檢查 [坑#52] 會抓,但我改完沒先跑。審核附錄 A 雙機模擬 13/13(三段情境 + N-3/N-4/N-5),test.mjs 23/23。屬 c+1。
+
+
+---
+
+## V5.67.0
+
+**UI 優化第二輪**
+
+| # | 改動 |
+|---|---|
+| ① | 會議決議面板:癌別篩選、待填篩選、下一個待填、儲存不關 |
+| ② | 收合列第二列顯示診斷 + 討論問題;旗標 >2 折疊 |
+| ③ | 固定列三段狀態:本機已儲存 / NAS 同步 / 結論未填 N 案 |
+| ④ | 閱覽模式「前往產出 ↓」 |
+
+20/20。兩輪 UI 優化完成。
+
+
+**摘要**:**UI 優化第二輪**(四項):①會議決議面板加癌別篩選(預設目前分頁)+「待填結論/待確認追蹤」+「下一個待填」+「儲存(留在面板)/儲存並返回」,每張卡 `data-cid/kind/todo/fup`,篩選只改 display;②收合列第二列 `.casetop2` 顯示診斷(40 字)+ 討論問題(36 字),旗標 >2 顯示「另 N 項」;③固定列拆三段:`actionbar-msg`(本機已儲存)/`actionbar-sync`(NAS 同步中/已同步/未完成可重試)/`actionbar-content`(結論尚有 N 案未填,點擊開面板切待填),markDirty 清同步宣稱;④閱覽模式固定列顯示「前往產出 ↓」,編輯按鈕群 `.ab-edit-only` 隱藏。20/20
+
+
+**開發敘事**:V5.67.0 UI 優化第二輪。主任說「第二輪」,四項一版。①**會議決議面板**:標題從「會後填寫」改「會議決議」(會議當下也可填);頂端 sticky 篩選列 —— 癌別按鈕(合併會議預設目前分頁、可切全部)、狀態下拉(全部/待填結論/待確認追蹤)、「下一個待填 ▼」捲到並 focus 結論欄;每張卡片打 `data-cid/kind/todo/fup`,`_postFilterApply` 只改 `display`,不清其他癌別未存的資料(審核明講);「儲存」留在面板(同步 `defaultValue` 讓 B-7 不誤判)與「儲存並返回」分開。②**收合列第二列** `.casetop2`:診斷截 40 字、討論問題 `▸` 截 36 字,`title` 放全文;旗標超過 2 個顯示「另 N 項」並 title 列出;展開時隱藏第二列。③**三種狀態分開**:`actionbar-msg` 改寫「本機已儲存 14:32」明說本機;新增 `actionbar-sync`(`_setSync`:同步中/已同步/未完成+重試連結,掛在 `_doSave` 的 `writeMtgToNAS` 前後)與 `actionbar-content`(`_updateContentStatus` 算 cases/followups/team/events 的 decision 空值,點擊 `_gotoTodo` 開面板並切待填);`markDirty` 時清掉「已同步」宣稱。④**閱覽模式**固定列也顯示,只放「前往產出 ↓」(`scrollIntoView` 到 `.output-section`),編輯按鈕群加 `.ab-edit-only` 在 view-mode 隱藏。錨點踩了三次縮排不對(面板 header 4 格、actionbar 12 格、saveMeeting 0 格),每次都印精確文字後重做。jsdom 20/20。兩輪 UI 優化完成,接下來照審核第六節請個管師做三件事記錄障礙次數。屬 c+1。
+
+
+---
+
+## V5.66.0
+
+**UI 優化第一輪(外部審核五項)**
+
+| # | 改動 |
+|---|---|
+| ① | 產出區按任務分組;「HTML 分享」搬到「HTML 投影片」旁 |
+| ② | 個案區頂端情境列「9/24 會議｜乳癌｜個案 8 位｜閱覽中」 |
+| ③ | 「已完稿」改中性;追蹤改「繼續追蹤 / 不列入下次」radio |
+| ④ | 小字顏色加深、行高 1.65、手機不再縮字 |
+| ⑤ | 更多工具手機兩欄、儲存列疊在導覽之上 |
+
+15/15。第二輪(決議面板篩選、收合列顯示診斷、三種狀態分開)等個管師用過再排。
+
+
+**摘要**:**UI 優化第一輪**(外部審核五項):①產出區按任務分組(會前通知/開會資料/決議與紀錄/更多工具),「HTML 分享」搬到「HTML 投影片」旁,「會後填寫」改「填寫會議決議」;②個案區頂端 `#ctx-bar`「日期｜癌別｜個案 N 位｜閱覽中」(`_updateCtxBar` 掛在 `updateOutputLabel`,N 算 cases+events+followups),產出副標「本次投影片與紀錄:○癌,共 N 位」;③「已完稿,可匯出」改中性、追蹤勾選改 radio「繼續追蹤/不列入下次」(資料仍 `followNext`);④`--textlt` #7A8A96→#637281、body 行高 1.65、手機不再縮到 8/10px;⑤更多工具 auto-fit 手機兩欄、`#mtg-actionbar` 疊在 mobile-nav 之上
+
+
+**開發敘事**:V5.66.0 UI 優化第一輪。外部審核給了一份「UI 與流程優化建議」,核心判斷是保留既有灰藍色系與收合設計,改善「找按鈕」與「知道自己在哪」;主任說「不難可以一次完成」,五項一版做完。①產出區從「主力產出 / 資料交換」改為按任務分四組,「HTML 分享」從摺疊區搬到「HTML 投影片」旁 —— 兩者是連續動作,藏在 Excel/JSON 之間是 V5.36.1 收摺疊時的誤傷;「會後填寫」大按鈕改名「填寫會議決議」歸入決議組,因為會議當下也可填。②`#ctx-bar` 放在癌別分頁上方(合併會議在 `tabsHtml` 前、單癌別插在容器頂),`_updateCtxBar()` 掛在 `updateOutputLabel()` 結尾,人數算 cases+events+followups 不只 cases;產出副標同步「本次投影片與紀錄:○癌,共 N 位」,切分頁即更新。③「已完稿,可匯出」是假承諾(會前投影片本來就沒結論),改「產生會議文件」;追蹤從「☐不列入下次追蹤」(要反向理解)改 radio「下次會議追蹤:繼續追蹤 / 不列入下次」,handler 讀 `:checked` 的 `data-val`,**資料仍存 `followNext`**(審核提醒不要只為統一 UI 就合併欄位)。④`--textlt` #7A8A96→#637281,body 行高 1.65,480px 斷點的 `.cal-event` 8px→11px、`.c-hdr .btn-sm` 10px→12px。⑤`out-more-grid` 改 auto-fit、768px 以下兩欄;`#mtg-actionbar` 在 768px 以下 `bottom:calc(56px+safe-area)` 疊在 mobile-nav 之上(mobile-nav 是純 CSS media 顯示,不需 body class)。jsdom 15/15。屬 c+1。
+
+
+---
+
+## V5.65.0
+
+**內部審核批次:S-1 P0 + Worker 安全收斂(新增坑 #87)**
+
+### S-1 ⭐ NAS 同步靜默覆蓋 —— 從 V4.3.41 就存在
+
+| 時間 | 林(A 機) | 楊(B 機) | NAS |
+|---|---|---|---|
+| 10:00 | 改 HN → 存 v8 | | v8 |
+| 11:00 | | 本機仍 v7,改 LY → 存 v8 | **v8(林的 HN 被蓋掉)** |
+| 隔天 | NAS v8 = 本機 v8 → 不動 | 同 | **永遠不再對齊** |
+
+`version` 是排序鍵不是內容識別。修法:`rev` 內容指紋 + 開會議拉 NAS + 存檔前依癌別區段合併。兩台實測:v9 兩區段皆最新。
+
+### Worker 八項
+
+| # | 問題 → 修法 |
+|---|---|
+| W-2 | cookie 簽章只用 VIEW_PWD,可離線破解 → 加 `SESSION_SECRET` |
+| W-4 | `max-age=300` 讓密碼閘門被磁碟快取繞過 → 設密碼一律 `no-store` |
+| W-3 | KV list 字母序 1000 筆截斷,最新的反而消失 → `listAll` 分頁 |
+| W-1/5/6/7/9 | 錯密碼減速、90 天過期、殘缺網址 400、不送 `ACAO:null`、先看 Content-Length |
+
+`test.mjs` 22/22 放進 zip。
+
+### 其餘
+B-1 甲(備份存影像清單)、U-1/2/3、D-1(性別預設空)、A-1(AI 去識別化)。
+
+
+**摘要**:**內部審核批次**(坑#87):(**S-1 P0**)NAS 同步靜默覆蓋 → `rev` 內容指紋 + 開會議拉 NAS + 存檔前依癌別區段合併;**Worker 安全收斂**:W-1 錯密碼 800ms 減速、W-2 `SESSION_SECRET` 參與簽章、W-3 `listAll` 分頁讀完、W-4 設密碼一律 `no-store`、W-5 `RETAIN_DAYS` 預設 90 天、W-6 殘缺網址/非表單 400、W-7 不送 `ACAO:null`、W-9 先看 Content-Length;`test.mjs` 22/22 放進 zip(O-1);(B-1 甲)備份改存影像清單不存本體;(U-1/2/3)分享視窗文案/跳脫/throw/401 提示;(D-1)性別預設空+空白選項+QA 提醒;(A-1)AI 提示詞去識別化該個案病歷號與姓名
+
+
+**開發敘事**:V5.65.0 內部審核批次(坑 #87)。主任說「問過我再修」,我用選擇題問了 B-1/W-5/W-8,主任回「繼續」沒選,採審核建議預設(甲/90 天/維持)。**S-1 是真正的 P0 且從 V4.3.41 就在**:`syncWithNAS` 只在登入跑、`_loadMtg` 不讀 NAS、`_doSave` 無條件 +1 覆寫 —— 合併會議兩位個管師各改一個癌別,後存的整份蓋掉前者,隔天兩台同號不同內容永遠不對齊。修法四步:`rev=uid()` 當內容指紋、開會議先 `_readNasMtg` 拉較新版並記 `_baseRev`、存檔前比 NAS rev 不同就依癌別區段合併(非我負責的取 NAS 版,我負責的也被改就 `showConflict`)、`syncWithNAS` 同號不同 rev 計入衝突。兩個 jsdom 共用 mock NAS 實測:林存 v8 HN 新 → 楊本機 v7 改 LY 存 → NAS v9 兩區段皆新。**Worker 八項**:W-2 最關鍵 —— cookie 簽章金鑰原本只有 VIEW_PWD,拿到任一 cookie 就能離線每秒數十億次猜密碼,加 `SESSION_SECRET` 高熵機密參與簽章;W-4 設密碼時 `max-age=300` 讓關瀏覽器後從歷史點回直接用磁碟快取、Worker 收不到請求密碼閘門沒執行,改 `no-store`;W-3 KV list 字母序最多 1000 筆,舊格式 `2026-` 排在新格式 `20260` 前,過千後最新的反而被截,`listAll` 分頁讀完(實測 995 舊 + 10 新 → 10/10);W-1/W-6/W-7/W-9 各約 3 行。`cloudflare-share/test.mjs` 22 條放進 zip,每次改 Worker 必跑。**B-1 甲**:每日備份宣稱含圖但 `imgFolderHandle` 在登入 5 秒時是 null 一張都沒備到,改存影像清單(會議/病歷號/子資料夾/檔名),影像本體由院內 NAS 備份。D-1 性別非乳癌婦癌靜默預設 M,改空 + 空白選項高亮 + QA「性別未填」。A-1 AI 提示詞把該個案的病歷號與姓名從自由文字精確替換成〔病歷號〕〔姓名〕。屬 c+1。
+
+
+---
+
+## V5.64.1
+
+檢視密碼改 session cookie:瀏覽器關掉就要重輸。
+
+
+**摘要**:檢視密碼改 **session cookie**(不設 Max-Age,瀏覽器關掉就忘)—— 主任:「每次都要輸入,不要記 30 天」。簽章仍帶 12 小時上限防 cookie 外流
+
+
+---
+
+## V5.64.0
+
+**分享空間檢視密碼**
+
+主任:「有沒有辦法加一道密碼,讓別人有連結也打不開?」Worker 加機密 `VIEW_PWD`:清單頁與所有投影片都要輸入,一次記 30 天。cookie 是 HMAC 簽章不含密碼,換密碼全部失效;偽造 cookie、外部 next、上傳端點都測過。不設就不擋。
+
+
+**摘要**:**分享空間檢視密碼**(Worker):機密 `VIEW_PWD`,設了就擋清單頁與所有投影片;cookie 存 `exp.HMAC(VIEW_PWD,exp)`,密碼本身不進 cookie,換密碼舊 cookie 全失效;`POST /auth` 驗後 302 導回,`next` 只允許站內路徑;上傳端點不受影響;沒設就不擋。11/11。設定頁提醒改寫。Cloudflare Access 仍是更嚴謹的選項
+
+
+---
+
+## V5.63.2
+
+**清單顯示上傳者 + 排序改上傳時間**
+
+`X-Uploader` header(encodeURIComponent)→ `metadata.uploader` → 清單標籤。排序從檔名字串改為上傳時間降冪,新舊檔名格式混用時不再亂。**Worker 要重新部署。**
+
+
+**摘要**:清單顯示**上傳者**:網頁端 `X-Uploader: encodeURIComponent(S.user.name)`(header 不能放中文),Worker 存 `metadata.uploader` 並在清單畫標籤;Worker 排序改**依上傳時間最新在上**(原本依檔名字串,`20260618` 會排在 `2026-09-17` 前面,6 月跑到 9 月上面,個管師找不到剛傳的)。**Worker 要重新部署**
+
+
+---
+
+## V5.63.1
+
+**合併會議分開產出**
+
+內容端早就只出目前分頁(`getOutputCid()`),但 `shareHTMLSlides` 與 DOCX 的**檔名**用全部癌別 —— `20260618-HN-LY_MDT.html` 裡只有頭頸的內容。改成檔名跟內容一致:切到頭頸出 `HN`、切到血淋出 `LY`。
+
+
+**摘要**:合併會議分開產出:主任定案「出目前切換到的癌別分頁,五種產出都分開」。內容端早就是(`getOutputCid()` V5.x 就有),**只有 `shareHTMLSlides` 的檔名用 `S.cids`(全部)** —— `HN-LY` 的檔名裝著只有 HN 的內容;DOCX 下載檔名同。兩處改 `[getOutputCid()]`
+
+
+**開發敘事**:V5.63.1 合併會議分開產出。主任:「兩個癌別同一天的,就是分開來,那個會分開作」,追問後定案:出目前切換到的癌別分頁,五種產出都分開。查了才發現**內容端早就是這樣** —— `getOutputCid()` 在合併會議回傳 `S.activeCid`,`genHTMLSlides`/`genDOCX`/`genPrintSheet` 都用它;**只有 `shareHTMLSlides` 的檔名用 `S.cids`(全部)**,DOCX 的 `download()` 檔名也是。所以主任看到的 `20260618-HN-LY_MDT.html` 裡面其實只有頭頸的內容 —— 檔名說謊。改兩處為 `[getOutputCid()||S.cids[0]]`。實測:切到頭頸 → `20260618-HN_MDT.html` 且內容只有 HN-001;切到血淋 → `20260618-LY_MDT.html` 且只有 LY-001。這次錨點第一次沒對上(`const m=S.meeting,cids=S.cids;` 是同一行宣告兩個),用實際文字重做。屬 c+1。
+
+
+---
+
+## V5.63.0
+
+**短檔名**
+
+`2026-06-18_HeadNeck-BloodLymph_MDT.html` → `20260618-HN-LY_MDT.html`。分享與下載共用 `_mdtFname()`,`_MDT` 保留。
+
+第一版 `CANCER_SHORT` 的 key 寫錯 5 個,測試也用假 id 所以通過 —— 加啟動時一致性檢查。
+
+
+**摘要**:**短檔名**:`2026-06-18_HeadNeck-BloodLymph_MDT.html`(39)→ `20260618-HN-LY_MDT.html`(23)。`CANCER_SHORT` 八癌別兩字母縮寫,`_mdtFname(date,cids)` 分享與下載共用,`_MDT` 保留(Worker/Git Pusher 篩選)。第一版 key 寫錯 5 個(用 gi/hbp 而非 digestive/hepatobiliary),測試也用假 id 所以過了 —— 加啟動時 CFG↔CANCER_SHORT 一致性檢查
+
+
+**開發敘事**:V5.63.0 短檔名。主任看到分享成功後說「網址短一點,設定檔案名稱,短又有意義」。原本 `2026-06-18_HeadNeck-BloodLymph_MDT.html` 39 字,改 `20260618-HN-LY_MDT.html` 23 字:日期去 `-` 保留 8 碼可讀,癌別改兩字母縮寫(`CANCER_SHORT`),`_MDT` 保留 —— Worker 清單頁與 Git Pusher 都靠它篩選,不能動。`_mdtFname(date,cids)` 分享與下載共用,Git Pusher 上傳的自然也是短檔名。**踩了一個測試盲點**:第一版 `CANCER_SHORT` 的 key 寫成 `gi/hbp/gu/gyn`,實際 CFG 是 `digestive/hepatobiliary/urology/gynecology`,5 個錯;**測試用的也是假 id,所以全過** —— 直到印出「CFG 癌別中沒縮寫的」才發現。教訓:**對照表的測試要從真實資料來源(CFG 的 keys)迭代,不要自己編輸入**;已加啟動時 `_assertConfigConsistency` 檢查 CANCER_SHORT 覆蓋全部 CFG。屬 c+1。
+
+
+---
+
+## V5.62.1
+
+**緊急修:守門沒跟著換**
+
+`shareHTMLSlides` 進入前仍檢查舊的 CF token,個管師填了上傳金鑰照樣被擋。註解旁邊寫著坑 #60「守門條件必須跟著換」—— 同一個位置第二次踩。
+
+
+**摘要**:**緊急修**:`shareHTMLSlides` 的守門仍檢查 `getCfToken()`,填了上傳金鑰照樣被擋 —— **同一個位置、同一個坑(#60),第二次**(V5.41.0 GitHub→CF 改過一次,V5.62.0 CF→金鑰又漏)。`getCfToken` 淘汰
+
+
+**開發敘事**:V5.62.1 緊急修。主任填好上傳金鑰按「HTML 分享」,跳出「請填入 Cloudflare API Token」—— `shareHTMLSlides` 進入前的守門 `if(!getCfToken())` 沒跟著 V5.62.0 換。**最諷刺的是那行旁邊的註解**:「V5.41.0:守門條件必須跟著換 —— 分享改走 Cloudflare 之後還檢查 GitHub token,個管師填了 CF token 一樣會被擋在門外(坑 #60)」。同一個位置、同一個坑、第二次 —— 我讀了那段註解,改了它下面的函式,沒改註解正上方那一行。教訓:**改一條路徑時,grep 所有「守門檢查」而不只是「執行本體」**;守門通常在呼叫端,不在被呼叫的函式裡。`getCfToken` 已無呼叫端,淘汰。屬 c+1。
+
+
+---
+
+## V5.62.0
+
+**B-4 根治:HTML 分享改走 Worker**
+
+主任實機測試:`Failed to fetch`。V5.50.0 的預測正確 —— Cloudflare 管理 API 不開 CORS,**那顆按鈕從 V5.41.0 起就沒成功過**。
+
+改成當時提的方案 B:
+
+```
+PUT https://share.selaginella.io/api/upload?name=<fname>
+X-Upload-Key: <上傳金鑰>
+Content-Type: text/html
+body: HTML 字串
+```
+
+網頁只帶上傳金鑰(外流換掉就好),CF API Token 從網頁完全移除。
+
+**Worker 新版附在 `cloudflare-share/`**:`index.js`(清單頁 + 檔案服務 + `/api/upload`)與 `DEPLOY.md`(五步,Dashboard 裡做)。mock KV 實測 12/12:預檢、CORS 只放行 github.io、錯金鑰 401、`../` 與非 .html 擋 400、metadata 同格式、清單只列 `_MDT`。
+
+### ⚠️ 未決:分享網址不需登入
+
+`share.selaginella.io` 上的頁面任何人拿到網址就能開,檔名好猜,內容含病歷號。建議 Cloudflare Access 或上傳前去識別化。
+
+
+**摘要**:**B-4 根治**:實機確認 `Failed to fetch`(Cloudflare 管理 API 不開 CORS),那顆按鈕**從 V5.41.0 起就沒成功過**。`uploadSlidesToCloudflare` 改打 `share.selaginella.io/api/upload?name=` + `PUT` + `X-Upload-Key`;設定頁 CF Token 欄換「上傳金鑰」(`mdt_upload_key`,不進備份);`CF_ACCOUNT_ID`/`CF_NAMESPACE_ID`/`saveCfToken`/`loadCfTokenStatus` 淘汰。**Worker 新版 `cloudflare-share/index.js` 一併附在 zip**(KV 綁定 `HTML`、機密 `UPLOAD_KEY`、CORS 只放行 github.io、檔名白名單、常數時間比較;mock KV 12/12),部署見 `DEPLOY.md`。**未決:分享網址不需登入**
+
+
+**開發敘事**:V5.62.0 B-4 根治。主任實機測試「HTML 分享」按鈕:`Failed to fetch` —— 確認了 V5.50.0 審核 B-4 的預測:Cloudflare 管理 API(`api.cloudflare.com`)不開 CORS,從 `sela1227.github.io` 發的請求在送出前就被 Chrome 攔掉;Git Pusher 能上傳是因為桌面程式不受此限。**所以 V5.41.0 選方案 A 做出來的那顆按鈕,從來沒有成功過** —— 而且錯誤訊息被包成「請確認網路連線」,看起來像網路問題。就算能通也不該那樣做:網頁裡的 CF token 按 F12 就看得到,而那把 token 能動整個 KV。現在改成 V5.41.0 當時提的方案 B:網頁改打自己的 Worker `/api/upload?name=<fname>`,`PUT` + `X-Upload-Key` header + `Content-Type: text/html`,body 直接是 HTML 字串(不再組 FormData);回應 `{ok,url,error}`,401/403 提示「金鑰錯誤或已更換」、400「檔名不合法」、413「超過 25 MB」;**網頁只帶上傳金鑰**(Worker 端的 `UPLOAD_KEY` 機密,外流換掉就好),CF API Token 從網頁完全移除。設定頁 CF Token 欄換成「上傳金鑰」(`mdt_upload_key`,加進 `_NEVER_BACKUP`),`CF_ACCOUNT_ID`/`CF_NAMESPACE_ID` 常數與 `saveCfToken`/`loadCfTokenStatus` 淘汰,`getCfToken` 留著供舊路徑相容。Worker 端(新 `index.js` + Dashboard 設 `UPLOAD_KEY` 機密)由主任部署,並提醒要覆蓋到本機 `cloudflare-share\src\` 免得 wrangler 重部署蓋回舊版。mock fetch 實測:網址/方法/header/body 正確、回傳 url 正確、401 訊息正確、無金鑰 alert、金鑰不進備份。**未決的資安問題**(主任的顧問也點出):`share.selaginella.io` 上的頁面**任何人拿到網址就能開、不需登入**,檔名 `日期_癌別_MDT.html` 很好猜,而內容含病歷號與可識別病情 —— 這等於把病人資料放在公開網址上。建議 Cloudflare Access(限定信箱登入,免費 50 人內)或上傳前去識別化;已寫進設定頁提醒與說明書。屬 c+1。
+
+
+---
+
+## V5.61.0
+
+**Hybrid timeline 收尾三項 —— 七個版本完成**
+
+| # | 改動 |
+|---|---|
+| **TL-5d** | AI 療效畫在**評估日**:提示詞要求 `assessedDate`,`tlLayout` 把 resp 掛到評估日節點 |
+| **TL-10** | DOCX 補病程時序;必要事件補過去病史/病理/檢查/治療/癌指數(原本只有死亡資訊) |
+| **TL-15** | QA 預檢五條:未勾產出/無有效日期/類型未選/晚於會議日/晚於死亡日,個案與必要事件都跑 |
+
+實測 11/11。
+
+### Hybrid timeline 歷程
+
+| 版本 | 內容 |
+|---|---|
+| V5.55.0 | 批次 1 止血(0x08 控制字元、null 日期拋錯、夾投影片消失) |
+| V5.56.0 | 2a 資料模型 v2 + `tlLayout`/`tlRender` |
+| V5.57.0 | 2b 投影片端,deep-equal 驗收 |
+| V5.58.0 | 驗證批次:Summary 藏治療(P0)等八項 |
+| V5.59.0 | 視覺收尾 + TL-1 正式 |
+| V5.60.0 | 收斂批次:bar 語意等 12 項 |
+| V5.61.0 | 收尾三項 |
+
+
+**摘要**:**Hybrid timeline 收尾三項**:(**TL-5d**)AI 療效畫在評估日 —— 提示詞要求 `assessedDate`(必須是清單中某筆的日期),匯入寫入 `_ai.assessedDate`,`tlLayout` 把 resp 掛到評估日節點、原事件 `_respMoved` 不再畫,bar 同理;(**TL-10**)DOCX 補病程時序(`_tlDocxText`:排序/區間/類型/⚑轉折/↑療效),必要事件補過去病史/病理/檢查/治療/癌指數(原本只有死亡資訊,坑#71 的 DOCX 版);(**TL-15**)QA 預檢 `_qaTl(c)`:未勾產出/已勾無有效日期/類型未選/晚於會議日/晚於死亡日,個案與必要事件都跑。**Hybrid timeline 從 V5.55.0 到 V5.61.0 七個版本全部完成**
+
+
+**開發敘事**:V5.61.0 Hybrid timeline 收尾三項。主任說「直接導入」—— 原本建議等個管師用過再排的 TL-5d/TL-10/TL-15 一次做完。**TL-5d(療效畫在評估日)**:整合版 §1.6 的語意問題 —— 3/1 開始化療、5/1 CT 才證實 PR,圖上卻把「有效」畫在 3/1。提示詞加規則「判讀為 better/stable/worse 時**必須同時輸出 assessedDate**,必須是清單中某筆的 date,無法指出者填 na」;`doImportTlAi` 的 `item` 帶 `assessedDate`、寫入時 `_normTlDate` 後存 `_ai.assessedDate`;`tlLayout` 在建 nodes 後掃 `shown`,有 `assessedDate` 且對得到節點的把 `{resp,from,fromLabel}` 掛到那個節點的 `respAt`、原事件標 `_respMoved`;`tlRender` 節點優先畫 `respAt`,`_respMoved` 的不畫,bar 也帶 `respMoved`。實測 FOLFOX(3/1)+CT PR(5/1):↑ 畫在 x=658、CT 節點 x=664。**TL-10(DOCX 時序)**:`genDOCX` 原本 0 處 timeline;抽 `_tlDocxText(c)`(與必要事件投影片文字頁同格式,排序/區間/[類型]/⚑轉折/↑有效),個案在「治療」mkBlock 後、必要事件在「病程經過」後各加一段;**必要事件同時補過去病史/病理/檢查/治療/癌指數** —— 原本 DOCX 的必要事件只有死亡資訊/病程/摘要/決策/改善,L7995 註解自己寫著「DOCX 是癌委會看的版本,不能漏」卻漏了臨床資料(坑 #71 的 DOCX 版,第二次)。**TL-15(QA 預檢)**:`_qa` 加 `tl:[]`,`_qaTl(c)` 五條檢查(有事件未勾產出、已勾但 0 筆有效日期、類型未選、日期晚於會議日、事件晚於死亡日),`_tips` 顯示前 3 項;第一版寫成個案迴圈內的 IIFE,實測「晚於死亡日」沒觸發才發現必要事件走 `_trackSlide` 不經個案迴圈,抽成函式兩邊呼叫。**Hybrid timeline 從 V5.55.0 止血到 V5.61.0 收尾,七個版本、四份審核、全部完成**。屬 c+1。
+
+
+---
+
+## V5.60.0
+
+**Hybrid 收斂批次(新增坑 #86)**
+
+兩份審核判定「架構成立,進入收斂階段」。三批 12 項一次做完。
+
+### M-3 ⭐ 治療一填結束日期,轉折/療效就消失
+
+V5.58.0 修「bar 畫兩次」時讓 bar 事件不進 `nodes`,但 pivot 環、AI 療效、basis 只畫在節點上。**填得越完整,圖上資訊越少。**
+
+修法:`bars` 帶上臨床語意,轉折環畫起點、療效箭頭畫終點。
+
+> **教訓**:修「畫兩次」時,要問「被拿掉的那一份帶著什麼別的東西」。
+
+### M-1:坑 #68 第五次
+
+`addStruct` 自己手寫一列 HTML。抽 `_tlRowHTML()` 成唯一產生器。
+
+### 其餘
+
+| # | 改動 |
+|---|---|
+| P1-2 | bar 空說明用類型名 |
+| P1-3 | `createCase` 補 `pivot` |
+| P1-4 | 提示詞範例補 id;同日無 id 不 silent skip |
+| M-5 | 空窗寬度改連續函數(逐日推移跳動 2px) |
+| P1-5/6 | cluster title、Full view 加高 |
+| P2-1/2/3 | gap label 上移、勾選即時重繪、endDate 驗證 |
+| M-6 | EV-11 複製換 id 剝 `_ai` |
+
+總測 17/17。
+
+
+**摘要**:**Hybrid 收斂批次**(坑#86):(M-3/P1-1)bar 帶 pivot/ai/resp/basis,轉折環畫起點、療效箭頭畫終點;(P1-2)bar 空說明用類型名;(P1-3)`createCase` 補 `pivot`;(P1-4)提示詞範例補 id、同日無 id 列入 unmatched 不 silent skip;(**M-1**)`addStruct` 手寫列改用 `_tlRowHTML()` 唯一產生器;(M-5)空窗寬度改連續函數;(P1-5)cluster 全部事件進 `<title>`;(P1-6)Full view 加高;(P2-1)gap label 移最上緣;(P2-2)勾產出包含後立即重繪;(P2-3)endDate<date 標紅;(M-6)EV-11 複製換 id 剝 `_ai`。總測 17 項
+
+
+**開發敘事**:V5.60.0 Hybrid 收斂批次(坑 #86)。兩份審核判定「架構成立,進入收斂階段,不建議再大改」,一次做完三批 12 項。**第一批(資料與臨床語意)**:M-3/P1-1 是我 V5.58.0 N-6 的副作用 —— 修「bar 與節點畫兩次」時讓 `isBar` 事件不進 `nodes`,但 pivot 環、AI 療效、basis 只畫在節點上,**治療一填結束日期就失去所有臨床語意**;`bars` 帶上 `pivot/ai/resp/basis`,轉折環畫 x0、療效箭頭畫 x1(較接近評估時點)、basis 進 title。P1-2 bar 空說明用 `lbl(type)`(不能要求聽眾靠顏色猜)。P1-3 `createCase` 白名單漏 `pivot`(V5.54.0 showGenomics 同一形狀,第二次)。P1-4 提示詞正文要求 id **範例卻沒有**(LLM 模仿範例),補上;`doImportTlAi` 的 `if(!ev)return;` 擋在 `unmatched.push` 前面,同日無 id 直接 silent skip,改為列入警告「2024-03-01(同日 2 筆,AI 未回 id,已略過)」。**M-1 是坑 #68 第五次**:`addStruct` 的 timeline 分支自己手寫一列 HTML,V5.58.0 N-2 只改了 `buildTimelineRows` —— 抽 `_tlRowHTML()` 成唯一產生器,新增的列現在有空白選項/endDate/★⚑/id。**第二批(顯示)**:M-5 空窗擴大原本 `realSpan<60 天` 二元條件,手術日期差 4 天整張圖翻轉(x 從 306 跳到 610),改連續函數,逐日推移最大跳動 2px;P1-5 cluster 全部事件名進 `<title>`(Full view 保留主事件名 + 「…+N 筆」);P1-6 Full view 加高 40-70px,minor 層不撞今日議題;P2-1 gap label 移到最上緣 y=12。**第三批(操作)**:P2-2 勾「產出時包含病程時序圖」後立即重繪該癌別容器,開關當場出現;P2-3 endDate 早於 date 時輸入框標紅並 title 提示;M-6 EV-11 複製時序時換 id 剝 `_ai`。總測 17 項,兩項一開始 🔴 是測試寫錯(Full view 確實有主事件名;P2-2 的 before 抓到影像區的 setembed),修正測試後全過;`titleAll` 定義順序順手修。`audit-render.js` 純函式 12/12。屬 c+1。
+
+
+---
+
+## V5.59.0
+
+**Hybrid 驗證批次:視覺收尾 + TL-1 正式修法**
+
+| 類 | 改動 |
+|---|---|
+| 視覺 | 標籤上下交錯、首尾 anchor、cluster「+N 筆」、basis tooltip、療效 ↑→↓、空窗自適應寬度 |
+| 收尾 | `_nTl` 只數有效日期、死碼清理、註解移出 onclick、文字頁顯示區間、AI 療效納入 systemic |
+| **TL-1 正式** | 內嵌時序頁 `tl-slide`,`DOMContentLoaded` 填 SVG,開關放回,按鈕互斥 |
+
+總測 18 項通過;主程式與投影片 `tlLayout` deep-equal 維持。
+
+
+**摘要**:**Hybrid 驗證批次:第二、三優先 + TL-1 正式**。`tlRender`:同層相鄰 <70px 標籤上下交錯、首尾節點 anchor start/end、cluster 行數依層間距上限超過顯示「+N 筆」、pivot 節點 `<title>` 顯示 AI basis、療效 ↑→↓ 標記;`tlLayout`:非空窗部分極短時空窗擴大填滿(審核 4.2);N-11 `_nTl` 只數有效日期、`TL_BANDS` 不再注入、`TL_TYPES` 不重複注入;N-13 註解移出 onclick;N-14 文字頁顯示 endDate 區間;AI 療效規則納入 systemic/intervention;N-12 audit 假紅燈修;**TL-1 正式**:內嵌時序頁 `<section class="slide tl-slide">` + `DOMContentLoaded` 填 SVG + 開關放回 + 按鈕互斥。總測 18 項
+
+
+**開發敘事**:V5.59.0 Hybrid 驗證批次:第二、三優先 + TL-1 正式修法。主任說「先作一作,再一次測」—— 把兩份審核的第二優先(視覺)、第三優先(語意)與 TL-1 正式修法一次做完,最後總測 18 項。**視覺**(`tlRender`):同層相鄰節點 <70px 時標籤上下交錯(`lastUp[layer]` 翻轉,12 週期化療實測 y 種類 2);首尾節點 x<60 或 >W-60 時 anchor 改 start/end 避免裁切;cluster 行數依層間距算上限,超過顯示「· +N 筆」;pivot 節點與圓點加 `<title>` 顯示 `_ai.basis`(原本有存沒地方看);AI 療效以 ↑→↓ 標在節點左上(評估日版本 TL-5d 留待);bar 標籤也做首尾 anchor。**`tlLayout`**(審核 4.2):只有兩個節點中間一段長空窗時 `realSpan≈0`,整張圖擠在左側 —— 非空窗部分極短(<60 天)時把多餘寬度分給空窗,「2020 診斷→2025 復發」從 x=[36,90] 變 [36,984]。**收尾**:N-11 `_nTl` 只數有效日期(與圖上節點一致)、`TL_BANDS` 隨舊引擎不再注入、`window.TL_TYPES` 不重複注入;N-13 註解從 `onclick` 屬性移回程式碼行(註解含雙引號就會提早結束屬性);N-14 必要事件文字頁顯示 `2024-03-01～2024-07-01`;AI 療效判讀規則從 chemo/surgery/rt 擴為含 systemic/intervention(提示詞與匯入端);N-12 `audit-render.js` 的 caseflag 期望值改「events 應為(無)」,消掉永遠紅燈。**TL-1 正式修法**:`_buildImgOut` 在 `_emb.timeline&&_nTl>0` 時產出 `<section class="slide tl-slide" data-tlkey>`,投影片端 `DOMContentLoaded` 找 `.tl-host` 用注入的 `tlRender('slide')` 填 SVG;卡片的 `embedToggle(...'timeline'...)` 放回;按鈕與內嵌頁互斥(V5.27.0 原則)。總測:視覺 5 項(交錯、首尾、basis、療效、+N)、收尾 5 項、內嵌頁 6 項(有頁/互斥/載入填圖/含 bar/含議題/不勾出按鈕/開關存在)、deep-equal 回歸 —— 過程中兩項是測試預期錯(6 化療間距 100px 本來就不需交錯;空窗擴張後末節點不在右緣本來就是 middle),換真實密度與邊緣資料後全過。屬 a+1。
+
+
+---
+
+## V5.58.0
+
+**Hybrid 驗證批次:第一優先八項(新增坑 #85)**
+
+兩份審核結論一致:骨架對了,但 **Summary 把所有療程藏起來**,不建議上線。
+
+### N-1 ⭐ 我自己寫錯的 P0
+
+```js
+if(e.layer==='treatment'&&e.endDate)return true;   // 而 UI 根本沒有 endDate 欄位
+```
+
+所有化療/放療/全身治療在預設投影片上**全部消失**。同一支函式的註解寫了決策 3「沒填畫單點」,程式卻寫成「沒填就不畫」。
+
+> **教訓**:每一條「有 X 才顯示」的規則,要問「使用者在 UI 上填得到 X 嗎」。
+
+### 八項修正
+
+| # | 改動 |
+|---|---|
+| N-1 | 療程一律顯示;列產生器加 **endDate 欄**(療程類才顯示)、**★摘要 / ⚑轉折** 勾選 |
+| N-2 | type select 加空白選項,空類型高亮 |
+| N-3 | 空窗改依所有已顯示事件的佔用區間 —— 「診斷→手術→5 年後復發」現在會壓縮 |
+| N-4 | AI 對應先 id 後日期;寫 `_ai.sig`;改 date/type 清 `_ai`;提示詞帶 id |
+| N-5 | `key`(列入摘要)與 `pivot`(轉折)分離 |
+| N-6 | bar 不重畫節點 |
+| N-8 | `__caseTL` 跳脫 `<` |
+| N-9 | 新列補 id;checkbox 讀 `checked` |
+
+### 實測
+
+```
+典型案例 Summary 治療節點 4、hidden 1 ✅  |  5 年空窗壓縮 ✅  |  bar 不重畫 ✅
+空白選項 ✅  endDate 欄 ✅  ★/⚑ ✅  新列 id ✅  改日期清 _ai ✅  script 標籤跳脫 ✅
+```
+
+
+**摘要**:**Hybrid 驗證批次:第一優先八項**(坑#85):(**N-1 P0**)Summary 隱藏所有無 endDate 的治療而 UI 填不到 → 過濾改一律顯示,列產生器加 endDate 欄(療程類)與 ★摘要/⚑轉折;(N-2)type select 加空白選項並高亮;(N-3)空窗改依所有已顯示事件的佔用區間;(N-4)AI 對應先 id 後「日期且唯一」、寫 `_ai.sig`、`updStruct` 改 date/type 清 `_ai`、提示詞帶 id;(N-5)key 與 pivot 分離;(N-6)bar 不重畫節點;(N-8)`__caseTL`/`__caseImgs` 跳脫 `<`;(N-9)新列/帶入補 id;handler checkbox 讀 `checked`
+
+
+**開發敘事**:V5.58.0 Hybrid 驗證批次(坑 #85)。兩份審核(內部 + 外部)結論一致:「骨架做對了,但 Summary 把所有療程藏起來,不建議上線」。**N-1 是我自己寫錯的 P0**:`tlLayout` 過濾寫 `layer==='treatment'&&e.endDate`,而編輯畫面根本沒有 endDate 欄位、帶入也不產生 —— 所有化療/放療/全身治療在預設投影片上全部消失,頁尾還稱它們「例行事件」;而我在同一支函式的註解裡寫了決策 3「沒填畫單點」,程式卻寫成「沒填就不畫」。**教訓:每一條「有 X 才顯示」的規則,要問「使用者在 UI 上填得到 X 嗎」**。八項一次修:①過濾改一律顯示,實測典型案例 Summary 治療節點 4、hidden 1 ②`buildTimelineRows`(唯一的列產生器)加空白選項(N-2,空類型高亮)、endDate 欄(療程類才顯示)、★摘要/⚑轉折勾選;改 type 時重繪列讓 endDate 欄跟著出現 ③N-3 空窗改依「所有已顯示事件的佔用區間」合併後找間隙,「診斷→手術→5 年後復發」現在會壓縮 ④N-4 `doImportTlAi` 先 id 後「日期且唯一」、寫入 `_ai.sig`(原本全檔沒人寫是死碼)、`updStruct` 改 date/type 時 `delete _ai`、`tlAiPrompt` 事件清單帶 `"id"` 並要求原樣照抄 ⑤N-5 `pivot` 只看 `e.pivot||_ai.pivot`,`key` 只影響 Summary 過濾 ⑥N-6 `isBar` 的事件不進 `nodes` ⑦N-8 `__caseTL`/`__caseImgs` 的 `JSON.stringify` 後 `replace(/</g,'\\u003c')`,實測說明含 script 結尾標籤投影片仍正常 ⑧N-9 `addStruct` 與帶入的新列 `_tlNewId()`;handler checkbox 改讀 `el.checked`(原本 `el.value` 永遠是 "on")。`audit-render.js` 加 N-1/N-3/N-6 三條。**未做**(審核第二/三優先):gap 前後標籤避碰、首尾裁切、AI response 在評估日畫、內嵌時序頁、DOCX 表格、`_nTl` 計數。屬 c+1。
+
+
+---
+
+## V5.57.0
+
+**Hybrid timeline 批次 2b:投影片端**
+
+| 步 | 改動 |
+|---|---|
+| ① | `_tlWinData` 傳完整事件(id/endDate/key/_ai)+ discussion + deathDate |
+| ② | `_tlInjectSrc()` 用 `.toString()` 在反引號外注入四個核心到 extraJs |
+| ③ | `openTimelineWindow` 13KB 舊 Event-band → 2.5KB 新版,同源子視窗直接交函式,Summary/Full 切換 |
+
+**驗收 #9 ✅**:jsdom 載入產出的投影片,主程式與投影片端對同一份資料的 `tlLayout` 輸出 **deep-equal**。同一份原始碼保證「修一次版面不用修兩套」。
+
+
+**摘要**:**Hybrid timeline 批次 2b:投影片端**。`_tlWinData` 傳完整事件(id/endDate/key/_ai)+discussion+deathDate;`_tlInjectSrc()` 用 `.toString()` 在反引號外把 TL_TYPES/_normTlDate/tlLayout/tlRender 注入 extraJs;`openTimelineWindow` 13KB 舊 Event-band → 2.5KB 新版(同源視窗直接交函式,Summary/Full 切換鈕)。**驗收 #9:主程式與投影片端 tlLayout 輸出 deep-equal ✅**。舊 Event-band 完全淘汰
+
+
+**開發敘事**:V5.57.0 Hybrid timeline 批次 2b:投影片端。三步:①`_tlWinData[_ck]` 從「簡化成 {date,type,label,pivot,resp,basis}」改成 `JSON.parse(JSON.stringify(c.timeline))` 完整事件,加 `discussion` 與 `deathDate` —— 舊格式丟掉 id/endDate/key/sig,新引擎沒這些就退化成舊圖;②`_tlInjectSrc()` 把 `TL_TYPES`(JSON)與三個函式(`.toString()`)串成字串,**接在反引號外**(坑 #48:模板字串會吃掉 `\d` 這種跳脫),注入點在 `window.__caseTL=…;` 之後;tlcore 寫的時候已避開反引號、`${`、script 結尾標籤;③`openTimelineWindow` 13211 字元的舊 Event-band 換成 2580 字元:`window.open` 後**直接把函式與資料交給同源子視窗**(`w.tlLayout=window.tlLayout`),不經字串序列化,子視窗的 `__tlRedraw`/`__tlToggle` 提供 Summary/Full 切換(決策 1:Summary 預設)。**驗收 #9(審核第八節)**:jsdom 載入產出的投影片,對同一份 timeline 分別在主程式與投影片端跑 `tlLayout`,`JSON.stringify` 結果**完全相同** —— 同一份原始碼保證這點,這是「修一次版面要修兩套」(坑 #61 事件軸版)的根治。舊 Event-band 連 V5.25.0 的設計原則註解一起清掉(設計原則已移至 tlcore)。**2c 待做**:TL-1 正式修法(內嵌時序頁 + 放回開關)、TL-5(a)(b) AI 判讀以 id 對應與三鍵對話框、TL-13 JSON 匯出補 showTimeline/embed/events、TL-15 QA 預檢、DOCX 時序表格(TL-10)。屬 a+1。
+
+
+---
+
+## V5.56.0
+
+**Hybrid timeline 批次 2a:架構基礎**
+
+主任五題定案(Summary 預設、轉折點 AI+手動、endDate 選填、Today's question 取討論方向、chemo 保留)後選「現在開始」。
+
+### 資料模型 v2
+
+```js
+{id, type, date, endDate, datePrec, label, key, src, _ai:{pivot,sig,…}}
+```
+
+`TL_TYPES` 加 `layer`(disease/procedure/treatment/evidence/minor)與五個新類型。`_normTlDate` 處理民國年、`YYYY/M/D`、`YYYY-MM`。
+
+### `tlLayout` 純函式 + `tlRender`
+
+```
+正規化 → Summary 過濾 → 空窗壓縮 → 同日 cluster → treatment bar → spine → question
+```
+
+編輯預覽與檢視卡片改走它,**舊蛇形圖淘汰**。
+
+### 實測
+
+```
+純函式 14 條(民國正規化、bar、gap、cluster、pivot、sig、deathDate…)✅
+jsdom 編輯/檢視 svg、今日議題、bar、id ✅
+audit-render.js 固化 9 條 ✅
+```
+
+### 2b 待做
+
+投影片端換 slide theme、內嵌時序頁、注入 extraJs、淘汰舊 Event-band。
+
+
+**摘要**:**Hybrid timeline 批次 2a**:資料模型 v2(`id`/`endDate`/`datePrec`/`key`/`src`/`_ai.sig`,`createCase` 保留、`loadLocal` 記憶體補 id);`TL_TYPES` 加 `layer` 與 5 個新類型(ned/progression/death/systemic/intervention);`_normTlDate`(民國/`YYYY/M/D`/`YYYY-MM`);**`tlLayout(events,opts)` 純函式**(正規化→Summary 過濾→semi-proportional 空窗壓縮→同日 cluster→treatment bar→spine)+ **`tlRender(model,theme,ca)`**(compact);5 處 `renderTimelineSVG` 呼叫改走它,舊蛇形圖定義**淘汰**。`audit-render.js` 加 9 條純函式斷言。**2b 待做**:投影片端換 slide theme + 內嵌時序頁 + 注入 extraJs
+
+
+**開發敘事**:V5.56.0 Hybrid timeline 批次 2a。主任五題定案後選 A「現在開始」。這版建立架構基礎,**投影片端還沒換**(2b)。**資料模型 v2**:每筆事件 `{id,type,date,endDate,datePrec,label,key,src,_ai}`;`createCase` 白名單保留全部欄位(否則 createItem 會丟掉,V5.54.0 的教訓);`loadLocal` 時 `_tlEnsureIds` 只在記憶體補 id,存檔才寫回(與 `cleanTimelineGhosts` 同原則,不讓「只是打開看」改動 version 判斷)。**`TL_TYPES` 加 `layer`**(disease/procedure/treatment/evidence/minor)與五個新類型 —— 決策 5 保留 chemo 與 systemic 同層;`TL_SIZE` 同步後發現已無人用(舊圖淘汰後),留著待 2b 清。**`_normTlDate`**(TL-12):民國 3 位數年 +1911、`YYYY/M/D`、`YYYY-MM` 補 -01 並標 `month`。**`tlLayout(events,opts)` 純函式**:①正規化剔除無效日期→`undated`②Summary 過濾(決策 1:疾病類/有 endDate 的治療/手術介入/pivot/key 五者之一)③semi-proportional —— 疾病階段間 >180 天且中間無其他事件的空窗壓縮成 54px 並標 `// 2.8 yr //`④同日 cluster 合一節點⑤treatment bar(決策 3:沒 endDate 畫單點)⑥spine 只在有疾病事件時畫、中性灰、紅色只給復發/進展/轉移節點(審核 §1.2 原則 3)⑦`_ai.sig` 不符不採用(TL-5c)⑧`deathDate` 自動成 death 節點(O-3)⑨`question` 取 `discussion`(決策 4)。**`tlRender(model,theme,ca)`** 只負責畫,compact 190px 高四泳道,pivot 畫雙環+垂直虛線+「AI」標示。5 處 `renderTimelineSVG` 呼叫全改走 `tlRender(tlLayout(...,{view:'summary'}),'compact')`,**舊蛇形圖定義 3614 字元淘汰** —— 編輯預覽與檢視卡片從此同一套(TL-8)。純函式 14 條單元測試 13 過,第 6 條是測試預期錯(summary 本來就過濾切片);jsdom 實跑編輯/檢視 svg、今日議題、bar、id 全過。`audit-render.js` 固化 9 條斷言。**2b**:`extraJs` 注入 `tlLayout.toString()`(注意 `</script>` 要拆),投影片 `openTimelineWindow` 與內嵌頁改用 slide theme,淘汰舊 Event-band;**驗收**:同一份資料編輯端與投影片端 `tlLayout` 輸出 deep-equal。屬 a+1。
+
+
+---
+
+## V5.55.0
+
+**治療事件軸專項審核批次 1:止血(新增坑 #84)**
+
+審核判定「現行程式不建議以目前狀態上線事件軸功能」—— 顯示方向要轉成 Hybrid timeline,但轉型前先止血。
+
+### TL-4 ⭐ RT 分類的 `\b` 是 0x08 控制字元
+
+```
+/\brt\b|…|\bgy\b|gray/    ← 檔案裡的 \b 是 backspace,不是 regex 字界
+```
+
+`RT`、`Adjuvant RT 60 Gy` 全判成「其他」。**`node --check` 與 jshint 都過** —— 語法合法,只是 regex 多了個永遠不匹配的字元。
+
+改用明確字界並補中文/Proton/brachy/`\d\s*c?gy`。**打包檢查加控制字元掃描。**
+
+### 其餘止血
+
+| # | 問題 | 修法 |
+|---|---|---|
+| **TL-2** P0 | 帶入時 `a.date.localeCompare` 在 null 拋錯,**每按一次重複一批** | 統一 `_tlCmp`,取代 17 處 |
+| **TL-1** P0 | 勾「夾在投影片」時序**完全消失**(沒有時序頁產生器) | 移除開關,一律出按鈕 |
+| TL-3 | 新增事件預設 dx,忘了改就變假診斷 | 改空 |
+| TL-9 | 必要事件時序文字未排序、無類型 | 排序 + `[類型]` |
+
+### 批次 2-3:Hybrid timeline 轉型(待決策)
+
+審核第七節列了五個需要個管師/主任決定的問題。
+
+
+**摘要**:**治療事件軸專項審核批次 1(止血)**(坑#84):(**TL-4 P1**)RT 分類 regex 的 `\b` 是 0x08 控制字元,`RT`/`60 Gy` 全判成其他;(**TL-2 P0**)帶入的 `a.date.localeCompare` 在 null 時拋錯,每按一次重複一批;統一 `_tlCmp`;(**TL-1 P0**)勾「夾在投影片」時序從投影片消失,移除開關一律出按鈕;(TL-3)新增事件預設 dx 改空;(TL-9)必要事件時序文字排序+類型。**打包檢查加控制字元掃描**。批次 2-3(Hybrid timeline 轉型)待決策
+
+
+**開發敘事**:V5.55.0 治療事件軸專項審核批次 1(坑 #84)。審核判定「現行程式不建議以目前狀態上線事件軸功能」—— 顯示方向要轉成 Hybrid timeline(Disease journey + 關鍵事件 + Treatment bar + Today's question),但轉型前先止血。這版做批次 1:**TL-4** 是最特別的 —— RT 分類 regex `/\brt\b|…/` 在檔案裡的 `\b` **是 0x08 backspace 控制字元**,`RT`、`Adjuvant RT 60 Gy` 全判成其他,`node --check` 與 jshint 都過(語法合法,只是 regex 多了個永遠不匹配的字元);推測是某次 `str_replace` 把 `\\b` 寫成 `\b`。改用明確字界並補中文/Proton/質子/brachy/`\d\s*c?gy`,13/13 通過;**打包檢查加 `grep -P` 控制字元掃描**(排除壓縮函式庫的 2 行)。**TL-2(P0)**:帶入的 `a.date.localeCompare(b.date)` 在 date 為 null 時拋 TypeError,先 push 再 sort 導致 markDirty/關窗/重繪全沒執行、**每按一次重複一批**;AI JSON 省略 date 或 EV-11 複製都會產生 null,手動新增是 `''` 所以手測永遠測不到;統一 `_tlCmp`(沒日期排最後、不拋錯)取代 3 種寫法共 17 處。**TL-1(P0)**:全檔沒有時序頁產生器,勾了「夾在投影片」時序就從投影片**完全消失**,README V5.27.0 的「病理手術時序全夾(2 頁 + 0 顆)」就是這個缺陷;移除時序的 embedToggle、`_buildImgOut` 一律出按鈕。**TL-3**:`addStruct` 新增事件預設 `type:'dx'`,忘了改的每一列都變成疾病層上的假診斷;改空。**TL-9**:必要事件投影片的時序文字未排序、無類型、空說明只剩日期;排序、帶 `[類型]`、空日期標「（未填日期）」。實測全過。**批次 2-3 需要決策**(審核第七節五個問題):Summary view 是否為預設、轉折點由誰標、endDate 是否必填、Today's question 取討論方向、chemo 是否保留。屬 c+1。
+
+
+---
+
+## V5.54.0
+
+**基因檢測「產出時顯示」勾選**
+
+個管師:「可以勾選要不要顯示基因檢測;如果有勾、沒作,就寫『無』。」
+
+| `showGenomics` | 投影片 / DOCX |
+|---|---|
+| 未設定(舊資料) | 有資料才顯示(向後相容) |
+| 勾 | 顯示;沒資料寫「**無**」 |
+| 沒勾 | 不顯示 |
+
+「無」與留白不同 —— 前者是「已確認未做」的結論。
+
+實作踩了兩次:`createCase` 白名單漏欄位;handler 正則插進了錯的區塊。都是實測抓到。
+
+
+**摘要**:個管師需求:基因檢測區塊加「產出時顯示」勾選。`showGenomics` 三態:未設(舊資料)→有資料才顯示、勾→顯示(沒資料寫「無」)、沒勾→不顯示。`_gnShow(c)` 統一判斷,投影片個案/必要事件/DOCX 三處套用;`createCase` 白名單補欄位(否則 createItem 會丟掉)。實作踩了一次:handler 的正則 `[^}]*` 停在內層 `}`,把新 handler 插進 `if(updtlshow){}` 裡永遠不執行,click 實測抓到
+
+
+**開發敘事**:V5.54.0 基因檢測「產出時顯示」勾選。個管師的需求兩句話:「可以勾選要不要顯示基因檢測;如果有勾、沒作,就寫『無』」。照 `showTimeline` 的模式做 —— 卡片基因檢測標題旁加勾選框(`data-action="updgenshow"`,帶 `data-ty`),`showGenomics` 三態:**未設定(舊資料)→ 有資料才顯示**(向後相容,不改變現有投影片)、**勾了 → 顯示,沒資料寫「無」**(那是「已確認未做」的結論,跟留白不同)、**沒勾 → 不顯示**(即使有資料)。`_gnShow(c)` 統一判斷,投影片個案 `mkRow`、必要事件 `_trackSlide` 的 `sections.push`、DOCX 的 `addRow` 三處套用。踩了兩次:①`createCase` 是白名單建構,`showGenomics` 沒加進去就被 `createItem` 丟掉 —— 實測 `_gnShow` 結果 `[false,true,false,true]` 才發現;②handler 用正則在 `updtlshow` 後插入,`[^}]*` 停在內層 `if(c){...}` 的 `}`,新 handler 被插進 `if(updtlshow){}` 區塊裡**永遠不執行**,`cb.click()` 實測抓到(第一次用 `change` 事件測也是錯的,handler 在 `click` 監聽器)。實測五種情境投影片全對,兩種卡片勾選都正確寫入且 dirty。屬 c+1。
+
+
+---
+
+## V5.53.0
+
+**必要事件影像產出端 + NGS 影像修復(新增坑 #83)**
+
+審核判定 V5.52.0「只做了編輯端」。
+
+### 根因只有一個:六份各自實作的影像列舉
+
+| 位置 | 看 events? | 看 NGS? |
+|---|---|---|
+| `_needsFolder` | ❌ | ❌ |
+| 預載迴圈 | ❌ | ❌ |
+| `_trackSlide` | ❌ **完全沒有影像輸出** | — |
+| `_collectAuditRows` | ❌ | ✅ |
+| `rebindMeetingImages` | ❌ | ✅ |
+| `updateFolderStatusBar` | ❌ | ❌ |
+| `backupToNAS` | ❌ | ❌ |
+
+**I-2:個案的 NGS 影像從 V5.30.0 起就沒進投影片** —— 22 個版本沒人發現。
+
+### 修法
+
+- `_forEachMeetingImg(m,cids,cb)` 成為唯一列舉器(cases + events 五種影像 + special),六處全改走它
+- 87 行影像組裝抽成 `_buildImgOut()`,個案與必要事件共用
+
+### 實測
+
+```
+投影片 58KB:C_NGS ✅  E病理 ✅  E手術 ✅  E_NGS ✅  E相關 ✅
+列舉器:總數 6、events 4 ✅
+audit-render.js 加「影像進投影片」檢查 ✅
+```
+
+
+**摘要**:**必要事件影像產出端 + NGS 影像修復**(坑#83):(**I-1**)`_trackSlide` 沒有影像輸出,87 行影像組裝抽成 `_buildImgOut()` 讓個案與必要事件共用;(**I-2**)**個案 NGS 影像從 V5.30.0 起沒進投影片**(預載漏 `genomicsImages`);(**I-3**)檢查影像/重新綁定加 events;(**I-4**)`_needsFolder`/狀態列/NAS 備份改走 `_forEachMeetingImg()` 列舉器。六個獨立列舉迴圈收斂成一個。`audit-render.js` 加「影像進投影片」檢查
+
+
+**開發敘事**:V5.53.0 必要事件影像產出端 + NGS 影像修復(坑 #83)。審核判定 V5.52.0「只做了編輯端」:必要事件選了圖,**投影片上一張都沒有**(I-1)、檢查影像與重新綁定都看不到(I-3)、資料夾提示與 NAS 備份也不看(I-4);更嚴重的是 **I-2:個案的 NGS 影像從 V5.30.0 起就沒進投影片**,22 個版本沒人發現 —— 預載清單當年加 `genomicsImages` 時漏了,NGS 影像多半是內嵌上傳所以沒感覺。根因只有一個:**「列舉這場會議所有影像」有六份各自實作**(`_needsFolder`/預載/`_collectAuditRows`/`rebindMeetingImages`/`updateFolderStatusBar`/`backupToNAS`),每一份都只寫 `sec.cases`,部分還漏 NGS —— 坑 #29 與 #81 的第三次,坑 #61「第二份實作要刪掉」這裡有六份。修法:①`_forEachMeetingImg(m,cids,cb)` 成為唯一列舉器(cases+events 五種影像+special),六處全改走它;②`_trackSlide` 根本沒有影像輸出邏輯,那 87 行在個案 callback 內外面拿不到 —— 抽成 `_buildImgOut(_ck,c,cid,meta,color)` 讓兩邊呼叫,key 用 `ci-N`/`ev-N` 區隔,必要事件的內嵌頁接在主頁後;③`_collectAuditRows`/`rebindMeetingImages` 的 `sec.cases` 改 `[...cases,...events]`;④NAS 備份的 key 從 `'cases['+ki+']'` 改 `_tyN+'['+ki+']'` 並補 `genomicsImages`。過程踩了兩次:抽出 `_buildImgOut` 時 `'ci-'+caseIndex`→`_ck` 的替換在一處跳脫上下文(`\'ci-'+caseIndex`)變成 `\_ck`,`node --check` 抓到;預載區塊的括號切少一個,也是 `node --check` 抓到。測試時 `genHTMLSlides` 因「請先儲存」早退,`saveLocal` 後才過。實測:投影片 58KB,C_NGS/E病理/E手術/E_NGS/E相關 全部在裡面,列舉器總數 6、events 4,只有個案 NGS 是資料夾影像時 `_needsFolder` 為 true。**已固化進 `audit-render.js`**:產出投影片斷言五個 caption 都在。屬 a+1。
+
+
+---
+
+## V5.52.0
+
+**開放必要事件影像(新增坑 #82)**
+
+V5.42.0 先關掉,因為影像流程有 8 處寫死 `.cases[`。現在必要事件那條線已被四輪專項審核跑過,而且個管師已在用特殊議程當替代方案 —— 需求是真的。
+
+### 改動
+
+| 層 | 內容 |
+|---|---|
+| HTML 產生 | `buildGenericImgArea` 10 個 `data-action` 補 `data-ty`;5 個 `build*ImgArea` 傳 `ty` |
+| 資料存取 | `_imgOwner` 加 `ty`;6 個輔助函式 + `imgMove`/`imgReorder`/`delImg` 一路傳到底 |
+| Handler | 6 處 `.cases[idx]` 改讀 `dataset.ty` |
+| 開關 | 10 處 `noImages:true` 移除 |
+
+### 坑 #82:三種字串上下文並存,批次替換改了四次才對
+
+`buildGenericImgArea` 裡有反引號模板、單引號串接、單引號串接內再一層跳脫。一支正則統一補 `${_ty}` → 4 個變字面;改 `'+_ty+'` → 3 個雙層的變字面。
+
+更糟的是兩處 `parseInt` 誤植:`parseInt(x.dataset.idx,x.dataset.ty)` → radix 變 `'events'` → **按必要事件的「刪除影像」刪到個案討論**。`node --check` 與 jshint 全過。
+
+> **教訓**:批次插入前先看每個插入點同行的 `cid` 怎麼寫,照抄它的跳脫層級。插進函式參數的替換要驗證括號配對。
+
+### 實測
+
+```
+8 種影像操作(刪/移/改說明/分頁/每頁張數/清除/內嵌/data-ty 覆蓋)
+→ 必要事件卡片上都只動 events、cases 不變 ✅
+audit-render.js EV-1:55 個元素 0 污染 ✅
+```
+
+
+**摘要**:**開放必要事件影像**(坑#82):`buildGenericImgArea` 10 個 `data-action` 補 `data-ty`(三種字串上下文,改了四次才對齊);`_imgOwner` 加 `ty`;6 個輔助函式(`imgDel`/`imgClear`/`imgSetCaption`/`_moveImage`/`imgToggleBrk`/`imgApplyLayout`)與 `imgMove`/`imgReorder`/`delImg` 加 `ty`;6 個 handler 的 `.cases[idx]` 改讀 `dataset.ty`;5 個 `build*ImgArea` 傳 `ty`;10 處 `noImages:true` 移除。實測 8 種影像操作在必要事件卡片上都只動 events、cases 不變
+
+
+**開發敘事**:V5.52.0 開放必要事件影像(坑 #82)。個管師說「開放影像」—— V5.42.0 先關掉的原因是影像流程有 8 處寫死 `.cases[`,而那是前十輪最脆弱的地方。現在必要事件那條線已被四輪專項審核跑過,而且個管師已經在用特殊議程當替代方案(坑 #81),需求是真的。改動範圍:`buildGenericImgArea` 的 10 個 `data-action` 全部補 `data-ty`;`_imgOwner(kind,cid,i,ty)` 加 ty,`holder==='cases'&&ty==='events'` 時改讀 events(special 不受影響);6 個輔助函式與 `imgMove`/`imgReorder`/`delImg` 加 ty 並一路傳到底;6 個 handler(`pickpathfolder`/`addpathimg`/`picksurgfolder`/`pickimgfolder`/`addmammoimg`×2)的 `.cases[idx]` 改讀 `dataset.ty`;5 個 `build*ImgArea(cid,i,d,ty)` 把 ty 塞進 cfg;10 處 `noImages:true` 移除,`_noImg` 機制保留但不再傳入。**過程中踩了坑 #82**:`buildGenericImgArea` 裡三種字串上下文並存(反引號模板、單引號串接、單引號串接內再一層跳脫),我用一支正則批次補 `data-ty`,**寫法統一成 `${_ty}` → 4 個串接的變字面**;改成 `'+_ty+'` → 3 個雙層跳脫的變字面;**改了四次才對齊**,每次都是實跑看到 `imgmove='+_ty+'` 才知道。更糟的是兩處 `parseInt` 誤植 —— 正則把 `,xxx.dataset.ty` 插進 `parseInt(...)` 括號裡,radix 變 `'events'`、索引變 NaN,**按必要事件的「刪除影像」刪到 cases**,而 `node --check` 與 jshint 全過。教訓:**批次插入前先印出每個插入點同行的 `cid` 怎麼寫,逐一複製它的跳脫層級**;**插進函式參數的替換,做完要驗證括號配對**。實測 8 種操作(data-ty 覆蓋/刪/移/改說明/分頁點/每頁張數/清除/內嵌開關)在必要事件卡片上都只動 events、cases 不變;`audit-render.js` 的 EV-1 現在涵蓋影像按鈕(55 個元素 0 污染)。屬 a+1。
+
+
+---
+
+## V5.51.1
+
+**特殊議程影像從 V5.32 起載不了(新增坑 #81)**
+
+個管師拿**特殊議程**當必要事件的影像替代方案,產出前檢查說「0/5 張已載入」。
+
+`pickSpecialImgs` 從根目錄直接列檔案、不記 `subFolder`;V5.32 的「絕不退回根目錄」規則是為**病人影像**設計的 —— 特殊議程沒有病人,那個風險不存在。**19 個版本沒人發現**,因為沒人用特殊議程放影像。
+
+修法:選圖時標 `_root:true`,驗證加 `allowRoot`;舊資料載入時補標。病人影像的規則不變。
+
+> **教訓**:加安全規則時,要列出它會影響到的所有種類的資料,確認每一種都真的有那個風險。
+
+**決策點**:必要事件的影像需求是真的。要開放還有 6 個 handler 寫死 `.cases[`。
+
+
+**摘要**:**特殊議程影像從 V5.32 起載不了**(坑#81):`verifyImgOwnership` 的「絕不退回根目錄」是為病人影像設計的,特殊議程本來就從根目錄選;加 `_root` 標記與 `allowRoot`,舊資料在 `loadLocal` 補標。個管師拿特殊議程當必要事件的影像替代方案才踩到 —— **必要事件的影像需求是真的**,要開放還有 6 個 handler 寫死 `.cases[`
+
+
+**開發敘事**:V5.51.1 特殊議程影像修復(坑 #81)。個管師傳兩張截圖:「9000015 測○丙必要事件提報」是一張**特殊議程**卡片(類別「其他」)選了 5 張影像,產出前檢查說「影像 0/5 張已載入 → 沒有記錄病人資料夾,也沒有病歷號可比對」。**她在用特殊議程當必要事件的影像替代方案** —— 因為 V5.42.0 我把必要事件的影像先關掉了。查證:`pickSpecialImgs` 從**根目錄**直接列檔案,存的是 `{name,fromFolder:true}` 沒有 `subFolder`;而 V5.32 的 `verifyImgOwnership` 規定「絕不退回根目錄」(避免載到別的病人的同名檔),`!sub&&!cno` 就回 `NO_OWNER`。**從 V5.32 起特殊議程的影像就載不了**,整整 19 個版本沒人發現。那條規則是為**病人影像**設計的;特殊議程沒有病人、沒有病歷號,「載到別的病人的檔案」這個風險不存在,規則不該套上去。修法:選圖時標 `_root:true`,驗證加 `opts.allowRoot`(只在明確傳入時生效,病人影像的規則不變),三處呼叫端補上;舊資料(她已選的那 5 張)在 `loadLocal` 時補標 —— 特殊議程只能從根目錄選,所以 `fromFolder` 且無 `subFolder` 的一律是根目錄。實測:無 `allowRoot` 仍回 `NO_OWNER`、有 `allowRoot` 找到檔案、遷移只標根目錄的。**連帶的決策點**:個管師已經在用替代方案,代表必要事件的影像需求是真的;要開放的話,影像流程還有 6 個 handler 寫死 `.cases[` 要先改 —— 那正是 V5.42.0 先關掉的原因,現在必要事件那條線已經被四輪專項審核跑過,風險比當時低很多。屬 c+1。
+
+
+---
+
+## V5.51.0
+
+**複審批次 1+2(新增坑 #80)**
+
+### N-1 ⭐ 會後填寫的結論會被卡片蓋掉
+
+面板與卡片編輯的是**同一筆資料**。面板「存檔關閉」寫回了,**但卡片的 DOM 還是舊值**:
+
+```
+面板存「會議當場的完整結論」
+  → 卡片 textarea 仍顯示「會前草稿」
+  → 個管師在卡片補一個字 → oninput 寫回「會前草稿。」
+  → 面板存的結論無聲消失
+```
+
+必要事件的結案狀態同理:面板選「已結案」,卡片仍顯示「待討論」。
+
+> **這是坑 #73 的畫面版**:資料只有一份,但畫面有兩份,一份更新了另一份沒跟上。
+
+修法:面板寫回後重繪各區塊(不整頁 `renderEditor`)。
+
+### Q1:每次存檔都跳「尚未存檔,確定=放棄」
+
+B-7 的副作用。關閉前比對 `value` 與 `defaultValue`,但寫回後**沒更新 `defaultValue`**,存檔路徑再呼叫關閉就被誤判。**內容與事實相反。** 加 `force` 跳過。
+
+### Q3/Q4:EV-11 的安全邊界
+
+這是本系統第一次會「**跨病人搬運臨床資料**」的功能。
+
+| 原本 | 現在 |
+|---|---|
+| 對話框只有日期與癌別 | 顯示病歷號、遮蔽姓名、性別/年齡、診斷前 40 字 |
+| 少打一碼是另一位病人也問 | 本卡已填姓名且不同 → **不問,改提醒** |
+| 姓名/年齡/性別整批覆蓋 | 基本資料**只填空白的**;age/ecog/cfs **不複製** |
+
+### Q2:EV-6 同一形狀第二次
+
+取「最新」而非「本場之前」。任何「找上一筆」的邏輯都要先過濾日期。
+
+### 實測
+
+```
+Q2: 10/1 輸入 9000099 → 選 8/6,不含 12/3 ✅
+Q3: 對話框含 林○麗 + Breast IDC ✅;已填「陳某某」輸入他人病歷號 → 不問、提醒 ✅
+Q4: 帶入後年齡為空 ✅
+Q1: 存檔關閉不跳確認 ✅
+N-1: 卡片摘要/結案狀態跟資料一致 ✅
+```
+
+
+**摘要**:**複審批次 1+2**(坑#80):(**N-1 P1**)會後填寫面板寫回後卡片 DOM 沒更新,卡片補一字就把面板結論蓋掉;寫回後重繪各區塊;(**Q1 P1**)B-7 的副作用,`savePostMtg` 後 `closePostMtgPanel` 誤判為未存,每次都跳「確定=放棄」;加 `force`;(**Q3 P1**)EV-11 對話框補病歷號/遮蔽姓名/性別年齡/診斷,本卡已填姓名且不同就不問;(Q4)基本資料只填空白、age/ecog/cfs 不複製;(Q2)只取本場之前的紀錄(EV-6 同形狀)
+
+
+**開發敘事**:V5.51.0 複審批次 1+2(坑 #80)。**N-1 是坑 #73 的畫面版**:會後填寫面板與個案卡片編輯的是同一筆 summary/decision/eventStatus,面板「存檔關閉」寫回資料了,**但卡片的 DOM 還是舊值** —— 個管師之後在卡片上補一個字,`oninput` 把「舊值 + 一字」寫回,**面板存的會議結論無聲消失**;必要事件的結案狀態同理,面板選「已結案」卡片仍顯示「待討論」。資料只有一份,但**畫面有兩份**,一份更新了另一份沒跟上。修法是面板寫回後重繪 cases/events/team/followups 各自容器,不整頁 `renderEditor`(坑 #62)。**Q1 是 B-7 的副作用**:關閉前比對 `value` 與 `defaultValue`,但 `savePostMtg` 寫回後沒更新 `defaultValue`,再呼叫 `closePostMtgPanel()` 就被判定為未存 → **每次正常存檔都跳「尚未存檔,確定=放棄」**,內容與事實相反,久了變警告疲勞(坑 #59);存檔路徑加 `force` 跳過。**Q3/Q4 是 EV-11 的安全邊界** —— 這是本系統第一次會「跨病人搬運臨床資料」的功能:原本對話框只有日期與癌別,少打一碼剛好是另一位病人時無從判斷,按下去另一位的病史/檢查/病理/治療/時序整批進來再進投影片;改成顯示病歷號、遮蔽姓名、性別/年齡、診斷前 40 字,**本卡已填姓名且與歷史不同就不問改提醒**;基本資料(name/gender/doctors)**只填空白的**,age/ecog/cfs **不複製**(死亡病例通常是數年後)。**Q2 是 EV-6 的同一形狀第二次出現**:取「最新」而非「本場之前」,任何「找上一筆」的邏輯都要先過濾日期。實測:10/1 輸入 9000099 選到 8/6 而非預先建好的 12/3、對話框含「林○麗」與診斷、已填「陳某某」輸入他人病歷號不問改提醒、帶入後年齡為空、存檔關閉不跳確認、卡片摘要與結案狀態跟資料一致。測試時 `openPostMtgPanel` 因 `readForm()` 在日期空白時早退,填了 `f-date` 才過 —— 這是測試環境的限制。屬 c+1。
+
+
+---
+
+## V5.50.1
+
+**B-5 改為延後(個管師決定)**
+
+「先不要管,但記下來。」—— `zoomPwdByMonth` 設定沒填就退回 `_LEGACY_ZOOM`,功能不受影響。三組密碼仍在公開程式碼裡,已知且接受。要處理時的三個步驟寫在 CLAUDE.md「十之四」。
+
+**B-4 記錄**:MDT 系統的「HTML 分享」按鈕從未被用過(個管師用 Git Pusher)。可能從 V5.41.0 起就因 CORS 壞掉但沒人發現。若確定不用,依減法原則應移除。
+
+
+**摘要**:B-5 依個管師決定改為**延後**:`zoomPwdByMonth` 設定沒填就退回 `_LEGACY_ZOOM`,功能不受影響;三組密碼仍在公開程式碼裡(已知且接受)。B-4 記錄:「HTML 分享」按鈕從未被用過,個管師用 Git Pusher。兩項列入「十之四、已決定延後的項目」
+
+
+---
+
+## V5.50.0
+
+**批次 4:B-5 / R-11 / C-8**
+
+### B-5:Zoom 密碼從程式碼移到設定
+
+三組季密碼寫死在 `zoomPwdByMonth` 與 `DEFAULT_C`(8 處)。而 index.html 放在**公開的 GitHub Pages** —— view-source 就看得到,而且在 Git 歷史裡。
+
+改存 `mdt_zoom_pwd`(不進備份),設定頁三個欄位,三台各填一次。**密碼本身仍要在 Zoom 後台重新產生。**
+
+### R-11:`mdt_sec_` 殘留清理
+
+兩處匯出仍把 `mdt_sec_` 塞進備份;`loadMergedSections` 空殼與呼叫端清掉。
+
+### C-8:說明書第三節
+
+仍寫 V4.6.2 的版面(PPTX、GitHub 分享)。更新到現在的三層結構、Cloudflare 書籤、標記匯出。
+
+### 實作過程踩了一次
+
+R-11 第一版用寬鬆正則移除函式,把旁邊兩個遷移函式一起吃掉(jshint 抓到);想從 zip 取回卻抽錯範圍,回退重做。**正則刪程式碼,錨點一定要精確到整段文字。**
+
+### ⚠️ B-4 需要決策
+
+「HTML 分享」直打 `api.cloudflare.com` —— **Cloudflare API 不回 CORS header,瀏覽器極可能擋**。錯誤會被包成「請確認網路連線」。Git Pusher 是 Python 不受限,所以一直沒發現。
+
+**要問個管師有沒有從 MDT 系統那顆按鈕成功上傳過。** 若沒有,就是 V5.41.0 提過的方案 B(Worker 加上傳端點)。
+
+
+**摘要**:(**B-5**)三組 Zoom 季密碼從程式碼移到設定頁(`mdt_zoom_pwd`,不進備份),`DEFAULT_C` 的 8 處 pwd 清空 —— index.html 在公開 GitHub Pages,密碼一直是公開的,**Zoom 後台仍需重新產生**;(R-11)`exportAllJSON`/`exportMeetingJSON` 不再帶 `mdt_sec_`、`loadMergedSections` 空殼與呼叫端移除;(C-8)USER_GUIDE 第三節更新到 V5.44.0 版面。**B-4 待決策**:「HTML 分享」直打 `api.cloudflare.com`,瀏覽器 CORS 極可能擋,需實機確認或改走 Worker
+
+
+**開發敘事**:V5.50.0 批次 4(B-5 / R-11 / C-8)。**B-5**:三組 Zoom 季密碼寫死在 `zoomPwdByMonth` 與 `DEFAULT_C`(8 處),而 index.html 放在**公開的 GitHub Pages** —— view-source 就看得到,而且在 Git 歷史裡。改存 `mdt_zoom_pwd`(不進備份,加進 `_NEVER_BACKUP`),設定頁三個密碼欄;**密碼本身仍要在 Zoom 後台重新產生**。**R-11**:`exportAllJSON` 與 `exportMeetingJSON` 仍會把 `mdt_sec_` 塞進備份,移除;`loadMergedSections` 空殼與最後一處呼叫端清掉。**C-8**:USER_GUIDE 第三節仍寫 V4.6.2 的版面(PPTX、GitHub 分享),更新到現在的三層結構、Cloudflare 書籤、標記匯出。**實作過程踩了一次**:R-11 第一版用寬鬆正則移除 `loadMergedSections`,把旁邊兩個遷移函式一起吃掉(jshint 抓到 `_migrateSecForIds` undefined);想從 V5.49.0 zip 取回卻抽錯範圍(518KB),回退整份重做 —— **正則刪程式碼,錨點一定要精確到整段文字**,不要用 `[\s\S]*?` 跨函式。**B-4 需要決策**:「HTML 分享」直打 `api.cloudflare.com/client/v4/...`,Cloudflare API 不回 CORS header,瀏覽器極可能擋(錯誤會被包成「請確認網路連線」);Git Pusher 是 Python 不受限,所以一直沒發現。**要問個管師有沒有從 MDT 系統那顆按鈕成功上傳過**;若沒有,就是 V5.41.0 提過的方案 B(Worker 加 `/upload` 端點,index.html 只放上傳密碼不放 CF token)。屬 b+1。
+
+
+---
+
+## V5.49.0
+
+**EV-11 實作 + 審核批次 3**
+
+### EV-11 ⭐ 輸入病歷號時,查以前討論過沒有
+
+個管師 V5.42.0 的原話:
+
+> 把必要提報當作一個個案討論,如果之前有在別的會議相同病歷號,看要不要連結;如果沒有,就是全新個案。
+
+設計說明寫了,一直沒做。現在:
+
+```
+病歷號填完 → 掃歷史會議(個案討論 + 必要事件都找)
+  → 同病歷號取最近一筆 → 問「要把那次的臨床資料複製過來嗎?」
+```
+
+| 帶 | 不帶 |
+|---|---|
+| 病史、檢查、病理、治療、癌指數、NGS、時序、醫師、年齡性別 | **影像**(依 V5.42.0 選的 B)、**討論方向／摘要／決策**(那是這一場要討論的) |
+
+**只在卡片其他欄位還是空的時候才問**,不打擾已填一半的。兩種卡片都能用。
+
+### 批次 3
+
+| # | 改動 |
+|---|---|
+| **R-9** | `if(_saving)return` 會**無聲丟掉**手動儲存 —— 自動存檔進行中按「存檔關閉」,面板關了但沒存。改為**排隊** |
+| **B-7** | 會後面板關閉前,有未寫回的內容就確認 |
+| **R-7** | 遷移抽 `_migrateSecForIds()`;還原備份後**不看旗標再跑一次**(舊備份仍含 `mdt_sec_`);寫入失敗不設旗標 |
+| **B-8** | 標記 JSON 把 `<` 換 `\u003c`,內容含 `</script` 不會弄壞檔案 |
+
+### 實測
+
+```
+B-8: JSON 含 </script → 跳脫後消失 ✅  JSON.parse 回來完整 ✅
+audit-render.js 全綠
+```
+
+
+**摘要**:(**EV-11 新功能**)病歷號 blur 時查歷史會議,同病歷號討論過就問要不要複製臨床資料(不含影像、不含討論/摘要/決策;只在卡片其他欄位還空時才問);(R-9)重入保護改**排隊**,不再無聲丟掉手動儲存;(B-7)會後填寫面板關閉前有未寫回內容就確認;(R-7)遷移抽 `_migrateSecForIds()`,還原備份後不看旗標再跑一次,寫入失敗不設旗標;(B-8)標記 JSON 把 `<` 換成 `\u003c`,內容含 script 結尾標籤不會弄壞檔案。**實作時我自己在註解裡寫了那五個字,主 script 被切斷,`audit-render.js` 當場抓到(坑#79)**
+
+
+**開發敘事**:V5.49.0 EV-11 實作 + 審核批次 3(R-7/R-9/B-7/B-8)。**EV-11**:個管師確認「要實作,查有就問要不要複製」—— 這是 V5.42.0 她自己提的需求(「之前有在別的會議相同病歷號,看要不要連結;沒有就是全新個案」),設計說明寫了但一直沒做。做法:病歷號欄位 `onblur` 時掃全部歷史會議(cases 與 events 都找),同病歷號取日期最近的一筆,`confirm` 問要不要複製;**只帶臨床文字**(name/age/gender/ecog/cfs/doctors/diagnosis/cc/ph/phChips/familyHistory/pathologies/exams/treatments/markers/genomics/timeline),**不帶影像**(依她 V5.42.0 選的 B —— 影像的 subFolder 跟著那場資料夾走,帶過來歸屬驗證全紅),**不帶討論方向/摘要/決策**(那是這一場要討論的);**只在卡片其他欄位還是空的時候才問**,避免打擾已填一半的。座標從 `closest('.casecard').id` 的 `cc-{cid}-{ty}-{i}` 解析,所以兩種卡片都能用。**R-9**:`if(_saving)return` 會無聲丟掉手動儲存 —— 自動存檔進行中按「存檔關閉」,面板關了使用者以為存了;改為排隊,`_savePromise.then(()=>saveMeeting(opts))`。**B-7**:會後面板關閉前比對每個 textarea 的 `value` vs `defaultValue`、select 的 `defaultSelected`,有差就 confirm。**R-7**:遷移抽成 `_migrateSecForIds(ids)`,啟動時看旗標跑全部、還原備份後不看旗標再跑一次(舊備份仍含 `mdt_sec_`),任一筆寫入失敗就不設旗標下次重試;舊本體砍掉不留死碼。**B-8**:標記匯出的 JSON 把 `<` 換 `\u003c`,innerHTML 含 `</script` 也不會提前關閉 hl-data 標籤 —— 實測 `</script` 消失、`JSON.parse` 回來完整。屬 b+1。
+
+
+---
+
+## V5.48.1
+
+**DEL-1 根治 + 專項批次 3(新增坑 #78)**
+
+### DEL-1 ⭐ 刪列後改類型,寫到下一列(兩種卡片都會)
+
+個管師問「先看審稿這問題你解決沒」—— **沒有**。V5.47.1 修了「寫錯卡片」,但列序號還是寫死在 inline:
+
+```html
+<select data-rowid="${ei}" onchange="onExamTypeChange(this,${i},${ei},…)">
+<!--              ↑ 刪列後會遞補         ↑ 刪列後不會變 -->
+```
+
+| 原本三列 | 刪第 1 列後改剩下第 1 列 | 實際 |
+|---|---|---|
+| CT, MRI, PET | 應為 Bone scan, PET | **Bone scan, Bone scan** —— 第 2 列被改掉 |
+
+「AI 匯入後刪掉重複的檢查、再修正類型」正是日常動線。
+
+**根治**:`onExamTypeChange` **不再寫資料**(委派的 `updstruct` 已經會寫),只負責自訂欄的插入/移除。
+
+> **原則**:任何會被刪除/重排的列,座標**只能存在 `data-*`**;inline 在渲染時就固定了。
+
+**新增打包檢查**:inline `on*` 不得含列序號。第一次跑抓到我自己註解裡的範例字串。
+
+### 批次 3
+
+| # | 改動 |
+|---|---|
+| DEL-2 | 刪有內容的列先確認(空白列直接刪) |
+| EV-8 | 會後填寫面板為必要事件加「是否需改善／結案狀態／改善方案」—— 那三項正是死亡病例討論的結論 |
+| EV-9 | 必要事件隱藏五個討論旗標;討論方向 placeholder 換成死亡病例適用的 |
+| EV-10 | 性別非 M/F 顯示「—」(原本空值顯示 M、「男」顯示 F) |
+
+### EV-11 待確認
+
+設計說明寫的「連結舊記錄」(查病歷號、複製舊資料)**從未實作**。要決定是延後還是遺漏。
+
+### 實測
+
+```
+[DEL-1] cases:  刪第1列後改類型 → ["CT","PET"]  ✅ 只改自己那列
+        events: 本卡 ["CT","PET"] ✅  個案討論 ["CT","MRI","PET"] ✅ 沒被動到
+[EV-1]  29 個元件逐一操作,個案討論 0 污染  ✅
+inline 含列序號: 0  ✅
+```
+
+
+**摘要**:**DEL-1 根治 + 專項批次 3**(坑#78):(**DEL-1 P0**)`onExamTypeChange` 的列序號寫死在 inline,刪列後 `data-rowid` 遞補但 inline 不變 → **改類型寫到下一列**(個案自己也會);改成不寫資料、只管自訂欄畫面;(DEL-2)刪有內容的列先確認;(EV-8)會後填寫面板加必要事件的改善/結案三欄;(EV-9)必要事件隱藏旗標、換 placeholder;(EV-10)性別缺值顯示「—」。**打包檢查加:inline 不得含列序號**
+
+
+**開發敘事**:V5.48.1 DEL-1 根治 + 專項批次 3(坑 #78)。個管師問「先看審稿這問題你解決沒」—— **沒有**:V5.47.1 給 `onExamTypeChange` 加了 `type` 參數修了「寫錯卡片」(EV-1),但**列序號 `${ei}` 還是寫死在 inline 屬性裡**。`delStruct` 刪一列後只把 `data-rowid` 往前遞補,inline 字串不會變 —— 同一個選單上,委派的 `updstruct` 讀新的 `data-rowid` 寫對列,inline 的 `onExamTypeChange` 讀舊的 `ei` **寫到下一列**。個案討論自己也會中(刪過檢查列後每次改類型都連帶改掉下一列),必要事件則錯寫到同序號個案的第 n+1 列,而且錯位隨刪除次數改變。「AI 匯入後刪掉重複的檢查、再修正類型」正是日常動線。根治採審核的「更根本的做法」:**`onExamTypeChange` 不再寫資料**(委派已經會寫),只負責自訂欄的插入/移除,所有座標從元素當下的 dataset 讀。實測:兩種卡片刪第 1 列後改剩下第 1 列,都只改到自己那一列,個案討論 `["CT","MRI","PET"]` 不動。**已加打包檢查**:inline `on*` 不得含 `${ei}`/`${pi}`/`${ti}`/`${mi}`/`${rowIdx}` —— 第一次跑抓到我自己註解裡的範例字串,改了措辭。**原則**:任何會被刪除/重排的列,座標只能存在 `data-*`;inline 在渲染時就固定了,之後怎麼改 DOM 都不會跟著變。批次 3:**DEL-2** 刪有內容的列先 confirm(空白列直接刪,不增加負擔);**EV-8** 會後填寫面板為必要事件加「是否需改善/結案狀態/改善方案」三欄並套白名單寫回 —— 那三項正是死亡病例討論的結論,原本只能回卡片上填;**EV-9** 必要事件卡片隱藏五個討論旗標(對死亡病例無意義)、討論方向 placeholder 換成「死因歸因與治療關聯之討論、是否需改善」;**EV-10** 性別 `(d.gender||'M')==='M'?'M':'F'` 讓空值顯示 M、「男」顯示 F,改成非 M/F 顯示「—」。**EV-11 待個管師確認**:設計說明寫的「連結舊記錄」(查病歷號、複製舊資料)從未實作,要決定是延後還是遺漏。屬 c+1。
+
+
+---
+
+## V5.48.0
+
+**必要提報專項批次 2(新增坑 #77)**
+
+### EV-6 ⭐ 「上一場」變成「最新一場」—— 影響全部癌別,潛伏 17 個版本
+
+```js
+const prev=idx.find(mi=>mi.id!==S.meeting.id&&(mi.cids||[]).includes(cid));
+//              ↑ 依賴 idx 的順序
+```
+
+**V5.31.0 把 `mdt_idx` 改成依日期由新到舊排序**。此後 `find` 拿到的是「日期最新的那一場」,不是「本場之前的上一場」。
+
+| 情境 | 帶入的上一場 |
+|---|---|
+| 已有 9/3 與 11/5,建 10/1 | ❌ **11/5** —— 9/3 的個案與必要事件全部漏掉 |
+
+個管師預先建好下個月的會議很常見(排程模式就是為此設計的)。沒人發現是因為「預先建下個月」跟「回頭補上個月」很少同時發生。
+
+**修法**:先 `filter` 出日期早於本場的,再排序取最近。
+
+> **教訓**:改一個資料結構的排序方向時,要 grep 所有用 `find()` / `[0]` / `[length-1]` 取「第一個」的地方 ——
+> 它們隱含「第一個就是我要的」的假設,排序一變全錯,**而且不報錯**。
+
+### EV-7:必要事件匯入跳過整理
+
+| 輸入 | 以前 | 現在 |
+|---|---|---|
+| `chartNo:" 9000099 "` | 原樣 | `"9000099"` |
+| `gender:"男"` | 原樣(檢視卡片顯示成 F) | `"M"` |
+| 時序 `type:"prog"` | 原樣(變未知類型) | `type:"other"`,label 前綴 `[prog]` |
+| `attribution:"疾病惡化"` | 清空但**沒提示** | 清空並在匯入完成後 alert |
+
+`_importWarn` 原本**宣告了、寫了、沒人讀**(坑 T-1 的形狀)。
+
+### R-4 剩餘入口 + `openMtgSchedule`
+
+`_confirmLeave` 補到 10 個入口。`openMtgSchedule` 補 `_resetEditState`(否則排程模式沿用上一場的快照,按「放棄編輯」會被換成上一場的內容)。
+
+### 實測
+
+```
+[EV-6] 已有 11 月時建 10 月 → 前期追蹤 ["C1","D1"],不含 NOV  ✅
+[EV-7] 去空白 ✅  男→M ✅  prog→other|[prog] ✅  警告產生 ✅
+總錯誤: 0
+```
+
+
+**摘要**:**必要提報專項批次 2**(坑#77):(**EV-6 影響全部癌別**)「上一場」用 `idx.find()` 而 `mdt_idx` 自 V5.31.0 依日期新→舊,**預先建好下個月時,前期追蹤帶入的是下個月那場**;改 filter 早於本場再取最近;(EV-7)必要事件匯入跳過整理,抽 `_normalizeImported()` 共用(去空白、性別 M/F、時序類型白名單轉 other 並保留原代碼),`_importWarn` 匯入後彙整顯示;(R-4)剩餘 5 個入口補 `_confirmLeave`;`openMtgSchedule` 補 `_resetEditState`
+
+
+**開發敘事**:V5.48.0 必要提報專項批次 2(坑 #77)。**EV-6 影響全部癌別,而且潛伏了 17 個版本**:`autoImportPrevFollowups` 用 `idx.find(...)` 找「上一場」,依賴 `mdt_idx` 的順序 —— 但 **V5.31.0 把 `mdt_idx` 改成依日期由新到舊排序**,此後 `find` 拿到的是「日期最新的那一場」而不是「本場之前的上一場」。個管師預先建好 11 月的會議(排程模式就是為此設計的),再建 10 月時,**前期追蹤帶入的是 11 月那場的內容,9 月的個案與必要事件全部漏掉**;沒人發現是因為「預先建下個月」跟「回頭補上個月」很少同時發生。修法:先 `filter` 出日期早於本場的再排序取最近,不再依賴 `idx` 的順序。**教訓**:改一個資料結構的排序方向時,要 grep 所有用 `find()`/`[0]`/`[length-1]` 取「第一個」的地方 —— 它們隱含「第一個就是我要的」的假設,排序一變全錯,而且**不報錯**。**EV-7**:必要事件的 JSON 匯入直接 `createItem` 後 return,跳過個案分支的去空白與癌指數去重;而 R-6 改了提示詞但**匯入端沒有正規化**,AI 不照做時沒有防線;`_importWarn` 宣告了、寫了、沒人讀(坑 T-1 的形狀)。抽 `_normalizeImported()`(去空白、性別「男/male」→M、時序類型不在 `TL_TYPES` 的轉 `other` 並把原代碼保留在 label 前綴),兩分支都先過它;匯入完成後彙整 `_importWarn` 用 alert 顯示、顯示後 delete。**R-4 剩餘入口**:`openMtgById`/`openMtgSchedule`/`openHistory`/`openNewModal`/`startNewMtgForCancer` 補 `_confirmLeave`,共 10 個入口;`openMtgSchedule` 補 `_resetEditState`(R-3 的遺漏點,否則排程模式沿用上一場的 dirty 與快照,按「放棄編輯」會被換成上一場的內容)。實測:已有 11 月會議時建 10 月,前期追蹤 `["C1","D1"]`,不含 NOV;病歷號去空白、「男」→M、`prog`→`other|[prog] 進展`、`dx` 不動;`createEvent` 產生警告。實作過程中我在 EV-6 留了一段 `if(false){...}` 死碼,自己抓到清掉(坑 #56)。屬 c+1。
+
+
+---
+
+## V5.47.1
+
+**必要提報專項審核批次 1(新增坑 #76)**
+
+> 個管師說「必要提報那邊問題多」。審核把必要事件區塊 **84 個可操作元件逐一實際點擊或輸入**,
+> 再比對個案討論有沒有被動到 —— 83 個乾淨,**1 個 P0**。
+
+### EV-1 ⭐ 檢查類型會改到另一位病人
+
+檢查類型的 `<select>` 同時掛了**兩個**處理器:
+
+| 處理器 | 有 type 嗎 |
+|---|---|
+| 委派 `data-action="updstruct"` | ✅ 有 `data-ty` |
+| inline `onchange="onExamTypeChange(this,${i},${ei},'${cid}')"` | ❌ **內部寫死 `.cases`** |
+
+必要事件卡片上改檢查類型 → **改到同序號個案討論的檢查名稱**。選「其他」時動態插入的自訂欄也沒設 `dataset.ty`。
+
+**V5.42.0 起就存在,四輪審核沒抓到** —— 因為個案討論卡片自己剛好寫對。
+
+這是坑 #68 的**第四個**漏網點,也是最隱蔽的:前三個都是委派元件,`data-ty` 覆蓋率檢查抓得到;**這個是 inline 屬性,參數藏在字串裡,檢查看不到**。
+
+### 審核給的檢查更根本
+
+> 渲染一張資料齊全的必要事件卡片,**逐一操作每個 input/select/textarea,斷言個案討論的 JSON 不變**。
+
+委派、inline、動態插入的元素全部涵蓋。已加進 `audit-render.js`:29 個元件、0 個污染。
+
+### 四個 P1 = 個管師感受到的四件事
+
+| # | 症狀 | 成因 |
+|---|---|---|
+| **EV-2** | 檢視卡片按「編輯」**打開的是別人的卡片** | `editSingleCase` 寫死 `cc-{cid}-cases-{i}` |
+| **EV-3** | 按「＋新增必要事件」**像沒反應** | `addItem` 只對 cases 展開新卡;新卡收合、游標落在看不見的欄位 |
+| **EV-4** | 刪除必要事件**不確認** | `delItem` 只對 cases 問 |
+| **EV-5** | 上一場只有必要事件時**下一場沒帶入** | `if(!sources.length)return` 讓 events 帶入永遠執行不到 |
+
+### 實測
+
+```
+[EV-1] 逐一操作 29 個元件 → 改到個案討論的: 0  ✅
+data-ty 覆蓋率 48/48  ✅
+存檔→改→放棄往返  ✅
+總錯誤: 0
+```
+
+
+**摘要**:**必要提報專項審核批次 1**(坑#76):(**EV-1 P0**)檢查類型 `onExamTypeChange` 是 inline onchange,內部寫死 `.cases` → **改到同序號個案討論**,V5.42.0 起存在;加 type 參數,自訂欄補 `dataset.ty`;(EV-2)檢視按「編輯」展開錯卡;(EV-3)新增必要事件收合;(EV-4)刪除不確認;(EV-5)上一場只有必要事件時**永遠不帶入**。**`audit-render.js` 加「逐一操作不得改到他卡」**(29 元件 0 污染)
+
+
+**開發敘事**:V5.47.1 必要提報專項審核批次 1(坑 #76)。個管師說「**必要提報那邊問題多**」,審核於是把必要事件區塊 84 個可操作元件**逐一實際點擊或輸入**,再比對個案討論有沒有被動到 —— 結果 83 個乾淨,**1 個 P0**。**EV-1**:檢查類型的 `<select>` 同時掛了委派的 `data-action="updstruct"`(有 `data-ty`,正確)與 inline 的 `onchange="onExamTypeChange(...)"`(**沒有 type 參數**,內部寫死 `.cases[caseIdx]`);必要事件卡片上改檢查類型 → **改到同序號個案討論的檢查名稱**,選「其他」時動態插入的自訂欄也沒設 `dataset.ty`。**V5.42.0 起就存在,四輪審核沒抓到**,因為個案討論卡片自己剛好寫對。這是坑 #68 的**第四個**漏網點,也是最隱蔽的 —— 前三個都是委派元件,`data-ty` 覆蓋率檢查抓得到;**這個是 inline 屬性,參數藏在字串裡,檢查看不到**。**審核給的檢查更根本**:逐一操作每個 input/select/textarea,斷言個案討論的 JSON 不變 —— 委派、inline、動態插入全部涵蓋;已加進 `audit-render.js`,29 個元件 0 個污染。四個 P1 正是個管師感受到的四件事:**EV-2** 檢視卡片按「編輯」展開的是同序號個案(`editSingleCase` 寫死 `cases`),個管師會直接在別人的卡片上打字;**EV-3** 新增必要事件的卡片是收合的(`addItem` 只對 cases 展開),游標落在看不見的欄位,像按了沒反應,個管師會連按好幾次;**EV-4** 刪除必要事件不確認(`delItem` 只對 cases 問),一張填滿死因與改善方案的卡片按一次 × 就沒了;**EV-5** `autoImportPrevFollowups` 的 `if(!sources.length)return` 讓「上一場只有必要事件、沒有個案」時 events 帶入**永遠執行不到** —— 正是 V5.42.0 E-1 要防的漏追,而且 ongoing 前期追蹤也一起漏。批次 2 待做:EV-6(「上一場」會選到日期較晚的會議,影響全部癌別)、EV-7(必要事件 JSON 匯入跳過整套整理、`_importWarn` 從未顯示)、R-4 剩餘入口、`openMtgSchedule` 的 `_resetEditState`。屬 c+1。
+
+
+---
+
+## V5.47.0
+
+**複審批次 2(新增坑 #75)**
+
+### R-6:提示詞的時序類型是我手寫的
+
+| 來源 | 類型代碼 |
+|---|---|
+| V5.44.0 提示詞(手寫) | `dx op ct rt io tt prog resp other` |
+| 系統 `TL_TYPES` | `dx biopsy chemo surgery rt imaging follow recurrence metastasis other` |
+
+**只有三個重疊。** AI 依提示詞輸出的手術、化療、**疾病進展**,匯入後全變「其他」—— 死亡病例時序圖的疾病主軸因此缺少進展事件,而那正是要看的轉折。不報錯、不警告。
+
+修法:清單改由 `TL_TYPES` **程式產生**,不再手寫。
+
+### R-10:同一類的另一面
+
+提示詞把選項給了 AI,**但匯入端沒驗證**。AI 若輸出「疾病惡化」或英文 → 存進資料、下拉顯示空白、DOCX 照原文印。
+
+加白名單:不在選項的**清空**,並列進匯入警告讓個管師知道要補。
+
+> **原則**:提示詞裡的選項清單一律從程式常數產生,匯入端一律白名單驗證。**兩邊都做才閉合。**
+
+### R-4:系統內換頁不檢查未儲存
+
+`beforeunload` 只管關分頁。側欄開另一場、回首頁、開設定、換使用者 —— 原本**都不問**,`S.meeting` 直接被換掉,自動存檔的兜底也跟著消失。
+
+加 `_confirmLeave()`:有未存修改就問「確定 = 先儲存再離開 / 取消 = 留在這裡」。儲存失敗就不離開。
+
+### R-5:自動存檔會寫入「已離開、未存」的會議
+
+B-6 的條件只看 `f-date` 有沒有值。新建會議加了個案沒存就回首頁 → 畫面隱藏但元素仍在 DOM → **自動存檔照樣寫進清單與 NAS**。
+
+加三個條件:會議畫面仍顯示、紀錄模式、編輯中。
+
+### 實測
+
+```
+[R-6]  提示詞涵蓋全部 10 個 TL_TYPES,不含舊代碼      ✅
+[R-10] 『疾病惡化』『Possibly related』清空、『本院住院』保留、警告 2 筆  ✅
+[R-4]  _confirmLeave 無修改時直接放行                  ✅
+載入錯誤: 0
+```
+
+
+**摘要**:**複審批次 2**(坑#75):(R-6)必要提報提示詞的時序類型**手寫**,與 `TL_TYPES` 只有三個重疊 → AI 產出的手術/化療/進展全變「其他」;改由程式產生,`_EVENT_PROMPT` 改函式;(R-10)死亡病例選單欄位加**白名單**,不在選項的清空並列 `_importWarn`;(R-4)換會議/回首頁/開設定/換使用者五個入口加 `_confirmLeave()`(有未存修改先問);(R-5)自動存檔加「會議畫面仍顯示 + 紀錄編輯模式」兩條件,不再把已離開的會議寫進清單
+
+
+**開發敘事**:V5.47.0 複審批次 2(坑 #75)。四項都不阻擋上線但都會弄壞資料。**R-6 是我 V5.44.0 手寫出來的**:必要提報提示詞的時序類型寫成 `dx|op|ct|rt|io|tt|prog|resp|other`,而系統 `TL_TYPES` 是 `dx|biopsy|chemo|surgery|rt|imaging|follow|recurrence|metastasis|other`,**只有三個重疊** —— AI 依提示詞輸出的手術、化療、**疾病進展**,匯入後全部變成「其他」,死亡病例時序圖的疾病主軸因此缺少進展事件,而那正是要看的轉折;不會報錯、不會警告。修法是清單改由 `TL_TYPES.map(...)` 程式產生,`_EVENT_PROMPT` 從 const 改成函式(樣板字串在定義時就求值,const 引用不到執行期的 `TL_TYPES`)。**R-10 是同一類的另一面**:提示詞把選項給了 AI,但匯入端沒驗證 —— AI 若輸出「疾病惡化」或英文,會存進資料、下拉顯示空白、DOCX 照原文印;加白名單 `_pick(v,list)`,不在選項的清空並列進 `_importWarn`。**原則**:提示詞裡任何「從以下選填」的清單一律從程式常數產生,匯入端一律白名單驗證,**兩邊都做才閉合**。**R-4**:系統內換頁不檢查未儲存修改 —— `beforeunload` 只管關分頁,側欄開另一場、回首頁、開設定、換使用者原本都不問,`S.meeting` 直接被換掉而 2 分鐘自動存檔的兜底也跟著消失;加 `_confirmLeave()`(有未存修改就問「確定=先儲存再離開 / 取消=留在這裡」,儲存失敗就不離開),掛在五個入口,那五個函式因此改成 async。**R-5** 是 B-6 的副作用:自動存檔條件只看 `f-date` 有沒有值,不看使用者是否還在會議畫面 —— 新建會議加了個案沒存就回首頁,畫面隱藏但 `#f-date` 仍在 DOM,自動存檔照樣把「使用者以為沒存就不算數」的會議寫進清單與 NAS;加「會議畫面仍顯示 + `meetingMode==='record'` + `!viewMode`」三個條件。實測:提示詞清單涵蓋全部 10 個 TL_TYPES 且不含舊代碼、白名單清掉 2 個 AI 自創值並保留合法值、`_confirmLeave` 無修改時直接放行、載入錯誤 0。屬 c+1。
+
+
+---
+
+## V5.46.1
+
+**複審批次 1(新增坑 #74)**
+
+> 審核判定 V5.46.0 不建議上線 —— 前次 A-1~A-5 全數確認修正,但新發現 2 個 P0。
+
+### R-1 ⭐ 我自己的疏漏:主路徑沒改
+
+V5.46.0 給 `buildTimelineRows` 加了 `type` 參數:
+
+| 呼叫點 | 改了嗎 |
+|---|---|
+| `addStruct` 之後的重繪 | ✅ |
+| `delStruct` 之後的重繪 | ✅ |
+| **`caseHTML` 卡片第一次渲染** | ❌ |
+| `delStruct` 內另一處 | ❌ |
+
+**會議一開啟,必要事件卡片上每一列時序都帶 `data-ty="cases"`** —— 打字與刪除作用到同索引的個案討論,兩邊都不報錯。
+
+這是坑 #68 的**第三個**漏網點,而且這次漏的是主路徑。前兩次都是修「發現問題的那一支」,**沒有回頭數「這個函式一共被幾個地方呼叫」**。
+
+**寬容預設是它藏了一版的原因**:`type?type:"cases"` 讓漏傳的呼叫點安靜地走 cases。改成 `console.error` + 退回。
+
+### 審核給的檢查比逐點追更根本
+
+> 渲染一張資料齊全的必要事件卡片,**斷言所有 `[data-action][data-cid]` 的 `data-ty` 都等於 events**。
+
+這一條抓得出 #64 / #67 / #68 / #73 / #74 **這一整類**。已加進 `audit-render.js`:48 個元素、0 個錯。
+
+### R-2 ⭐ A-4 修法的副作用
+
+V5.45.0 把快照更新放進有 gen 檢查的 setTimeout:
+
+```js
+setTimeout(()=>{
+  if(_editGen!==_genAtSave)return;          // 有新修改就整段跳過
+  S._snapshot=JSON.stringify(S.meeting);    // ← 快照也一起被跳過
+},1200);
+```
+
+「存檔後 1.2 秒內繼續打字」→ 快照停在**進入編輯那一刻** → 按「放棄編輯」:
+
+| 觀察點 | 結果 |
+|---|---|
+| 記憶體 | **A0**(連已存的 A1 都被倒回) |
+| version | **倒退** |
+| 下次存檔 | 與別台**同號但內容不同**,NAS 永遠對不齊 |
+
+**快照必須在寫入成功的當下更新**,與收尾動畫無關。
+
+### R-3:`renderEditor()` 暗中清 `_dirty`
+
+18 個呼叫點,被當「重繪」用卻同時清狀態。`rebindMeetingImages` 的 `markDirty();renderEditor();` 讓影像修改立刻失去保護 —— 底部變「檢視」、自動存檔跳過、關分頁不攔,**畫面上卻寫著「請記得儲存」**。
+
+拆成 `_resetEditState()`,只在**換了一場會議**的 6 個入口呼叫。新會議因此也有了快照(B-1 的 T4 一併解決)。
+
+### 實測
+
+```
+必要事件卡片 48 個元素 data-ty≠events: 0  ✅
+存檔→立即修改→放棄:記憶體=A1 磁碟=A1  ✅
+總錯誤: 0
+```
+
+
+**摘要**:**複審批次 1**(坑#74):(**R-1 P0**)`buildTimelineRows` 的 `type` 只改了兩個重繪呼叫點,**主渲染路徑沒改** → 必要事件時序列帶 `data-ty="cases"`,打字與刪除作用到同索引個案;type 改必填(漏傳當場 console.error);(**R-2 P0**)快照放在有 gen 檢查的 setTimeout 內 → 存檔後 1.2 秒內打字,「放棄編輯」把**已存內容也倒回**且 version 倒退;改為寫入成功當下更新;(R-3)`renderEditor()` 不再清 `_dirty`,改由 `_resetEditState()` 在 6 個換會議入口呼叫;(R-8)else 分支也加 gen 檢查。**`audit-render.js` 加兩項:整卡 data-ty 覆蓋率、存檔→改→放棄往返**
+
+
+**開發敘事**:V5.46.1 複審批次 1(坑 #74)。審核判定 V5.46.0 不建議上線 —— 前次的 A-1~A-5 全數確認修正,但**新發現 2 個 P0,其中 R-1 是我自己的疏漏**:V5.46.0 給 `buildTimelineRows` 加了 `type` 參數,**只改了兩個重繪呼叫點**(`addStruct`/`delStruct` 之後),**卡片第一次渲染的主路徑 `caseHTML` L4652 沒改** —— 會議一開啟,必要事件卡片上每一列時序都帶 `data-ty="cases"`,打字與刪除作用到**同索引的個案討論**,兩邊都不報錯。這是坑 #68 的第三個漏網點,而且這次漏的是主路徑;前兩次都是修「發現問題的那一支」,**沒有回頭數「這個函式一共被幾個地方呼叫」**(4 處,我改了 2 處)。**寬容預設是它藏了一版的原因**:`type?type:"cases"` 讓漏傳的呼叫點安靜地走 cases,改成 `console.error` + 退回。**審核給的檢查比逐點追更根本** —— 渲染一張資料齊全的必要事件卡片,斷言所有 `[data-action][data-cid]` 的 `data-ty` 都等於 events,這一條抓得出 #64/#67/#68/#73/#74 **這一整類**;已加進 `audit-render.js`,48 個元素 0 個錯。**R-2 是 A-4 修法的副作用**:快照更新放進了有 gen 檢查的 setTimeout,「存檔後 1.2 秒內繼續打字」就讓快照停在進入編輯那一刻 → 按「放棄編輯」把**已經存檔的內容也倒回去**,連 version 一起倒退,下次存檔與別台**同號但內容不同**,NAS 只比版本號 → 永遠對不齊;快照改為在寫入成功的**當下**更新,setTimeout 只留 UI。**R-3**:`renderEditor()` 有 18 個呼叫點,被當「重繪」用卻同時清 `_dirty` —— `rebindMeetingImages` 的 `markDirty();renderEditor();` 讓影像修改立刻失去保護(底部變「檢視」、自動存檔跳過、關分頁不攔,**畫面上卻寫著請記得儲存**);拆成 `_resetEditState()`,只在換了一場會議的 6 個入口呼叫(`openMtgById`/`openMtgRecord`/`createNewMtg`×2/`confirmCopyMtg`/`resolveConflict`),新會議因此也有了快照(B-1 的 T4 一併解決)。R-8 是 A-4 的另一半:else 分支在 `await saveShared()` 之後無條件清 dirty,補上 gen 檢查。**批次 2**(R-4 換會議不檢查未存、R-5 自動存檔寫入已離開的會議、R-6 提示詞時序類型與 `TL_TYPES` 對不上、R-10 死亡病例選單白名單)待做。屬 c+1。
+
+
+---
+
+## V5.46.0
+
+**根治方案甲:停用 `mdt_sec_*`(新增坑 #73)**
+
+### 起點是個管師的一句話
+
+> 「功能蠻不錯的,但不知道為什麼**無法刪減,存檔又重新開就又出現了**」
+
+附圖是病程時序的七列。查證後確認 —— **那正是上線前審核預測的 A-3。**
+
+### 成因
+
+```js
+function loadMergedSections(){
+  if(!S.meeting||S.cids.length<=1)return;      // 只在合併會議執行
+  S.cids.forEach(cid=>{
+    const saved=loadSec(cid,S.meeting.date);
+    if(saved)S.meeting.sections[cid]=saved;     // ← 整個覆蓋記憶體
+  });
+}
+```
+
+NK/T-cell lymphoma 是血液淋巴癌 —— 正是「頭頸＋血淋」那種合併會議。
+
+```
+刪掉時序列 → 記憶體更新 ✅
+任何操作觸發 renderEditor()(18 處呼叫)→ 磁碟版蓋回來 🔴
+存檔 → 存的是蓋回來的舊版
+```
+
+### `mdt_sec_` 是第二份副本
+
+`mdt_m_{id}` **本來就含完整 sections**。而這第二份有三個致命性質:
+
+| 性質 | 後果 |
+|---|---|
+| **不含會議 ID** | 同日同癌別的兩場會議**共用同一把 key**(A-2) |
+| **不隨 NAS 同步** | 另一台同步進來的新版,**一開啟就被本機舊的蓋掉**(A-1) |
+| **會被重繪重讀** | 任何 `renderEditor()` 都把**未存的修改換成磁碟版**(A-3) |
+
+### 這個形狀在 V5.19.1 被「修」過一次
+
+當時加了日期衝突偵測與舊 key 清理。
+
+> **那是在替第二份副本打補丁,而不是問「為什麼要有第二份」。**
+
+而補丁本身又製造了 B-2(複製會議時 `_loadedDate` 殘留 → 首存刪掉原會議的分區)。
+
+### 根治做法
+
+| 步驟 | 動作 |
+|---|---|
+| 停止讀 | `openMtgRecord` 的覆蓋行移除;`loadMergedSections()` 改空實作(**6 處呼叫端不動**,降低風險) |
+| 停止寫 | `saveMeeting` 的 saveSec 區段整段移除(日期衝突偵測隨之不必要) |
+| 遷移 | **只有 `mdt_m_` 那一段是空的才採用 sec**;不動 version/touchedAt |
+| 退路 | 舊 `mdt_sec_` key **暫不刪除**,保留一版 |
+
+### 順手修的漏網之魚
+
+`buildTimelineRows` 產生的元素**沒有 `data-ty`** —— **那是坑 #68 的漏網之魚**:V5.42.4 只補了 `addStruct` 產生的那批,這支獨立的產生器沒補。
+
+### 教訓
+
+> 坑 #61 說「同一件事的第二份實作要刪掉」,但當時只想到**程式碼**的重複。
+> **資料也會有第二份,而且更危險** —— 程式碼分歧會報錯,**資料分歧只會安靜地蓋掉一邊**。
+
+### 實測
+
+```
+[A-3] 原本 3 列 → 刪除後 2 列 → 觸發重繪後 2 列  ✅（原本會變回 3）
+[A-1] NAS 同步進來的新版 version=9 病歷號保住   ✅
+存檔後 mdt_sec_ key 數: 0                        ✅
+時序列 data-ty: cases ✅  events ✅
+總錯誤: 0
+```
+
+
+**摘要**:**根治方案甲:停用 `mdt_sec_*`**(坑#73,一次解決審核 A-1/A-2/A-3/B-2 四個 P0/P1)。個管師實際回報的是 A-3:「**刪掉病程時序的一列,存檔重開又出現**」—— `loadMergedSections()` 會用磁碟上的第二份副本蓋掉記憶體中未存的修改,而 `renderEditor()` 有 18 處呼叫。停止讀、停止寫、加一次性遷移、舊 key 留一版當退路。另修 `buildTimelineRows` 的 `data-ty`(坑#68 的漏網之魚)與 B-2 的 `_loadedDate` 殘留
+
+
+---
+
+## V5.45.0
+
+**上線前審核批次 1(新增坑 #72)**
+
+> 這一輪審核刻意**不沿用專案既有的檢查框架**,從三個看不到的角度切入:
+> 多機資料流、時間軸上的狀態競爭、部署環境。
+>
+> **結果:既有六項檢查與 `audit-render.js` 全部通過,但抓出 5 個 P0。**
+
+### A-5 ⭐ NAS 每日備份夾帶金鑰(現在進行式的外流)
+
+```js
+Object.keys(localStorage).forEach(k=>{ if(k.startsWith('mdt_'))data[k]=…; });
+//                                        ↑ mdt_ai_key、mdt_cf_token 都符合
+```
+
+V5.37.0 的 P0-9 只修了**手動匯出**(`_PREF_FIXED` 白名單)。**這正是坑 #61** —— 同一件事(決定什麼能備份)有兩份實作,修了一份漏了另一份。
+
+> 每天一份、每人 10 份、放在**三人共用的 NAS** 上。
+> 而 CF token 有 KV 的 Edit 權限(**含刪除**)。
+
+### A-4 ⭐ Ctrl+S 後 1.2 秒內打的字被標成「已儲存」
+
+```js
+setTimeout(()=>{ _dirty=false; … '✓ 已儲存' },1200);   // 無條件
+```
+
+但 **V5.38.0 加 Ctrl+S 的目的就是「連續打字中存檔」** —— 「按完立刻繼續打」不是邊緣情況,**是主流操作**。
+
+| | 打字當下 | 1.2 秒後 |
+|---|---|---|
+| `_dirty` | `true` | **`false`** |
+| 底部列 | — | **✓ 已儲存** |
+| localStorage 有新字 | — | **否** |
+| `beforeunload` 攔截 | — | **否** |
+| 自動存檔 | — | **跳過** |
+
+而且 `_collapseAllCases()` 會把**正在輸入的那張卡片收起來**。
+
+**改用修改世代號**取代布林值:存檔前記下 `_editGen`,收尾時比對,期間有新修改就整段跳過。
+
+### 其餘四項
+
+| # | 問題 |
+|---|---|
+| **B-1** | 存檔後 `S._snapshot=null` → 「放棄編輯」**找不到快照可還原**,想放棄的修改留在記憶體,下次儲存就寫進去 |
+| **B-6** | 自動存檔條件是 `S.meeting.version`,而**新會議的 version 是 0** → 第一次建檔(最長的一段輸入)**完全沒有保護** |
+| **C-3** | Ctrl+S 無重入保護,按住會連續存檔(version 連跳、對 NAS 並行寫入) |
+| **C-1** | `cases-list` **這個元素全檔不存在** → 個案卡片套用 AI 判讀後**畫面永遠不更新** |
+
+### 實作時踩了兩個自己的坑
+
+| 坑 | 情況 | 誰抓到 |
+|---|---|---|
+| **#54** | `const _genAtSave` 宣告在 `try{}` 內,收尾 `setTimeout` 在 try 之後 —— **區塊作用域讀不到** | jshint |
+| **#52** | A-5 的常數插在 `async` 與 `function` 之間 | `node --check` |
+
+> #54 那個特別值得記:**旁邊那行註解正好寫著「`_lok` 提升到 try 外」**,就在同一個函式裡,我還是踩了。
+
+### 實測結果
+
+```
+[A-5] 含 AI Key: false ✅  含 CF Token: false ✅  其餘 5 筆仍備份 ✅
+[A-4] 存檔時 gen=0 → 打字後 gen=1,收尾正確跳過 ✅  _dirty=true ✅
+[C-3] _saving 旗標 ✅
+[C-1] 舊的 cases-list 確實不存在(所以原本永遠不重繪)✅
+總錯誤: 0
+```
+
+### 批次 2(尚未做)
+
+**根治方案甲:停用 `mdt_sec_*`** —— 一次解決 A-1/A-2/A-3/B-2 四個**合併會議的資料覆蓋**問題。
+
+屬資料層變更、需遷移與備份,**合併會議共編前必須完成**。
+
+
+**摘要**:**上線前審核批次 1**(坑#72):(**A-5 P0**)NAS 每日備份**前綴全收**,夾帶 `mdt_ai_key` 與 `mdt_cf_token` —— V5.37.0 P0-9 只修了手動匯出,**同一件事兩份實作**(坑#61);(**A-4 P0**)存檔收尾無條件清 `_dirty` → **Ctrl+S 後 1.2 秒內打的字被標成已儲存**,改用修改世代號;(**B-1 P1**)存檔後快照清成 null → 「放棄編輯」無效;(C-3)Ctrl+S 無重入保護;(B-6)**新會議永遠不自動存檔**(`version` 為 0);(C-1)`cases-list` 元素不存在 → AI 判讀後個案畫面永遠不更新
+
+
+**開發敘事**:V5.45.0 上線前審核批次 1(坑 #72)。這一輪的審核刻意**不沿用專案既有的檢查框架**,從三個看不到的角度切入(多機資料流、時間軸上的狀態競爭、部署環境),結果:**既有六項檢查與 `audit-render.js` 全部通過,但抓出 5 個 P0**。本版先修批次 1(改動小、集中在 `saveMeeting` 與備份)。**A-5 是現在進行式的外流**:NAS 每日自動備份用**前綴全收**(`k.startsWith('mdt_')`),而 `mdt_ai_key` 與 `mdt_cf_token` 都以 `mdt_` 開頭 —— V5.37.0 的 P0-9 只修了**手動匯出**那條(`_PREF_FIXED` 白名單);每天一份、每人 10 份、放在三人共用的 NAS 上,而 CF token 有 KV 的 Edit 權限(**含刪除**)。**這正是坑 #61**:同一件事(決定什麼能備份)有兩份實作,修了一份漏了另一份。**A-4**:存檔收尾的 1.2 秒 `setTimeout` **無條件**清 `_dirty`,但 V5.38.0 加 Ctrl+S 的目的就是「連續打字中存檔」—— 那 1.2 秒內打的字 `beforeunload` 不攔、自動存檔跳過、底部列還顯示「✓ 已儲存」,**使用者完全看不出來**;改用**修改世代號**。**B-1** 是它的孿生:存檔後 `S._snapshot=null`,「放棄編輯」找不到快照可還原,想放棄的修改留在 `S.meeting` 並在下次儲存時寫進去;改成存剛存好的狀態。**B-6**:自動存檔的條件是 `S.meeting.version`,而**新會議的 version 是 0** —— 第一次建檔(通常是最長的一段輸入)**完全沒有自動存檔保護**。C-3 補 Ctrl+S 重入保護(`_saving` + `e.repeat`);C-1 `cases-list` **這個元素全檔不存在**,所以個案卡片套用 AI 判讀後畫面永遠不更新(V5.42.4 只修好 events 分支)。**實作時踩了坑 #54 的完全相同形狀**:`const _genAtSave` 宣告在 `try{}` 內、收尾 `setTimeout` 在 try 之後,**區塊作用域讀不到** —— 而旁邊那行註解正好寫著「`_lok` 提升到 try 外」,就在同一個函式裡我還是踩了(jshint 當場抓到)。另外 A-5 的第一次修法把常數插在 `async` 與 `function` 之間,**坑 #52 重演**,也是當場被 `node --check` 抓到。**批次 2 是根治方案甲**(停用 `mdt_sec_*`,一次解決 A-1/A-2/A-3/B-2 四個合併會議的資料覆蓋問題),屬資料層變更、需遷移與備份,**合併會議共編前必須完成**。屬 b+1。
+
+
+---
+
+## V5.44.1
+
+**修:必要提報的臨床資料完全沒進投影片(新增坑 #71)**
+
+### 症狀
+
+個管師:「有寫必要事件提報的欄位,但 HTML 沒有顯示。」
+
+| 編輯畫面 | 投影片 |
+|---|---|
+| 過去病史(HTN/DM + ASHD…) | ❌ |
+| 病理 4 筆 | ❌ |
+| 檢查、治療、癌指數、NGS | ❌ |
+| 病程時序 | ❌ |
+| 死亡資訊、病程經過 | ✅ |
+
+### 原因:下游不只一條
+
+V5.42.0 把 events 從 `createTeamItem`(13 欄)改成 `createEvent`(個案全欄 + 死亡資訊):
+
+| 下游 | 跟上了嗎 |
+|---|---|
+| 編輯畫面(`caseHTML`) | ✅ |
+| 檢視卡片(`caseViewHTML`) | ✅ |
+| DOCX | ✅ |
+| **HTML 投影片** | ❌ **仍走 `_trackSlide`** |
+
+而 `_trackSlide` 是 **V5.0.0 為「醫療小組」寫的**,只渲染 5 個文字欄位。
+
+### 為什麼前面五輪實測沒抓到
+
+> V5.42.x 的審核全部聚焦在「**輸入寫到哪裡**」(打字落點、點擊、新增列、跨卡片污染)。
+> **沒有人跑一次「填完 → 產投影片 → 看內容有沒有到齊」。**
+
+那是輸入路徑與輸出路徑的分界 —— 兩邊都測了,**中間那條線沒測**。
+
+### 這是坑 #60 的第三種形狀
+
+| 坑 | 形狀 |
+|---|---|
+| #60 | 舊入口刪掉後,原本走它的情況去哪了 |
+| #68 | 改了函式,沒改函式**產生的 HTML** |
+| **#71** | **換了資料結構,但讀它的「下游」不只一個** |
+
+**已寫進原則**:改資料結構時,列出所有讀它的地方 —— 編輯畫面、檢視卡片、列印、DOCX、投影片、LINE、JSON 匯出 —— **逐一確認**。這個系統的下游有七條,**漏一條就是「填了看不到」**。
+
+### 修法
+
+在 `_trackSlide` 補上七個臨床資料區塊。**團隊卡片沒有那些欄位,所以這段對它是 no-op**,不影響醫療小組的投影片。
+
+
+**摘要**:**修:必要提報的臨床資料完全沒進投影片**(坑#71)。V5.42.0 把 events 改用完整個案結構,編輯畫面/檢視卡片/DOCX 都跟上了,**但 HTML 投影片仍走 `_trackSlide`** —— 那是 V5.0.0 為「醫療小組」寫的,只渲染 5 個文字欄位 → **過去病史、病理、檢查、治療、癌指數、NGS、病程時序全部看不到**,而那正是死亡病例討論的核心。已補上七個區塊(team 無這些欄位,不受影響)
+
+
+**開發敘事**:V5.44.1 修必要提報的臨床資料完全沒進投影片(坑 #71)。個管師回報「**有寫必要事件提報的欄位,但 HTML 沒有顯示**」,附了兩張圖:編輯畫面有過去病史(HTN/DM + ASHD…)、病理四筆、檢查、治療,但投影片上**只有死亡資訊與病程經過**。原因:V5.42.0 把 events 從 `createTeamItem`(13 欄)改成 `createEvent`(個案全欄 + 死亡資訊)之後,**編輯畫面跟上了**(改用 `caseHTML`)、**檢視卡片跟上了**(`caseViewHTML`)、**DOCX 跟上了**(補了死亡欄位)—— **但 HTML 投影片沒有**:`events` 仍走 `_trackSlide`,而那是 **V5.0.0 為「醫療小組」寫的**,只渲染 cc/familyHistory/discussion/summary/decision 五個文字欄位。**為什麼前面五輪實測沒抓到**:V5.42.x 的審核全部聚焦在「**輸入寫到哪裡**」(打字落點、點擊、新增列、跨卡片污染),**沒有人跑一次「填完 → 產投影片 → 看內容有沒有到齊」** —— 那是輸入路徑與輸出路徑的分界,兩邊都測了,中間那條線沒測。**這是坑 #60 的第三種形狀**:#60 是「舊入口刪掉後使用者去哪了」、#68 是「改了函式沒改它產生的 HTML」、**#71 是「換了資料結構,但讀它的下游不只一個」**。這個系統的下游有七條(編輯畫面、檢視卡片、列印、DOCX、投影片、LINE、JSON 匯出),**漏一條就是「填了看不到」**,已寫進原則:改資料結構時要列出所有讀它的地方逐一確認。修法是在 `_trackSlide` 補上七個臨床資料區塊(過去病史/病理/檢查/治療/癌指數/基因檢測/病程時序),**團隊卡片沒有那些欄位,所以這段對它是 no-op**,不影響醫療小組的投影片。屬 c+1。
+
+
+---
+
+## V5.44.0
+
+**兩件事,都是分類問題**
+
+### ① 底部固定列的三顆產出鍵移除
+
+個管師:「儲存鈕旁邊多了不對的三個鈕」——
+
+> **因為在編輯模式時,根本不需要產出那些。**
+
+V5.39.0(F-3)加它們的理由是「產出鍵在整頁最底部,8 個個案要滑過全部才按得到」。那個觀察沒錯,但**沒想到產出是「弄完了」才做的事**。
+
+這跟 V5.43.3(檢查影像/錄音切割不是產出)是**同一個分類問題連續第二次**:
+
+> 功能擺哪裡,要看「**什麼時候會用它**」,不是「按起來方不方便」。
+
+固定列現在只留:
+
+```
+✓ 已儲存 15:42                              放棄編輯 ｜ 儲存
+```
+
+### ② 醫療小組與必要提報也能 JSON 匯入
+
+**沒有加兩顆匯入按鈕**(摺疊區已經很滿),改成 **JSON 自己宣告要進哪一區**:
+
+```json
+[{"_target":"events","_cancer":"肝膽胰癌","chartNo":"0000001", ...}]
+```
+
+三種提示詞各自要求 AI 輸出對應的 `_target`,匯入時據此路由。**沒有 `_target` 就退回 `cases`** —— 舊 JSON 照樣能用。
+
+| 提示詞 | 欄位 |
+|---|---|
+| **提示詞·個案** | 原本那份(完整臨床欄位) |
+| **提示詞·小組** | 11 欄。點明 `cc` 是「**之前**的現病史」、`summary` 是「**最新情況**」 |
+| **提示詞·提報** | 個案全欄 + 死亡資訊 |
+
+### 提報那份特別加了一條限制
+
+> **死因歸因與「與治療之關聯」尤其不可推測** —— 資料沒明講就留空字串,那是 MDT 會議上要討論決定的,不是 AI 判斷的。
+
+### jsdom 實測
+
+```
+三筆 JSON(team / events / 無 target)→ cases=1 team=1 events=1  ✅
+team  病歷號=T001                                              ✅
+events病歷號=E001 死亡日=2026-03-20 狀態=待討論                 ✅
+cases 病歷號=C001(無 _target 退回 cases)                       ✅
+載入錯誤: 0
+```
+
+
+**摘要**:(**①**)底部固定列的三顆產出鍵(LINE 通知/HTML 投影片/會議小抄)**移除** —— 個管師:「**編輯模式時根本不需要產出那些**」;V5.39.0(F-3)加它們時只想到「產出鍵在整頁最底部」,沒想到產出是「弄完了」才做的事。固定列只留放棄編輯/儲存。(**②**)**醫療小組與必要提報也能 JSON 匯入**:不加匯入按鈕,改成**三種提示詞各自要求 AI 輸出 `_target`**,JSON 自己宣告要進哪一區(無 `_target` 退回 cases,舊 JSON 照樣能用);三份提示詞欄位各自對應(小組 11 欄、提報多死亡資訊),**且明確要求 AI 不得推測死因歸因與治療關聯** —— 那是會議上要討論決定的
+
+
+**開發敘事**:V5.44.0 兩件事,都是分類問題。**①底部固定列的三顆產出鍵移除**:個管師看著畫面說「儲存鈕旁邊多了不對的三個鈕」,理由是「**因為在編輯模式時,根本不需要產出那些**」。V5.39.0(F-3)加它們的理由是「產出鍵在整頁最底部,8 個個案要滑過全部才按得到」—— 那個觀察沒錯,但**我沒想到產出是「弄完了」才做的事**,跟「編輯中隨時要用」的儲存混在一起反而讓固定列失焦。這跟 V5.43.3(檢查影像/錄音切割不是產出)是**同一個分類問題連續第二次**:功能擺哪裡,要看「**什麼時候會用它**」而不是「按起來方不方便」。固定列現在只留放棄編輯/儲存。**②醫療小組與必要提報也能 JSON 匯入**:個管師要的是「提供 JSON 匯入個案,然後按照欄位寫新的 prompt,AI 生成 prompt 分成三種」。實作上**沒有加兩顆匯入按鈕**(摺疊區已經很滿),改成**三種提示詞各自要求 AI 輸出 `_target`**,匯入時據此路由 —— **JSON 自己宣告要進哪一區**,而沒有 `_target` 就退回 `cases`(舊 JSON 照樣能用)。三份提示詞的欄位各自對應:醫療小組 11 欄(且點明 `cc` 是「**之前**的現病史」、`summary` 是「**最新情況**」—— 那正是輸入介面審核指出的同名不同義);必要提報是個案全欄 + 死亡資訊,並**明確要求 AI 不得推測 `attribution`(死因歸因)與 `txRelated`(與治療關聯)** —— 那是 MDT 會議上要討論決定的,不是 AI 判斷的,沒明講就留空。**jsdom 實測**:三筆 JSON(team/events/無 target)分別進到正確區塊、events 的死亡日期與狀態完整保留、無 `_target` 的退回 cases,載入錯誤 0。順手給 `scrollIntoView` 加了存在性保護。屬 b+1。
+
+
+---
+
+## V5.43.4
+
+**按鈕配色建立規則**
+
+### 個管師問「這配色的邏輯是?」
+
+查證後的答案:**沒有邏輯,是歷史遺留。**
+
+產出區 13 顆按鈕,只有兩顆是深色 `btn-a`:
+
+| 按鈕 | 使用頻率 |
+|---|---|
+| LINE 通知 | **每場都用** |
+| AI 生成摘要 | 收在摺疊區,**一年用不到幾次** |
+
+**兩顆沒有任何共同點。**
+
+推測成因:`btn-a` 用在當初第一顆做出來的按鈕上,後來新增的都複製 `btn-b`;「AI 生成摘要」是後來加的,大概想強調它是那一區的主要動作。
+
+### 問題不是難看,是誤導
+
+深色在設計上意味「**主要動作**」—— 個管師看到會以為那顆比較重要。
+
+### 個管師自己給了更好的規則
+
+> 「LINE 通知變成跟其他一樣,**AI 生成摘要特殊色要留著,因為那個是要串 AI 才有的功能**。」
+
+這比「主要動作」好,因為它**對應到一個使用者需要知道的事實**:那顆要先到設定頁填 API Token 才能用。
+
+**深色從此只代表「需要串接 AI」** —— 目前只有一顆。
+
+
+**摘要**:按鈕配色建立規則:「LINE 通知」從 `btn-a`(深底)改 `btn-b`。原本深色**沒有規則可循** —— 13 顆產出按鈕只有「LINE 通知」與「AI 生成摘要」深色,而兩者重要性天差地遠。**深色從此只代表「需要串接 AI 才能用」**,個管師看到深色就知道要先設定 API Token
+
+
+**開發敘事**:V5.43.4 按鈕配色建立規則。個管師問「這配色的邏輯是?」—— 查證後的答案是**沒有邏輯,是歷史遺留**:產出區 13 顆按鈕只有兩顆深色 `btn-a`,「LINE 通知」與「AI 生成摘要」,而**這兩顆沒有任何共同點**(一個是每場都用的主力產出、一個是收在摺疊區一年用不到幾次的低頻工具)。推測成因是 `btn-a` 用在當初第一顆做出來的按鈕上,後來新增的都複製 `btn-b`;「AI 生成摘要」是後來加的,大概想強調它是那一區的主要動作。**問題不是難看,是誤導** —— 深色在設計上意味「主要動作」,個管師看到會以為那顆比較重要。**個管師自己給了更好的規則**:「LINE 通知變成跟其他一樣,AI 生成摘要特殊色要留著,**因為那個是要串 AI 才有的功能**」。這比「主要動作」好,因為它**對應到一個使用者需要知道的事實**:那顆要先到設定頁填 API Token 才能用。深色從此只代表「需要串接 AI」,目前只有一顆。屬 c+1。
+
+
+---
+
+## V5.43.3
+
+**功能列歸位**
+
+### 個管師的觀察
+
+> 「**那一排是產出的**,把『檢查影像』『錄音切割』移到上面自訂/清除旁邊,感覺更適合。」
+
+這個判斷點出一個分類錯誤:
+
+| 「主力產出」那一排 | 是產出嗎 |
+|---|---|
+| LINE 通知 / HTML 投影片 / Word 簡報 / DOCX 記錄 / 會議小抄 | ✅ 都是「產生一份給別人看的東西」 |
+| **🔍 檢查影像** | ❌ 是「**選完圖之後確認有沒有選對**」 |
+| **🎙 錄音切割** | ❌ 產出的是**逐字稿**,不是會議文件 |
+
+而「檢查影像」跟左邊那排資料夾按鈕(多專科會議影像／自訂／清除)**本來就是同一件事的上下游**。
+
+### 代價不是「難看」
+
+> **是「這場弄完了要按哪幾顆」變得不清楚。**
+
+那正是 V5.36.1 分層(U-3)想解決的問題 —— 只是當時只分了「主力產出 / 資料交換」兩層,**沒注意到主力產出裡還混著工具**。
+
+### 改後
+
+```
+📂 多專科會議影像  自訂  清除              🔍 檢查影像  🎙 錄音切割
+─────────────────────────────────────────────────────────
+主力產出
+LINE 通知 ｜ HTML 投影片 ｜ Word 簡報 ｜ DOCX 記錄 ｜ 會議小抄
+```
+
+左邊是「**現在用哪個資料夾**」,右邊是「**對資料夾做什麼**」;下面那排**五顆全部都是產出**。
+
+
+**摘要**:功能列歸位:「🔍 檢查影像」與「🎙 錄音切割」從「**主力產出**」移到上方的資料夾工具列。個管師的觀察 —— **那一排是產出的,這兩顆不是**:檢查影像是「選完圖之後確認有沒有選對」,跟左邊的資料夾按鈕是同一件事的上下游;錄音切割產出的是逐字稿不是會議文件。混在產出列裡會讓「這場弄完了要按哪幾顆」變得不清楚
+
+
+**開發敘事**:V5.43.3 功能列歸位。個管師看著畫面說:「**那一排是產出的**,把『檢查影像』『錄音切割』移到上面自訂/清除旁邊,感覺更適合。」—— 這個判斷是對的,而且點出一個我沒注意到的分類錯誤:「主力產出」那一排的其他五顆(LINE 通知/HTML 投影片/Word 簡報/DOCX 記錄/會議小抄)**都是「產生一份給別人看的東西」**,而這兩顆不是 —— **檢查影像是「選完圖之後確認有沒有選對」**,跟左邊那排資料夾按鈕(多專科會議影像/自訂/清除)是**同一件事的上下游**;**錄音切割是會議當下的工具**,產出的是逐字稿不是會議文件。混在一起的代價不是「難看」,是**「這場弄完了要按哪幾顆」變得不清楚** —— 而那正是 V5.36.1 分層(U-3)想解決的問題,只是當時只分了「主力產出 / 資料交換」兩層,沒注意到主力產出裡還混著工具。移過去之後那一排剩五顆,**全部都是產出**。實作上同時把兩顆改成 `btn-sm` 並靠右對齊,與資料夾狀態列在視覺上分開(左邊是「現在用哪個資料夾」,右邊是「對資料夾做什麼」)。屬 c+1。
+
+
+---
+
+## V5.43.2
+
+**存檔後把個案卡片收合起來**
+
+### 個管師的原話點出重點
+
+> 「以前編輯病人儲存完,會自動跳回閱覽模式,現在不會」
+> → 再問下去:**「應該是還不習慣,不確定有沒有存好,因為之前存好就會收合了」**
+
+**他要的不是跳回檢視模式,是那個「存好了」的訊號** —— 而訊號的形式剛好是卡片收合。
+
+### 查證:那個收合是副作用,不是設計
+
+`caseHTML` 產生的卡片**預設就帶 `cc-collapsed`**。以前存完會 `renderEditor()` 整頁重繪 → 全部回到預設的收合狀態。
+
+V5.36.1(坑 #62)拿掉自動切檢視模式時,**收合也跟著消失了**。
+
+> **這是坑 #60 的又一次**:拿掉一個行為時,沒問「原本靠它的人去哪了」——
+> 而這次靠它的是**使用者的確認習慣**,不是程式。
+
+### 做法:只加 class,不重繪
+
+```js
+function _collapseAllCases(){
+  document.querySelectorAll('.casecard:not(.track-card)').forEach(function(c){
+    c.classList.add('cc-collapsed');
+    // 同步更新 ▶/▼ 圖示
+  });
+}
+```
+
+**保留 V5.36.1 的好處**(捲動位置不歸零、卡片狀態不被整頁刷掉),同時把習慣的訊號還回來。
+
+自動存檔(`silent`)**不收合** —— 那會打斷打字。
+
+### 另外補一個訊號:底部固定列
+
+```
+✓ 已儲存 15:42        LINE通知 ｜ HTML投影片 ｜ 會議小抄 │ 檢視 ｜ 儲存
+```
+
+toast 只有 2.2 秒、出現在右下角,眼睛看著卡片中間時很容易錯過。**固定列那一行就在按鈕旁邊,而且會留著。**
+
+一有修改就換成:
+
+```
+● 有未儲存的修改
+```
+
+> **留著舊的時間戳比沒有更糟** —— 會讓人以為剛才的修改也存進去了。
+
+
+**摘要**:存檔後把個案卡片收合起來:個管師回報「以前存好就會收合,現在不會,**不確定有沒有存好**」。查證後確認 —— 卡片預設就帶 `cc-collapsed`,以前存完的 `renderEditor()` 整頁重繪讓它們回到預設狀態,**那是副作用不是設計**;V5.36.1(坑#62)拿掉重繪時收合也跟著消失。但那個收合有兩個作用:①「存好了」的視覺訊號 ②「填完換下一個」的動線。改成**只加 class 不重繪**(保留捲動位置),另在底部固定列顯示「✓ 已儲存 HH:MM」,一有修改就換成「● 有未儲存的修改」
+
+
+**開發敘事**:V5.43.2 存檔後把個案卡片收合起來。個管師回報「以前編輯病人儲存完會自動跳回閱覽模式,現在不會」,再問下去才是重點:**「應該是還不習慣,不確定有沒有存好,因為之前存好就會收合了」** —— 他要的**不是跳回檢視模式,是那個「存好了」的訊號**,而訊號的形式剛好是卡片收合。查證後確認:`caseHTML` 產生的卡片預設就帶 `cc-collapsed`,以前存完會 `renderEditor()` 整頁重繪 → 全部回到預設的收合狀態 —— **那是重繪的副作用,不是刻意設計**;V5.36.1(坑 #62,UI 減法投報率最高的一項)拿掉自動切檢視模式時,收合也跟著消失了。**這是坑 #60 的又一次**:拿掉一個行為時,沒問「原本靠它的人去哪了」—— 而這次靠它的是**使用者的確認習慣**,不是程式。做法:`_collapseAllCases()` **只加 class、不重繪**,保留 V5.36.1 的好處(捲動位置不歸零、卡片狀態不被整頁刷掉),同時把習慣的訊號還回來;自動存檔(silent)不收合,那會打斷打字。另外補一個訊號:**底部固定列顯示「✓ 已儲存 HH:MM」**(toast 只有 2.2 秒、出現在右下角,眼睛看著卡片中間時很容易錯過;固定列那一行就在按鈕旁邊而且會留著),並在 `markDirty` 時換成「● 有未儲存的修改」—— **留著舊的時間戳比沒有更糟**,會讓人以為剛才的修改也存進去了。屬 c+1。
+
+
+---
+
+## V5.43.1
+
+**緊急修 V5.43.0 的匯出(新增坑 #70)**
+
+### 症狀
+
+> 個管師:「新匯出的,在我自己的電腦雙擊也看不到?」
+
+而**還原本來就不需要 fetch** —— 本機開啟應該要看得到。所以問題一定在匯出那一端。
+
+### 原因:regex 匹配到自己的原始碼
+
+```js
+if(/<script id="hl-data"[^>]*>[\s\S]*?<\/script>/.test(src)){
+  src=src.replace(/<script id="hl-data"[^>]*>[\s\S]*?<\/script>/, tag);
+}
+```
+
+**但 `hlExport` 自己就住在那份 HTML 的 `<script>` 區塊裡** —— 它的原始碼含有字面上的 `'<script id="hl-data" type="application/json">'`。
+
+> regex 從頭找,**第一個匹配到的是自己的程式碼** → **把函式本體換成了資料** → 整段 JS 語法壞掉。
+
+### 最麻煩的是「壞的是匯出後的檔案」
+
+按匯出的當下**一切正常**:下載成功、還跳了成功訊息。要等到**打開那份檔案**才發現。
+
+jsdom 實測:
+
+```
+→ 替換既有分支          ← 明明沒有 hl-data 標籤,卻走了「替換」
+SyntaxError: Invalid or unexpected token
+hl-data 在 DOM: 🔴
+```
+
+### 兩道防護
+
+| # | 做法 |
+|---|---|
+| ① | **搜尋字串用拼接組出來**(`'<scr'+'ipt id="hl'+'-data"'`)—— 原始碼裡不存在可被搜到的字面值 |
+| ② | **用 `lastIndexOf` 從後面找**,而且產出時就固定放一個空佔位標籤在 `extraJs` **之後** |
+
+任一失效,另一個仍能擋住。
+
+連**註解裡**的那個字串也拆掉了 —— 註解一樣會進產出物(我改完檢查時,發現殘留在自己寫的警告文字裡)。
+
+### 這是坑 #65/#67 的第三種形狀
+
+| 坑 | 形狀 |
+|---|---|
+| #65 | `${_ty}` 缺引號 → **產生出來的東西壞了** |
+| #67 | `data-ty` 在單引號字串裡未插值 → **產生出來的東西壞了** |
+| **#70** | regex 匹配到自己 → **產生東西的程式把自己改壞了** |
+
+共同點:**真正的產物一直到執行期才存在。**
+
+**已加入原則**:任何「讀取或改寫自己所在檔案」的程式,**搜尋用的字串都不可以字面出現在自己的原始碼裡**。
+
+### 端到端實測
+
+```
+匯出後檔案: +74 字元
+本機 file:// 雙擊 → 第2頁有 <mark> ✅  第1/3頁未被動到 ✅
+hlExport 仍可用 ✅
+二次匯出不累積膨脹 ✅
+錯誤: 0
+```
+
+
+**摘要**:**緊急修 V5.43.0 的匯出**(坑#70):`hlExport` 的 regex `<script id="hl-data"…` **匹配到 hlExport 自己的原始碼**(它就住在同一份 HTML 的 script 區塊裡)→ 把函式本體換成資料 → **匯出的檔案 JS 全壞、標記看不到**;而按匯出當下一切正常,要打開檔案才發現。改用「拼接組搜尋字串 + `lastIndexOf` 從後面找」,並在產出時就固定放一個佔位標籤在 `extraJs` **之後**
+
+
+**開發敘事**:V5.43.1 緊急修 V5.43.0 的標記匯出(坑 #70)。個管師回報「新匯出的,在我自己的電腦雙擊也看不到」—— 而**還原本來就不需要 fetch,本機開啟應該要看得到**,所以問題一定在匯出那一端。實測後找到:`hlExport` 用 regex `<script id="hl-data"[^>]*>[\s\S]*?<\/script>` 去找要替換的標籤,**但 `hlExport` 自己就住在那份 HTML 的 `<script>` 區塊裡**,而它的原始碼含有字面上的那個字串 —— **regex 從頭找,第一個匹配到的是自己的程式碼**,於是**把函式本體換成了資料**,整段 JS 語法壞掉。**最麻煩的是壞的是「匯出後的檔案」**:按匯出的當下一切正常(下載成功、還跳了成功訊息),要等到打開那份檔案才發現。jsdom 實測的證據很直接:「→ 替換既有分支」(明明沒有 hl-data 標籤卻走了替換)+ `SyntaxError: Invalid or unexpected token`。修法兩道防護:①**搜尋字串用拼接組出來**(`'<scr'+'ipt id="hl'+'-data"'`),原始碼裡不存在可被搜到的字面值;②**用 `lastIndexOf` 從後面找**,而且在產出 HTML 時就固定放一個空的佔位標籤在 `extraJs` **之後** —— 兩者任一失效另一個仍能擋住。連**註解裡**的那個字串也拆掉了(註解一樣會進產出物,我第一次改完檢查就發現殘留在自己寫的警告文字裡)。**這是坑 #65/#67 的第三種形狀**:前兩個是「產生出來的東西壞了」(`${_ty}` 缺引號、`data-ty` 未插值),這個是「**產生東西的程式把自己改壞了**」;共同點仍然是 **真正的產物一直到執行期才存在**。已加入原則:**任何「讀取或改寫自己所在檔案」的程式,搜尋用的字串都不可以字面出現在自己的原始碼裡**。端到端實測:匯出只讓檔案多 74 字元、本機 `file://` 雙擊正確還原標記、其餘頁面未被動到、`hlExport` 仍可用、**二次匯出不會累積膨脹**、零錯誤。屬 c+1。
+
+
+---
+
+## V5.43.0
+
+**投影片標記匯出**
+
+### 起點:個管師的一句抱怨
+
+> 「做好的 html,畫完線重存後,打開要花很多時間才正常開啟。」
+> (30-40 秒、一頁一頁才正常,而且那份**沒有圖片**)
+
+往回問才知道 —— **真正的問題不是「另存新檔很慢」,是「標記不會留」。**
+
+螢光筆與字色是 `surroundContents` 直接改 DOM:
+
+```js
+var span=document.createElement('mark');
+span.style.background=color;
+_hlSel.surroundContents(span);     // 只活在記憶體裡
+```
+
+關掉就沒了。個管師只好用瀏覽器「另存完整網頁」—— **那是目前唯一能讓標記跨電腦的方法。**
+
+而「另存完整網頁」序列化的是**執行期的完整 DOM**(上百個 mark 節點 + 所有計算過的 inline style),重新開啟時瀏覽器要全部重新解析、投影片還要重算縮放。
+
+### 關鍵洞察
+
+> **那上百個節點,其實只是幾筆資訊的展開結果。**
+
+```
+真正的資訊:  第 5 頁有標記、內容是 ...
+瀏覽器存的:  <mark style="background:#FFE066">…</mark> × 上百
+```
+
+### 做法
+
+工具列加「💾 匯出」:
+
+```
+fetch(location.href)              抓回原始檔案
+  → 只存有標記的頁面的 innerHTML   通常 3-5 頁、幾 KB
+  → 塞進 <script id="hl-data">
+  → 下載同名檔
+```
+
+**不記座標**(文字選取範圍難以穩定還原),直接換 `innerHTML`。
+
+| | 另存完整網頁 | 💾 匯出 |
+|---|---|---|
+| 檔案大小 | 膨脹 | **幾乎不變** |
+| 開啟速度 | 30-40 秒 | **與原檔相同** |
+| 多一個資料夾 | 會 | 不會 |
+| 檔名 | 瀏覽器決定 | **同名**(可直接覆蓋) |
+
+### 限制講清楚
+
+匯出需要抓回原始檔案 → **必須從分享網址開啟**。`file://` 會被 CORS 擋,此時給明確訊息:
+
+> 這份檔案是從電腦本機開啟的,瀏覽器的安全限制讓程式讀不到原始檔案。
+> 請改從分享網址開啟,畫完線再按匯出。
+
+**新動線**(個管師確認沒有困擾):
+
+```
+產出 → 下載 → 上傳 Cloudflare → 在網頁上畫線 → 💾 匯出 → 上傳覆蓋
+```
+
+### jsdom 實跑驗證
+
+```
+有標記的檔案 → 第2頁還原出 <mark> ✅  第1/3頁未被動到 ✅
+沒標記的檔案 → 載入零錯誤 ✅  _hlCollect 回空 ✅
+總錯誤: 0
+```
+
+過程中測試腳本報 `go is not defined` —— 查證後確認是**測試環境缺投影片本體的函式**(`go` 定義在 L8898),不是缺陷。
+
+
+**摘要**:**投影片標記匯出**:螢光筆與字色原本只存在記憶體 DOM,關掉就沒了,個管師只好用瀏覽器「另存完整網頁」保存 → **開啟要 30-40 秒、一頁一頁才正常**(那會序列化執行期的完整 DOM,含上百個 mark 節點與計算過的 inline style)。改成工具列加「💾 匯出」:`fetch(location.href)` 抓回原始檔案 → 只把**有標記的頁面**存成一段 JSON(`<script id="hl-data">`)→ 下載同名檔。**檔案大小幾乎不變、開啟速度與原檔相同**。開啟時自動還原,可反覆畫反覆匯出。⚠ 需從分享網址開啟(`file://` 會被 CORS 擋,已給明確訊息)
+
+
+**開發敘事**:V5.43.0 投影片標記匯出。**起點是個管師的一句抱怨**:「做好的 html,畫完線重存後,打開要花很多時間才正常開啟」(30-40 秒、一頁一頁才正常、而且那份沒有圖片)。往回問才知道**真正的問題不是「另存新檔很慢」,是「標記不會留」** —— 螢光筆(`<mark>`)與字色(`<span class="fc">`)是 `surroundContents` 直接改 DOM,只活在記憶體裡,關掉就沒了;個管師只好用瀏覽器「另存完整網頁」來保存,**那是目前唯一能讓標記跨電腦的方法**。而「另存完整網頁」序列化的是**執行期的完整 DOM**(含上百個 mark 節點與所有計算過的 inline style),重新開啟時瀏覽器要全部重新解析、投影片還要重算縮放 —— 那就是那 30-40 秒的來源。**關鍵洞察:那上百個節點其實只是幾筆資訊的展開結果。** 做法:工具列加「💾 匯出」→ `fetch(location.href)` 抓回**原始檔案** → 只把**有標記的頁面的 innerHTML** 存成一段 JSON 塞進 `<script id="hl-data">` → 下載同名檔。**不記座標**(那很脆弱,文字選取範圍難以穩定還原),直接換 `innerHTML`;通常一場 3-5 頁、幾 KB,**檔案大小幾乎不變、開啟速度與原檔相同**。**限制講清楚**:匯出需要抓回原始檔案,所以**必須從分享網址開啟** —— `file://` 會被 CORS 擋,此時給明確訊息而不是默默失敗(個管師確認新動線「下載→上傳 Cloudflare→在網頁上畫線→匯出→上傳覆蓋」沒有困擾)。選 A(匯出後可繼續畫):已有 `hl-data` 就整段換掉,可反覆畫反覆匯出。**jsdom 實跑驗證**:有標記的檔案正確還原、其餘頁面未被動到、沒有標記的檔案載入零錯誤、`_hlCollect` 只挑出有標記的頁。過程中測試腳本報 `go is not defined` —— 查證後確認是**測試環境缺投影片本體的函式**(`go` 定義在 L8898),不是缺陷。屬 b+1。
+
+
+---
+
+## V5.42.5
+
+**實測複審 F-1 + E-1(新增坑 #69)**
+
+### 這一輪最該記的一句話
+
+> V5.42.4 修了「新列缺 `data-ty`」—— **那是真的原因之一**。
+> 但**修完之後沒有再按一次確認**,而實際按下去會看到:**那一列根本沒有出現在這張卡片上**。
+
+### F-1:容器 id 撞在一起
+
+六個結構列容器 id **只有 `${cid}-${i}`、沒有 `_ty`**:
+
+```
+個案討論 #0 → id="pathlist-head_neck-0"
+必要事件 #0 → id="pathlist-head_neck-0"   ← 完全相同
+```
+
+`getElementById` 永遠回傳**文件中第一個**,而 `casesPane` 的排版是個案討論在前:
+
+| 步驟 | 現象 |
+|---|---|
+| 必要事件按「+ 新增病理」 | **畫面完全沒有反應** |
+| 往上看個案討論卡片 | **憑空多出一列空白病理** |
+| 在那一列打字 | 資料其實進的是**必要事件**(`data-ty` 是對的) |
+| 個管師把那列刪掉 | 🔴 **刪掉的是必要事件的資料** |
+
+**六種結構化列全部無法在必要事件卡片上新增** —— 而「治療事件軸」正是必要提報的核心。
+
+諷刺的是:**V5.42.0 在卡片 id 上就做對了**(`cc-${cid}-${_ty}-${i}`),註解還寫著「否則與個案討論同索引會撞」。**這七個列容器是漏網的。**
+
+本版把七個前綴共 **24 處**全部加上 `_ty`。
+
+### 兩個缺陷的關係
+
+**在同一個動作上、成因相鄰**(都是 `addStruct` 產生 DOM 時漏了 `_ty`),**但一個在屬性上、一個在容器 id 上**。
+
+> **已寫進流程:修完之後,照著使用者的動作再做一次。**
+> F-1 只要在補完 `data-ty` 之後按一次「+新增病理」,當場就會看到畫面沒反應。
+
+**新增檢查**:渲染 `casesPane` 後不得有重複 id(jsdom 五行)。跑 V5.42.4 會輸出七個。
+
+### E-1:一次新增產生兩列
+
+```js
+c[field].push({name:'',date:'',content:''});      // 對所有欄位無條件先塞一筆
+if(field==='timeline'){
+  c.timeline.push({type:'dx',date:'',label:''});  // timeline 再塞一筆正確的
+```
+
+多出來那一列**欄位名對不上**(timeline 要的是 `{type,date,label}`)—— **渲染不出來、永遠填不了**,而且會進 localStorage、備份與產出。
+
+已改成 timeline 跳過通用 push,並加 `cleanTimelineGhosts()` 在 `loadLocal` 時清舊資料:
+
+> **只在記憶體清、不主動寫回** —— 避免「只是開啟看一下」就改動 localStorage,那會讓 NAS 同步的 version 判斷變複雜。
+
+### 兩者都不拋錯
+
+console 全程安靜 —— 一個是「東西加到別的地方去了」,一個是「多加了一筆」。
+
+### 實跑驗證
+
+```
+重複 id: 無 ✅
+pathologies/exams/treatments/markers/genomics/timeline
+  → 必要事件卡片 +N、個案卡片 +0、cases 資料 0 筆  全部 ✅
+時序新增: cases 1 列 ✅  events 1 列 ✅
+舊髒資料: 清掉 1 筆空殼,有內容的保留 ✅
+載入錯誤: 0
+```
+
+
+**摘要**:**實測複審 F-1 + E-1**(坑#69):(**F-1 P1**)六個結構列容器 id 只有 `${cid}-${i}` **沒有 `_ty`** → 個案討論 #0 與必要事件 #0 id 完全相同,`getElementById` 回傳第一個 → **必要事件按新增,列跑到個案討論卡片**(畫面沒反應 + 個案討論憑空多一列);七個前綴共 24 處加 `_ty`;(E-1)`addStruct` 對 timeline **雙重 push** → 一次新增產生兩列,其中一列是欄位名對不上的空殼;加 `cleanTimelineGhosts()` 清舊資料。**新增檢查:渲染後不得有重複 id**
+
+
+**開發敘事**:V5.42.5 實測複審 F-1 + E-1(坑 #69)。**這一輪最該記的是審核的那句話**:V5.42.4 發現「必要事件按新增之後行為不對」,追到的原因是新列缺 `data-ty` —— **那是真的原因之一**,補上之後從程式碼看是完整的;**但修完之後沒有再按一次確認**,而實際按下去會看到**那一列根本沒有出現在這張卡片上**。第二個成因是 **F-1**:六個結構列容器 id **只有 `${cid}-${i}`、沒有 `_ty`**,個案討論 #0 與必要事件 #0 產生**完全相同的 id**;而 `getElementById` 永遠回傳文件中**第一個**,`casesPane` 的排版是個案討論在前 → **必要事件的新列一律被插進個案討論的清單裡**。個管師會遇到「按新增畫面沒反應」+「個案討論憑空多一列」,而她很可能把那一列刪掉 —— **刪掉的其實是必要事件的資料**。**兩個缺陷在同一個動作上、成因相鄰**(都是 `addStruct` 產生 DOM 時漏了 `_ty`),**但一個在屬性上、一個在容器 id 上**。諷刺的是 V5.42.0 在卡片 id 上就做對了(`cc-${cid}-${_ty}-${i}`),註解還寫著「否則與個案討論同索引會撞」—— **這七個列容器是漏網的**;本版把七個前綴共 24 處全部加上 `_ty`。**已寫進流程:修完之後,照著使用者的動作再做一次** —— F-1 只要在補完 `data-ty` 之後按一次「+新增病理」,當場就會看到畫面沒反應。**已加入檢查:渲染 `casesPane` 後不得有重複 id**(jsdom 五行,跑 V5.42.4 會輸出七個)。同版順手修 **E-1 雙重 push**:`addStruct` 對所有欄位無條件先 push `{name,date,content}`,timeline 分支再 push 一筆 `{type,date,label}` → **一次新增產生兩列**,其中一列是欄位名對不上的空殼(渲染不出來、永遠填不了),而且會進 localStorage、備份與產出;改成 timeline 跳過通用 push,並加 `cleanTimelineGhosts()` 在 `loadLocal` 時清舊資料 —— **只在記憶體清、不主動寫回**,避免「只是開啟看一下」就改動 localStorage(那會讓 NAS 同步的 version 判斷變複雜)。**兩者都不拋錯、console 全程安靜**:一個是「東西加到別的地方去了」,一個是「多加了一筆」。**實跑驗證**:重複 id 歸零、六種結構列新增後都出現在自己的卡片上且不碰 cases、時序一次只加一列、舊髒資料清得掉(有內容的保留)、載入錯誤 0。屬 c+1。
+
+
+---
+
+## V5.42.4
+
+**輸入路徑實測 E-1 + C-1(新增坑 #68)**
+
+### E-1:改了函式,沒改函式產生的 HTML
+
+V5.42.0 給 `addStruct` 加了 `type` 參數 —— **函式自己讀寫的陣列對了**:
+
+```js
+const _ty=type?type:"cases";                 // ✅ 對
+S.meeting.sections[cid][_ty][i]              // ✅ 對
+```
+
+**但它動態產生新列的那段 HTML,23 個 `updstruct`/`delstruct` 全部沒有 `data-ty`**:
+
+```js
+'<input data-action="updstruct" data-cid="'+cid+'" data-field="treatments" …'
+//                              ↑ 少了 data-ty
+```
+
+必要事件卡片按「+新增治療」之後:
+
+| 步驟 | 結果 |
+|---|---|
+| 新列加到哪 | ✅ `events[i].treatments` |
+| 新列的 `data-ty` | ❌ **沒有** → handler 退回 `'cases'` |
+| **在新列打字** | 🔴 **寫進同索引的個案討論** |
+| **按 × 刪掉** | 🔴 **刪的是個案討論的列** |
+
+而「事件發生到死亡的治療歷程」正是必要提報要記的東西 —— **每一列都寫錯位置。**
+
+### 為什麼靜態檢查沒抓到
+
+`caseHTML` 內的 28 個 `data-ty` 我檢查過(#64 加的那條)。
+
+> **但 `addStruct` 產生的是另一批 HTML,不在那個函式裡。**
+
+「改渲染函式時順便檢查同一個函式」的做法,漏掉了「**其他也會產生 HTML 的地方**」。
+
+**已加入原則**:任何會動態產生含 `data-action` 的 HTML 的函式,都要一起檢查 `data-ty` 覆蓋率(目前 `caseHTML` 28 個、`addStruct` 23 個)。
+
+### C-1:AI 判讀
+
+`openTlAi` / `tlAiPrompt` / `doImportTlAi` 三處全寫死 `'cases'` —— 必要事件按「🤖 AI 判讀」會**讀到同索引個案討論的時序**,匯入時也寫回那裡。
+
+加 `_tlAiTy` 記住開啟時的卡片種類,而且**連重繪都要分流**:
+
+> 原本只重繪個案討論 —— 在必要事件套用後**畫面看不到新時序**,但資料其實已經寫進去了。那會讓人以為沒生效而重按。
+
+type 的判定一律用**白名單**而非 `||'cases'`(坑 #67 的教訓)。
+
+### jsdom 實跑驗證
+
+```
+cases:  data-ty="cases"   →cases=true  →events=false  ✅
+events: data-ty="events"  →cases=false →events=true   ✅
+載入錯誤: 0
+```
+
+
+**摘要**:**輸入路徑實測 E-1 + C-1**(坑#68):(**E-1 P1**)`addStruct` 的 `type` 參數只改了「函式讀寫哪個陣列」,**沒改它動態產生的 HTML** —— 23 個 `updstruct`/`delstruct` 全無 `data-ty` → 必要事件按「+新增治療」後,**在新列打字寫進同索引的個案討論、按 × 刪的也是個案討論的列**;(C-1)`openTlAi`/`tlAiPrompt`/`doImportTlAi` 寫死 `'cases'`,加 `_tlAiTy` 並分流重繪。jsdom 實跑驗證兩種卡片互不污染
+
+
+**開發敘事**:V5.42.4 輸入路徑實測 E-1 + C-1(坑 #68)。**E-1 的形狀值得記**:V5.42.0 給 `addStruct` 加了 `type` 參數,**函式自己讀寫的陣列對了**(新列確實加到 `events[i].treatments`),**但它動態產生新列的那段 HTML,23 個 `updstruct`/`delstruct` 全部沒有 `data-ty`** → handler 退回 `'cases'` → **在新列打字寫進同索引的個案討論、按 × 刪掉的也是個案討論的列**。而「事件發生到死亡的治療歷程」正是必要提報要記的東西,**每一列都寫錯位置**。**兩行分開看都正確,合起來才是錯的**(坑 #53 的形狀):`const _ty=type?type:"cases"` 對、`sections[cid][_ty][i]` 對,錯在第三個地方 —— 它產生的 HTML 少了一個屬性。**靜態檢查抓不到的原因**:`caseHTML` 內的 28 個 `data-ty` 我檢查過(#64 那條),**但 `addStruct` 產生的是另一批 HTML,不在那個函式裡** —— 「改渲染函式時順便檢查同一個函式」的做法,漏掉了「**其他也會產生 HTML 的地方**」。已加入原則:**任何會動態產生含 `data-action` 的 HTML 的函式,都要一起檢查 `data-ty` 覆蓋率**(全檔目前 `caseHTML` 28 個、`addStruct` 23 個)。順帶修 **C-1**:`openTlAi`/`tlAiPrompt`/`doImportTlAi` 三處全部寫死 `'cases'` —— 必要事件按「🤖 AI 判讀」會讀到同索引個案討論的時序、匯入時也寫回那裡;加 `_tlAiTy` 記住開啟時的卡片種類,而且**連重繪都要分流**(原本只重繪個案討論,在必要事件套用後畫面看不到新時序,但資料其實已經寫進去了 —— 那會讓人以為沒生效而重按)。type 的判定一律用**白名單**而非 `||'cases'`(坑 #67 的教訓)。**jsdom 實跑驗證**:`cases` 新列 `data-ty="cases"` → 寫進 cases 不碰 events;`events` 新列 `data-ty="events"` → 寫進 events **不碰 cases**;載入錯誤 0。屬 c+1。
+
+
+---
+
+## V5.42.3
+
+**執行期實測 D-1(新增坑 #67)**
+
+> **這一輪審核改變了驗證方式。** 前十二輪都是靜態分析,這次把 `index.html` 載進 jsdom
+> **真的跑起來、真的打字、真的點按鈕**。
+
+### 載入結果
+
+```
+[設定檢查] 癌別英文代碼與預設會議室皆一致 ✓
+VERSION = V5.42.3
+載入期間錯誤: 0
+```
+
+測試環境刻意把 `indexedDB` 設 undefined、`fetch` 一律 reject —— **模擬「IndexedDB 不可用 + 完全斷網」的最壞情況,程式沒有因此拋錯。**
+
+### D-1:五個旗標從 V5.42.0 起全部點不動
+
+```js
+return'<span data-action="caseflag" data-ty="${_ty}" data-cid="'+cid+'" …'
+//                                  ↑ 這在**單引號字串**裡,${_ty} 不會被插值
+```
+
+同一行其他屬性都是 `'+cid+'` 的正確寫法,**只有 `data-ty` 用了樣板語法**。
+
+`dataset.ty` 拿到的是**字面上的 `"${_ty}"`** —— 而它是**非空字串所以 truthy**:
+
+```js
+sections[cid][caseflag.dataset.ty||'cases']   // ||'cases' 完全不會生效
+  → sections[cid]["${_ty}"]                   // undefined
+  → undefined[idx]                            // TypeError
+```
+
+**連帶失效**:「首次討論」統計、投影片的討論原因標籤、產出中的旗標區塊 —— **那是會議當天看得到的東西**。
+
+### 為什麼十二輪都沒抓到
+
+全檔 **28 個 `data-ty="${_ty}"`,27 個正確、1 個錯誤** —— **它們在原始碼裡長得一模一樣。**
+
+| 檢查 | 為什麼沒抓到 |
+|---|---|
+| `node --check` | 合法字串 |
+| jshint `undef` | 沒有未定義識別字 |
+| `data-action` 覆蓋率 | `caseflag` 有處理器 |
+| 事件屬性裸插值(#65 加的) | **`data-ty` 不是事件屬性,不在掃描範圍** |
+| 人工 review | **看起來跟其他 27 個一樣** |
+
+### 這是 #65(A-1)的同一類
+
+> **產生出來的東西壞了,而產生它的程式碼是合法的。**
+
+這個系統的本質是「用 JS 字串產生 HTML 再交給瀏覽器執行」—— **真正的產物一直到執行期才存在**。那正是靜態分析的邊界。
+
+### 新增 `audit-render.js`(jsdom 實跑,約 5 秒)
+
+| # | 斷言 |
+|---|---|
+| ① | **載入零錯誤**(含 IndexedDB 不可用 + 斷網) |
+| ② | **渲染後掃描未插值殘留** —— 七個渲染函式產生 DOM 後檢查屬性值有沒有 `${` |
+| ③ | **打字往返** —— dispatch `input` → 斷言 `S.meeting` 有寫入 → `saveLocal`/`loadLocal` → 斷言還在 |
+
+**第 ③ 項是 A-1 那一類缺陷的唯一可靠防線。**
+
+### 防線本身也改了
+
+```js
+// 舊:||'cases' —— 只擋得住「空值」
+const c=sections[cid][caseflag.dataset.ty||'cases'][idx];
+
+// 新:白名單 —— 任何非預期的值都退回安全預設
+const _farr=sections[cid][(_fty==='events'||_fty==='cases')?_fty:'cases'];
+const c=_farr&&_farr[idx];
+```
+
+### 修完後的實跑結果
+
+```
+渲染後未插值殘留:  7 個渲染函式全部 ✅
+caseflag data-ty:  cases="cases" ✅  events="events" ✅
+打字往返:          cases ✅  events ✅
+儲存/載入往返:     存檔/索引/回讀/內容都在 ✅
+總計錯誤:          0 ✅
+```
+
+
+**摘要**:**執行期實測 D-1**(坑#67):`caseflag` 的 `data-ty="${_ty}"` 在**單引號字串**裡,`${_ty}` 未被插值 → `dataset.ty` 是字面的 `"${_ty}"`(truthy,`||'cases'` 失效)→ TypeError → **五個旗標從 V5.42.0 起全部點不動,兩種卡片都中**;全檔 28 個同樣寫法只有這個錯,**原始碼裡長得一模一樣**。改用字串串接 + 白名單防線。**新增 `audit-render.js`(jsdom 實跑)**:載入零錯誤 / 渲染後未插值殘留 / 打字往返,約 5 秒
+
+
+**開發敘事**:V5.42.3 執行期實測 D-1(坑 #67)。**這一輪審核改變了驗證方式** —— 前十二輪都是靜態分析,這次把 `index.html` 載進 jsdom **真的跑起來、真的打字、真的點按鈕**,結果:程式載入零錯誤(而且測試環境刻意把 `indexedDB` 設 undefined、`fetch` 一律 reject,模擬「IndexedDB 不可用 + 完全斷網」的最壞情況),14 項功能測試過 13 項,抓到一個 P1。**D-1**:`caseflag` 的 `data-ty="${_ty}"` 寫在**單引號字串串接**裡(同一行其他屬性都是 `'+cid+'` 的正確寫法),所以 `${_ty}` **不會被插值** —— `dataset.ty` 拿到的是**字面上的 `"${_ty}"`**,而它是**非空字串所以 truthy**,處理器的 `||'cases'` 防線**完全失效** → `sections[cid]["${_ty}"]` → `undefined[idx]` → TypeError。後果是 `FLAG_LIST` 五個旗標**從 V5.42.0 起全部點不動、兩種卡片都中**,而且下游連帶失效(「首次討論」統計、投影片的討論原因標籤、產出中的旗標區塊 —— 那是會議當天看得到的東西)。**最值得記的是它為什麼十二輪都沒被抓到**:全檔 28 個 `data-ty="${_ty}"`,27 個正確、1 個錯誤,**它們在原始碼裡長得一模一樣**;`node --check` 過(合法字串)、jshint `undef` 過(沒有未定義識別字)、`data-action` 覆蓋率過(`caseflag` 有處理器)、#65 加的事件屬性裸插值掃描也過(**`data-ty` 不是事件屬性,不在範圍**)、人工 review 更看不出來。**這與 #65 的 A-1 是同一類:產生出來的東西壞了,而產生它的程式碼是合法的** —— 這個系統的本質是「用 JS 字串產生 HTML 再交給瀏覽器執行」,**真正的產物一直到執行期才存在**,那正是靜態分析的邊界。已加入 **`audit-render.js`**(jsdom 實跑,約 5 秒)三項斷言:①載入零錯誤 ②七個渲染函式**產生 DOM 後掃描未插值殘留** ③**打字往返**(dispatch `input` → 斷言 `S.meeting` 有寫入 → `saveLocal`/`loadLocal` → 斷言還在)。**第三項是 #65 那一類缺陷的唯一可靠防線**。防線本身也改了:`||'cases'` 換成**白名單**(`(_fty==='events'||_fty==='cases')?_fty:'cases'`)—— 前者只擋得住「空值」,擋不住「非空但不存在的鍵」。修完後實跑驗證:未插值殘留 7 個渲染函式全 0、`caseflag` 的 `data-ty` 兩種卡片都正確、打字往返兩種都寫入、存取往返內容還在、**總計錯誤 0**。屬 c+1。
+
+
+---
+
+## V5.42.2
+
+**複審 B-1(新增坑 #66)**
+
+> 上線前複審判定 **A-1~A-5 全數修正、可以上線**。B-1 是一項殘留(P2,不阻擋上線),但只要幾行就修得掉。
+
+### `_noImg` 的語意被我理解窄了
+
+**我實作時理解成「不要畫影像清單」,但它該是「不要出現影像功能」。**
+
+```js
+<div class="fg full"><div class="field-hdr"><label>病理染色影像</label>${embedToggle(...)}</div>
+  ${_noImg?"":buildPathImgArea(cid,i,d)}    ← 只有這一行被擋
+</div>
+```
+
+四個區塊(病理／NGS／手術／相關)都是這個結構。
+
+**兩個後果**:
+
+| # | 問題 |
+|---|---|
+| ① | **畫面殘骸** —— 必要事件卡片出現四個**空的**影像區塊,看到標題卻沒有選圖按鈕,**會以為壞掉** |
+| ② | **安靜寫錯位置** —— 開關的處理器寫死 `'cases'`,按下去改到**同索引個案討論**的 `embed` 旗標。影響不大但**無聲**,下次產投影片發現某個個案的影像行為變了,查不出原因 |
+
+### 與第十次審核的 Z-1 同一形狀
+
+> **保護／搬移的邊界,要用「使用者會看到什麼、點得到什麼」來判定,不是用「程式碼長得像一組」來判定。**
+
+### 雙層修法(與 A-3 的 `updMammo` 一致)
+
+① 四個區塊**整段**納入 `_noImg` → 消掉畫面殘骸
+② `embedToggle` 加 `type` + `data-ty`,處理器改 `dataset.ty||'cases'` → 即使日後有人拿掉 `_noImg` 也不會寫錯
+
+`timeline` 那個 `embedToggle` **刻意不擋** —— 病程時序正是必要事件要用的。
+
+### 我的檢查寫錯兩次
+
+| 次 | 錯在哪 | 結果 |
+|---|---|---|
+| 1 | 漏算長註解占滿了前 420 字元 | 誤報「未受保護」 |
+| 2 | 檢查字串少了冒號(`_noImg?""` vs `_noImg?"":`) | 同上 |
+
+> **檢查本身也會錯 —— 「檢查說有問題」與「真的有問題」要分開確認。**
+
+兩次都是先看實際程式碼才確定是誤報,沒有據此亂改。
+
+### 複審確認做對的兩件事
+
+- **A-1 沒有過度修改** —— id 字串裡的 `${_ty}` 沒動,只改了作為函式引數的 12 處
+- **A-3／A-4 都是雙層防護**,不是「讓症狀消失」
+
+
+**摘要**:複審 B-1(坑#66):`_noImg` 只擋了影像內容,**四個影像區塊的標題列與內嵌開關還在** → 必要事件卡片出現空的影像區塊(以為壞掉),而開關按下去會改到同索引個案討論的 `embed` 旗標。雙層修法:①四區塊**整段**納入 `_noImg` ②`embedToggle` 加 `type`+`data-ty`、處理器改 `dataset.ty`。`timeline` 刻意不擋(必要事件要用病程時序)
+
+
+**開發敘事**:V5.42.2 複審 B-1(坑 #66)。**上線前複審判定 A-1~A-5 全數修正、可以上線**,但發現一項殘留:`_noImg` 這個旗標**我在實作時理解成「不要畫影像清單」,但它該是「不要出現影像功能」**。四個影像區塊的 `build*ImgArea` 擋住了,**標題列與「開新分頁/夾在投影片」開關還在** —— 兩個後果:①**畫面殘骸**,必要事件卡片出現四個空的影像區塊,個管師看到標題卻沒有選圖按鈕**會以為壞掉**;②**安靜寫錯位置**,那個開關的處理器寫死 `'cases'`,按下去改到**同索引個案討論**的 `embed` 旗標,影響不大但**無聲**,下次產投影片發現某個個案的影像行為變了查不出原因。**與第十次審核的 Z-1 是同一個形狀**(`#out-area` 被搬進摺疊區):**保護/搬移的邊界要用「使用者會看到什麼、點得到什麼」來判定,不是用「程式碼長得像一組」**。採雙層修法(與 A-3 的 `updMammo` 一致):①四個區塊**整段**納入 `_noImg` ②`embedToggle` 加 `type` 參數與 `data-ty`、處理器改 `dataset.ty||'cases'` —— 即使日後有人拿掉 `_noImg` 也不會寫錯。`timeline` 那個 `embedToggle` **刻意不擋**,病程時序正是必要事件要用的。**過程中我的檢查寫錯兩次**:第一次漏算長註解占滿了前 420 字元、第二次檢查字串少了冒號(`_noImg?""` vs `_noImg?"":`),兩次都報成「未受保護」。教訓:**檢查本身也會錯,「檢查說有問題」與「真的有問題」要分開確認** —— 兩次都是先看實際程式碼才確定是誤報,沒有據此亂改。複審也確認了兩件做對的事:A-1 修正**沒有過度修改**(id 字串裡的 `${_ty}` 沒動),A-3/A-4 都是**雙層防護**而非「讓症狀消失」。屬 c+1。
+
+
+---
+
+## V5.42.1
+
+**上線前審核 A-1~A-5 全修 —— V5.42.0 不可上線(新增坑 #65)**
+
+### A-1 ⭐⭐ 十二輪來最嚴重的缺陷
+
+V5.42.0 把 `caseHTML` 參數化時:
+
+```js
+upd('${cid}','cases',${i},…)      // 改前
+upd('${cid}',${_ty},${i},…)       // 改後 ← 連同外面那對引號一起換掉了
+```
+
+產生的屬性是:
+
+```html
+oninput="upd('head_neck',cases,0,'chartNo',this.value)"
+                         ↑ 裸識別字 → ReferenceError
+```
+
+**後果**:
+
+| 動作 | 畫面 | 實際 |
+|---|---|---|
+| 在欄位打字 | **文字正常出現**(`<input>` 自己的行為) | `upd()` 從未執行 |
+| 按儲存 | **顯示「已儲存」** | **存下去的是空的個案** |
+| 重新整理 | **剛才打的全部不見** | — |
+
+> **畫面沒有任何異常、儲存回報成功、資料全部遺失。**
+
+每張卡片 **17 個互動元件失效**(7 個 textarea + 9 個欄位 + 刪除鈕),個案討論與必要事件兩種卡片都中。
+
+### 而六項打包檢查全過
+
+| 檢查 | 為什麼沒抓到 |
+|---|---|
+| `node --check` | 那是**合法的模板字串** |
+| jshint `undef` | `_ty`/`upd`/`cid` 都有宣告 —— **jshint 看不到字串內容** |
+| 事件屬性函式解析 | 檢查的是「`upd` 存不存在」,它存在 —— **沒有人檢查引數是字串還是變數** |
+
+**這不是理解錯誤,是取代操作漏了引號** —— 同一版新寫的必要事件區塊 `'${_ty}'` 引號是對的。
+
+### 已加入第七項打包檢查
+
+**事件屬性內的裸插值**(函式引數位置的 `${...}`,排除 `${i}`/`${idx}` 這類數值索引)。
+
+跑 V5.42.0 的輸出正是那 12 處,**零誤報**。
+
+### A-2~A-5:type 沒一路傳到底
+
+| # | 問題 |
+|---|---|
+| **A-2** | `importTimelineFromTreatments` 沒傳 type → 必要事件按「從治療記錄帶入」,**時序寫進同索引的個案討論**,而那正是必要提報最核心的內容 |
+| **A-3** | `updMammo` 寫死 `.cases[i]`,且乳攝**日期與報告欄位沒被 `_noImg` 擋住**(只擋了影像區)—— **這一項不會 ReferenceError,所以 A-1 修好後反而更難發現** |
+| **A-4** | `moveCase` 寫死 `.cases` → 必要事件按 ▲▼ **重排的是個案討論** |
+| **A-5** | NGS 與手術影像區漏了 `_noImg`,而它們的 `IMG_KINDS` 都是 `holder:'cases'` |
+
+### 這個形狀出現第四次
+
+| 版本 | 症狀 |
+|---|---|
+| V5.32.0 | `o is not defined` |
+| V5.32.1 | `_row` / `renderCases` / `delDr` |
+| V5.35.0 | `img._ownerChartNo` 從未賦值 |
+| **V5.42.0** | **`${_ty}` 缺引號** |
+
+每一次都藏在**字串裡**。**差別是:前三次會報錯或靜默失效,這一次會讓使用者以為存好了。**
+
+
+**摘要**:**上線前審核 A-1~A-5 全修,V5.42.0 不可上線**(坑#65):(**A-1 P0**)參數化時 `'cases'`→`${_ty}` **連引號一起換掉**,產生 `upd('head_neck',cases,0,…)` 裸識別字 → ReferenceError → **打字看起來正常、儲存回報成功、重新整理全部不見**,每張卡片 17 個元件失效;12 處補引號。(A-2)`importTimelineFromTreatments` 沒傳 type → 時序寫進同索引的個案討論;(A-3)`updMammo` 寫死 `.cases` + 乳攝整段納入 `_noImg`;(A-4)`moveCase` 寫死 `.cases` → 移動的是個案討論;(A-5)NGS/手術影像區沒被 `_noImg` 擋住。**打包檢查加第七項:事件屬性內的裸插值**
+
+
+**開發敘事**:V5.42.1 上線前審核 A-1~A-5 全修 —— **V5.42.0 被判定不可上線,而 A-1 是十二輪來最嚴重的缺陷**。**A-1**:V5.42.0 把 `caseHTML` 參數化時做的是 `'cases'` → `${_ty}`,**連同外面那對引號一起換掉了**,產生的屬性是 `upd('head_neck',cases,0,'chartNo',this.value)` —— **`cases` 是裸識別字**,inline handler 的作用域鏈查不到 → 必然 ReferenceError。**後果**:在欄位打字時文字**正常出現**(那是 `<input>` 自己的行為)、按儲存**顯示「已儲存」**、重新整理後**剛才打的全部不見** —— **畫面沒有任何異常、儲存回報成功、資料全部遺失**,每張個案卡片 17 個互動元件失效(7 個 textarea + 9 個欄位 + 刪除鈕),個案討論與必要事件兩種卡片都中。**而六項打包檢查全過**:那是合法的模板字串(`node --check` 過)、`_ty`/`upd`/`cid` 都有宣告(jshint `undef` 過)、事件屬性檢查看的是「函式名存不存在」而 `upd` 存在 —— **沒有人檢查引數是字串還是變數**。**這不是理解錯誤,是取代操作漏了引號** —— 同一版新寫的必要事件區塊 `'${_ty}'` 引號是對的。已加入**第七項打包檢查:事件屬性內的裸插值**(函式引數位置出現 `${...}` 且前後是逗號或括號,排除 `${i}`/`${idx}` 這類本來就該是數字的),跑 V5.42.0 的輸出正是那 12 處、零誤報。其餘四項都是同一個家族(type 沒一路傳到底):A-2 `importTimelineFromTreatments` 沒傳 type → 必要事件按「從治療記錄帶入」時序寫進**同索引的個案討論**,而那正是必要提報最核心的內容;A-3 `updMammo` 寫死 `.cases[i]`,且乳攝的日期與報告欄位**沒被 `_noImg` 擋住**(只擋了影像區)—— 這一項**不會 ReferenceError,所以 A-1 修好後反而更難發現**,已把整段納入 `_noImg`;A-4 `moveCase` 寫死 `.cases` → 必要事件按 ▲▼ 重排的是個案討論;A-5 `buildGenomicsImgArea`/`buildSurgicalImgArea` 兩處漏了 `_noImg`,而它們的 `IMG_KINDS` 都是 `holder:'cases'`。**端到端模擬**:把模板產生的 handler 字串實際 eval,`cases`/`events` 兩種情境都正確、省略 type 退回 `cases`。**這個形狀十二輪裡出現第四次**(V5.32.0 `o`、V5.32.1 `_row`/`renderCases`/`delDr`、V5.35.0 `_ownerChartNo`),每一次都藏在字串裡;**差別是前三次會報錯或靜默失效,這一次會讓使用者以為存好了**。屬 c+1。
+
+
+---
+
+## V5.42.0
+
+**必要提報事件(死亡病例討論)改用個案討論的卡片(新增坑 #64)**
+
+### 方向是個管師定的,而且比審核建議的更對
+
+審核想做「**自動判定誰該提報**」(從治療日期算出術後 30 天內死亡等條件)。但個管師指出:
+
+> **本系統沒有病人資料庫的功能。**
+
+很多死亡病例的病人**從來沒在 MDT 討論過**,系統裡根本沒有他的治療記錄 —— 自動判定的前提不成立。
+
+個管師的說法:
+
+> 把必要提報當作一個個案討論,如果之前有在別的會議相同病歷號,看要不要連結;如果沒有,就是全新個案。
+
+所以本版做的是**結構對齊**,不是自動化。
+
+### 改了什麼
+
+| | 原本 | 現在 |
+|---|---|---|
+| 資料結構 | `createTeamItem`(13 欄) | `createCase`(43 欄) |
+| 病程過程 | **一個 discussion textarea** | 病史/檢查/病理/治療/**病程時序** |
+| 死亡資訊 | 無 | 日期、地點、直接死因、**歸因**、**與治療關聯** |
+| 改善方案 | 無 | **需/不需改善** + 方案內容 |
+| 結案狀態 | 無 | 待討論／已討論待改善／已結案 |
+| 跨場帶入 | ❌ **完全沒有** | ✅ 非「已結案」都帶入 |
+
+### 範圍評估錯了一次,而修正是對的決定
+
+第一次估「15 處 `'cases'` + 2 個 handler」。實際盤出來:
+
+| 位置 | 數量 |
+|---|---|
+| `caseHTML` 內寫死 `'cases'` | 15 |
+| `sections[cid].cases[...]` **屬性存取** | **15**(字串檢查抓不到) |
+| handler 需要傳 type | **12** |
+| DOM id 會撞 | 2 |
+
+**而且影像流程還有 8 處寫死 `.cases[`** —— 那是前十輪修過最多次的地方(歸屬驗證花了五個版本)。
+
+> **在第一次真實實測之前不該碰它。**
+
+改成 `opts.noImages`,必要事件先不開放影像 → 要改的從 **27 處降到 7 處**。
+
+### 漏改的後果特別麻煩
+
+> **不報錯、不當機** —— 只是在必要事件卡片上打的字**寫進同索引的個案討論**,等產投影片才發現內容不見。
+
+所以打包檢查加了一條:**`caseHTML` 內不得殘留寫死的 `'cases'`**。
+
+### 一個實作細節
+
+**替換順序很重要**:要先把內容裡的 `'cases'` 全換掉,**最後才加簽章** —— 否則我自己寫的 `type||'cases'` 也會被替換掉。第一次就踩到,回退重做。
+
+### E-1:原本會漏追
+
+帶入來源只有 `cases` / `team` / ongoing `followups` —— **`events` 完全沒有**。
+
+> 死亡病例討論完之後,改善方案還在執行,**下一場不會出現**。
+> 而必要提報是要呈報癌症委員會、認證會查的項目。
+
+### 舊資料
+
+18 筆自動遷移(`migrateEvent`),欄位名剛好相同。唯一差異是 `cc` 的 label 從「之前現病史」變成「現病史」—— 死亡病例本來就是回顧性的,個管師確認可接受。
+
+
+**摘要**:**必要提報事件(死亡病例討論)改用個案討論的卡片**(坑#64):原本與 team 共用 `createTeamItem`,「事件到死亡的過程」只能塞一個 textarea;改用 `caseHTML` 後有病史/檢查/病理/治療/**病程時序**。`caseHTML(cid,i,d,type,opts)` 參數化(15 處 `'cases'` + 12 個 handler + DOM id);**影像先不開放**(`opts.noImages`)—— 影像流程還有 8 處寫死 `.cases[`,而那是前十輪最脆弱的地方。加死亡日期/地點、直接死因、死因歸因、與治療關聯、改善方案、三態結案;**E-1 跨場帶入補上 `sec.events`**(原本完全沒有 → 改善方案還在執行也不會被帶到下一場,**漏追**);舊 18 筆資料自動遷移
+
+
+**開發敘事**:V5.42.0 必要提報事件(死亡病例討論)改用個案討論的卡片(坑 #64)。**這個方向是個管師定的,而且比審核建議的更對**:審核想做「自動判定誰該提報」,但個管師指出**本系統沒有病人資料庫的功能** —— 很多死亡病例的病人從來沒在 MDT 討論過,系統裡根本沒有他的治療記錄,自動判定的前提不成立。個管師的說法是:「**把必要提報當作一個個案討論,如果之前有在別的會議相同病歷號,看要不要連結;如果沒有,就是全新個案**」。所以本版做的是**結構對齊**而非自動化:`events` 從 `createTeamItem`(13 欄、一個 discussion textarea)改用 `createCase`(43 欄,含病史/檢查/病理/治療/**病程時序的結構化多列**)。**實作上最大的教訓是範圍評估**:第一次估「15 處 + 2 個 handler」,實際盤出來是 15 處字串 + **15 處屬性存取**(`.cases[`,我的字串檢查抓不到)+ **12 個 handler** + 2 處 DOM id 會撞。**而且盤到影像流程還有 8 處寫死 `.cases[`** —— 那是前十輪修過最多次的地方(歸屬驗證 V5.32~V5.35 花了五個版本),**在第一次真實實測之前不該碰**;改成 `opts.noImages`,必要事件先不開放影像,要改的從 27 處降到 7 處。**漏改的後果特別麻煩**:不報錯、不當機,只是在必要事件卡片上打的字**寫進同索引的個案討論**,等產投影片才發現內容不見(坑 #55 的形狀)—— 所以打包檢查加了一條「`caseHTML` 內不得殘留寫死的 `'cases'`」。另有一個實作細節值得記:**替換順序** —— 要先把內容裡的 `'cases'` 全換掉,最後才加簽章,否則我自己寫的 `type||'cases'` 也會被替換(第一次就踩到,回退重做)。新增欄位:死亡日期/地點、直接死因、**死因歸因**、**與治療之關聯**(癌委會最關心,也決定要不要改善)、**是否需改善方案**(「留白」與「認定不需改善」必須分得開,留白會讓認證訪查以為漏填)、**三態結案狀態**(待討論/已討論待改善/已結案)。**E-1 跨場帶入補上 `sec.events`** —— 原本帶入來源只有 cases/team/ongoing followups,**events 完全沒有**,死亡病例討論完之後改善方案還在執行也不會出現在下一場 → **漏追**,而必要提報是要呈報癌委會、認證會查的。舊 18 筆資料在渲染時自動遷移(`migrateEvent`),欄位名剛好相同,只有 `cc` 的 label 從「之前現病史」變「現病史」—— 死亡病例本來就是回顧性的,個管師確認可接受。產出端 DOCX 與 HTML 投影片都補上死亡欄位,**「不需改善」也明白印出來**。屬 a+1。
+
+
+---
+
+## V5.41.0
+
+**投影片分享改走 Cloudflare KV —— 關閉 P0-6 / P0-7 兩項個資列管**
+
+### 為什麼
+
+個管師的實際流程有兩個用途:
+
+| 用途 | 對象 | 原本 |
+|---|---|---|
+| 會前確認 | 主治(私人電腦/手機) | LINE 傳連結 ✅ 沒問題 |
+| **會議現場** | **個管在公用電腦** | 🔴 **手動輸網址** |
+
+而公用電腦**不能插 USB**(怕中毒)。
+
+**解法**:Worker 加一個帶密碼的清單頁,會議室電腦存書籤 → 點兩下就開,**零輸入**。
+
+```
+https://share.selaginella.io/?k=cbshow
+```
+
+### Worker 同時補的安全 header
+
+最重要的是 **`robots.txt` 與 `x-robots-tag`** —— 原本完全沒有:
+
+> 只要一個連結流到公開場合(轉貼到某群組、某網頁),**搜尋引擎就會索引含病歷號的投影片**。
+> 這比「有人刻意窮舉」機率高得多 —— 不需要有人惡意,一次不小心的轉貼就夠了。
+
+### MDT 系統這端
+
+| 項目 | 做法 | 理由 |
+|---|---|---|
+| Account / Namespace ID | **寫死** | 不是機密(沒 token 不能做任何事),三台電腦不必各設定 |
+| **API Token** | **存 `mdt_cf_token`,不進備份** | 比照 P0-9 |
+| 檔名 | 補上 `_MDT` | **Worker 清單頁靠這個格式篩選**,不帶就不會出現在書籤清單 |
+
+### GitHub 分享整組移除
+
+`uploadSlidesToGitHub`、`getGhToken`、`saveGhToken`、`clearGhToken`、`getSharedSlides`、`saveSharedSlides`、`renderSharedSlides`、`deleteSharedSlide`、設定頁的「已分享的投影片」UI、`copyslideurl`/`deleteslide` 兩個 handler。
+
+**其中那顆刪除鍵最該拿掉**:
+
+> 它打的是 GitHub API —— 對 Cloudflare 上的檔案**無效卻會回報成功**。
+> 個管師以為刪掉了,實際上還在。(坑 #33 謊報成功的形狀。)
+
+而清單本身的 `slice(0,30)` 上限,就是 P0-7 的一部分。
+
+### 過程中應用了坑 #60
+
+拿掉寫入端後**逐一追讀取端**,因此抓到:
+
+```js
+// shareHTMLSlides 的守門條件還在檢查 GitHub token
+if(!getGhToken()){alert('請先到設定頁填入 GitHub Personal Access Token');return;}
+```
+
+**不修的話,個管師填了 Cloudflare token 一樣被擋在門外。**
+
+### 權限分工(個管師定的)
+
+- **個管師只能上傳**
+- **管理權在林醫師** —— Git Pusher 有完整的搜尋/改名/刪除/QR,而且跨三台電腦看得到全部
+
+所以本機不再保存分享清單(也避免「同一件事兩份實作」,坑 #61)。
+
+### 已知未解
+
+| 項目 | 狀態 |
+|---|---|
+| P0-6 的「檔名可窮舉」 | **沒做隨機 token** —— 個管師的判斷是「猜對沒關係,一陣子就清掉,而會議現場網址難輸更實際」。Cloudflare 是真刪除 + 時間窗短,取捨成立 |
+| token 權限過大 | CF 的 KV token 只有 Read/Edit 兩級,**Edit 含刪除**,做不到「只能寫不能刪」 |
+
+
+**摘要**:**投影片分享改走 Cloudflare KV,關閉 P0-6/P0-7 兩項個資列管**:Account/Namespace ID 寫死(非機密),**API Token 存 `mdt_cf_token` 不進備份**(比照 P0-9);檔名補 `_MDT` 與「HTML 下載」一致(Worker 清單頁靠這格式篩選);**GitHub 分享整組移除**(上傳函式、token 存取、分享清單 UI 與其刪除鍵)—— 那顆刪除鍵打的是 GitHub API,**對 Cloudflare 的檔案無效會謊報成功**;守門條件也跟著換(否則填了 CF token 仍被擋,坑 #60)
+
+
+**開發敘事**:V5.41.0 投影片分享改走 Cloudflare KV,**批次 B 的 P0-6 與 P0-7 兩項列管因此關閉**。背景:個管師的實際流程有兩個用途 —— 會前用 LINE 傳連結給主治確認(私人電腦/手機),會議當天在公用電腦開;而卡住的是後者(**手動輸網址**),且公用電腦不能插 USB(怕中毒)。解法是 **Cloudflare Worker 加一個帶密碼的清單頁**(`share.selaginella.io/?k=cbshow`),會議室電腦存書籤 → 點兩下就開,零輸入。Worker 那邊同時補了五個 header,其中最重要的是 **`robots.txt` 與 `x-robots-tag`** —— 原本完全沒有,**只要一個連結流到公開場合,搜尋引擎就會索引含病歷號的投影片**,那比「有人刻意窮舉」機率高得多。**MDT 系統這端的改動**:Account ID / Namespace ID 寫死(它們**不是機密**,沒有 token 不能做任何事,而且個管師三台電腦不必各設定一次);**API Token 不寫死**,存在 `mdt_cf_token` 且**不在 `_PREF_FIXED` 裡 → 不進備份檔**(比照 P0-9)。檔名補上 `_MDT` 與「HTML 下載」一致 —— **Worker 的清單頁靠 `日期_癌別_MDT.html` 這個格式篩選出會議記錄**,不帶 `_MDT` 的上傳後不會出現在會議室電腦的書籤清單裡。**GitHub 分享整組移除**:`uploadSlidesToGitHub` / `getGhToken` / `saveGhToken` / `clearGhToken` / `getSharedSlides` / `saveSharedSlides` / `renderSharedSlides` / `deleteSharedSlide`,以及設定頁的「已分享的投影片」UI 與 `copyslideurl`/`deleteslide` 兩個 handler。**其中分享清單那顆刪除鍵最該拿掉** —— 它打的是 GitHub API,對 Cloudflare 上的檔案**無效卻會回報成功**(坑 #33 謊報成功的形狀);而清單本身的 `slice(0,30)` 上限就是 P0-7 的一部分。**過程中應用了坑 #60 的教訓**:拿掉寫入端後逐一追讀取端,因此抓到 `shareHTMLSlides` 的守門條件還在檢查 GitHub token —— **不修的話個管師填了 CF token 一樣被擋在門外**。管理權的分工是個管師定的:**她們只能上傳,已分享內容的管理(搜尋/改名/刪除/QR)在林醫師的 Git Pusher**,所以本機不再保存分享清單(也避免「同一件事兩份實作」,坑 #61)。**已知未解**:P0-6 的「檔名可窮舉」沒有做隨機 token —— 個管師的判斷是「猜對沒關係,一陣子就會清掉,而會議現場網址難輸更實際」,而 Cloudflare 是真刪除 + 時間窗短,這個取捨成立。另:Cloudflare 的 KV token 權限只有 Read/Edit 兩級,**Edit 含刪除,沒辦法給個管師「只能寫不能刪」**,這是已知限制。屬 b+1。
+
+
+---
+
+## V5.40.0
+
+**輸入介面一致化 — 只做第 1 步**
+
+審核指出五個可輸入區塊**是五套不同的寫法**,不一致有三層:
+
+| 層級 | 問題 |
+|---|---|
+| 長相 | 手抄 inline style(28 / 20 / 38 次) |
+| 能力 | 共病快選、結構化多列**只有個案卡片有** |
+| **語意** | **`cc` 在個案是現病史、在團隊是「之前」現病史;`summary` 在個案是摘要、在團隊是「最新情況」** |
+
+三個數字逐一驗證,**全部精確命中**。
+
+### 但第 1 步的推論要修正
+
+審核說「68 處手抄 → 3 個 CSS class」。實測:
+
+| | 變體數 | 總數 |
+|---|---|---|
+| `<textarea>` | **14 種** | 37 |
+| `<input>` | **37 種** | 65 |
+
+差別在 `min-height`(32/36/40)、`line-height`(1.5/1.6/1.8)、border 用 `--border` 還是 `--blt`、radius 2px 還是 3px。
+
+> **全部換成同一個 class 會改變外觀 —— 而那是我看不到、個管師週一才會看到的。**
+
+只轉換**字元完全相同**的主流變體(23 處),class 的值就是原值 → **零外觀變化**。
+
+```css
+.f-ta  /* 10 處 */   .f-ta-sm  /* 4 處 */
+.f-in  /* 3 處 */    .f-in-auto /* 6 處 */
+```
+
+### 第 2~7 步刻意不做
+
+**理由一**:三套 chip **不是同一件事**
+
+| chip | 寫入 | 模式 |
+|---|---|---|
+| `topic` | `cases[i].topics` | 多選 |
+| `phchip` | 獨立的 `togglePhChip()` | 多選 |
+| `specialtype` | `special[i].topicType` | **單選** |
+
+合併要改三個運作正常的 handler,**對個管師沒有可見改變**。
+
+**理由二**:**從 V5.31.2 到現在 16 個版本,沒有一個被真人用過。** 週一是第一次實測 —— 這時候動正在運作的程式碼,萬一測出問題會**分不清是哪一版造成的**。
+
+### 記下來的判準
+
+> **一致性的目的是「不用適應」,不是「每個地方都長一樣」。**
+> 判準:**同一個動作在不同區塊,操作方式是否相同**。只存在於一個區塊的動作,維持現狀是對的。
+
+
+**摘要**:輸入介面一致化**第 1 步**:`.f-ta`/`.f-ta-sm`/`.f-in`/`.f-in-auto` 取代 23 處手抄 inline style。**修正了審核的推論**:實測 `<textarea>` 有 14 種變體、`<input>` 有 37 種(差在 min-height/line-height/border 變數/radius),不是「68 處換 3 個 class」那麼單純 —— 只轉換字元完全相同的,class 的值就是原值,**零外觀變化**。第 2~7 步刻意不做
+
+
+**開發敘事**:V5.40.0 輸入介面一致化**只做第 1 步**。審核提了一份紮實的結構性建議:五個可輸入區塊是五套不同寫法,不一致有三層 —— 長相(手抄 inline style)、能力(共病快選與結構化多列只有個案有)、**語意(`cc` 在個案是現病史、在團隊是「之前」現病史;`summary` 在個案是摘要、在團隊是「最新情況」)**;第三層最危險,不只讓個管師要適應,還會讓產出程式取錯欄位。**三個數字我逐一驗證全部精確命中**(28/20/38)。**但第 1 步的推論要修正**:審核說「68 處手抄 → 3 個 CSS class」,實測後 `<textarea>` 有 **14 種變體**、`<input>` 有 **37 種**,差別在 `min-height`(32/36/40)、`line-height`(1.5/1.6/1.8)、border 用 `--border` 還是 `--blt`、radius 2px 還是 3px —— **全部換成同一個 class 會改變外觀,而那是我看不到、個管師週一才會看到的**。改成只轉換**字元完全相同**的主流變體(23 處),class 的值就是原值,**零外觀變化**,但從此有「下次新增欄位該用哪個」的標準答案。**第 2~7 步刻意不做**,兩個理由:①查證後三套 chip **不是同一件事**(`topic`→`cases[i].topics` 多選、`phchip`→獨立的 `togglePhChip()`、`specialtype`→`special[i].topicType` **單選**),合併要改三個運作正常的 handler 而**對個管師沒有可見改變**;②**從 V5.31.2 到現在 16 個版本沒有一個被真人用過**,週一是第一次實測 —— 這時候動正在運作的程式碼,萬一測出問題會**分不清是哪一版造成的**。審核自己也寫「第 1 步單獨就值得做」。記下審核第 6 步的提醒:**「一致性的目的是『不用適應』,不是『每個地方都長一樣』;判準是同一個動作在不同區塊操作方式是否相同 —— 只存在於一個區塊的動作,維持現狀是對的。」** 屬 b+1。
+
+
+---
+
+## V5.39.0
+
+**F-3 底部固定操作列(含收斂 U-2 的儲存鍵)**
+
+### 先講 F-2:查證後判定不需做
+
+審核說「時間與地點在垂直相鄰的兩區各顯示一次,個案區被推到第二屏」。
+
+**但系統已經用模式 class 把兩區完全隔開**:
+
+```css
+.mtg-record   .info-section  { display:none !important }   /* 記錄模式:資訊區隱藏 */
+.mtg-schedule .cases-section { display:none !important }   /* 排程模式:個案區隱藏 */
+```
+
+所以**兩者不會同時出現**,個案區上面只有薄薄的 `#mtg-info-bar`。
+
+> **這一輪唯一該做的事:先查證再動手,不是照單全收。**
+
+### F-3 確實成立
+
+`output-section` 在 `cases-inner` 之後 —— 一場 8 個個案的會議,每張卡片展開後高度可觀:
+
+- 要按「HTML 投影片」「DOCX 記錄」得**滑過全部個案**,而那正是會議當天/會後立刻要用的
+- 儲存鍵同理:捲到一半想存要捲回去找
+
+新增 `#mtg-actionbar`(sticky bottom),編輯模式下固定在畫面底部:
+
+```
+[訊息]                LINE 通知 ｜ HTML 投影片 ｜ 會議小抄 │ 放棄編輯 ｜ 儲存
+```
+
+**同時收斂第一輪 U-2 的「五顆功能相同的儲存鍵」** —— 這一顆是隨時可及的那顆。
+
+### 過程中抓到一個自己的錯
+
+顯示條件原本寫:
+
+```css
+.mtg-record .cases-section:not(.view-mode) #mtg-actionbar{display:flex}
+```
+
+但查證發現 **`.view-mode` 與 `.mtg-record` 都掛在同一個 `#view-meeting .wrap` 上**,不是掛在 `.cases-section`。
+
+> 那個選擇器**永遠不會成立,等於固定列根本不會出現**。
+
+改成 `.mtg-record:not(.view-mode)`,並用四種 class 組合模擬驗證:
+
+| 狀態 | 固定列 |
+|---|---|
+| 記錄模式 + 編輯中 | ✅ 顯示 |
+| 記錄模式 + 檢視 | 隱藏 |
+| 排程模式 | 隱藏 |
+| 排程 + 檢視 | 隱藏 |
+
+
+**摘要**:F-3 底部固定操作列(含收斂 U-2 的儲存鍵):編輯模式下固定在畫面底部,放「LINE 通知 / HTML 投影片 / 會議小抄 / 放棄編輯 / 儲存」—— 一場 8 個個案的會議,產出鍵原本在整頁最底部要滑過全部個案,儲存鍵也要捲回去找。**F-2 查證後判定不需做**:系統已用 `.mtg-record`/`.mtg-schedule` 把資訊區與個案區**完全隔開**(`display:none!important`),審核說的「時間地點顯示兩次」實際不會同時發生
+
+
+**開發敘事**:V5.39.0 F-3 底部固定操作列。**但先講 F-2:查證後判定不需做,審核那一項的前提是錯的** —— 系統已經用 `.mtg-record` / `.mtg-schedule` 兩個模式 class 把資訊區與個案區**完全隔開**(`.mtg-record .info-section{display:none!important}`),所以「時間地點在垂直相鄰的兩區各顯示一次」**實際上不會同時發生**,個案區上面只有薄薄的 `#mtg-info-bar`。**這是我這輪唯一該做的事:先查證再動手,不是照單全收。** **F-3 則確實成立**:`output-section` 在 `cases-inner` 之後,一場 8 個個案的會議每張卡片展開後高度可觀,要按「HTML 投影片」或「DOCX 記錄」得滑過全部個案 —— 而那兩顆正是「會議當天/會後立刻要用」的;儲存鍵同理,捲到一半想存要捲回去找。加了 `#mtg-actionbar` 固定列(sticky bottom),放 LINE 通知/HTML 投影片/會議小抄/放棄編輯/儲存,**同時收斂第一輪 U-2 的「五顆功能相同的儲存鍵」**(這一顆是隨時可及的那顆)。個管師選完整版(五顆),等實測覺得擠再精簡。**過程中抓到一個自己的錯**:顯示條件原本寫 `.mtg-record .cases-section:not(.view-mode)`,但查證發現 **`.view-mode` 與 `.mtg-record` 都掛在同一個 `#view-meeting .wrap` 上**(L3041-3042),不是掛在 `.cases-section` —— 那個選擇器**永遠不會成立,等於固定列根本不會出現**。改成 `.mtg-record:not(.view-mode)`,並用四種 class 組合模擬驗證(記錄+編輯→顯示、記錄+檢視→隱藏、排程→隱藏、排程+檢視→隱藏)全對。另加小螢幕的按鈕縮排與列印隱藏。屬 b+1。
+
+
+---
+
+## V5.38.0
+
+**UI 流程優化第二輪 F-1 / F-4 / F-5**
+
+> 第一輪(U 系列)算的是**點擊次數**。這一輪算的是兩種更隱形的成本:
+> **手離開鍵盤**(注意力中斷)與**捲動距離**。
+>
+> 審核的觀察:**這兩種成本使用者不會回報** —— 沒有人會說「這系統讓我手離開鍵盤太多次」,他們只會覺得「用起來有點累」。
+
+### F-1 ⭐ 主程式原本零個鍵盤快捷鍵
+
+查證確認:全檔只有兩個 `keydown`,**兩個都在產出的投影片檢視器裡**(Escape 關螢光筆、L 開放大鏡)。主應用**一個都沒有**。
+
+個管師整理個案是**連續打字**的工作,每次存檔要:
+
+```
+手離開鍵盤 → 移到滑鼠 → 找「儲存」按鈕 → 點擊 → 手回鍵盤 → 找回游標位置
+```
+
+一場會議 8–15 次。而且:
+
+> **`Ctrl+S` 是所有人肌肉記憶裡本來就有的動作 —— 現在按下去只會跳出瀏覽器的「儲存網頁」對話框,那比沒有反應更糟。**
+
+新增三組(掛在 `document` 上,才攔得到 `<textarea>` 內按的):
+
+| 快捷鍵 | 動作 |
+|---|---|
+| **Ctrl / Cmd + S** | 儲存 |
+| **Esc** | 關掉最上層的對話框 |
+| **Ctrl / Cmd + Enter** | 在「建立會議」對話框直接送出 |
+
+### F-5 動態 overlay 也能 Esc 關
+
+影像選取器、稽核報表是 `createElement` 出來的,不在 `.overlay.open` 選擇器裡 → 統一帶 `.dyn-overlay`。
+
+**影像選取器若已勾選項目,Esc 直接關會丟掉選擇** → 有勾選時先問一句。
+
+### F-4 配色條收進摘要行
+
+一年改不到幾次,卻佔著產出區最顯眼的第一排。
+
+### 過程中的教訓
+
+F-5 第一次用**寬鬆 regex 批次加 class**,插進了字串內部造成語法錯誤;清理時又**誤傷變數名**(`escA(f.name…)` → `escA(se)`)。
+
+> **jshint 當場抓到,而 `node --check` 不會** —— 那是語法合法的邏輯錯誤。
+
+最後**從 V5.37.1 乾淨重建再套用**,並改用嚴格 regex(要求 `createElement` 與 `cssText` 相鄰)。
+
+### 未做
+
+| # | 項目 | 原因 |
+|---|---|---|
+| F-2 | 資訊區檢視模式收合 | 與 F-3 都在改會議畫面垂直排版,**一起做一次驗**比較好 |
+| F-3 | 底部固定操作列 | 同上 |
+| F-7 | 自動存檔 45 秒 + blur 觸發 | 審核明確要求「**第一步驗證過才做第二步**」 |
+
+
+**摘要**:UI 流程優化第二輪 F-1/F-4/F-5:(**F-1,唯一主動催的一項**)主程式**零個鍵盤快捷鍵** —— 全檔兩個 keydown 都在產出的投影片檢視器裡;而 `Ctrl+S` 是人人肌肉記憶裡的動作,**按下去只會跳瀏覽器的「儲存網頁」對話框,比沒有反應更糟**;加 Ctrl+S 儲存 / Esc 關對話框 / Ctrl+Enter 建立會議,掛在 document 上才攔得到 textarea 內的按鍵;(F-5)動態 overlay 統一帶 `.dyn-overlay` 讓 Esc 可關,**有勾選時先問一句**避免丟掉選擇;(F-4)投影片配色條收進摺疊摘要,產出按鈕上移一排
+
+
+**開發敘事**:V5.38.0 UI 流程優化第二輪 F-1/F-4/F-5。**這一輪算的不是點擊次數(第一輪 U 系列已處理),而是兩種更隱形的成本**:**手離開鍵盤**(注意力中斷)與**捲動距離**。審核的觀察:「這兩種成本的共同點是**使用者不會回報它們** —— 沒有人會說『這個系統讓我手離開鍵盤太多次』,他們只會覺得『用起來有點累』」。**F-1 是唯一主動催的一項**:查證確認主程式**零個鍵盤快捷鍵** —— 全檔只有兩個 `keydown`,兩個都在**產出的投影片檢視器**裡(Escape 關螢光筆、L 開放大鏡),主應用一個都沒有。個管師整理個案是連續打字的工作,每次存檔要「手離開鍵盤 → 移到滑鼠 → 找儲存按鈕 → 點擊 → 手回鍵盤 → 找回游標位置」,一場會議 8–15 次。而且 **`Ctrl+S` 是所有人肌肉記憶裡本來就有的動作 —— 現在按下去只會跳出瀏覽器的「儲存網頁」對話框,那比沒有反應更糟**。加了三組:Ctrl/Cmd+S 儲存、Esc 關最上層對話框、Ctrl/Cmd+Enter 在建立會議對話框送出;**掛在 `document` 上而非特定元素**,才攔得到在 `<textarea>` 內按的。**F-5**:動態建立的 overlay(影像選取器、稽核報表)是 `createElement` 出來的,不在 `.overlay.open` 選擇器裡 → 統一帶 `.dyn-overlay`;**影像選取器若已勾選項目,Esc 直接關會丟掉選擇,所以有勾選時先問一句**。**F-4**:投影片配色條一年改不到幾次卻佔著產出區最顯眼的第一排,收進可點的摘要行。**過程中的教訓**:F-5 第一次用寬鬆 regex 批次加 class,**插進了字串內部造成語法錯誤**;清理時又誤傷變數名(`escA(f.name...)` 變成 `escA(se)`)—— **jshint 當場抓到**,而 `node --check` 不會(那是語法合法的邏輯錯誤)。最後**從 V5.37.1 乾淨重建再套用**,並改用嚴格 regex(要求 `createElement` 與 `cssText` 相鄰)。F-2(資訊區收合)、F-3(底部固定操作列)、F-7(自動存檔 45 秒 + blur 觸發)未做 —— 前兩者都在改會議畫面的垂直排版,建議一起做並一次驗;F-7 審核明確要求「第一步驗證過才做第二步」。屬 b+1。
+
+
+---
+
+## V5.37.1
+
+**第十次審核 Z-1~Z-4 全修(新增坑 #63)**
+
+### Z-1 ⭐ 按「LINE 通知」完全沒反應
+
+V5.36.1 的 U-3 把一批低頻按鈕搬進 `<details>` 摺疊區 —— **但跟著搬進去的還有服務區外按鈕的輸出元素**:
+
+| 元素 | 服務誰 | 在哪 |
+|---|---|---|
+| `#out-area` / `#out-text` / `#copy-ok` | **「LINE 通知」(常用區)** | 🔴 摺疊區內 |
+| `#lib-status` | **「Word 簡報」(常用區)** | 🔴 摺疊區內 |
+| `#ai-result-area` | 「AI 生成摘要」(**區內**) | ✅ 區內正確 |
+
+`<details>` 未展開時**內部內容不會渲染** → `display='block'` 設了也看不到、`scrollIntoView` 也不捲動。
+
+> **按「LINE 通知」完全沒反應** —— 而那是每場會議都要用的三顆之一。
+
+**為什麼人眼 review 抓不到**:
+
+> HTML 的「**視覺分組**」與「**功能歸屬**」不一定一致 —— `#out-area` 在原始碼裡確實排在匯入匯出按鈕後面,但它服務的是上面那顆。
+> **靠讀 HTML 縮排看不出來,要靠追 `getElementById` 的呼叫端。**
+
+**已加入打包檢查**:抓出摺疊區內所有 id,再掃區外按鈕的 onclick 函式有沒有 `getElementById` 到它們。
+
+判準是「**誰觸發它**」,不是「**它長在哪**」。
+
+### 三問集滿
+
+1. 舊入口被刪掉之後,原本走它的**每一種情況**現在走哪裡?(#60)
+2. 換掉一個工具之後,舊工具**自帶的行為**有沒有人接手?(#60)
+3. **搬動一個區塊時,區塊裡的東西有沒有服務區塊外的人?**(本項)
+
+### Z-2~Z-4
+
+| # | 問題 |
+|---|---|
+| Z-2 | Y-2 的 dryRun 造成**每按一次跑兩輪完整驗證**,而按鈕在第一輪結束就恢復 → NAS 上第二輪十幾秒畫面靜止,**個管師會再按一次觸發第三輪** |
+| Z-3 | **還原舊備份會把含金鑰的 `mdt_ai` 寫回** → 若立刻再匯出一次,金鑰又被帶出去;改成匯入時就地遷移 |
+| Z-4 | U-1 之後「放棄編輯」實質是「切回檢視」(行為正確,但剛存完看到那四個字會猶豫);文字跟著 `_dirty` 走 |
+
+### ⚠ Z-3 的第二件事:程式改不到的部分
+
+> **V5.37.0 之前匯出的備份檔裡,那把 API 金鑰仍然有效。**
+>
+> 必須通知三位個管師:**刪除舊備份檔**,並到 Anthropic / OpenAI 後台**輪替一次 API Key**。
+
+
+**摘要**:第十次審核 Z-1~Z-4 全修(坑#63):(**Z-1 P1**)U-3 的摺疊區把服務區外按鈕的 `#out-area`/`#lib-status` 一起包進去 → **按「LINE 通知」完全沒反應**;移出區外並加結構檢查;(Z-2)Y-2 的 dryRun 造成兩輪完整掃描,而按鈕在第一輪結束就恢復 → NAS 上第二輪十幾秒畫面靜止會被再按一次;按鈕恢復延後、中間顯示進度;(Z-3)還原舊備份會把含金鑰的 `mdt_ai` 寫回 → 匯入時就地遷移;(Z-4)U-1 之後「放棄編輯」實質是「切回檢視」,文字跟著 `_dirty` 走
+
+
+**開發敘事**:V5.37.1 第十次審核 Z-1~Z-4 全修(坑 #63)。**Z-1 是 P1,而且又是「搬移時的覆蓋不全」**:V5.36.1 的 U-3 把一批低頻按鈕搬進 `<details>` 摺疊區,**但跟著搬進去的還有服務區外按鈕的輸出元素** —— `#out-area`/`#out-text`/`#copy-ok` 服務的是常用區的「LINE 通知」(`doOutput`)、`#lib-status` 服務的是「Word 簡報」;而 `<details>` 未展開時內部內容不會渲染,`display='block'` 設了也看不到、`scrollIntoView` 也不捲動 → **按「LINE 通知」完全沒反應**,而那是每場會議都要用的三顆之一。**人眼 review 抓不到的原因**:HTML 的「視覺分組」與「功能歸屬」不一定一致 —— `#out-area` 在原始碼裡確實排在匯入匯出按鈕後面,但它服務的是上面那顆;**要靠追 `getElementById` 的呼叫端**才看得出來。已把 `#out-area`/`#lib-status` 移出區外(`#ai-result-area` 服務的是區內的「AI 生成摘要」,留在區內才對 —— **判準是「誰觸發它」,不是「它長在哪」**),並**加入打包檢查**:抓出摺疊區內所有 id,再掃區外按鈕的 onclick 函式有沒有 `getElementById` 到它們。其餘:Z-2 Y-2 的 dryRun 修法本身正確,但代價是每按一次「🔍 檢查影像」跑**兩輪完整驗證**,而 `finally` 在第一輪就把按鈕恢復 → 第二輪期間畫面靜止、按鈕可按,NAS 上十幾秒**個管師會以為沒反應再按一次觸發第三輪**;把按鈕恢復延後到兩輪都跑完、中間顯示「分析可修正項目…」。Z-3 **還原舊備份會把含金鑰的 `mdt_ai` 寫回 localStorage**,要等下次 `loadAICfg` 才遷移,中間若立刻再匯出一次備份金鑰又被帶出去;改成匯入時就地拆開;**但程式只能保證「以後不會再外流」—— V5.37.0 之前匯出的備份檔裡那把金鑰仍然有效,必須通知個管師刪除舊備份並輪替金鑰**(流程動作)。Z-4 U-1 之後儲存成功留在編輯模式,此時「放棄編輯」實質是「切回檢視」(行為正確無資料風險,但剛存完看到那四個字會猶豫),文字跟著 `_dirty` 走,順便補回 U-1 拿掉的「看成品」入口。**三問集滿**(#60 兩問 + 本項第三問)。屬 c+1。
+
+
+---
+
+## V5.37.0
+
+**批次 B 的兩項個資修復(不需等 Cloudflare)**
+
+> P0-6(GitHub 公開)、P0-7(Git 歷史)仍列管,等搬完 Cloudflare 再處理。
+> **但這兩項與搬遷無關,現在就能修。**
+
+### P0-9 每份備份 JSON 都帶著 API 金鑰
+
+```js
+const _PREF_FIXED=['mdt_ai','mdt_cr_template'];   // ← mdt_ai 含金鑰明文
+```
+
+`mdt_ai` 存的是 `{provider, key, model}` —— **`key` 是 API 金鑰明文**。
+
+> 備份上 NAS、互相傳檔、寄出去 → **金鑰外流到所有拿到備份檔的人手上**。
+> (`mdt_gh_token` 當初就正確地沒有列入,只有這個漏了。)
+
+**做法**:拆成兩個 key
+
+| key | 內容 | 進備份 |
+|---|---|---|
+| `mdt_ai_pref` | provider / model | ✅ |
+| `mdt_ai_key` | API 金鑰 | ❌ **永不** |
+
+並在 `loadAICfg` 對**舊格式一次性遷移後刪除** —— 否則舊資料會繼續把金鑰留在那個會進備份的 key 裡。
+
+模擬驗證:備份內容不再含 `sk-ant`。
+
+### P0-8 AI prompt 送出完整病歷號與姓名
+
+兩處組裝點都送往 `api.anthropic.com` / `api.openai.com`:
+
+| 函式 | 原本 |
+|---|---|
+| `genAI` | 有 `maskName` 遮姓名,**但病歷號沒遮** |
+| `genAIInline` | **姓名與病歷號都沒遮** |
+
+> **姓名與病歷號對 AI 摘要完全沒有貢獻** —— 拿掉零損失。
+
+改成個案以「**案 N**」代稱,只送性別/年齡/主治醫師與臨床描述。驗證兩個函式都不再含 `c.chartNo` 與 `c.name`。
+
+**設定頁加固定告示**:
+
+> **資料處理說明**
+> • 本功能會將個案的**臨床描述**傳送至境外 AI 服務。**姓名與病歷號已自動移除**(個案以「案 1、案 2」代稱)。
+> • 請勿在自由文字欄位填入姓名、身分證號等可識別個資。
+> • API Key **只存在本機、不會進入備份檔**;還原備份後需重新填入一次。
+
+
+**摘要**:**批次 B 的兩項個資修復**(不需等 Cloudflare):(**P0-9**)`mdt_ai` 含 API Key 明文卻列在備份清單 → **每份備份 JSON 都帶著金鑰**(上 NAS、互傳、寄出都外流);拆成 `mdt_ai_pref`(可備份)與 `mdt_ai_key`(永不備份),並對舊格式做一次性遷移後刪除;(**P0-8**)AI prompt 送**完整病歷號與姓名**到境外 LLM → 兩處組裝點都去識別化(個案以「案 N」代稱),姓名與病歷號**對 AI 摘要完全沒有貢獻**;設定頁加固定告示
+
+
+**開發敘事**:V5.37.0 批次 B 的兩項個資修復 —— **這兩項與 Cloudflare 搬遷無關,現在就能修**(P0-6 GitHub 公開、P0-7 Git 歷史仍列管,等搬完再處理)。**P0-9**:`mdt_ai` 存的是 `{provider,key,model}`,**`key` 是 API 金鑰明文**,而它原本列在 `_PREF_FIXED` 備份清單裡 → **每一份備份 JSON 都帶著金鑰**,上 NAS、互相傳檔、寄出去就外流到所有拿到備份的人手上;(`mdt_gh_token` 當初就正確地沒有列入,只有這個漏了)。做法:拆成 `mdt_ai_pref`(provider/model,可備份)與 `mdt_ai_key`(永不備份),並在 `loadAICfg` 對**舊格式做一次性遷移後刪除** —— 否則舊資料會繼續把金鑰留在那個會進備份的 key 裡。模擬驗證備份內容不再含 `sk-ant`。**P0-8**:AI prompt 的兩處組裝點(`genAI`、`genAIInline`)送出**完整病歷號與姓名**到 `api.anthropic.com` / `api.openai.com` —— `genAI` 雖有 `maskName` 但病歷號沒遮、`genAIInline` 兩者都沒遮。**姓名與病歷號對 AI 摘要完全沒有貢獻**,拿掉零損失;改成個案以「案 N」代稱,只送性別/年齡/主治醫師與臨床描述。驗證兩個函式都不再含 `c.chartNo` 與 `c.name`。另在設定頁 AI 區加固定告示:說明會傳送臨床描述至境外服務、姓名病歷號已自動移除、請勿在自由文字欄位填入可識別個資、API Key 只存本機不進備份。屬 b+1。
+
+
+---
+
+## V5.36.1
+
+**UI 減法 U-1 / U-3 / U-7(新增坑 #62)**
+
+### U-1 ⭐ 儲存後不再被踢回檢視模式(投報率最高,修法兩行)
+
+```js
+// 舊:存完 1.2 秒強制切檢視 + 整頁重繪
+setTimeout(()=>{
+  S.viewMode=true; S.meetingMode='record';
+  renderEditor();
+},1200);
+```
+
+個管師整理一場 **8 個個案**的會議,實際動線:
+
+```
+編輯 → 填個案1 → 儲存
+   ↓ 1.2 秒後畫面自己跳成檢視模式
+編輯 → 填個案2 → 儲存
+   ↓ 又跳回檢視模式
+編輯 → 填個案3 → 儲存 → …
+```
+
+> **每場會議多按 8–15 次「編輯」,而且每次重繪都讓捲動位置歸零、展開的卡片收合、剛才在看的那張要重新找。**
+
+**這個 `setTimeout` 當初寫進去是善意的**(存完給人看一眼結果),程式上完全正確,**九輪審核從來沒把它當缺陷**。
+
+根本的認知錯誤:**把存檔當成「結束動作」,但它是「中途動作」** —— 尤其會議記錄這種要來回補的工作。
+
+現在:**畫面原地不動**,只清 dirty 與快照。想看成品自己按「檢視」。
+
+### U-3 產出按鈕分兩層(不刪任何功能)
+
+14 顆平鋪,但使用頻率差兩個數量級:
+
+| 頻率 | 按鈕 |
+|---|---|
+| **每場都用** | HTML 投影片、會議小抄、LINE 通知 |
+| 一年幾次 | Excel 匯出/匯入、JSON ×3、HTML 分享、AI 匯入提示詞 |
+
+「資料交換與分享」整區收進 `<details>` 預設摺疊。
+
+> 審核特別提醒:**UI 減法最容易犯的錯是把「少用」當成「該刪」** —— 一年用兩次的 JSON 批次匯入,用到的那兩次通常是在救火。收進摺疊區是對的,刪掉不是。
+
+### U-7 設定頁分頁排序(零風險)
+
+前四個是主檔維護(一年改幾次)、後兩個是日常會碰的。**把「影像資料夾」「備份」提到最前面**。
+
+### 已固化的驗收方式:用步數量,不用感覺
+
+> **腳本**:整理一場有 6 個個案、每個帶 2 張病理影像的會議,直到產出 HTML 投影片。
+>
+> **記錄**:總點擊次數 / 「編輯」按了幾次 / 找按鈕的停頓次數。
+
+**每次較大改版後找一位個管師實際走一次,旁邊記步數 —— 三十分鐘,比任何審核報告都準。**
+
+> 這類問題**靜態檢查抓不到、jshint 抓不到、壓力測試也抓不到**。
+
+### 未做(待實測後評估)
+
+U-2(五顆儲存鍵收成一顆)、U-4(合併 schedule/record 模式)、U-5(建立會議預填)、U-6(影像按鈕收合)。
+
+
+**摘要**:UI 減法 U-1/U-3/U-7(坑#62):(**U-1,投報率最高**)儲存後那個 1.2 秒 setTimeout **強制切回檢視模式** → 整理 8 個個案要多按 8–15 次「編輯」,每次還重繪讓捲動歸零;改成畫面原地不動,只清 dirty 與快照;(U-3)14 顆產出按鈕裡「一年用兩次」的 Excel/JSON 匯入匯出收進 `<details>` 摺疊區,**不刪任何功能**;(U-7)設定頁分頁排序 —— 日常會碰的「影像資料夾/備份」提到最前面,主檔維護類往後
+
+
+**開發敘事**:V5.36.1 UI 減法 U-1/U-3/U-7(坑 #62)。內部審核另出了一份 UI 減法建議,盤點後指出最貴的不是按鈕多,是**三個會反覆發生的多餘動作**。**U-1 是投報率最高的一項,而修法只有兩行**:`saveMeeting` 收尾那個 1.2 秒 `setTimeout` 會強制 `S.viewMode=true` 並 `renderEditor()` —— 個管師整理一場 8 個個案的會議,實際動線變成「編輯 → 填 → 儲存 → **畫面自己跳檢視** → 編輯 → 填 → 儲存 → …」,**每場多按 8–15 次「編輯」,而且每次重繪都讓捲動位置歸零、展開的卡片收合、剛才在看的那張要重新找**。這個 setTimeout **當初寫進去是善意的**(存完給人看一眼結果),程式上完全正確,**九輪審核從來沒把它當缺陷** —— 根本的認知錯誤是**把存檔當成「結束動作」,但它是「中途動作」**。改成畫面原地不動,只清 dirty 與快照。**U-3**:14 顆產出按鈕平鋪,但使用頻率差兩個數量級(每場都用的 HTML 投影片/會議小抄/LINE 通知,和一年用兩次的 JSON 批次匯入排在一起);把「資料交換與分享」整區收進 `<details>` 預設摺疊,**不刪任何功能** —— 審核特別提醒「**UI 減法最容易犯的錯是把少用當成該刪**,一年用兩次的 JSON 批次匯入,用到的那兩次通常是在救火」。**U-7**:設定頁七個分頁,前四個是主檔維護(一年改幾次)、後兩個是日常會碰的(影像資料夾要換、備份要檢查),把日常的提到最前面,零風險。**審核建議的驗收方式已固化進章法**:**用步數量,不用感覺** —— 跑同一個動作腳本(整理 6 個個案含影像直到產出投影片),記錄總點擊次數、「編輯」按了幾次、找按鈕的停頓次數;**每次較大改版後找一位個管師實際走一次,旁邊記步數,三十分鐘比任何審核報告都準**。U-2(五顆儲存鍵收成一顆)、U-4(合併 schedule/record 模式)、U-5(建立會議預填)、U-6(影像按鈕收合)未做,待實測後再評估。屬 c+1。
+
+
+---
+
+## V5.36.0
+
+**減法優化 A+B(新增坑 #61)**
+
+內部審核提了一份減法建議,依據是**九輪累積的缺陷分布**:
+
+| 缺陷類型 | 次數 | 根因 |
+|---|---|---|
+| **同一件事有兩份實作,其中一份漏改** | **8 次以上** | 重複 |
+| 引用了不存在的名字(冷路徑) | 8 次 | 規模 |
+| 舊路徑被關掉、使用者無處可去 | 2 次 | 合併覆蓋不全 |
+
+> **第一類佔最大宗,而它只有一種根治方式:把其中一份刪掉。**
+
+### A-1 ⭐ 影像驗證合併成一份(審核唯一主動催的一項)
+
+`_auditOneImg`(67 行)與 `verifyImgOwnership`(60 行)是**同一套四段驗證的兩份實作**:
+
+```js
+// _auditOneImg —— 無 subFolder 一律 risk
+if(!sub){ … return{level:'risk', …}; }
+
+// verifyImgOwnership —— 同樣情況會重新定位並回 warn
+if(!scan&&cno){ … relocated=true; }   // → level:'warn'
+```
+
+**這就是 Y-2 的根因** —— 修正按鈕的 `warn>0` 條件因此擋掉了存量舊資料。V5.35.1 修好了症狀,但**兩份實作還在,下一次分歧只是時間問題**。
+
+已退化成薄包裝:**驗證只有 `verifyImgOwnership` 一份**,稽核只負責加診斷資訊。
+
+### A-2 移除外部校時(24 行 → 1 行)
+
+追過 `savedAt` 的全部 8 個使用點:**沒有任何一處拿它做比較或仲裁**,`detectConflict` 只看 `version`。
+
+> 24 行程式 + 兩個外部網域依賴 + 30 分鐘快取狀態 + **W-1 那起「每 2 分鐘鎖住按鈕十秒」事件**,換來的只是**一個顯示用的時間戳記**。
+
+三台個管師電腦是院內設備、時間由網域控制站同步 → 改用本機時間。
+
+### B 清除三個零引用死碼
+
+| 函式 | 說明 |
+|---|---|
+| `filterPrevCases` | 「前期個案帶入」殘骸 |
+| `doPrevCaseImport` | 同上 —— **而 `autoImportPrevFollowups` 才是現役的** |
+| `buildSlidesHTML` | `buildSlidesHTMLOnly` 才是實際用的 |
+
+> 兩支同名目的函式並存、其中一支沒人叫 —— **正是 A 級問題的溫床**。
+
+### 審核明確列出「不該砍」的
+
+| 項目 | 為何保留 |
+|---|---|
+| `peekImgs` 與 `get()` 並存 | **語意不同**(一個純讀、一個有初始化副作用),是 M-1 的修法 |
+| `escA` 的六個 `replace` | 逐一都有具體理由 |
+| 匯入的兩階段回滾 | N-2 的修法,少一階就會刪掉原有資料 |
+| `verifyImgOwnership` 的四段 | 每段擋不同的錯人情境 |
+
+> **減法的對象是「同一件事的第二份實作」與「沒人走的路徑」,不是「看起來複雜的防護」。**
+> 前九輪的缺陷有一半是防護不足造成的,砍防護會直接倒退。
+
+**行數不是重點** —— A-1 的價值在於把「兩份會分歧的實作」變成一份;A-2 的價值在於把 24 行的功能換成 1 行。
+
+### 待拍板(C 級,屬產品範圍)
+
+GitHub 分享整組移除(可同時關閉 P0-6/P0-7 兩項列管)、三條匯入路徑收斂、Word 簡報 vs DOCX 記錄、14 顆按鈕分組。
+
+
+**摘要**:減法優化 A+B(坑#61):(**A-1**)`_auditOneImg` 與 `verifyImgOwnership` 是**同一套四段驗證的兩份實作**,分歧的結果就是 Y-2 → 退化成薄包裝,**驗證只有一份**;(**A-2**)追過 `savedAt` 全部 8 個使用點**都是顯示用**、衝突仲裁只看 `version` → 外部校時的 24 行 + 2 個外部依賴 + 30 分鐘快取狀態 + W-1 整起事件,換來的只是一個顯示字串;改用本機時間(院內電腦由網域同步);(**B**)清三個死碼 `filterPrevCases`/`doPrevCaseImport`/`buildSlidesHTML`(約 1.6KB)
+
+
+**開發敘事**:V5.36.0 減法優化 A+B(坑 #61)。內部審核提了一份減法建議,依據是九輪累積的缺陷分布:**「同一件事有兩份實作,其中一份漏改」佔 8 次以上、是最大宗**,而它**只有一種根治方式:把其中一份刪掉**。**A-1(審核唯一主動催的一項)**:`_auditOneImg`(67 行)與 `verifyImgOwnership`(60 行)是**同一套四段驗證的兩份實作**,兩邊對「無 `subFolder`」的分級不一致(稽核判 risk、驗證判 warn/relocated)—— **那正是 Y-2 的根因**:修正按鈕的 `warn>0` 條件因此擋掉了存量舊資料這個最大宗。V5.35.1 雖然修好了症狀,但**兩份實作還在,下一次分歧只是時間問題**。已把 `_auditOneImg` 退化成薄包裝:**驗證只有 `verifyImgOwnership` 一份**,稽核只負責加上診斷資訊(失敗時檢查根目錄有沒有同名檔,把抽象風險講成具體事實),`level` 由 `code` 決定不另行判斷。**A-2**:追過 `savedAt` 的全部 8 個使用點 —— L2284/L2493/L9438 顯示、其餘是寫入,**沒有任何一處拿它做比較或仲裁**(`detectConflict` 只看 `version`)。也就是說 24 行程式 + 兩個外部網域依賴 + 30 分鐘快取狀態 + **W-1 那起「每 2 分鐘鎖住按鈕十秒」事件**,換來的只是一個顯示用的時間戳記;三台個管師電腦是院內設備、時間由網域控制站同步,改用本機時間一行解決(保留 async 簽章讓 13 個呼叫端不必改)。**B**:清掉三個零引用死碼 `filterPrevCases`、`doPrevCaseImport`(兩者是「前期個案帶入」的殘骸,而 `autoImportPrevFollowups` 才是現役的 —— **兩支同名目的函式並存、其中一支沒人叫,正是 A 級問題的溫床**)、`buildSlidesHTML`。**審核明確列出不該砍的**:`peekImgs` 與 `get()` 並存(語意不同,是 M-1 的修法)、`escA` 的六個 replace、匯入的兩階段回滾(N-2 的修法)、`verifyImgOwnership` 的四段、`showPersistentError` —— **減法的對象是「同一件事的第二份實作」與「沒人走的路徑」,不是「看起來複雜的防護」**;前九輪的缺陷有一半是防護不足造成的,砍防護會直接倒退。C 級(GitHub 分享移除、三條匯入路徑收斂、Word/DOCX 兩顆按鈕、14 顆按鈕分組)屬產品範圍判斷,待個管師拍板。屬 b+1。
+
+
+---
+
+## V5.35.1
+
+**第九次審核 Y-1~Y-5 全修(新增坑 #60)**
+
+> 兩個 P1 都出在 V5.34.0 的流程合併上,而且是**同一種形狀**:
+> **合併時把原本存在的路徑關掉了,新路徑卻沒有完全覆蓋舊路徑的使用情境。**
+
+### Y-2 ⭐ 存量舊資料完全失去一鍵修正的入口
+
+合併按鈕時,新入口的條件寫成 `warn>0`。但 `_auditOneImg` 把「無 `subFolder`」硬編成 `risk`:
+
+```js
+if(!sub){
+  const re=await _resolveSubFolder(rootHandle,cno);
+  return{level:'risk',                       // ← 連「現在已經有病歷號資料夾了」
+    note:'…'+(re?'（現在已有「'+re.name+'」資料夾,建議重選）':'')};  //   都判斷出來了
+}
+```
+
+而「無 `subFolder`」正是 **V5.32.0 嚴格模式上線前的所有存量影像 —— 最大宗的一批**,且 `rebindMeetingImages` 明明修得好。
+
+| 資料狀況 | 分級 | 有修正按鈕 | 實際能修 |
+|---|---|---|---|
+| 資料夾改名 | 🟡 warn | ✅ | ✅ |
+| **無 `subFolder`,病歷號資料夾存在** | 🔴 **risk** | ❌ | ✅ **能** |
+| 病歷號資料夾不存在 | 🔴 risk | ❌ | ❌(正確) |
+| 指紋不符 | 🔴 risk | ❌ | ❌(U-1 的設計,正確) |
+
+**第二列就是缺口** —— 而工具列的獨立按鈕已在 V5.34.0 移除,個管師只能一張張回卡片重選,**正是 R-7 當初要消除的工**。
+
+**修法**:
+- `_auditOneImg` 無 `subFolder` 分兩級(找得到病歷號資料夾 → `warn`)
+- **有沒有得修不從 `level` 反推,直接問 `rebindMeetingImages({dryRun:true})`**
+
+### Y-1 ⭐ 失敗時留下永久的「還在跑」假象
+
+`showStickyToast` **沒有自動關閉**,關閉完全靠呼叫端 —— 但 `close()` 只放在成功路徑:
+
+```
+    ┌─ alert ────────────────┐
+    │ 上傳失敗：Timed out …   │
+    └────────────────────────┘
+                  右下角  ┌──────────────────────┐
+                          │ 正在產生並上傳，請稍候… │  ← 永遠不消失
+                          └──────────────────────┘
+```
+
+> `showSaveToast` **自帶自動關閉**所以放哪裡都沒事,`showStickyToast` 沒有 —— **舊工具自帶的行為沒有人接手**。
+>
+> **W-5 的初衷正是「不要讓使用者以為還在跑」,放錯位置反而製造了永久的「還在跑」假象。**
+
+已把宣告提到 `try` 外、`close()` 移進 `finally`,並在函式上方加註解避免日後重用時重犯。
+
+### Y-3~Y-5(同一類的輕量版)
+
+| # | 問題 |
+|---|---|
+| Y-3 | `readForm` 換了契約(回傳 `false`),但 **12 個呼叫端沒跟上** → 各自跳 alert 後繼續用舊值跑 |
+| Y-4 | `saveOneSec` 轉呼叫後會**把使用者踢出編輯模式**(那顆按鈕的情境就是邊編邊存);`tab-save-msg` 變成永遠空白的死元素 |
+| Y-5 | 匯入容量計算掃了兩次 localStorage |
+
+### 已加入章法的兩問
+
+1. **舊入口被刪掉之後,原本會走到它的「每一種情況」,現在走哪裡?**
+2. **換掉一個工具之後,舊工具「自帶的行為」(自動關閉、自動重繪、自動還原按鈕)有沒有人接手?**
+
+前面幾輪談的是「這行寫對了嗎」(#57)、「這條線接上了嗎」(#56)、「這個動作會關掉什麼警報」(#58)。**這一輪是「舊路徑被關掉之後,它的使用者去哪了」。**
+
+
+**摘要**:第九次審核 Y-1~Y-5 全修(坑#60):(**Y-1 P1**)上傳失敗時「正在產生並上傳…」的 sticky toast **永不關閉**(close 只在成功路徑)→ 宣告提到 try 外、close 移進 finally,並在 `showStickyToast` 加使用註解;(**Y-2 P1**)「無 `subFolder`」的**存量舊資料被硬編為 risk**,導致修正按鈕的 `warn>0` 條件擋住、而獨立入口已在 V5.34.0 移除 → **那批圖完全失去一鍵修正入口**;改成分兩級 + 由 `rebindMeetingImages({dryRun:true})` 判斷;(Y-3)12 個 `readForm()` 呼叫端補回傳值檢查;(Y-4)`saveOneSec` 加 `keepEditing`(原本會把使用者踢出編輯模式)+ 補回 `tab-save-msg` 寫入;(Y-5)匯入容量計算共用
+
+
+**開發敘事**:V5.35.1 第九次審核 Y-1~Y-5 全修(坑 #60)。**兩個 P1 都出在 V5.34.0 的流程合併上,而且是同一種形狀:合併時把原本存在的路徑關掉了,新路徑卻沒有完全覆蓋舊路徑的使用情境。** **Y-2 較嚴重**:把「🔍 檢查」與「🔗 重新綁定」合併時刪掉了工具列的獨立 rebind 按鈕,新入口條件寫成 `warn>0` —— 但 `_auditOneImg` 把「無 `subFolder`」硬編成 `risk`,**連「現在已經有病歷號資料夾了」都判斷出來了卻還是回 risk**;而那正是 V5.32.0 嚴格模式上線前的**所有存量影像、最大宗的一批**,且 `rebindMeetingImages` 明明修得好(`verifyImgOwnership` 會走 relocated 分支回 warn)。結果:報表說「建議重選」、能一鍵修好的按鈕被條件擋住、獨立入口又已拿掉 → 個管師只能一張張回卡片重選,**正是 R-7 當初要消除的工**。修法:`_auditOneImg` 的無 subFolder 分支**分兩級**(找得到病歷號資料夾降為 warn),而且**有沒有得修不從 level 反推,直接問 `rebindMeetingImages({dryRun:true})`**。**Y-1**:把 2.2 秒 toast 換成 `showStickyToast` 但 `close()` 只放成功路徑 —— `showSaveToast` **自帶自動關閉**所以放哪都沒事,`showStickyToast` 沒有,**舊工具自帶的行為沒有人接手**;上傳失敗時 alert 說失敗、右下角卻永遠留著「正在產生並上傳,請稍候…」,**W-5 的初衷是「不要讓使用者以為還在跑」,放錯位置反而製造了永久的「還在跑」假象**;已把宣告提到 try 外、close 移進 finally,並在函式上方加註解避免日後重用時重犯。Y-3 補 12 個 `readForm()` 呼叫端的回傳值檢查(V5.35.0 改了契約卻只有 saveMeeting 在接);Y-4 `saveOneSec` 加 `keepEditing`(轉呼叫後會在 1.2 秒把使用者**踢出編輯模式**,但那顆按鈕的使用情境就是邊編邊存)並補回 `tab-save-msg` 的寫入(V5.34.0 之後變成永遠空白的死元素);Y-5 匯入容量計算共用第一個對話框算好的值。**已加入章法的兩問**:①舊入口被刪掉之後,原本會走到它的**每一種情況**現在走哪裡?②換掉一個工具之後,舊工具**自帶的行為**有沒有人接手?—— 前面幾輪談「這行寫對了嗎」(#57)、「這條線接上了嗎」(#56)、「這動作會關掉什麼警報」(#58),**這一輪是「舊路徑被關掉之後,它的使用者去哪了」**。屬 c+1。
+
+
+---
+
+## V5.35.0
+
+**批次 C 全清(第一次審核列的,延後至今)**
+
+| # | 問題 | 後果 |
+|---|---|---|
+| **P1-4** | `readForm` **允許空日期** | `mdt_sec_head_neck_` 這種 key → **所有空日期的會議互相覆蓋** |
+| **P2-2** | `escA` 不跳脫 `'` 與 `` ` `` | **臨床文字含 `<` 是家常便飯**(`T<2cm`、`PSA<0.1`)→ 被當標籤吃掉,**該行後面整段消失** |
+| **P0-5** | NAS 備份檔名無使用者識別 | 三台瓜分「最新 10 份」→ 保留期 10 天縮到 **3 天**,而且互刪 |
+| **P1-6** | 三處渲染錯誤靜默吞掉 | 卡片整張消失,個管師以為**個案被刪了** |
+| **P2-3** | `docx` 走 CDN | **封網時 Word 產出完全失效** |
+
+### P1-4:原本要 throw,查證後改成回傳值
+
+原本規劃 `throw new Error(...)`,但查證發現 **`readForm()` 有 13 個呼叫端沒有 try/catch**:
+
+> 拋錯會變成 unhandled error,而且**畫面上完全沒訊息** —— 這正是坑 #55 的形狀。
+
+改成回傳 `false` + alert + focus 到日期欄,`saveMeeting` 判斷後中止。
+
+### P0-5:只改檔名等於沒改
+
+```js
+// 檔名加了使用者
+'MDT_backup_'+userId+'_'+ts+'.json'
+// 但輪替還是掃全部 → 還是會刪到同事的
+e.name.startsWith('MDT_backup_')        // ← 也要一起改
+```
+
+### P2-3:docx 內嵌(+321KB)
+
+Word 簡報是**每次開完會都要用**的核心產出,而院內防火牆擋 CDN 是常態。另外無 SRI 時,CDN 被投毒可直接讀取頁面上所有病人資料。
+
+檔案 816KB → **1059KB**。`xlsx`/`pptxgenjs` 頻率低維持 CDN,但 `loadLib` 改成:
+- 失敗時**移除 script 標籤**(原本不移除,重試會累積殘骸)
+- 訊息指向「可能是院內防火牆阻擋 cdn.jsdelivr.net,請聯繫 IT」
+
+### 本輪的做法
+
+全程用 **「先全驗再寫檔」** —— 10 項替換一次檢查唯一性,全過才寫。中途 `escA` 因分號位置切錯造成語法錯誤,回退重做時改用精確原文,**沒有留下半成品**。
+
+
+**摘要**:**批次 C 全清**(第一次審核列的,延後至今):(P1-4)`readForm` **允許空日期** → `mdt_sec_{癌別}_` 這種 key 讓所有空日期會議**互相覆蓋**,改成擋下並 focus 日期欄;(P2-2)`escA` 補 `'` 與 `` ` `` 跳脫 —— **臨床文字含 `<` 是家常便飯**(`T<2cm`、`PSA<0.1`),未跳脫會被當標籤吃掉整段消失;(P0-5)NAS 備份檔名加使用者識別**且輪替只掃自己的檔**(原本三台瓜分 10 份 → 實際只留 3 天,而且互刪);(P1-6)三處渲染錯誤靜默吞掉 → 改留可見殘骸並標病歷號;(P2-3)**docx 7.8.2 內嵌**(+321KB)—— Word 簡報是每次開會都要用的核心產出,而院內擋 CDN 是常態
+
+
+**開發敘事**:V5.35.0 批次 C 全清 —— 第一次審核就列出、延後至今的五項。**(P1-4)`readForm` 允許空日期**:`secKey` 是 `'mdt_sec_'+cid+'_'+date`,空日期會產生 `mdt_sec_head_neck_` 這種 key → **所有空日期的會議共用同一組 key 互相覆蓋**,是會靜默毀資料的一類。原本規劃用 `throw`,但**查證後發現 `readForm()` 有 13 個呼叫端沒有 try/catch** —— 拋錯會變成 unhandled error 且畫面上完全沒訊息(**坑 #55 的形狀**);改成回傳 `false` + alert + focus 到日期欄,`saveMeeting` 判斷回傳值後中止。**(P2-2)`escA` 補 `'` 與 `` ` ``**:目前未用在單引號屬性內不構成注入,但**臨床文字含 `<` 是家常便飯**(`T<2cm`、`PSA<0.1`、`ALT<40`、`WBC<3000`),帶到未跳脫路徑時瀏覽器會把 `<2cm…` 當未知標籤吃掉、**該行後面整段消失**;另補 `s==null` 保護。**(P0-5)NAS 備份檔名加使用者識別**,而且**輪替也要只掃自己的檔** —— 只改檔名不改輪替等於沒改,還是會刪到同事的;原本三台瓜分「最新 10 份」讓保留期從 10 天縮到約 3 天,而三台是不同癌別**互相不是彼此的備援**。**(P1-6)三處渲染錯誤 `catch(e){return ''}`** → 個案卡片整張消失,個管師看到的是「我的個案被刪了」但資料其實還在;改成留可見殘骸並標出病歷號(坑 #29 無聲不產出、#33 謊報成功的同類)。**(P2-3)docx 7.8.2 內嵌**(+321KB,816KB→1059KB):Word 簡報是**每次開完會都要用**的核心產出,而院內防火牆擋 CDN 是常態,一擋就完全產不出來;另外無 SRI 時 CDN 被投毒可直接讀取頁面上所有病人資料。個管師選 A(內嵌);xlsx/pptxgenjs 頻率低維持 CDN,但 `loadLib` 改成失敗時移除 script 標籤(原本不移除,重試會累積殘骸)並把訊息指向防火牆。屬 b+1。**本輪全程用「先全驗再寫檔」**:10 項替換一次檢查唯一性,全過才寫;中途 escA 因分號位置切錯造成語法錯誤,回退重做時改用精確原文,沒有留下半成品。
+
+
+---
+
+## V5.34.0
+
+**流程精簡 —— 能少一個鈕少一步就少一步**
+
+個管師的需求就是這句話。盤點後提了五項,**一題一題確認**。
+
+**個管師否決的一項**:「一鍵產四種輸出」—— HTML / Word / DOCX / LINE 是**四件事、不同時機**,合併只會製造垃圾檔案。這個否決是對的。
+
+### ① 檢查與修正合併成一顆(省 2 次點擊)
+
+原本:
+
+```
+🔍 檢查影像歸屬 → 看到黃燈 → 🔗 重新綁定影像 → 再按 🔍 確認     (3 次)
+```
+
+這兩顆做的是**同一件事的兩半**。現在:
+
+```
+🔍 檢查影像 → 報表裡直接有「🔗 自動修正」→ 修完就地更新表格與摘要     (1 次)
+```
+
+- **全部正常** → 連對話框都不開,只跳 toast
+- **沒有可自動修正的** → 那顆按鈕不出現
+
+實作:掃描邏輯抽成 `_collectAuditRows()` 供重用;`rebindMeetingImages(opts)` 加 `fromAudit` 旗標(不重複開確認、回傳 `{fixed}` 讓報表更新)。
+
+### ② 選完圖背景自動驗證
+
+不必等到產出前才知道有問題。用 `setTimeout` 背景跑**不擋操作**,而且**只驗這次新選的**(不重驗整場,避免 NAS 上變慢)。
+
+### ③ 新建會議自動帶入上一場
+
+找**同一組癌別、日期最近的一場**,帶入時間 / 地點 / Zoom。
+
+> 實作前先查 `readForm()` 確認**表頭實際欄位只有 `time`/`loc`/`zoom`** —— 沒有憑印象帶 `chair`/`recorder`/`attendees` 這些不存在的欄位。
+
+### ④ 儲存合併成一顆
+
+查證結果:**分開儲存不是防覆蓋設計**。
+
+| | `saveOneSec` | `saveMeeting` |
+|---|---|---|
+| **呼叫 `readForm()`** | ❌ **改了日期地點不會存到** | ✅ |
+| 版本號 +1 | ❌ NAS 衝突仲裁看不到 | ✅ |
+| 共享/NAS 同步 | ❌ | ✅ |
+| 存整個會議物件 | ✅(照樣寫) | ✅ |
+
+唯一好處是「快、不對外連線」—— 但 V5.33.0 修好 W-1 後對時最多 2 秒且 30 分鐘一次,那個理由也消失了。
+
+### 過程中的兩件事
+
+**坑 #52 重演**:替換時把 `async function saveOneSec` 的 `async` 留在註解前面。**但這次 jshint 當場抓到**,不是等個管師發現畫面壞掉 —— 這就是把檢查加進流程的價值。
+
+**改用「先全驗再寫檔」**:所有替換先檢查唯一性,全部通過才寫。中途有一個因註解差異找不到,**檔案完全沒被動**,避免了半成品。
+
+
+**摘要**:流程精簡(個管師:能少一個鈕少一步就少一步),一題一題確認後定案四項:(①)「🔍 檢查影像歸屬」與「🔗 重新綁定影像」**合併成一顆** —— 原本要按 3 次(檢查→綁定→再檢查),現在檢查完直接在報表裡給「自動修正」,修完**就地重新檢查並更新表格**;全部正常時連對話框都不開;(②)選完圖**背景自動驗證**,有問題當下 toast 提醒,不必等產出前;(③)新建會議**自動帶入上一場同癌別**的時間/地點/Zoom;(④)區塊「儲存」轉呼叫 `saveMeeting()` —— 查證確認分開儲存**不是防覆蓋設計**,而且它不呼叫 `readForm()`,**改了日期地點按那顆不會存到**。個管師明確否決「一鍵產四種輸出」(那是四件事)
+
+
+**開發敘事**:V5.34.0 流程精簡。個管師的需求是「**能優化的是,有辦法少一個鈕少一步就少一步**」。盤點後提了五項,**一題一題確認**,個管師**明確否決了「一鍵產四種輸出」**(HTML/Word/DOCX/LINE 是四件事、不同時機,合併只會製造垃圾檔案)—— 這個否決是對的,我原本把它列在清單裡。定案四項:**①檢查與修正合併成一顆** —— 原本要按 3 次(🔍檢查 → 看到黃燈 → 🔗重新綁定 → 再按🔍確認),但這兩顆做的是同一件事的兩半;改成檢查完直接在報表裡給「🔗 自動修正」,修完**就地重新檢查並更新表格與摘要**,全部正常時連對話框都不開只跳 toast(3 次 → 1 次);實作上把掃描邏輯抽成 `_collectAuditRows()` 供重用,`rebindMeetingImages(opts)` 加 `fromAudit` 旗標(不重複開確認、回傳 `{fixed}` 讓報表更新)。**②選完圖背景自動驗證** —— 用 `setTimeout` 不擋操作,只驗這次新選的(不重驗整場,避免 NAS 變慢),有問題 toast 提醒。**③新建會議自動帶入上一場**同癌別的時間/地點/Zoom —— 實作前先查 `readForm()` 確認**表頭實際欄位只有 time/loc/zoom**,沒有憑印象帶 chair/recorder/attendees 這些不存在的欄位。**④儲存合併** —— 查證後確認分開儲存**不是防覆蓋設計**(資料在各自電腦的 localStorage 本來就不會互相蓋,而且 `saveOneSec` 照樣 `saveLocal(m)` 寫整個會議物件);真正的差別是它**不呼叫 `readForm()`**,所以**改了日期/時間/地點按那顆不會存到**,而且版本號不 +1 讓 NAS 衝突仲裁看不到;唯一好處「快、不對外連線」在 V5.33.0 修好 W-1 後也消失了。**過程中坑 #52 重演一次**(替換時把 `async function saveOneSec` 的 async 留在註解前),但**這次 jshint 當場抓到**,而不是等個管師發現畫面壞掉 —— 這就是把檢查加進流程的價值。另外本輪改用「**所有替換先全部驗證唯一性,確認無誤才寫檔**」的做法,中途有一個替換因註解差異找不到,檔案完全沒被動,避免了半成品。屬 b+1。
+
+
+---
+
+## V5.33.0
+
+**第八次審核「訊息干擾專題」W-1~W-7 全修(新增坑 #59)**
+
+審核的結論很關鍵:
+
+> **訊息分類已經乾淨了** —— `alert` 79 處幾乎全是守門或錯誤、`confirm` 34 處都對應真實決策。
+> **剩下的干擾不在「該不該講」,而在「時機」與「呈現」。**
+
+### W-1 ⭐ 唯一實際擋住操作的一項
+
+```js
+// getNetworkTime:兩個來源串行,各 5 秒 timeout
+for(const src of srcs){ await Promise.race([src.fn(), timeout(5000)]); }
+
+// saveMeeting:一進來就禁用所有儲存按鈕
+_btns.forEach(b=>{b.disabled=true;b.textContent='儲存中...';});
+
+// autosave:每 2 分鐘
+setInterval(async ()=>{ await saveMeeting({silent:true}); }, 2*60*1000);
+```
+
+院內防火牆擋掉 `timeapi.io` 與 `cloudflare.com`(**醫院內網的常態**)時:
+
+> **每 2 分鐘的自動存檔,會把所有儲存按鈕鎖住最長 10 秒。**
+
+審核的評語:
+
+> 這比任何一個彈窗都更干擾 —— 彈窗至少按一下就走,**這個是每兩分鐘定期卡十秒,而且不是使用者發起的**。
+
+**修法**:30 分鐘快取 + `Promise.any` 並行 + 2 秒上限(最壞 **10 秒 → 2 秒**,而且 30 分鐘只發生一次);並讓 **silent 存檔不動按鈕** —— 把使用者的按鈕鎖住,與 `silent` 的語意剛好相反。
+
+### 其餘六項
+
+| # | 問題 |
+|---|---|
+| W-2 | 每個 toast 都建在 `bottom:20px;right:20px` → **完全疊在一起**。登入時 NAS 同步連發兩個,第二個蓋掉第一個 —— **這次剛好是警告蓋住一般訊息(幸運),但那是順序巧合不是設計** |
+| W-3 | 還原備份最多連按**四個**對話框,而**容量檢查排在最後** —— 按了三次、下載了還原前備份,才被告知空間可能不夠。**還原備份是在出事的時候做的事**,最不該增加認知負擔 → 正常路徑 **4→2** |
+| W-4 | NAS 訊息用 `innerHTML+=` 累加 → 畫面同時出現「NAS 備份中... ✓ NAS 完成」,失敗時「NAS 備份中... NAS 失敗」 |
+| W-5 | 長時作業(上傳分享含影像可十幾秒)用 2.2 秒 toast → **中間完全沒回饋,使用者以為當掉會重複按** |
+| W-6 | 兩處相同意義的授權提示用不同措辭 |
+| W-7 | `IDX_MAX` 警告未節流,與 N-3 修好的容量警告同一個模式 |
+
+### 訊息分類判準(已補完寫進章法)
+
+| 類型 | 用什麼 | 判準 |
+|---|---|---|
+| 需要使用者做決定 | `confirm` | 按「取消」會導致不同結果 |
+| 錯誤 / 需接著行動 | `alert` | 不處理就做不下去 |
+| 告知結果 | toast(2.2 秒) | 使用者不做任何事也沒關係 |
+| **週期性 / 非使用者發起** | **常駐橫幅 + 節流** | **不可用 alert —— 會重複打斷** |
+| **超過 3 秒的作業** | **持久 toast,完成才關** | **中途不可留白,否則使用者會以為當掉** |
+
+
+**摘要**:第八次審核訊息干擾專題 W-1~W-7 全修(坑#59):(**W-1 P1**)`getNetworkTime` 兩來源串行各 5 秒 → 封網時**每 2 分鐘的自動存檔把儲存按鈕鎖住 10 秒**;改 30 分鐘快取+並行+2 秒,且 silent 存檔不動按鈕;(W-2)toast 全疊在同一位置互相覆蓋 → 容器堆疊+去重+新增 sticky;(W-3)還原備份最多四個對話框且**容量檢查排最後** → 合併成「說明+容量」,正常路徑 4→2;(W-4)NAS 訊息 `innerHTML+=` 累加出現「備份中...✓完成」並存 → 獨立 span 取代;(W-5)長時作業用 sticky toast;(W-6)統一授權文案;(W-7)IDX_MAX 警告套用節流
+
+
+**開發敘事**:V5.33.0 第八次審核的「訊息干擾專題」W-1~W-7 全修(坑 #59)。審核的結論很關鍵:**訊息分類已經乾淨了**(alert 79 處幾乎全是守門或錯誤、confirm 34 處都對應真實決策,V5.32.4/5 那兩輪方向正確),**剩下的干擾不在「該不該講」,而在「時機」與「呈現」**。**W-1 是唯一實際擋住操作的一項**:`getNetworkTime()` 兩個外部來源**串行**、各 5 秒 timeout,院內防火牆擋掉 `timeapi.io` 與 `cloudflare.com`(醫院內網常態)時最壞卡 **10 秒**;而 `saveMeeting` 一進來就禁用所有儲存按鈕 → **每 2 分鐘的自動存檔把按鈕鎖住十秒,期間個管師按不了儲存**。審核評語:「這比任何一個彈窗都更干擾 —— 彈窗至少按一下就走,這個是每兩分鐘定期卡十秒,而且不是使用者發起的」。改成 30 分鐘快取 + `Promise.any` 並行 + 2 秒上限(最壞 10→2 秒,30 分鐘只一次),並讓 **silent 存檔不動按鈕**(把使用者按鈕鎖住與 silent 的語意剛好相反)。其餘:W-2 每個 toast 都建在同一個絕對位置**完全疊在一起**(登入時 NAS 同步連發兩個,第二個蓋掉第一個;**這次剛好是警告蓋住一般訊息,但那是順序巧合不是設計**)→ 容器堆疊 + 相同訊息去重;W-3 還原備份最多連按四個對話框而**容量檢查排在最後**(按了三次、下載了還原前備份才被告知空間不夠;**還原備份是在出事的時候做的事**,最不該增加認知負擔)→ 合併成一個資訊完整的對話框,正常路徑 4→2;W-4 NAS 訊息用 `innerHTML+=` 累加導致「NAS 備份中... ✓ NAS 完成」並存 → 獨立 span 取代;W-5 長時作業(上傳分享含影像可十幾秒)用 2.2 秒 toast → **中間完全沒回饋使用者會重複按**,加 `showStickyToast()`;W-6 統一兩處授權文案;W-7 `IDX_MAX` 警告套用 N-3 現成的常駐橫幅 + 30 分鐘節流。**訊息分類判準已補完兩條寫進章法**:週期性/非使用者發起的狀況**不可用 alert**(用常駐橫幅並節流);超過 3 秒的作業**中途不可留白**。屬 b+1。
+
+
+---
+
+## V5.32.5
+
+**產出前檢查只擋真問題**
+
+個管師反映「產出 html 會有很多沒用的訊息」。查證後定位到 QA 預檢對話框 —— 它把四項警告混在一起要求確認,但**四項的性質完全不同**:
+
+| 項目 | 性質 | 處理 |
+|---|---|---|
+| **✗ 影像讀取失敗** | **真問題** —— 投影片會缺圖,而且在嚴格模式下可能是歸屬驗證擋下的(有掛錯病人的風險) | **維持阻斷** |
+| △ 沒填討論方向 | 有些個案本來就不填,**是個管師的選擇** | 改 toast |
+| △ 內容較長需捲動 | 提醒,不是錯誤 | 改 toast |
+| △ 影像頁超過 6 張 | 個管師自己設的排版,**他知道自己在做什麼** | 改 toast |
+
+**關鍵的判斷理由**:
+
+> 後三項每次產出都要多按一次「確定」,久了就變成**反射性按掉** ——
+> 而反射性按掉的後果是,**真正該看的第一項也被一起按掉了**。
+
+現在 △ 類改成:
+
+```
+提醒：3 案未填討論方向、有影像頁超過 6 張（不影響產出）
+```
+
+**查證後產出主流程只剩兩個中斷點**,兩個都是必要的:
+- 「請先儲存會議資料」
+- 「需要授權資料夾才能嵌入影像」
+
+**教訓**:**警告疲勞會讓所有警告一起失效。** 混合不同嚴重度的提示放在同一個阻斷式對話框裡,等於把最重要的那一項稀釋掉 —— 分級呈現(阻斷 vs 非阻斷)比「全部都講」更能讓人看到重點。
+
+
+**摘要**:產出前檢查只擋真問題(個管師反映產出 HTML 跳太多沒用的訊息):四項警告裡只有「✗ 影像讀取失敗」是真問題(投影片會缺圖、可能是歸屬驗證擋下的)→ 維持阻斷;「△ 沒填討論方向 / 內容較長 / 影像頁超過 6 張」都是**提醒不是錯誤**(個管師知道自己在做什麼)→ 改 toast。**關鍵理由:每次產出都要多按一次確定,久了會變成反射性按掉,而反射性按掉的後果是真正該看的第一項也被一起按掉**
+
+
+**開發敘事**:V5.32.5 產出前檢查只擋真問題。個管師反映「產出 html 會有很多沒用的訊息」,查證後定位到 QA 預檢對話框 —— 它會把四項警告混在一起要求確認,但**四項的性質完全不同**:「✗ 影像讀取失敗」是**真問題**(投影片會缺圖,而且在嚴格模式下可能是歸屬驗證擋下的,代表有掛錯病人的風險);而「△ 沒填討論方向」(有些個案本來就不填,是個管師的選擇)、「△ 內容較長需捲動」(提醒)、「△ 影像頁超過 6 張」(個管師自己設的排版)三項**都不是錯誤**。**關鍵的判斷理由**:後三項每次產出都要多按一次「確定」,久了就變成**反射性按掉** —— 而反射性按掉的後果是,**真正該看的第一項也被一起按掉了**。改成:只有 ✗ 阻斷;△ 改用 toast(「提醒:3 案未填討論方向、有影像頁超過 6 張(不影響產出)」)。查證後產出主流程只剩兩個中斷點(「請先儲存會議資料」與「需要授權資料夾」),兩個都是必要的。屬 c+1。**教訓**:**警告疲勞會讓所有警告一起失效**。混合不同嚴重度的提示放在同一個阻斷式對話框裡,等於把最重要的那一項稀釋掉;分級呈現(阻斷 vs 非阻斷)比「全部都講」更能讓人看到重點。
+
+
+---
+
+## V5.32.4
+
+**第七次審核 U-1~U-4 全修 + 減少無意義彈窗(新增坑 #58)**
+
+### U-1 ⭐ 重新綁定工具會無聲拆掉安全警報
+
+V5.32.3 的工具註解寫著:
+
+> 只改 `subFolder` / `size` 兩個欄位,不動任何影像檔案
+
+**這句話字面上完全正確。** 問題出在 **「改 size」這個動作本身的語意沒有被審視**:
+
+> `size` 不是描述性欄位,**它是一個安全斷言**(「這張圖的內容是我當初選的那一張」)。改寫它 = **撤銷斷言**。
+
+**發生什麼事**:
+
+1. 一張「檔案內容已被換掉」的影像 → `verifyImgOwnership` 回 `file:null` + risk
+2. 工具把它當成「需要重新綁定」
+3. 重新定位時**不傳 size**(跳過指紋檢查)
+4. 用新檔案大小覆蓋 `img.size` → **警告就此消失**
+
+**而使用者看不出來** —— 因為資料夾其實沒問題,重新定位會找回**同一個資料夾**:
+
+```
+  0000001 測○試　病理影像　HE_100x.jpg
+      「0000001 測○試」→「0000001 測○試」     ← 從到相同
+```
+
+指紋比對是嚴格模式四段驗證裡**唯一能發現「檔案還在、但內容是別人的」的機制** —— 前三段都只驗路徑。
+
+**修法**:`code==='FINGERPRINT'` 一律列入「無法自動修正」,並給 `verifyImgOwnership` 補上機器可判讀的 `code`:
+
+| code | 意義 |
+|---|---|
+| `FINGERPRINT` | 檔案內容已改變 ← **不自動處理** |
+| `PATIENT_DIR_GONE` | 找不到病人資料夾 |
+| `FILE_GONE` | 資料夾內沒有這個檔案 |
+| `RELOCATED` | 已用病歷號重新定位 |
+
+**用 `code` 而非中文訊息正則** —— 訊息文字日後一改,正則會悄悄失效。
+
+### U-2~U-4
+
+| # | 問題 |
+|---|---|
+| U-2 | 重新綁定漏掉**特殊議程病人佐證圖** —— 稽核工具已涵蓋(M-3),而那組走 `crPickImages` 自成一套寫入路徑,**是全系統歸屬保護最薄的一組** |
+| U-3 | 每張圖各跑一次 `_resolveSubFolder`(會列舉整個資料夾)→ 加病歷號快取 + `n/N` 進度 |
+| U-4 | 套用後 `renderEditor()` 是必要的(要更新 `data-subfolder`),但會**還原未儲存的日期/時間/地點** → 先 `readForm()` |
+
+### 減少無意義彈窗(個管師要求)
+
+原則:**需要使用者做決定的才用 `alert`;只是告知結果的一律用 toast。**
+
+| 改成 toast | 保留 alert |
+|---|---|
+| 「已清除 N 筆」 | 錯誤與警告 |
+| 「NAS 連線測試成功」 | 「請先開啟會議」等引導 |
+| 「所有影像的歸屬都正常」 | 需要確認的 confirm |
+| 「沒有發現孤兒資料」 | 有待人工處理的結果 |
+
+**alert 87 → 79**。重新綁定改成條件式:全部處理完用 toast,**只有「還有需人工處理的」才阻斷**。
+
+### 這輪的教訓(坑 #58,審核原話)
+
+> 要抓這類問題只能問一個問題:**我這個動作會關掉什麼警報?**
+>
+> 日後寫任何「批次修正」「一鍵整理」「自動清理」工具都適用 —— **它們的存在目的是讓紅燈變綠燈,而最省事的讓紅燈變綠燈的方法,永遠是把燈泡拆掉。**
+
+
+**摘要**:第七次審核 U-1~U-4 全修 + 減少無意義彈窗:(**U-1 P1,坑#58**)重新綁定會**無聲清掉指紋警告** —— 指紋不符代表「檔案還在但內容被換過」,工具卻把它當成需重新綁定並用新大小覆蓋 `img.size`,等於拆掉警報;改成一律列入 fail,並給 `verifyImgOwnership` 補 `code` 欄位(不靠中文正則);(U-2)重新綁定涵蓋特殊議程病人佐證圖(稽核已涵蓋而修正工具沒有);(U-3)病歷號解析快取 + n/N 進度;(U-4)套用前先 `readForm()` 保住未儲存的日期時間地點。另依個管師要求**把 8 個「成功/沒事」類 alert 改成 toast**(87→79)
+
+
+**開發敘事**:V5.32.4 第七次審核 U-1~U-4 全修,並依個管師要求減少無意義彈窗。**U-1(P1,坑 #58)是這輪最重要的**:V5.32.3 的「🔗 重新綁定影像」註解寫著「只改 subFolder / size 兩個欄位,不動任何影像檔案」—— **字面完全正確**,問題出在**「改 size」這個動作本身的語意沒有被審視**:`size` 不是描述性欄位,**它是一個安全斷言**(「這張圖的內容是我當初選的那一張」),改寫它等於撤銷斷言。實際後果:指紋不符(= 檔案還在但內容被換過)的影像會被當成「需重新綁定」,重新定位時不傳 size 跳過檢查,再用新大小覆蓋 `img.size` → **警告無聲消失**;而且因為資料夾本來就沒問題,預覽清單顯示「0000001 測○試」→「0000001 測○試」(**從到相同**),使用者看不出發生了什麼。指紋比對是四段驗證裡**唯一能發現「檔案還在、但內容是別人的」的機制**(前三段只驗路徑)。已改成 `code==='FINGERPRINT'` 一律列入 fail 交人工確認,並給 `verifyImgOwnership` 補上機器可判讀的 `code`(不靠中文訊息正則 —— 文字一改正則就悄悄失效)。其餘:U-2 重新綁定補上特殊議程病人佐證圖(稽核工具 M-3 已涵蓋、修正工具卻沒有,而那組走 `crPickImages` 自成一套寫入路徑,是全系統歸屬保護最薄的一組);U-3 病歷號解析快取(原本每張圖各列舉一次整個資料夾)+ n/N 進度;U-4 套用前先 `readForm()`(`renderEditor()` 在這裡是必要的,但會還原未儲存的日期時間地點)。**另依個管師要求減少無意義彈窗**:原則是「**需要使用者做決定的才用 alert;只是告知結果的一律用 toast**」,把 8 個「已完成」「沒事」類改掉(87→79),保留錯誤、警告與需接著行動的引導。**坑 #58 的教訓值得逐字記住**:「要抓這類問題只能問一個問題 —— **我這個動作會關掉什麼警報?**」日後寫任何「批次修正/一鍵整理/自動清理」工具都適用,因為**它們的存在目的是讓紅燈變綠燈,而最省事的讓紅燈變綠燈的方法,永遠是把燈泡拆掉**。屬 c+1。
+
+
+---
+
+## V5.32.3
+
+**第六次審核 P2 五項全清 + 重新綁定影像批次工具**
+
+> **第六次審核是六輪以來第一次「沒有新缺陷」。**
+> 審核歸因於前一版加的兩道機制:**jshint `undef` 掃描**(機器抓錯名字,6→0)與**逐列打勾的發版檢查**(人抓漏項)。
+
+### T-1 「宣告了、寫了、沒人讀」比沒有更糟
+
+`_imgFailNotes` 在 V5.32.2 只修了「不再 ReferenceError」:
+
+```js
+const _imgFailNotes={};                      // ✅ 宣告
+if(!file){_imgFailNotes[_ck]=_vr.note;}      // ✅ 寫入
+_qa.missing.push(…未命名影像');              // ❌ 沒讀
+```
+
+審核說得對:**這種狀態比沒有更容易誤導** —— 下一位接手的人看到它會以為功能已完成。
+
+已讓 QA 對話框帶出原因:
+
+```
+測○試：病理_HE_100x.jpg
+      → 找不到病人資料夾「0000001」,為避免載入到其他病人的同名檔案,已停止載入。
+```
+
+### T-2 換了資料夾,重開又跳回舊的
+
+還原優先序是「**本會議覆寫** > 根目錄+會議子資料夾 > 根目錄」,而**任何影像選取器在 handle 為空時都會寫入覆寫**。
+
+於是:選 A → 換成 B(當下有效)→ **關掉重開又變回 A**。個管師會認為「換資料夾沒被記住」。
+
+已在換根目錄時一併清掉本會議覆寫。
+
+### T-3 `renderEditor()` 會還原尚未儲存的修改
+
+換資料夾只需更新狀態列,但 `renderEditor()` 會:
+- 全頁重繪(卡片收合與捲動位置重置 —— 違反專案章法)
+- **用 `S.meeting` 重填 `f-date`/`f-time`/`f-loc`** → 尚未儲存的日期/時間/地點修改**被還原**
+
+改用 `updateFolderStatusBar()`。
+
+### ⭐ R-7 新增「🔗 重新綁定影像」
+
+嚴格模式上線後,資料夾改名的影像只能靠病歷號比對救回 —— 但修正要**一張張回卡片重選**,十幾張圖就要點幾十次。
+
+新工具一次掃完整場會議:
+
+```
+重新綁定影像
+──────────────────────
+✅ 可修正 8 張(改寫資料夾名稱):
+  0000001 測○試　病理影像　IMG_0001.jpg
+      「0000001」→「0000001 測○試」
+  …
+📌 另有 3 張歸屬正常,將補上檔案指紋(供日後比對)
+
+⚠ 無法自動修正 2 張(需人工處理):
+  9000002 測○例　CT.jpg
+      找不到以病歷號「9000002」開頭的資料夾
+──────────────────────
+只會修改影像的「資料夾記錄」,不會動到任何影像檔案。
+```
+
+**只改 `subFolder` 與 `size` 兩個欄位**,不動影像檔案、不新增不刪除。救不回的一律列出,**不做任何猜測**。
+
+### 順手修一處 M-2 當時漏掉的
+
+換資料夾的 catch 用的是原始 alert,沒走 `_handleFolderErr` —— 程式錯誤會顯示成「無法選取資料夾:...」誤導使用者去重選。
+
+
+**摘要**:第六次審核 P2 五項全清 + R-7 批次工具:(T-1)`_imgFailNotes` 原本「宣告了、寫了、沒人讀」→ QA 對話框帶出歸屬驗證的失敗原因;(T-2)換根目錄時清掉本會議覆寫(否則還原優先序會讓下次開啟又跳回舊資料夾);(T-3)`renderEditor()`→`updateFolderStatusBar()`(前者會全頁重繪並把**尚未儲存的日期/時間/地點還原**);(R-6)`_imgGetFile` 註解改為事實(已無呼叫端);(**R-7**)新增「🔗 重新綁定影像」批次工具 —— 一次把能用病歷號定位的影像改寫 subFolder 並補 size 指紋,**只改欄位不動檔案**;順手把換資料夾的 catch 改走 `_handleFolderErr`(M-2 當時漏了這處)
+
+
+**開發敘事**:V5.32.3 第六次審核 P2 五項全清,並補上 R-7 批次工具。**第六次審核是六輪以來第一次「沒有新缺陷」** —— 審核歸因於前一版加的兩道機制:jshint `undef` 掃描(機器抓錯名字,6→0)與逐列打勾的發版檢查(人抓漏項,九項對到七項完成、兩項標延後、沒有留白)。**本版修的五項**:(T-1)`_imgFailNotes` 在 V5.32.2 只修了「不再 ReferenceError」,變成**「宣告了、寫了、沒人讀」** —— 審核說這種狀態**比沒有更容易誤導**(下一位接手的人會以為功能已完成);已讓 `_qa.missing` 帶出 `verifyImgOwnership` 算出的原因,個管師才知道要改資料夾名還是重選圖。(T-2)換根目錄時沒清本會議覆寫 —— 還原優先序是「本會議覆寫 > 根目錄+會議子資料夾 > 根目錄」,而任何影像選取器在 handle 為空時都會寫入覆寫,於是「選 A → 換 B(當下有效)→ 關掉重開又變回 A」,個管師會認為換資料夾沒被記住。(T-3)`renderEditor()` 用在換資料夾過重 —— 它會全頁重繪(卡片收合與捲動位置重置,違反專案章法)**而且用 `S.meeting` 重填 f-date/f-time/f-loc,尚未儲存的日期時間地點修改會被還原**;改用 `updateFolderStatusBar()`。(R-6)`_imgGetFile` 註解改為事實(三個呼叫端都已直接用 `verifyImgOwnership`,它已無服役)。(**R-7**)新增「🔗 重新綁定影像」—— 嚴格模式上線後,資料夾改名的影像只能靠病歷號比對救回,而修正要一張張回卡片重選(十幾張就要點幾十次);本工具一次掃完所有影像,把「能用病歷號定位到」的改寫 `subFolder` 並補上 `size` 指紋,**只改這兩個欄位,不動任何影像檔案、不新增不刪除**;救不回的一律列出不做猜測;套用前顯示完整計畫(哪幾張、從哪改到哪)。**順手修一處 M-2 當時漏掉的**:換資料夾的 catch 用原始 alert 沒走 `_handleFolderErr`,程式錯誤會顯示成「無法選取資料夾:...」誤導使用者。屬 c+1。
+
+
+---
+
+## V5.32.2
+
+**第五次審核七項全修(新增坑 #57)**
+
+### 這一輪最重要的不是程式,是流程
+
+第四次審核列了七項修復清單,結尾明寫:
+
+> 請務必在任何人拿到這一版之前先修掉。
+
+**V5.32.1 完全沒動那一項。** 原因是**第四次審核那份文件在我這邊是空的**,而我卻憑《設計書》推論回應 —— 等於假裝看過。
+
+審核的診斷精準:
+
+> 這不是疏忽程度的問題,而是**缺少一道把「已知待修項目」與「本版實際改動」對起來的檢查**。
+
+**已固化為工作流程**:發版前開啟上一份審核報告的修復清單,**逐列標註 ✅已修 / ⏭本版不修(附原因),不允許留白**。
+
+### 兩個 P0
+
+**R-1 `caseViewHTML` 的 `o is not defined`**
+
+```js
+function caseViewHTML(cid,i,d){          // 參數是 d
+  …data-chartno="${escA((o&&o.chartNo)||'')}"   // 卻用 o
+```
+
+**成因**:V5.32.0 我加 `data-chartno` 時用了**不限次數的 `replace`**,同一個按鈕樣板在唯讀檢視也被改到,而那裡的參數叫 `d`。
+
+後果:儲存後 1.2 秒切換檢視模式時,卡片渲染失敗。
+
+**S-1 `_row` 應為 `mkRow` —— HTML 投影片按了完全沒反應**
+
+```js
+(c.genomics||[]).length ? _row('基因檢測',…) : ''     // 同 scope 的函式叫 mkRow
+```
+
+**觸發條件:個案有填 NGS 資料**(肺癌/乳癌/大腸癌 MDT 的常態)。而按鈕的 catch 只 `console.error`:
+
+> 個管師按「HTML 投影片」→ **什麼都沒發生** → 再按一次 → 還是沒反應。
+
+沒有人會想到是因為某個個案填了基因檢測。已一併把 catch 改成會跳 alert。
+
+### 其餘五項
+
+| # | 問題 |
+|---|---|
+| S-2 | `renderCases&&renderCases()` —— **`X&&X()` 對未宣告識別字無效**(求值左側就拋 ReferenceError,短路輪不到),必須用 `typeof` |
+| S-3 | 設定頁醫師的「刪除」鍵**從來沒實作過** —— 38 位醫師一直只能新增不能刪除 |
+| R-2 | `_imgFailNotes` 用了卻沒宣告 → 嚴格模式算出的「為什麼這張圖不能用」完全傳不出去 |
+| R-4 | NAS zip 的 `imgTasks` 沒帶 `chartNo` —— K-1 只修了投影片那條路,**三條路有兩條一致、一條不一致,比三條都錯更難察覺** |
+| R-6 | `_imgGetFile` 註解修正 |
+
+### ⭐ jshint 掃描已加進打包檢查(輸出必須為空)
+
+審核實際跑了它:**十秒、6 個名字**,抓到
+
+- 人工前一輪找到但未修的 2 個
+- **人工連續四輪都沒找到的 3 個既有缺陷**(`_row`、`renderCases`、`delDr`)
+
+而且本輪它**當場抓到我新寫的 `delDr` 裡兩個不存在的函式名**(`renderDrs`、`renderSettings` —— 正確是 `renderDrsTab`)。
+
+> 這三個都符合同一個模式:**藏在冷路徑裡的錯名字** —— 人眼掃不到,機器一秒鐘。
+
+
+**摘要**:第五次審核七項全修(坑#57):(R-1 P0)`caseViewHTML` 用了未定義的 `o`(V5.32.0 我用不限次數 replace 波及唯讀檢視)→ 儲存後 1.2 秒卡片渲染失敗;(S-1 P0)`_row` 應為 `mkRow` → **有 NGS 資料的個案會讓 HTML 投影片按了完全沒反應**;(S-2)`renderCases&&renderCases()` —— `X&&X()` 對未宣告識別字無效,改 typeof;(S-3)補 `delDr()` 實作(醫師刪除鍵從未能用);(R-2)宣告 `_imgFailNotes`;(R-4)NAS zip 補 chartNo。**jshint undef 掃描已加進打包檢查,輸出必須為空**
+
+
+**開發敘事**:V5.32.2 第五次審核七項全修(坑 #57)。**這一輪最重要的不是程式,是流程**:第四次審核列了七項修復清單並在結尾明寫「請務必在任何人拿到這一版之前先修掉」的 R-1(P0),**V5.32.1 完全沒動** —— 原因是**第四次審核那份文件在我這邊是空的**,我卻憑《設計書》推論回應,等於假裝看過。審核的診斷精準:這不是疏忽程度問題,是**缺少一道把「已知待修項目」與「本版實際改動」對起來的檢查**。已固化為工作流程:**發版前開啟上一份審核報告的修復清單,逐列標註 ✅已修 / ⏭本版不修(附原因),不允許留白**。**修的七項**:(R-1 P0)`caseViewHTML(cid,i,d)` 內卻用 `(o&&o.chartNo)` —— 成因是 V5.32.0 我加 `data-chartno` 時用了**不限次數的 replace**,同一個按鈕樣板在唯讀檢視也被改到,而那裡參數叫 `d`;後果是儲存後 1.2 秒切換檢視模式時卡片渲染失敗。(S-1 P0)`genHTMLSlides` 裡 `_row('基因檢測',...)` 應為同 scope 的 `mkRow` —— **觸發條件是個案有填 NGS 資料**(肺癌/乳癌/大腸癌 MDT 常態),而按鈕 catch 只 `console.error` → **按「HTML 投影片」完全沒反應**,沒人會聯想到是基因檢測欄位;已一併把 catch 改成會跳 alert。(S-2)`renderCases&&renderCases()` —— **`X&&X()` 對未宣告識別字無效**,求值左側時就拋 ReferenceError,短路輪不到;必須用 `typeof`。(S-3)補 `delDr()`,設定頁醫師的「刪除」鍵**從來沒實作過**,38 位醫師一直只能新增。(R-2)宣告 `_imgFailNotes`(V5.32.0 用了卻沒宣告,嚴格模式算出的失敗原因完全傳不出去)。(R-4)NAS zip 的 `imgTasks` 補 `chartNo`(K-1 只修了投影片那條路,三條路有兩條一致一條不一致,比三條都錯更難察覺)。**jshint `undef` 掃描已加進打包檢查(輸出必須為空)** —— 它在本輪當場抓到我新寫的 `delDr` 裡兩個不存在的函式名(`renderDrs`、`renderSettings`,正確是 `renderDrsTab`),十秒抓到人工四輪沒找到的東西。屬 c+1。
+
+
+---
+
+## V5.32.1
+
+**緊急修 V5.32.0 的兩個 P0(新增坑 #56)**
+
+兩個都是我的疏漏,**第一個會讓嚴格模式直接誤殺大量正常影像**。
+
+### K-1 ⭐⭐ 標記從來沒被寫入
+
+V5.32.0 產出端讀 `img._ownerChartNo` 做歸屬驗證 —— **但那個標記從來沒被寫入**。
+
+我規劃的 `_tagOwner()` 插入失敗了,**而我的驗證只檢查「函式定義字串存在」,沒檢查它有沒有被呼叫**。
+
+結果 `chartNo` 永遠 `undefined` → `verifyImgOwnership` 第 1 段無法用病歷號重新定位:
+
+| 情況 | V5.32.0 | **V5.32.1** |
+|---|---|---|
+| `subFolder` 正確 | 🟢 載入 | 🟢 載入 |
+| **資料夾改過名** | 🔴 **不載入** | 🟡 用病歷號定位 |
+| **`subFolder` 為空**(舊資料從根目錄選的) | 🔴 **不載入** | 🟡 用病歷號定位 |
+| 無病歷號可比對 | 🔴 不載入 | 🔴 不載入 |
+
+**V5.32.0 等於把自己設計的「用病歷號救回來」整條路關掉**,只剩「資料夾名一字不差」才過。
+
+### K-2 用函式屬性當全域狀態
+
+`_imgPreview._owner` 只有四個個案影像 handler 會設定,**特殊議程的預覽不會** → 吃到**上一次點過的病人殘值**。
+
+> 驗證結果取決於「上一次點了誰」—— 沒有穩定重現路徑,是最難追的一類 bug。
+
+### 共同形狀:用隱性通道傳值
+
+一個掛在資料物件上(`img._ownerChartNo`)、一個掛在函式物件上(`_imgPreview._owner`)。
+
+> **隱性通道的問題是:漏設時不會報錯,只會安靜地拿到 `undefined` 或殘值。**
+
+兩處都改成**顯式參數**:`_loadImgsToCache(imgs, chartNo)`、`_imgPreview(img, label, chartNo)`。
+
+### 已加入打包檢查:死碼偵測
+
+偵測「定義了但從未被呼叫的函式」。**當場抓到另外兩個真死碼**:
+
+| 函式 | 來源 |
+|---|---|
+| `_cleanImportDates` | V5.23.0 我寫了它,實作卻改用 `_cleanImportedCase` |
+| `_caseImportIssues` | V5.23.0 同上,實作改用 `_importGaps` |
+
+**與 K-1 完全同一種失誤** —— 寫了函式,然後寫了別的程式碼沒用它。已一併移除。
+
+**教訓**:**「函式已定義」不等於「函式有被呼叫」** —— 字串存在性檢查對這類問題完全無效。
+
+
+**摘要**:**緊急修 V5.32.0 的兩個 P0**(坑#56):(K-1)產出端讀的 `img._ownerChartNo` **從未被寫入**(`_tagOwner` 插入失敗而我只檢查字串存在)→ chartNo 永遠 undefined → 「subFolder 為空」與「資料夾改過名」的影像**全部不載入**;(K-2)`_imgPreview._owner` 用函式屬性當全域,特殊議程預覽會吃到**上一次點的病人殘值**。兩處都改**顯式參數**。另加**死碼偵測**進打包檢查,當場抓到 `_cleanImportDates`/`_caseImportIssues` 兩個真死碼
+
+
+**開發敘事**:V5.32.1 緊急修 V5.32.0 的兩個 P0(坑 #56),**兩個都是我的疏漏,而且第一個會讓嚴格模式直接誤殺大量正常影像**。**K-1**:產出端讀 `img._ownerChartNo` 做歸屬驗證,但**那個標記從來沒被寫入** —— 我規劃的 `_tagOwner()` 插入失敗了,**而我的驗證只檢查「函式定義字串存在」,沒檢查它有沒有被呼叫**。結果 `chartNo` 永遠 `undefined`,`verifyImgOwnership` 第 1 段無法用病歷號重新定位 → 凡是「`subFolder` 為空」(舊資料從根目錄選的,占比可能很高)或「資料夾改過名」的影像**一律判 risk、不載入** —— V5.32.0 等於把自己設計的「用病歷號救回來」整條路關掉,只剩「資料夾名一字不差」才過。**K-2**:`_imgPreview._owner` 用**函式屬性當全域狀態**傳病歷號,但只有四個個案影像 handler 設定它,**特殊議程的預覽不會** → 吃到上一次點過的病人殘值;**驗證結果取決於「上一次點了誰」,沒有穩定重現路徑**。兩者共同形狀是**用隱性通道傳值**(一個掛資料物件、一個掛函式物件)—— 漏設時不報錯,只會安靜拿到 undefined 或殘值。兩處都改成**顯式參數**。**已把死碼偵測加進打包檢查**(定義了但從未被呼叫的函式),當場抓到 `_cleanImportDates`、`_caseImportIssues` 兩個真死碼 —— 都是 V5.23.0 我寫了函式、實作卻改用別的名字,**與 K-1 完全同一種失誤**,已一併移除。冷路徑四情境驗證:subFolder 正確→過、資料夾改名→用病歷號定位、**subFolder 為空的舊資料→用病歷號定位**(這兩類在 V5.32.0 全部會失敗)、無病歷號→拒絕。屬 c+1。
+
+
+---
+
+## V5.32.0
+
+**影像歸屬驗證(嚴格模式)—— 正式修復影像掛錯病人的問題**
+
+移除那一行靜默 fallback:
+
+```js
+// 舊(已移除)
+try{ scan=await imgFolderHandle.getDirectoryHandle(subFolder,{create:false}); }
+catch(_e){ scan=imgFolderHandle; }        // ← 退回根目錄抓同名檔
+```
+
+改走 `verifyImgOwnership(name, subFolder, chartNo, opts)` **四段驗證**:
+
+| 段 | 做什麼 | 關鍵 |
+|---|---|---|
+| ① | 定位病人資料夾 | 失敗時用**病歷號重新定位**,**絕不退回根目錄** |
+| ② | 取檔 | 保留坑 #31 的列舉退回,但**只在該病人資料夾內** |
+| ③ | 指紋比對 | size 不符 = 內容被替換 |
+| ④ | 歸屬結論 | 重新定位成功 → warn;完全正常 → ok |
+
+驗證不過一律回 `file:null` + **明確原因**,**永不猜測**。
+
+**四條路徑全改**:
+
+| 路徑 | 說明 |
+|---|---|
+| 產出端 | `_loadImgsToCache` |
+| 預覽端 | `_imgPreview`,四種預覽按鈕加 `data-chartno` 把病人帶進來 |
+| **NAS/ZIP 備份收圖** | 設計書項目 7 —— **這條後果比投影片更久**,會把別人的影像打包進備份,之後還原、寄出、上 NAS 都帶著錯的圖 |
+| 產出前 QA | 顯示失敗原因,而非只說「載入失敗」 |
+
+**冷路徑測試(依坑 #55 的教訓)**
+
+| 情境 | 結果 |
+|---|---|
+| 資料夾正常 | 🟢 載入 |
+| **資料夾改名 + 根目錄有同名檔** | 🟡 **用病歷號找回正確那張**(舊版會掛錯病人) |
+| 資料夾不見且無法定位 | 🔴 **拒絕載入** |
+| 資料夾在但檔案不在 | 🔴 拒絕,**不去別處找** |
+| 沒有病歷號可比對 | 🔴 拒絕 |
+
+**為什麼採嚴格模式**(個管師確認)
+
+> 設計書:「產出一份少一張圖的投影片,比產出一份圖是別人的投影片安全得多。」
+
+「只警告不擋」在會議前趕產出的情境下,大概率會被直接按確定 —— 風險等於沒降。過渡期已由 V5.31.2/3 的診斷工具提供。
+
+
+**摘要**:**影像歸屬驗證(嚴格模式)** —— 移除 `_imgGetFile` 的靜默 fallback `catch(_e){scan=imgFolderHandle;}`,改走 `verifyImgOwnership()` 四段驗證:①定位病人資料夾(找不到就用病歷號重新定位,**絕不退回根目錄**)②取檔只在該資料夾內(保留坑#31 的列舉退回)③指紋比對 ④歸屬結論。驗證不過回 null + 原因,**永不猜測**。四條路徑全改:產出端、預覽端、NAS/ZIP 備份收圖、QA 顯示失敗原因。個管師確認採嚴格模式(寧可少一張圖也不給別人的圖)
+
+
+**開發敘事**:V5.32.0 影像歸屬驗證(嚴格模式)—— 內部審核專題的**正式修復**。移除 `_imgGetFile` 那一行靜默 fallback `catch(_e){scan=imgFolderHandle;}`,改走 `verifyImgOwnership(name,subFolder,chartNo,opts)` 四段驗證:**①定位病人資料夾** —— `getDirectoryHandle(subFolder)` 失敗時改用病歷號重新定位(V5.29.0 的前綴比對,病歷號須完整),**絕不退回根目錄**;**②取檔只在該資料夾內** —— 保留坑 #31 的列舉退回(檔名含括號時 getFileHandle 會失敗),但範圍限定在該病人資料夾;**③指紋比對** —— 有 size 就比對,不符視為「內容已被替換」;**④歸屬結論** —— 用病歷號重新定位成功回 warn(附說明),完全正常回 ok。驗證不過一律 `file:null` + 明確原因,**永不猜測**。**四條路徑全改**:產出端(`_loadImgsToCache`)、預覽端(`_imgPreview`,並在四種預覽按鈕加 `data-chartno` 把病人帶進來)、**NAS/ZIP 備份收圖**(設計書項目 7 —— 這條後果比投影片更久,**會把別人的影像打包進備份**,之後還原、寄出、上 NAS 都帶著錯的圖)、產出前 QA(顯示失敗原因而非只說「載入失敗」)。**採嚴格模式是個管師的決定**;我建議 A 的理由:設計書自己說「產出一份少一張圖的投影片,比產出一份圖是別人的投影片安全得多」,而「只警告不擋」在會議前趕產出的情境下大概率會被直接按確定,風險等於沒降;過渡期已由 V5.31.2/3 的診斷工具提供。**依坑 #55 的教訓跑了五種冷路徑**:資料夾正常→載入;**資料夾改名 + 根目錄有同名檔→用病歷號找回正確那張(舊版會掛錯病人)**;資料夾不見且無法定位→拒絕;資料夾在但檔案不在→拒絕且不去別處找;無病歷號可比對→拒絕。屬 b+1。
+
+
+---
+
+## V5.31.3
+
+**第三次審核 M-1~M-7 全修(新增坑 #55)**
+
+兩個 P1 都是我造成的,而且**都是「只在冷路徑才執行的程式碼」**。
+
+### M-1 ⭐ 診斷工具在寫髒資料
+
+V5.31.2 的稽核對 mammo 傳了 `c.mammo` 而非 `c`:
+
+```js
+if(kind==='mammo'){ owner=c.mammo; }     // ← 錯
+const list=K.get(owner);
+```
+
+但 `IMG_KINDS.*.get(o)` **一律收個案物件、自己往下鑽**:
+
+```js
+get:function(o){ if(!o.mammo)o.mammo={date:'',report:'',images:[]}; return o.mammo.images; }
+```
+
+所以 `get(c.mammo)` 去找 `c.mammo.mammo`:
+
+| 後果 | 說明 |
+|---|---|
+| **乳攝永遠回 0 張** | 等於完全沒檢查 —— 而乳攝是郭美伶個管師每週都在用的 |
+| **污染病歷資料** | 在 `c.mammo` 底下憑空長出 `c.mammo.mammo` |
+
+**一個宣稱「只診斷、不改資料」的工具在寫髒資料。** 而且 `S.meeting` 是活物件,下次任何儲存都會把它寫進 localStorage → 備份 → NAS → 所有機器。
+
+**冷路徑測試證實**:
+
+```
+舊版對有乳攝的個案 → 0 張  🔴（應為 2 張）+ 污染
+新版 peekImgs()    → 2 張  ✅ 無污染
+```
+
+已加 `peekImgs()` 純讀版本,並在 `IMG_KINDS` 上方註明 `get()` 有寫入副作用。
+
+### M-2 ⭐ `c is not defined`,而錯誤訊息把人導向錯的方向
+
+`crPickImages` 裡用了 `c.chartNo`,但該函式的變數叫 `p`,**全域也沒有 `c`**。
+
+**觸發條件正好是最該保護的那條路** —— 只在「找不到病人子資料夾」時才求值。開發測試時資料夾都建好了,永遠跑不到。
+
+而錯誤被外層 catch 接住後顯示:
+
+> **無法存取資料夾:c is not defined**
+
+中文前綴把人導向「資料夾壞了」。個管師會去重新授權、重選資料夾、甚至重開電腦 —— **全部沒用**。
+
+已修正(`p.chartNo`),並讓 `_handleFolderErr` 區分程式錯誤:
+
+> 系統內部錯誤（非資料夾問題）：…
+> 資料夾設定沒有問題,不需要重選。請截圖回報此訊息。
+
+這是 **V5.29.0 我加提示時造成的**。
+
+### 這輪最重要的教訓(坑 #55)
+
+兩者共同形狀:**只在冷路徑才執行**。而且 M-1 **錯得很安靜**(回空陣列,不拋例外)。
+
+> **這兩個都不會被語法檢查、data-action 稽核、`new Function()` 冒煙測試抓到。**
+> 目前的打包前檢查全是**結構性**檢查,對「邏輯在冷路徑上是錯的」完全無能為力。
+
+**已固化的做法**:每個新增或修改的函式,**至少讓它的「失敗分支」跑過一次**。本輪用 node 模擬「有乳攝」與「沒有乳攝」兩種輸入,當場證實舊版的問題。
+
+### 其餘五項
+
+| # | 問題 |
+|---|---|
+| M-3 | 稽核漏掉特殊議程的 `images` 與 `patients[].images` —— 後者**同樣以病歷號找資料夾、同樣會退回根目錄,風險模式一模一樣**,卻既不在 `IMG_KINDS` 也不在稽核範圍 |
+| M-4 | 常駐橫幅與 `#mob-topbar` 同為 `fixed;top:0`,`z-index 99999>200` → **整條蓋住手機頂端列**;而橫幅內容正是叫人去「設定」(入口就在被蓋住那條上)且無關閉鈕 → **閉環** |
+| M-5 | 稽核在 NAS 上每張問題影像做兩輪完整列舉 → 加快取 + 進度顯示 |
+| M-6 | NAS 同步也呼叫 `saveLocal` → 側欄「最近」被同步結果洗版 |
+| M-7 | 孤兒預覽顯示 `head_neck_2026-06-18`(內部代碼)→ 改成「頭頸癌 2026-06-18（分區資料 XXX KB）」 |
+
+
+**摘要**:第三次審核 M-1~M-7 全修(坑#55):(M-1)稽核對 mammo 傳 `c.mammo` 而非 `c` → 乳攝永遠回 0 張且**污染病歷資料**(長出假的 `c.mammo.mammo`),加 `peekImgs()` 純讀版本;(M-2)`crPickImages` 的 `c.chartNo` 應為 `p.chartNo` → 找不到子資料夾時 ReferenceError,訊息還顯示「無法存取資料夾:c is not defined」誤導去重選資料夾,並讓 `_handleFolderErr` 區分程式錯誤;(M-3)稽核補特殊議程兩組影像;(M-4)橫幅加關閉鈕+body padding(原本蓋住手機頂端列形成閉環);(M-5)列舉快取+進度;(M-6)同步不更新 touchedAt;(M-7)孤兒預覽改可讀
+
+
+**開發敘事**:V5.31.3 第三次審核 M-1~M-7 全修(坑 #55)。**兩個 P1 都是我造成的,而且都是「只在冷路徑才執行的程式碼」**。**M-1**:V5.31.2 的稽核工具對 mammo 傳了 `c.mammo` 而非 `c` —— 但 `IMG_KINDS.*.get(o)` 一律收**個案物件**、自己往下鑽,所以變成找 `c.mammo.mammo`:①**乳攝永遠回 0 張,等於完全沒檢查**(而乳攝是郭美伶個管師每週都在用的);②**在病歷資料裡長出假的 `c.mammo.mammo` 物件** —— **一個宣稱「只診斷、不改資料」的工具在寫髒資料**,而且 `S.meeting` 是活物件,下次任何儲存都會把它寫進 localStorage → 備份 → NAS → 所有機器。**M-2**:`crPickImages` 用了 `c.chartNo` 但該函式變數叫 `p`,全域也沒有 `c` → `ReferenceError`;**觸發條件正好是最該保護的那條路**(找不到病人子資料夾),而訊息顯示「**無法存取資料夾:c is not defined**」—— 中文前綴把人導向「資料夾壞了」,個管師會去重新授權、重選資料夾、重開電腦,**全部沒用**。這是 V5.29.0 我加提示時造成的。**兩者的共同形狀**:只在冷路徑執行,開發時跑不到;M-1 還**錯得很安靜**(回空陣列不拋例外)。**關鍵是這兩個都不會被既有的打包檢查抓到** —— 語法檢查、data-action 稽核、`new Function()` 冒煙測試全是**結構性**檢查,對「邏輯在冷路徑上是錯的」無能為力。已固化做法:**每個新增或修改的函式,至少讓它的失敗分支跑過一次**;本輪用 node 模擬兩種輸入,當場證實舊版對有乳攝的個案回 0 張且污染資料。其餘:M-3 稽核補上特殊議程的 `images` 與 `patients[].images`(後者同樣以病歷號找資料夾、同樣會退回根目錄,**風險模式一模一樣卻不在 IMG_KINDS 也不在稽核範圍**);M-4 橫幅與 `#mob-topbar` 同為 fixed top:0 且 z-index 99999>200,**整條蓋住手機頂端列**,而橫幅內容正是叫人去「設定」(入口就在被蓋住那條列上)且無關閉鈕 → 閉環,加關閉鈕與 body padding;M-5 列舉快取(NAS 上每張問題影像原本兩輪完整列舉)+ 進度顯示;M-6 NAS 同步不更新 `touchedAt`(否則側欄「最近」會被同步結果洗版);M-7 孤兒預覽顯示癌別中文名與體積。屬 c+1。
+
+
+---
+
+## V5.31.2
+
+**影像歸屬診斷版(只檢查、不改讀取行為)**
+
+內部審核的專題報告指出一個**比批次 A 更嚴重**的問題。
+
+### 問題
+
+影像引用只存 `subFolder` **字串**,沒有病人身分:
+
+```js
+{ name:'IMG_0001.jpg', fromFolder:true, subFolder:'0000001 測○試' }
+```
+
+而 `_imgGetFile` 在子資料夾找不到時:
+
+```js
+try{ scan=await imgFolderHandle.getDirectoryHandle(subFolder,{create:false}); }
+catch(_e){ scan=imgFolderHandle; }        // ← 靜默退回根目錄抓同名檔
+```
+
+**實際場景**:
+
+1. 個管師把 `0000001/` 改名成「0000001 測○試」(**人之常情,方便自己找**)
+2. 下次產投影片 → `getDirectoryHandle('0000001')` 失敗 → **退回根目錄**
+3. 抓到同名的 `IMG_0001.jpg`(相機與掃描器的預設命名,**撞名機率極高**)
+4. **A 病人的病理影像貼到 B 病人的投影片上**
+5. 產出前 QA 只看 `if(src)` 有沒有值 → **掛錯病人的圖 src 一定有值,算成功載入**
+
+### 嚴重性對比
+
+| | 批次 A(資料遺失) | **本問題(資料錯置)** |
+|---|---|---|
+| 發現時機 | 馬上(東西不見了) | **可能永遠不會發現** |
+| 後果 | 重做 | **主治醫師看著錯的病理照片決定治療** |
+| QA 能抓到 | 是(數量少了) | **否(算成功)** |
+
+### 本版刻意只做診斷
+
+新增工具列按鈕 **「🔍 檢查影像歸屬」**,逐張檢查六類影像並分三級:
+
+| 等級 | 意義 |
+|---|---|
+| 🟢 正常 | 資料夾與檔案都在,指紋相符 |
+| 🟡 注意 | 資料夾改過名但用病歷號找得回來;或舊資料尚無指紋 |
+| 🔴 風險 | 資料夾不存在且無法重新定位 —— **特別會指出「根目錄有同名檔,目前會抓到那一張」** |
+
+最後那項正是**掛錯病人的具體證據**。
+
+**為什麼不直接堵住 fallback**:V5.32.0 堵住後,原本靠 fallback 才讀到的圖會變成**紅燈不輸出**,會議前可能一團亂。先讓個管師跑一次知道現況,再決定何時上。
+
+### 一個更正
+
+我上一輪說「會議層資料夾不存在」是**誤判** —— 我搜的是中文詞「會議層」而不是函式名 `_mtgSubName()`。**它確實存在**,設計書描述的現況完全正確。
+
+### 已確認
+
+第 7 節的「五場」= **(A) 每一場會議獨立**,設計書不需調整。
+
+
+**摘要**:影像歸屬**診斷版**(只檢查、不改讀取行為):內部審核專題指出 `_imgGetFile` 在子資料夾找不到時**靜默退回根目錄抓同名檔** → 個管師把資料夾改名後,A 病人的圖會貼到 B 病人投影片,而產出前 QA 只看「src 有沒有值」完全看不出來。**刻意先不堵** —— 堵住後那些原本靠 fallback 才讀到的圖會變紅燈不輸出,會議前可能一團亂。先加「🔍 檢查影像歸屬」按鈕讓個管師知道現況有多少張有風險,再決定 V5.32.0 何時上
+
+
+**開發敘事**:V5.31.2 影像歸屬**診斷版**。內部審核的專題報告指出一個**比批次 A 更嚴重**的問題:影像引用只存 `subFolder` **字串**,沒有病人身分;而 `_imgGetFile` 在子資料夾找不到時 `catch(_e){scan=imgFolderHandle;}` —— **靜默退回根目錄抓同名檔**。實際場景:個管師把 `0000001/` 改名成「0000001 測○試」(**人之常情**),下次產投影片 `getDirectoryHandle('0000001')` 失敗 → 退回根目錄 → 抓到同名的 `IMG_0001.jpg`(相機與掃描器的預設命名,**撞名機率極高**)→ **A 病人的病理影像貼到 B 病人的投影片上**。而產出前 QA 只看 `if(src)` 有沒有值 —— **掛錯病人的圖 src 一定有值,算成功載入**。查證後 G-1 到 G-6 六個缺口全部屬實,`_mtgSubName()` 會議層也確實存在(我上一輪說「不存在」是**搜中文詞而不是函式名**,誤判了,已更正)。**嚴重性對比**:批次 A 那些是資料遺失(馬上會發現、後果是重做);這個是**資料錯置**(可能永遠不會發現、後果是主治醫師看著錯的病理照片決定治療、而且 QA 抓不到)。**本版刻意只做診斷不改行為**:加 `_auditOneImg()` + `auditMeetingImages()` + 報表 modal + 工具列「🔍 檢查影像歸屬」按鈕,逐張檢查六類影像並分三級(正常/注意/風險),**特別會指出「根目錄有同名檔,目前會抓到那一張」** —— 那正是掛錯病人的具體證據。理由:V5.32.0 堵住 fallback 後,原本靠 fallback 才讀到的圖會變成紅燈不輸出,**會議前可能一團亂**;先讓個管師跑一次知道現況,再決定何時上。個管師確認第 7 節為 **(A) 每一場會議獨立**,設計書不需調整。屬 b+1。
+
+
+---
+
+## V5.31.1
+
+**內部審核複審九項全修(新增坑 #54)**
+
+複審指出「批次 A 的 6 項有 4 項修對、2 項不完整,**而且修復引入了 2 個新 P0**」—— 逐一查證後全部屬實。
+
+### N-1 ⭐⭐ 我的修復被自己的程式碼推翻
+
+V5.31.0 為了 P0-4 在儲存失敗時設 `_dirty=true`,但 **1.2 秒後的收尾 `setTimeout` 又設回 `false`**:
+
+```js
+if(!lok){ _dirty=true; ... }        // L5846 新增的保護
+...
+if(!opts||!opts.silent){            // L5873 ← 不看 lok
+  setTimeout(()=>{
+    S._snapshot=null;_dirty=false;  // L5875 ★★ 把保護整個推翻
+    S.viewMode=true;                // ← 還切成檢視模式,看起來像存成功
+  },1200);
+}
+```
+
+**新增的保護只活了 1.2 秒,P0-4 等於沒修** —— 而且**比原版更有誤導性**(原版角落至少還有紅字「儲存失敗」)。
+
+修法:`_lok` 提升到 `try` 外層,收尾只在成功時執行。
+
+### N-2 ⭐⭐ 「回滾」會刪掉本機原有的會議,訊息還謊報
+
+```js
+_written.forEach(k=>{localStorage.removeItem(k);});   // ← 這不是回滾,是刪除
+throw new Error('...全部回復原狀,未造成資料混亂');    // ← 這句話是假的
+```
+
+備份裡的會議**大部分是本機已存在的同一批**(同 id)。`setItem` 是覆蓋、`removeItem` 是徹底刪除 → **原值再也回不來**。
+
+**坑 #33「謊報成功」重演,而且是在資料救援路徑上。**
+
+修法:`_prev` 快照舊值 + 兩階段復原(先全清騰空間,再放回舊值)。
+
+### 其餘七項
+
+| # | 問題 |
+|---|---|
+| N-3 | 空間滿時自動存檔**每 2 分鐘彈一次阻斷式 alert**,唯一逃脫方式是關分頁 —— 正是要防的事 → 常駐橫幅 + 節流 |
+| N-4 | `cleanOrphanKeys` 是**死碼**(拿掉自動清理但沒接 UI)→ 接設定頁按鈕 + 納入 `mdt_sec_*` |
+| N-5 | 索引改日期排序後,側欄「最近」變成「日期最新」→ 預建下月會議永久佔住前 4 格 → 加 `touchedAt` |
+| N-6 | 容量估算只看「要寫多少」沒看「已用多少」 |
+| N-7 | `saveMeeting` 缺 `catch` → 例外變 unhandled rejection,畫面完全無訊息 |
+| N-8 | `version` 在衝突檢查前遞增 → 按取消也灌水,而 version 是 NAS 同步的仲裁依據 |
+| N-9 | 截斷訊息說「請先封存再還原」但程式照樣截斷寫入 |
+
+### 這輪最重要的教訓(坑 #54)
+
+N-1、N-2、N-5 有共同形狀:
+
+> **修復本身寫對了,但沒追問「我要保護的那個狀態,全檔還有誰會動它?」**
+
+已固化成檢查習慣:**改動涉及共享狀態變數,就 grep 一次它的所有寫入點**。以 `_dirty` 為例全檔只有 8 處,逐一看過就會發現問題。
+
+**而且**:修 bug 修出**比原版更有誤導性**的行為,是最需要警覺的一類回歸。
+
+
+**摘要**:內部審核複審九項全修(坑#54):(N-1)V5.31.0 的 `_dirty=true` 被 1.2 秒後的收尾 setTimeout 推翻,P0-4 等於沒修且更有誤導性 → `_lok` 提升到 try 外,收尾只在成功時執行;(N-2)匯入「回滾」只是 removeItem 會刪掉本機原有會議且謊報「全部回復原狀」→ `_prev` 快照 + 兩階段復原;(N-3)空間滿時自動存檔每 2 分鐘彈一次 alert → 常駐橫幅 + 30 分鐘節流;(N-4)`cleanOrphanKeys` 是死碼 → 接上設定頁按鈕 + 納入 `mdt_sec_*`;(N-5)索引改日期排序後側欄「最近」語意改變 → 加 touchedAt;(N-6)容量估算納入已用空間;(N-7)saveMeeting 補 catch;(N-8)version 移到衝突檢查後;(N-9)截斷訊息與行為對齊
+
+
+**開發敘事**:V5.31.1 內部審核複審九項全修(坑 #54)。複審指出「批次 A 的 6 項有 4 項修對、2 項不完整,**而且修復引入了 2 個新 P0**」—— 逐一查證後全部屬實。**N-1 最嚴重**:V5.31.0 為 P0-4 在失敗時設 `_dirty=true`,但**1.2 秒後的收尾 `setTimeout` 又設回 `false`**,還清掉 `S._snapshot`、切換成檢視模式 —— **失敗後畫面反而長得像「儲存成功」**;新增的保護只活了 1.2 秒,**比原版更有誤導性**(原版角落至少還有紅字)。修法:`_lok` 提升到 try 外層,收尾只在成功時執行。**N-2**:我寫的「回滾」只是 `removeItem`,但備份裡的會議**大部分是本機已存在的同一批**(同 id),`setItem` 是覆蓋、`removeItem` 是徹底刪除 → **原值回不來**;訊息卻寫「全部回復原狀」= **謊報,坑 #33 重演,而且在資料救援路徑上**。改成 `_prev` 快照 + 兩階段復原。其餘:N-3 空間滿時自動存檔每 2 分鐘彈阻斷式 alert(唯一逃脫方式是關分頁,正是要防的事)→ 常駐紅色橫幅 + 手動必跳/自動 30 分鐘節流;N-4 `cleanOrphanKeys` 是死碼(拿掉自動清理但沒接 UI)→ 接上設定頁按鈕並納入 `mdt_sec_*`(體積更大,影像都在裡面);N-5 索引改日期排序後 `renderSbRecent` 語意被改變(預建下月會議會永久佔住側欄前 4 格)→ 加 `touchedAt` 分開兩種順序;N-6 容量估算納入已用空間;N-7 `saveMeeting` 補 catch(否則例外變成 unhandled rejection,畫面完全無訊息);N-8 `version` 移到衝突檢查後(否則按取消也灌水,而 version 是 NAS 同步的仲裁依據);N-9 截斷訊息與行為對齊。node 模擬驗證 N-1(失敗時 `_dirty` 保住、不切檢視模式)與 N-2(原值正確復原)。**共同教訓(坑 #54)**:三項都是「修復本身寫對了,但沒追問**我要保護的那個狀態,全檔還有誰會動它**」。已固化成習慣:**改動涉及共享狀態變數就 grep 所有寫入點**。屬 c+1。
+
+
+---
+
+## V5.31.0
+
+**內部審核批次 A(上線阻擋項)全修**
+
+收到內部審核單位的上線前程式審核報告,**六項 P0/P1 逐一查證後全部屬實**。
+
+### P0-1 ⭐ 兩行各自合理的程式碼,合起來是資料毀滅器(新增坑 #53)
+
+```js
+const newIdx=idx.slice(0,100);            // ① 索引硬截斷
+const validIds=new Set(newIdx.map(x=>x.id));
+Object.keys(localStorage).forEach(k=>{    // ② 不在索引的本體直接刪除
+  if(k.startsWith('mdt_m_')&&!validIds.has(k.slice(6)))localStorage.removeItem(k);
+});
+```
+
+**儲存第 101 場時,永久刪除第 101 名之後的真實會議** —— 完全無聲。
+
+**兩行分開看都沒問題**(「索引留最近 100 筆」合理、「清掉孤兒」合理,註解還寫著 `Clean orphan` 看起來在做好事),**合起來才是毀滅器**。
+
+更糟:排序用 `idx.unshift`(**依儲存時間**不是會議日期)—— 編輯一場舊會議會把它推到第 1 名,**被擠出第 100 名的可能是上週剛開的會**。
+
+| | 舊版 | 新版 |
+|---|---|---|
+| 上限 | 100(硬截斷) | `IDX_MAX=2000`,超過**明確告知不靜默丟棄** |
+| 排序 | 儲存時間 | **會議日期**(新→舊) |
+| 孤兒清理 | 自動、無聲 | 設定頁 `cleanOrphanKeys()`,**先列出要刪什麼再確認** |
+
+**node 壓力測試 105 場**:新版索引 105 筆、本體 105 個、第 1 場仍在;**舊版已永久刪除 5 場**。
+
+### 其餘五項
+
+| # | 問題 | 修法 |
+|---|---|---|
+| **P0-2** | 匯入還原同樣 `slice(0,100)` —— **專門用來救資料的功能反而造成資料遺失**,且延遲觸發(還原當下正常,隔天存一次才消失) | 不截斷,超限明確告知 |
+| **P0-3** | 匯入逐筆寫入無交易性,容量爆掉留下「本體有、索引沒有」的半個資料庫 | 容量估算 + **整批回滾** |
+| **P0-4** | `_dirty=false` 無條件執行 → 儲存失敗後 `beforeunload` 不攔截 → **關頁資料全失**。影像壓縮後 5–15 張就填滿 5MB,**這是常態不是邊緣情境** | 失敗時保持 `_dirty=true` + 容量警示 |
+| **P1-1** | `saveMeeting` 缺 `try/finally` —— 日期衝突按取消 → enable 那行**永遠到不了** → 按鈕永久卡在「儲存中…」 | 包 `try/finally` |
+| **P1-2** | 匯入 `input.value=''` 在 try 外,取消後同一檔案再選不觸發 | 移入 `finally` |
+
+### 個資項目依指示列待辦
+
+P0-6(GitHub 公開可窮舉)、P0-7(Git 歷史)、P0-8(未遮罩送境外 LLM)、P0-9(API Key 進備份)**未在本版處理**,已列入 CLAUDE.md 的待辦區。
+
+### 這次審核最值得記的
+
+> **「每行都合理」不等於「合起來合理」。** 審查刪除類程式碼時,要把「決定刪什麼」與「執行刪除」兩段**合起來讀**,問一句「在什麼情況下這會刪到不該刪的?」
+
+單元測試抓不到(測試資料不到 100 筆),code review 也容易放過(因為每行都對)。**它會在上線半年、大家都已經信任它之後才發作。**
+
+
+**摘要**:內部審核批次 A(上線阻擋項)全修:(坑#53/P0-1)saveLocal 的 `slice(0,100)`+孤兒清理合起來會**無聲永久刪除第 101 名之後的真實會議**,改 IDX_MAX=2000、依會議日期排序、超限明確告知、孤兒清理改手動;(P0-2)匯入還原同樣截斷 100 筆,改不截斷;(P0-3)匯入無交易性,加容量估算與**整批回滾**;(P0-4)`_dirty=false` 無條件執行導致儲存失敗後關頁資料全失,改失敗時保持 dirty + 容量警示;(P1-1)saveMeeting 包 try/finally(日期衝突按取消會讓按鈕永久卡住);(P1-2)匯入 input.value 移入 finally。**個資項目(P0-6~9)依個管師指示列待辦**
+
+
+**開發敘事**:V5.31.0 內部審核批次 A(上線阻擋項)全修。收到內部審核單位的上線前程式審核報告,**六項 P0/P1 逐一查證後全部屬實**。**最嚴重的 P0-1(坑 #53)**:`saveLocal()` 的 `idx.slice(0,100)` 加上緊接著的孤兒清理,**兩行合起來會在儲存第 101 場時永久刪除第 101 名之後的真實會議**,而且完全無聲;更糟的是排序用 `idx.unshift`(依儲存時間),編輯舊會議會把它推到第 1 名,被擠掉的可能是上週剛開的會;8 個癌別每週開會約 3 個月觸發。**兩行分開看都合理**(「索引留最近 100 筆」+「清掉孤兒」,註解還寫著 Clean orphan 看起來在做好事),合起來才是毀滅器 —— 這正是審核報告說的「不會被單元測試抓到(測試資料不到 100 筆),會在上線半年、大家都信任它之後才發作」。node 壓力測試 105 場:新版全在,**舊版已永久刪除 5 場**。其餘:P0-2 匯入還原同樣截斷(「專門用來救資料的功能反而造成資料遺失」,且延遲觸發最難追);P0-3 匯入無交易性(容量爆掉留下半個資料庫),加估算 + **整批回滾**;P0-4 `_dirty=false` 無條件執行(儲存失敗後 beforeunload 不攔截,關頁全失,而影像壓縮後 5-15 張就填滿 5MB,**這是常態不是邊緣情境**),改失敗時保持 dirty + 容量警示;P1-1 `saveMeeting` 缺 try/finally(日期衝突按取消 → enable 那行永遠到不了 → 按鈕永久卡在「儲存中…」);P1-2 匯入 `input.value` 移入 finally。**個資項目(P0-6 GitHub 公開可窮舉、P0-7 Git 歷史、P0-8 未遮罩送境外 LLM、P0-9 API Key 進備份)依個管師指示列入待辦,未在本版處理**。屬 b+1。
+
+
+---
+
+## V5.30.3
+
+**緊急修復:登入畫面的三位個管師完全消失(新增坑 #52)**
+
+V5.30.2 在 `async function restoreRootHandle(){` 前面插入一段註解,結果變成:
+
+```js
+async /* 註解… */
+function _isStaleHandleErr(e){     // ← 新加的函式吃掉了那個 async
+...
+function restoreRootHandle(){      // ← 失去 async,但內部有 await
+```
+
+**整個 script 掛掉 → `renderLogin()` 從未執行 → 登入畫面空白。**
+
+**為什麼語法檢查沒擋住**
+
+`async /*註解*/ function` 在語法上**完全合法**(只是把後面那個函式變成 async)。這是**語法正確但邏輯錯誤**。
+
+第一次修正時語法檢查確實抓到了 `restoreRootHandle` 缺 async —— **但我在補寫的註解裡用了反引號**,而那段在模板字串環境內,反引號提前結束模板 → 又一次錯誤(坑 #48 的變體)。
+
+**兩次都是同一個根源**:在既有程式碼前插入註解時,**沒檢查插入點是否切斷了語法單元**。
+
+**已加入打包驗證**:
+
+| 檢查 | 作用 |
+|---|---|
+| `async /*` 樣式偵測 | 抓「修飾詞與 function 之間插了註解」 |
+| **主 script 執行測試** | 用 `new Function(main)` **實際解析整段**,而非只做 `node --check` |
+
+**教訓**:
+1. 插入註解前先看清楚**插入點前面是什麼** —— `async`、`export`、`return` 這類修飾詞後不能插註解再接別的東西
+2. 在**模板字串環境裡寫註解不可用反引號**
+3. **語法檢查通過 ≠ 行為正確**
+
+
+**摘要**:**緊急修復**:V5.30.2 插入註解時把 `async function restoreRootHandle` 的 async 留在註解前面,被新函式吃掉 → restoreRootHandle 失去 async 但內含 await → 整個 script 掛掉 → **登入畫面三位個管師完全消失**(坑#52)。第二次修正又在模板字串環境的註解裡用反引號再度出錯。已加打包驗證:`async /*` 偵測 + 主 script 執行測試
+
+
+**開發敘事**:V5.30.3 緊急修復:**登入畫面的三位個管師完全消失**,系統無法使用(坑 #52)。根因是 V5.30.2 在 `async function restoreRootHandle(){` 前面插入註解,結果 `async` 被留在註解前、被我新加的 `_isStaleHandleErr` 吃掉,而 `restoreRootHandle` 失去 async 卻仍含 `await` → 整個 script 掛掉 → `renderLogin()` 從未執行。**為什麼語法檢查沒擋住**:`async /*註解*/ function` 在語法上**完全合法**(只是把後面那個函式變成 async),這是**語法正確但邏輯錯誤**;第一次修正時語法檢查確實抓到了 restoreRootHandle 缺 async,但**我在補寫的註解裡用了反引號**,而那段在模板字串環境內 → 反引號提前結束模板 → 又一次錯誤(坑 #48 的變體)。兩次都是同一個根源:**在既有程式碼前插入註解時,沒檢查插入點是否切斷了語法單元**。已加入打包驗證:`async /*` 樣式偵測 + **主 script 執行測試**(用 `new Function(main)` 實際解析整段,而非只做 `node --check`)。屬 c+1,但這是本專案少數「讓系統完全無法使用」的事故,教訓寫進坑 #52。
+
+
+---
+
+## V5.30.2
+
+**修:資料夾失效時顯示原始英文錯誤**
+
+個管師截圖:點「📂 新增資料夾 選取」跳出
+
+```
+無法存取資料夾：A requested file or directory could not be found
+at the time an operation was processed.
+```
+
+看不懂,也不知道怎麼辦。
+
+**根因**
+
+資料夾 handle 存在 IndexedDB(`imgFolder_root`),重開瀏覽器會自動還原 —— 但 `restoreRootHandle()` **只做 `_checkPerm()` 檢查權限,沒檢查資料夾是否還存在**。
+
+而按鈕文字取自 `imgFolderHandle.name`,所以畫面還顯示舊資料夾名(「新增資料夾」是 Windows 預設名,個管師顯然後來改過名或移動了),實際 handle 早已指向不存在的位置。
+
+**做法**
+
+| 函式 | 作用 |
+|---|---|
+| `_isStaleHandleErr(e)` | 偵測 `NotFoundError` 或訊息含 `could not be found`,**排除 AbortError 與權限錯誤**(那兩種要走原路徑) |
+| `_handleFolderErr(e, retryFn)` | 清掉失效的 handle 與 IndexedDB 記錄 → 中文說明常見原因 → 直接引導重選 → 選完自動重試原操作 |
+
+訊息改成:
+
+> 影像資料夾已無法存取（原本是「新增資料夾」）。
+>
+> 常見原因:資料夾被改名、移動、刪除,或換了電腦。
+>
+> 要現在重新選擇資料夾嗎?
+
+6 處原本 `alert('無法存取資料夾：'+e.message)` 的 catch 全部改走這條。node 驗證 5 種錯誤情境判定正確。
+
+**過程中踩到自己的坑**:插入註解時把原本 `async function restoreRootHandle` 的 `async` 切掉,**語法檢查立刻抓到** —— 這正是每次打包都跑語法檢查的價值。
+
+**教訓**:**持久化的外部資源 handle 必須同時檢查「權限」與「存在性」** —— 只檢查權限會讓失效 handle 一路帶到使用者操作時才爆,而且爆出來的是瀏覽器的原始英文訊息。
+
+
+**摘要**:修「資料夾 handle 失效時顯示原始英文錯誤」:handle 存在 IndexedDB 會自動還原,但 `restoreRootHandle` **只檢查權限沒檢查資料夾是否還在**;資料夾被改名/移動後,點選取就跳「A requested file or directory could not be found」。加 `_isStaleHandleErr`+`_handleFolderErr`:偵測 NotFoundError → 清掉失效 handle → 中文說明常見原因 → 直接引導重選並自動重試。6 處 catch 統一走這條
+
+
+**開發敘事**:V5.30.2 修「資料夾 handle 失效時顯示原始英文錯誤」。個管師截圖:點「📂 新增資料夾 選取」跳出 `無法存取資料夾：A requested file or directory could not be found at the time an operation was processed.` —— 看不懂也不知道怎麼辦。**根因**:資料夾 handle 存在 IndexedDB(`imgFolder_root`),重開瀏覽器會自動還原,但 `restoreRootHandle()` **只做 `_checkPerm()` 檢查權限,沒檢查資料夾是否還存在**;而按鈕文字取自 `imgFolderHandle.name`,所以畫面還顯示舊資料夾名(「新增資料夾」—— Windows 預設名,個管師顯然後來改過名或移動了),實際 handle 早已指向不存在的位置。**做法**:加 `_isStaleHandleErr(e)` 偵測(`NotFoundError` 或訊息含 `could not be found`,但**排除 AbortError 與權限錯誤**,那兩種要走原路徑)+ `_handleFolderErr(e,retryFn)` 統一處理 —— 清掉失效的 `imgFolderHandle`/`imgRootHandle` 與 IndexedDB 記錄,用中文說明常見原因(資料夾被改名、移動、刪除,或換了電腦),直接問要不要重選,選完自動重試原本的操作。6 處原本 `alert('無法存取資料夾：'+e.message)` 的 catch 全部改走這條。node 驗證 5 種錯誤情境判定正確。**過程中踩到自己的坑**:插入註解時把原本 `async function restoreRootHandle` 的 `async` 切掉,語法檢查立刻抓到 —— 這正是每次打包都跑語法檢查的價值。屬 c+1。**教訓**:**持久化的外部資源 handle 必須同時檢查「權限」與「存在性」** —— 只檢查權限會讓失效 handle 一路帶到使用者操作時才爆,而且爆出來的是瀏覽器的原始英文訊息。
+
+
+---
+
+## V5.30.1
+
+**AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面**
+
+個管師問「json prompt 你有同時改嗎」。查證後確認 V5.30.0 **有改而且內容完整**:
+
+```
+genomics：基因檢測（NGS panel 或單基因），陣列，每筆 {"name":...,"date":...,"content":...}
+  - name 例：EGFR、ALK、BRCA1/2、FoundationOne CDx、TSO500、MSI/MMR
+  - content 寫變異、VAF、TMB、MSI 狀態、可用藥建議等；【重要】不要重複寫 name 與 date
+  - 資料中沒有基因檢測就給空陣列 []，不要臆測
+```
+
+而且 V5.23.0 的日期重複自動清理也涵蓋了 genomics。
+
+**但發現順序不一致**:
+
+| | 順序 |
+|---|---|
+| prompt(舊) | …treatments → **genomics** → markers… |
+| 編輯畫面 | …**癌指數 → 基因檢測** → 治療… |
+
+功能上沒有影響(JSON 靠 key 對應),但個管師的主要工作流是「AI 匯入後**逐欄查看修改**」,prompt 順序與畫面一致比較好對照。已移到 markers 之後。
+
+> 個管師說「雖然我們是不會細看」—— 仍值得改,因為這種小落差累積起來會讓人不信任工具的一致性。
+
+
+**摘要**:AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面:原本插在 treatments 與 markers 之間,但畫面順序是「癌指數 → 基因檢測」,移到 markers 之後。功能無影響(JSON 靠 key 對應),但個管師的工作流是「匯入後逐欄查看修改」,順序一致較好對照
+
+
+**開發敘事**:V5.30.1 AI 匯入 prompt 的 genomics 欄位順序對齊編輯畫面。個管師問「json prompt 你有同時改嗎」—— 查證後確認 V5.30.0 **有改而且內容完整**(欄位定義、name 範例 EGFR/ALK/BRCA/FoundationOne/TSO500/MSI-MMR、「沒有就給空陣列不要臆測」、日期重複清理也涵蓋 genomics),但發現**順序不一致**:prompt 是「treatments → genomics → markers」,而編輯畫面是「癌指數 → 基因檢測 → 治療」。功能上沒有影響(JSON 靠 key 對應,順序不影響解析),但個管師的主要工作流是「AI 匯入後**逐欄查看修改**」,prompt 順序與畫面順序一致比較好對照。移到 markers 之後。個管師說「雖然我們是不會細看」—— 仍值得改,因為這種小落差累積起來會讓人不信任工具的一致性。屬 c+1。
+
+
+---
+
+## V5.30.0
+
+**新增基因檢測欄位**
+
+個管師需求:「需要多一欄基因檢測,類似癌指數,但手動輸入,可以用 JSON 整串代入;也可以有地方放照片,TAG 寫 NGS」。
+
+**四題定案**:獨立一個區塊、放**癌指數下方**、影像獨立成**第六種**、**不夾帶 PDF**(個管師:自己另開就好)。
+
+> 不夾 PDF 這個決定是對的 —— NGS 報告 PDF 常 2–5MB,存進 localStorage 幾乎必爆。
+
+**① 資料結構刻意與 markers 相同**
+
+`genomics[]` 用 `{name, date, content}`,可直接沿用 `addStruct`/`delStruct`/`updstruct` 的通用 struct row 機制,只換欄位提示:
+
+| 欄位 | 提示 |
+|---|---|
+| name | 基因/Panel (EGFR/FoundationOne...) |
+| content | 檢測結果（變異/VAF/TMB/MSI/建議用藥…) |
+
+**② AI 匯入支援**
+
+prompt 加 genomics 定義,附 name 範例(EGFR、ALK、BRCA1/2、FoundationOne CDx、TSO500、MSI/MMR),明令「**沒有就給空陣列,不要臆測**」。日期重複清理也涵蓋 genomics。
+
+**③ 第六種影像 —— 重構的回報**
+
+`genomicsImages` 走 V5.16.0 建立的 `IMG_KINDS` 註冊表:
+
+> **只加一列註冊 + 一個 build 函式,del / clear / preview / 排序 / 拖曳 / ⏎分頁點 全部自動繼承。**
+
+同時支援 V5.27.0 的夾投影片/開新分頁切換(🧬 按鈕排在病理之後)。
+
+**④ 產出**
+
+Word 記錄與 HTML 投影片都緊接癌指數輸出,無資料時不出現。
+
+**驗證**:21 項全通過,端到端模擬含 FoundationOne CDx 實例。
+
+
+**摘要**:新增基因檢測欄位(個管師需求):①`genomics[]` 結構同 markers({name,date,content}),放在**癌指數下方**,可手動輸入;②AI 匯入 prompt 加 genomics 定義(NGS panel/單基因/TMB/MSI),可整串代入;③**第六種影像** `genomicsImages`(🧬 NGS 報告影像)走 IMG_KINDS 註冊表,支援夾投影片/開新分頁切換;④Word 記錄與 HTML 投影片都在癌指數後輸出。**不夾帶 PDF**(個管師確認自己另開)
+
+
+**開發敘事**:V5.30.0 新增基因檢測欄位。個管師需求:「需要多一欄基因檢測,類似癌指數,但手動輸入,可以用 JSON 整串代入;也可以有地方放照片,TAG 寫 NGS」。**四題定案**:獨立一個區塊、放癌指數下方、影像獨立成第六種、**不夾帶 PDF**(個管師:自己另開就好 —— 這個決定是對的,NGS 報告 PDF 常 2-5MB,存進 localStorage 幾乎必爆)。**做法**:①`genomics[]` 結構刻意與 `markers` 相同(`{name,date,content}`),可直接沿用 `addStruct`/`delStruct`/`updstruct` 的通用 struct row 機制,只換欄位提示(基因/Panel、檢測結果含變異/VAF/TMB/MSI);②AI 匯入 prompt 加 genomics 定義並附 name 範例(EGFR/ALK/BRCA/FoundationOne/TSO500/MSI-MMR),明令「沒有就給空陣列不要臆測」,日期重複清理也涵蓋 genomics;③**第六種影像** `genomicsImages` 走 V5.16.0 的 `IMG_KINDS` 註冊表 —— **只加一列註冊 + 一個 build 函式,del/clear/preview/排序/拖曳/分頁點全部自動繼承**,這正是當初重構的回報;同時支援 V5.27.0 的夾投影片/開新分頁切換(🧬 按鈕排在病理之後);④Word 記錄(`addRow('基因檢測',gnS)`)與 HTML 投影片(`_row('基因檢測')`)都緊接癌指數輸出,無資料時不出現。21 項驗證全通過,端到端模擬含 FoundationOne CDx 實例。屬 b+1。
+
+
+---
+
+## V5.29.0
+
+**影像子資料夾比對放寬 + 未命中提示 + 重選資料夾**
+
+個管師反映「不同病人的圖很容易混在一起」。查證後發現**系統 V5.3.0 就支援以病歷號命名的子資料夾** —— 但個管師說「有依病歷號分子資料夾,系統卻沒自動找到」。
+
+**根因**:`_resolveSubFolder` 只做完全比對
+
+```js
+await rootHandle.getDirectoryHandle(c.chartNo)   // 名稱要一字不差
+```
+
+但實務上資料夾常是「`0000001 測○試`」「`0000001_頭頸癌`」這種帶說明的形式。
+
+**① 前綴比對(但病歷號必須完整)**
+
+完全比對失敗時,退而列舉找「以病歷號開頭」的資料夾。**關鍵安全條件:病歷號之後必須接分隔字元或結束**:
+
+| 資料夾名 | 病歷號 `0000001` | 結果 |
+|---|---|---|
+| `0000001` | 完全相同 | ✅ |
+| `0000001 測○試` | 空白分隔 | ✅ |
+| `0000001_頭頸癌` | 底線分隔 | ✅ |
+| **`00000010`** | 前綴相同但**病歷號不同** | ❌ **必須擋掉** |
+| `00000001` | 補零 = 不同病歷號 | ❌ |
+| `0000001測○試` | 無分隔字元 | ❌ 保守不認 |
+
+**不能只用 `startsWith`** —— 否則 `0000001` 會誤中 `00000010`(**不同病人**,這是會出臨床事故的)。node 驗證 9 種命名全對。
+
+**② 未命中時也要說**
+
+選圖對話框原本只在找到子資料夾時顯示「📂 根 / 子」,**找不到時完全沒提示** → 使用者以為系統不支援。改成:
+
+```
+📂 MDT影像　（未找到「0000001」子資料夾，顯示根目錄檔案）
+```
+
+**③ 加「↻ 換資料夾」按鈕**
+
+原本 13 處 `showDirectoryPicker` 全包在 `if(!imgFolderHandle)` 裡 —— **選過就永遠不能換**,換會議或圖放在別處時就卡住。
+
+**教訓**:字串比對放寬時,要先想清楚「放寬後會不會把不該匹配的也收進來」—— 這裡的代價是**拿錯病人的影像**,所以分隔字元檢查是必要的而非可選的。
+
+
+**摘要**:影像子資料夾比對放寬 + 未命中提示 + 重選資料夾:①`_resolveSubFolder` 原本只做**完全比對**,個管師的資料夾是「0000001 測○試」這種形式就找不到 → 加前綴比對,但**病歷號之後必須是分隔字元**(不能只用 startsWith,否則 0000001 會誤中 00000010 不同病人);②選圖對話框原本只在「找到」時顯示子資料夾名,改成未找到時也明說;③加「↻ 換資料夾」按鈕(原本選過就永遠不能換)
+
+
+**開發敘事**:V5.29.0 影像子資料夾比對放寬。個管師反映「不同病人的圖很容易混在一起」,查證後發現**系統其實 V5.3.0 就支援以病歷號命名的子資料夾**,但個管師說「有依病歷號分子資料夾,系統卻沒自動找到」—— 根因是 `_resolveSubFolder` 只做 `getDirectoryHandle(chartNo)` 的**完全比對**,而實務上資料夾名常是「0000001 測○試」「0000001_頭頸癌」這種帶說明的形式。**做法**:①完全比對失敗時,退而列舉找「以病歷號開頭」的資料夾 —— **關鍵安全條件是病歷號之後必須接分隔字元(空白/底線/連字號/括號等)或結束**,不能只用 `startsWith`,否則 `0000001` 會誤中 `00000010`(**不同病人**,這是會出臨床事故的);個管師也明確要求「病歷號要完全一樣」。node 驗證 9 種命名全對,含 `00000010`、`00000001` 正確擋掉。②選圖對話框原本只在找到子資料夾時顯示「📂 根 / 子」,找不到時完全沒提示 → 使用者以為系統不支援;改成未命中時明說「未找到「0000001」子資料夾,顯示根目錄檔案」。③加「↻ 換資料夾」按鈕 —— 原本 13 處 `showDirectoryPicker` 全包在 `if(!imgFolderHandle)` 裡,**選過就永遠不能換**,換會議或圖放在別處時就卡住。屬 b+1。**教訓**:字串比對放寬時,要先想清楚「放寬後會不會把不該匹配的也收進來」—— 這裡的代價是拿錯病人的影像,所以分隔字元檢查是必要的而非可選的。
+
+
+---
+
+## V5.28.1
+
+**修:「夾在投影片 / 開新分頁」切換太淡**
+
+個管師反映「**很淡很淡**」「**我反黑看到了**」—— 要用滑鼠選取反白才看得到那兩顆按鈕。
+
+**三個原因疊加**:
+
+| # | 問題 |
+|---|---|
+| ① | 未選中狀態只用 `opacity:.65`,在淺色底上淡到接近消失 |
+| ② | 字級 **10.5px** —— V5.24.0 才剛把全站主要文字拉到 14px、label 拉到 12px,**而我在 V5.27.0 新加的這個元件卻用了全系統最小的字級** |
+| ③ | 兩顆按鈕之間沒有視覺群組,看不出是「二選一」 |
+
+**改法**:
+
+- 未選中 → `background:#fff` + `1px solid var(--blt)` 實框 + `var(--textmd)` 文字色(**不再靠 opacity 表達未選中**)
+- 選中 → 維持實色填滿
+- 字級 10.5 → **12px** 並加粗
+- 外層包一圈 `#F2F5F7` 底 + 邊框的群組容器,讓它看起來就是個 segmented control
+
+順帶把 handler 裡「用正則移除再追加 `cssText`」的脆弱寫法改成整段重設。
+
+**教訓**:
+- **用 opacity 表達「未選中」在淺色底上不可靠** —— 未選中不等於不重要,它仍需可讀
+- 新增元件時要**對照當前的字級基準**(V5.24.0 已定 14px / 12px),不能沿用舊習慣隨手寫 10px
+
+
+**摘要**:修「夾投影片/開新分頁」切換太淡(個管師:反黑才看到):①未選中只用 `opacity:.65` 在淺底上近乎消失 → 改成白底+實框+可讀文字色;②字級 10.5px(V5.24.0 已把全站拉到 14px,這裡卻最小)→ 12px 加粗;③兩顆按鈕加外層群組框,一眼看出是二選一。handler 的即時切換也從「正則改 cssText」改成整段重設
+
+
+**開發敘事**:V5.28.1 修「夾投影片/開新分頁」切換的可讀性。個管師反映「**很淡很淡**」「**我反黑看到了**」—— 要用滑鼠選取反白才看得到那兩顆按鈕。查證後三個原因疊加:①未選中狀態只用 `opacity:.65`,在淺色底上淡到接近消失;②字級 **10.5px** —— **V5.24.0 才剛把全站主要文字從 12px 拉到 14px、label 拉到 12px,而我在 V5.27.0 新加的這個元件卻用了全系統最小的字級**;③兩顆按鈕之間沒有視覺群組,看不出是「二選一」的開關。改法:未選中改成 `background:#fff` + `1px solid var(--blt)` 實框 + `var(--textmd)` 文字色(**不再靠 opacity 表達未選中**),選中維持實色填滿;字級 10.5→12px 並加粗;外層包一圈 `#F2F5F7` 底 + 邊框的群組容器,讓它看起來就是個 segmented control。順帶把 handler 裡「用正則移除再追加 cssText」的脆弱寫法改成整段重設。屬 c+1。**教訓**:**用 opacity 表達「未選中」在淺色底上不可靠** —— 未選中不等於不重要,它仍需可讀;而且新增元件時要對照當前的字級基準(V5.24.0 已定 14px/12px),不能沿用舊習慣隨手寫 10px。
+
+
+---
+
+## V5.28.0
+
+**放大鏡改成「罩在游標上、中心即放大點」**
+
+個管師回報:原本放大鏡浮在游標**右上方 24px**,放大的是「游標箭頭所指處」,鏡中心畫十字準星標示位置。
+
+**問題**:使用者要看的點在**鏡片外面**,大家不習慣。
+
+**改法**:
+
+```js
+// 舊:鏡片浮在游標右上,還會為了不超出畫面而夾擠
+var lx = e.clientX + 24, ly = e.clientY - SZ - 24;
+if(lx + SZ > window.innerWidth) lx = e.clientX - SZ - 24;
+
+// 新:鏡片中心對準游標
+var lx = e.clientX - SZ/2, ly = e.clientY - SZ/2;
+```
+
+就像真的放大鏡壓在圖上。
+
+**刻意不做邊界夾擠** —— 原本有 `if(lx+SZ>innerWidth)` 之類的處理,但夾了之後鏡中心就不再對準游標,**會破壞「中心 = 放大點」這個承諾**。寧可讓鏡片在畫面邊緣被裁切。
+
+**另加**:放大時 `cursor:none` 隱藏系統游標(否則箭頭會擋住鏡中心),`mouseleave` 與關閉時還原。
+
+主投影片 `_magCv` 與影像檢視器 `_pmCv` 兩處同步修改。
+
+**教訓**:互動元件的定位若「為了不超出畫面」而夾擠,要先確認夾擠會不會破壞該元件的核心語意 —— **放大鏡的核心語意就是「中心 = 你要看的地方」**。
+
+
+**摘要**:放大鏡改成「罩在游標上、中心即放大點」:原本鏡片浮在游標右上 24px、放大的是游標所指處 —— 使用者要看的點在鏡片外,不直覺。改成 `lx=clientX-SZ/2` 鏡片中心對準游標,像真的放大鏡壓在圖上;**刻意不做邊界夾擠**(夾了中心就 ≠ 游標,破壞承諾);放大時隱藏系統游標避免箭頭擋住中心。主投影片與影像檢視器兩處同步
+
+
+**開發敘事**:V5.28.0 放大鏡改成「罩在游標上、中心即放大點」。個管師回報:原本放大鏡浮在游標**右上方 24px**,放大的是「游標箭頭所指處」,鏡中心畫十字準星標示 —— 但**使用者要看的點在鏡片外面**,大家不習慣。改成 `lx=e.clientX-SZ/2, ly=e.clientY-SZ/2`,鏡片**中心對準游標**,就像真的放大鏡壓在圖上;**刻意不做邊界夾擠** —— 原本有 `if(lx+SZ>innerWidth)` 之類的夾擠,但夾了之後鏡中心就不再對準游標,會破壞「中心=放大點」這個承諾,寧可讓鏡片在邊緣被裁切。另加 `document.body.style.cursor='none'`(放大時隱藏系統游標,否則箭頭會擋住鏡中心),在 mouseleave 與關閉放大鏡時還原。主投影片 `_magCv` 與影像檢視器 `_pmCv` 兩處同步修改。屬 b+1。**教訓**:互動元件的定位若「為了不超出畫面」而夾擠,要先確認夾擠會不會破壞該元件的核心語意 —— 放大鏡的核心語意就是「中心 = 你要看的地方」。
+
+
+---
+
+## V5.27.4
+
+**修:GitHub 上傳的錯誤訊息誤導**
+
+個管師回報上傳失敗,畫面顯示:
+
+```
+Repository rule violations found
+Timed out validating rule, please try again
+— 請確認 Token 權限（需 Contents: Read and write）
+```
+
+於是去查 Token 權限 —— **但那不是原因**。GitHub 自己已經說了 `please try again`,這是**暫時性逾時**(HTML 含 base64 圖片常有 1~3MB,GitHub 的 repository ruleset 掃描會超時),重試即可。
+
+**根因是我們的錯誤處理**:
+
+```js
+throw new Error((err.message||resp.status) + ' — 請確認 Token 權限（需 Contents: Read and write）');
+```
+
+**不管什麼錯都硬加同一句提示**,把 GitHub 的真實訊息與建議蓋掉了。
+
+**改成依狀態碼分類**:
+
+| 狀況 | 提示 |
+|---|---|
+| 訊息含 timeout | GitHub 端暫時性逾時(檔案較大時常見),**直接再按一次上傳** |
+| 401 | Token 無效或已過期,請重新填入 |
+| 403 | Token 權限不足,需要 Contents: Read and write |
+| 404 | 找不到 repository 或路徑 |
+| 409 | 檔案版本衝突,請再試一次 |
+| 422 | 檔案可能過大或被 GitHub 規則擋下 |
+
+**教訓**:**錯誤處理不該把所有失敗都歸因到同一個原因** —— 那等於用一句猜測,覆蓋掉系統給的真實診斷,反而讓使用者往錯的方向查。
+
+這與坑 #33(NAS 錯誤被 catch 吞掉、謊報成功)同源:一個是**隱藏**錯誤,一個是**竄改**錯誤,都讓使用者拿不到真相。
+
+
+**摘要**:修 GitHub 上傳的錯誤訊息誤導:原本 `throw new Error(msg+' — 請確認 Token 權限')` **不管什麼錯都硬加權限提示**,把 GitHub 真正的原因蓋掉。個管師遇到 `Timed out validating rule, please try again`(檔案含 base64 圖片常 1~3MB,GitHub ruleset 掃描逾時)卻被導去查權限。改成依狀態碼分類(逾時/401/403/404/409/422),逾時明確告知「直接再按一次」
+
+
+**開發敘事**:V5.27.4 修 GitHub 上傳的錯誤訊息誤導。個管師回報上傳失敗,畫面顯示「Repository rule violations found / Timed out validating rule, please try again / **— 請確認 Token 權限(需 Contents: Read and write)**」—— 於是去查 Token 權限,但**那不是原因**:GitHub 自己已經說了 `please try again`,這是**暫時性逾時**(HTML 含 base64 圖片常有 1~3MB,GitHub 的 repository ruleset 掃描會超時),重試即可。**根因是我們的錯誤處理**:`throw new Error((err.message||resp.status)+' — 請確認 Token 權限...')` —— **不管什麼錯都硬加同一句提示**,把 GitHub 的真實訊息與建議蓋掉。改成依 `resp.status` 與訊息內容分類:逾時→「GitHub 端暫時性逾時,直接再按一次」、401→「Token 無效或過期」、403→「權限不足需 Contents: Read and write」、404→「找不到 repo 或路徑」、409→「版本衝突請重試」、422→「檔案過大或被規則擋下」、其他→通用提示。屬 c+1。**教訓**:**錯誤處理不該把所有失敗都歸因到同一個原因** —— 那等於用一句猜測覆蓋掉系統給的真實診斷,反而讓使用者往錯的方向查。這與坑 #33(NAS 錯誤被 catch 吞掉謊報成功)同源:一個是隱藏錯誤,一個是竄改錯誤,都讓使用者拿不到真相。
+
+
+---
+
+## V5.27.3
+
+**修:夾入的影像頁排在個案文字頁之前**
+
+個管師指出「第一頁一定是病人的文字頁,乳攝開刀影像類的都往後」。查證位置後確認是真 bug:
+
+```
+pos 500083  夾投影片:乳攝      ← 先 push 影像頁
+pos 500791  push 個案文字頁    ← 文字頁反而在後
+```
+
+翻頁變成「乳攝 → 影像 → 手術 → 病理 → **病人資料**」,完全顛倒。
+
+**根因**
+
+V5.27.0 加 `_embedImgSlides()` 時,為了讓按鈕能拿到張數(決定要不要出按鈕),把它放在組按鈕之前 —— **但它同時也負責 `slides.push()`**。
+
+於是「算張數的時機」順便決定了「排版的位置」。
+
+**做法**
+
+產生器改成**只回傳投影片陣列**,呼叫端先收集,等個案文字頁 push 完才接上:
+
+```js
+var _embSlides = [];
+_embSlides = _embSlides.concat(_embedImgSlides('mammo', ...));   // 只收集
+...
+slides.push('<section class="slide case" ...>');                  // 文字頁先
+if(_embSlides.length) Array.prototype.push.apply(slides, _embSlides);  // 影像頁後
+```
+
+**教訓**:一個函式若同時做「**計算**」與「**產生副作用**」,呼叫時機就會被兩種需求拉扯 —— 這次是「算張數要早、排版要晚」的衝突。**把回傳值與副作用分開,呼叫端才能各自安排時機**。
+
+這與坑 #51(資料累積寫在使用它的地方之後)是同一類問題的兩面。
+
+
+**摘要**:修「夾入的影像頁排在個案文字頁之前」:V5.27.0 的 `_embedImgSlides()` 為了讓按鈕拿到張數而放在組按鈕之前,但它同時也直接 `slides.push()` → 翻頁變成「乳攝→影像→手術→病理→病人資料」完全顛倒。改成產生器**只回傳陣列**,個案文字頁 push 完才 `Array.prototype.push.apply` 接上。**「算張數」與「排版位置」是兩件事,不該綁在同一個函式的副作用裡**
+
+
+**開發敘事**:V5.27.3 修「夾入的影像頁排在個案文字頁之前」。個管師指出「第一頁一定是病人的文字頁,乳攝開刀影像類的都往後」—— 查證位置後確認是真 bug:夾投影片:乳攝 pos 500083 < push 個案文字頁 pos 500791,**影像頁確實排在文字頁前面**,翻頁變成「乳攝→影像→手術→病理→病人資料」完全顛倒。**根因**:V5.27.0 加 `_embedImgSlides()` 時,為了讓按鈕能拿到張數(決定要不要出按鈕),把它放在組按鈕之前 —— **但它同時也負責 `slides.push()`**,於是「算張數的時機」順便決定了「排版的位置」。做法:產生器改成**只回傳投影片陣列**(`return out`),呼叫端先收集到 `_embSlides`,等個案文字頁 `slides.push()` 完成後才 `Array.prototype.push.apply(slides,_embSlides)` 接上。**教訓**:一個函式若同時做「計算」與「產生副作用」,呼叫時機就會被兩種需求拉扯 —— 這次是「算張數要早、排版要晚」的衝突。**把回傳值與副作用分開,呼叫端才能各自安排時機**。這與坑 #51(資料累積寫在使用它的地方之後)是同一類問題的兩面。屬 c+1。
+
+
+---
+
+## V5.27.2
+
+**影像順序改依臨床時序**
+
+個管師指出投影片裡的影像順序應該依**診療時序**排:
+
+| 順位 | 類型 | 臨床意義 |
+|---|---|---|
+| 1 | **乳房攝影** | 篩檢 / 初始影像 |
+| 2 | **相關影像** | 分期影像 |
+| 3 | **手術照片** | 術中所見 |
+| 4 | **病理影像** | 術後病理 |
+
+系統原本是「病理 → 手術 → 相關影像 → 乳攝」—— 那是**程式碼的撰寫順序,不是臨床順序**,剛好整個反過來(病理是術後才有的東西,卻排在最前面)。
+
+**兩處同步改**:
+- `_embedImgSlides()` 的呼叫順序(夾在投影片時的產出順序)
+- `_mkImgBtn()` 的組裝順序(標題列按鈕)
+
+確保「夾投影片」與「開新分頁」兩種模式看到的順序一致。
+
+**教訓**:預設順序若只是「程式碼寫的順序」,很容易與使用者的心智模型相反。凡是會呈現給使用者的清單,順序都該有明確的業務理由。
+
+
+**摘要**:影像順序改依臨床時序(個管師指定):**乳房攝影 → 相關影像 → 手術照片 → 病理影像**。原本是程式碼順序「病理→手術→相關→乳攝」,剛好與臨床邏輯相反(病理是術後才有的東西卻排第一)。夾投影片的產出順序與標題列按鈕順序**同步改**,兩處一致
+
+
+**開發敘事**:V5.27.2 影像順序改依臨床時序。個管師指出投影片裡的影像順序應該是 **乳房攝影 → 相關影像 → 手術照片 → 病理影像**,而系統原本是「病理 → 手術 → 相關影像 → 乳攝」—— 那是**程式碼的撰寫順序,不是臨床順序**,剛好整個反過來(病理是術後才有的東西,卻排在最前面)。新順序對應診療時序:篩檢/初始影像 → 分期影像 → 術中所見 → 術後病理。**兩處同步改**:`_embedImgSlides()` 的呼叫順序(夾在投影片時的產出順序)與 `_mkImgBtn()` 的組裝順序(標題列按鈕),確保「夾投影片」與「開新分頁」兩種模式看到的順序一致。屬 c+1。**教訓**:預設順序若只是「程式碼寫的順序」,很容易與使用者的心智模型相反 —— 凡是會呈現給使用者的清單,順序都該有明確的業務理由。
+
+
+---
+
+## V5.27.1
+
+**分享網址縮短約 50%**
+
+根因是**檔名含中文**:`2026-06-18_頭頸癌多專科會議.html` 經 URL 編碼後,9 個中文字膨脹成 **81 個字元**。
+
+**做法**:改用**既有的 `CANCER_EN_CODES`**(HTML 下載的「英文檔名」選項本來就在用)。
+
+| 情況 | 舊 | 新 |
+|---|---|---|
+| 單癌別 | 133 字元 | **69 字元**(-48%) |
+| 合併會議 | 142 字元 | **67 字元**(-53%) |
+
+```
+https://sela1227.github.io/MDT-slides/slides/2026-06-18_HeadNeck.html
+https://sela1227.github.io/MDT-slides/slides/2026-06-18_GI-HBP.html
+```
+
+合併會議用 `-` 而非 `+` —— **`+` 在 URL 會被編碼成 `%2B`**,反而更長。
+
+**兩個邊界(個管師確認)**:已分享的舊連結不管它(舊網址仍有效);同名仍覆蓋。
+
+
+**摘要**:分享網址縮短約 50%:原檔名含中文(「頭頸癌多專科會議」),URL 編碼後 9 個中文字膨脹成 81 字元。改用既有 CANCER_EN_CODES(`2026-06-18_HeadNeck.html`),合併會議用 `-` 連接(`+` 會被編碼成 %2B)。133→69 字元。舊連結不受影響,同名仍覆蓋
+
+
+**開發敘事**:V5.27.1 分享網址縮短。個管師反映 HTML 分享網址太長 —— 根因是**檔名含中文**:`2026-06-18_頭頸癌多專科會議.html` 經 URL 編碼後,9 個中文字膨脹成 **81 個字元**,佔網址一大半。**做法(個管師選 A)**:改用**既有的 `CANCER_EN_CODES`**(HTML 下載的「英文檔名」選項本來就在用,不必新增對照表),`2026-06-18_HeadNeck.html`;合併會議用 `-` 連接而非 `+`(`+` 在 URL 會被編碼成 `%2B` 佔 3 字元,反而更長)。**實測**:單癌別 133→69 字元(-48%)、合併會議 142→67 字元(-53%)。**個管師確認的兩個邊界**:已分享出去的舊連結**不管它**(舊檔案仍在 GitHub、舊網址繼續有效,新舊格式並存);同一場會議重複上傳**維持同名覆蓋**的原行為。屬 c+1。
+
+
+---
+
+## V5.27.0
+
+**影像與病程時序可選「夾在投影片」或「開新分頁」**
+
+**恢復 V5.15.0 拿掉的彈性。** 當初把四種影像一律改成「按鈕 + 新分頁」,是為了讓個案之間不被圖片頁隔開 —— 但也失去了「重要影像要直接投出來」的能力。
+
+**設定層級(個管師選 A):逐個案、逐類型各自設定**
+
+五個區塊各自有切換:病理染色影像、手術照片、相關影像、乳房攝影、病程時序圖
+
+```
+病理染色影像   [ 開新分頁 ] [ 夾在投影片 ]      [+ 選擇資料夾]
+```
+
+**預設全部「開新分頁」** —— 既有會議完全不受影響。
+
+**實作**
+
+| 項目 | 內容 |
+|---|---|
+| 資料 | `createCase` 加 `embed:{patho,surg,related,mammo,timeline}` |
+| UI | 抽 `embedToggle(cid,i,kind,d)` 共用切換,五處掛載 |
+| 產出 | `_embedImgSlides()` 通用產生器,依 `pageBreak` 分組、沿用特殊議程影像頁版型 |
+| **互斥** | 夾投影片的類型**不出按鈕**,避免同一批圖既在投影片又在分頁 |
+
+**端到端模擬驗證**
+
+| 個案 | 設定 | 產出投影片 | 標題列按鈕 |
+|---|---|---|---|
+| 甲 | (全預設) | 0 頁 | 病理、手術、📈時序 |
+| 乙 | 病理夾 | **1 頁**(病理影像) | 手術、📈時序 |
+| 丙 | 病理+手術+時序全夾 | **2 頁** | **(無)** |
+
+
+**摘要**:影像/時序可選「夾在投影片」或「開新分頁」(個管師選 A:逐個案、逐類型各自設定):(1)createCase 加 `embed:{patho,surg,related,mammo,timeline}`,**預設全 false = 開新分頁**,既有會議零影響;(2)`embedToggle()` 共用切換 UI 掛在五個區塊標題列;(3)`_embedImgSlides()` 通用產生器,依 pageBreak 分組、沿用特殊議程影像頁版型;(4)**互斥**:夾投影片的類型不出按鈕,避免同一批圖既在投影片又在分頁
+
+
+**摘要**:時序圖排版四項 + AI 徽章位置:(⓪)「AI 匯入待確認」徽章原本插在「個案討論」與 flags 之間,它是**狀態標記**不該夾在分類標籤中,移到最後;(①)無疾病事件時疾病軸縮小 126→72px、改淡虛線不畫箭頭、標「尚無疾病事件記錄(建議補上診斷確立)」——**刻意不隱藏**,隱藏會讓「該填沒填」靜靜消失;(②)長標籤用 wrap2 斷成 2 行 + 超出截斷加… + `<title>` 顯示全文,並加 x 下限避免壓到軌名;(③)跨度 ≤2 個月時刻度改「月 日」逐事件標,解決軸線太空
+
+
+**開發敘事**:V5.27.0 影像與病程時序可選「夾在投影片」或「開新分頁」—— **恢復 V5.15.0 拿掉的彈性**。當初把四種影像一律改成「按鈕+新分頁」是為了讓個案之間不被圖片頁隔開,但也失去了「重要影像要直接投出來」的能力。個管師要求逐案可選,**兩題都選 A:逐個案、逐類型各自設定(最靈活),病程時序圖也一起加**。**做法**:(1)`createCase` 加 `embed:{patho,surg,related,mammo,timeline}` 五個布林,**預設全 false = 開新分頁**,既有會議完全不受影響;(2)抽 `embedToggle(cid,i,kind,d)` 共用切換 UI(兩顆按鈕互斥高亮),掛在五個區塊標題列;(3)`_embedImgSlides(kind,imgs,label)` 通用產生器 —— 依 `pageBreak` 分組、每組一頁 grid 排版,沿用特殊議程影像頁版型確保視覺一致;(4)**互斥邏輯**:`_mkImgBtn` 開頭 `if(_emb[type])return ''`,夾投影片的類型不出按鈕,避免同一批圖既在投影片又在分頁;時序圖同理 `_nTl>0&&!_emb.timeline`。node 端到端模擬三種設定:全按鈕(0 頁 + 3 顆)、病理夾(1 頁 + 2 顆)、病理手術時序全夾(2 頁 + 0 顆),全部正確。屬 b+1。
+
+
+---
+
+## V5.26.3
+
+**時序圖排版四項 + AI 徽章位置**
+
+個管師提供實際產出截圖,一次暴露四個排版缺陷。
+
+**⓪ AI 徽章插錯位置**
+
+```
+個案討論 → AI 匯入待確認 → 首次討論
+  ↑分類       ↑狀態標記      ↑討論原因
+```
+
+V5.23.0 的徽章插在「分類標籤」與「討論原因標籤」中間,把 flags 推開。**它是狀態標記,不是分類標記** —— 已移到所有分類標籤之後。
+
+**① 疾病軸是空的,卻佔最大空間**
+
+個管師的頭頸癌個案有病理、手術、PET-CT,但 timeline 裡**沒有任何一筆標成「診斷確立」**,所以疾病軸一個點都沒有 —— 卻仍佔 126px 並畫一條沒有意義的箭頭。
+
+**評估後刻意不隱藏**:隱藏會讓「該填卻沒填」靜靜消失。改為:
+
+| 項目 | 處理 |
+|---|---|
+| 高度 | 126px → **72px** |
+| 線條 | 紅色實線 + 箭頭 → **淡虛線,不畫箭頭** |
+| 提示 | **「尚無疾病事件記錄(建議補上「診斷確立」等事件)」** |
+
+這跟 V5.19.0 QA 預檢、V5.23.0 匯入報告是同一個思路:**不讓缺漏消失**。
+
+**② 長標籤被截斷**
+
+`Left hypopharynx — moderately differentiated SCC` 被硬切成 `Left hypopharynx — moder` —— SVG `<text>` 不會自動換行。
+
+加 `wrap2()`:以字元寬估算(中文 ≈1、英數 ≈0.55)斷成 **2 行**,第 2 行超出才截斷加「…」,並用 `<title>` 讓滑鼠移過去看**全文**。
+
+**不選「縮小字級」** —— 那違反 V5.24.0 才剛做的「字級要夠大」。
+
+**② 軌名與事件標籤重疊**
+
+事件標籤是 `text-anchor="middle"`,第一筆若靠左會往左延伸壓進軌名區。加 x 下限 `Math.max(x, padL+52)`。
+
+**③ 短跨度時軸線太空**
+
+那筆跨度只有 1 個月,底部只有 `JUL` / `AUG` 兩個孤立刻度。改成:跨度 ≤ 2 個月時**逐事件標「月 日」**。
+
+**全部用個管師截圖的真實資料驗證通過。**
+
+
+**開發敘事**:V5.26.3 時序圖排版四項 + AI 徽章位置修正(個管師提供實際產出截圖,一次暴露四個排版缺陷)。**(⓪ AI 徽章位置)**:V5.23.0 的「AI 匯入待確認」徽章原本插在 `sec-tag-case`(個案討論)與 flags(首次討論等)**中間**,把討論原因標籤推開 —— 它是**狀態標記**不是分類標記,應排在所有分類標籤之後。移到 flags 後。**(① 空疾病軸)**:個管師的頭頸癌個案有病理、手術、PET-CT,但 timeline 裡**沒有任何一筆標成「診斷確立」**,所以疾病軸是空的卻仍佔 126px 並畫一條沒有點的箭頭。**評估後刻意不隱藏** —— 隱藏會讓「該填卻沒填」靜靜消失(同 V5.19.0 QA 預檢、V5.23.0 匯入報告的思路:不讓缺漏消失);改為縮小到 72px、淡虛線不畫箭頭、明確標示「尚無疾病事件記錄(建議補上「診斷確立」等事件)」。**(② 長標籤)**:`Left hypopharynx — moderately differentiated SCC` 被硬切斷 —— SVG text 不會自動換行。加 `wrap2()` 以字元寬估算(中文≈1、英數≈0.55)斷成 2 行、第 2 行超出才截斷加「…」、並用 `<title>` 讓滑鼠移過去看全文。**評估時不選「縮小字級」**,因為那違反 V5.24.0 才剛做的「字級要夠大」。**(② 軌名重疊)**:事件標籤是 `text-anchor="middle"`,第一筆若靠左會往左延伸壓進軌名區 —— 加 x 下限 `Math.max(x,padL+52)`。**(③ 短跨度軸線空)**:個管師那筆跨度只有 1 個月,底部只有 JUL/AUG 兩個孤立刻度;改成跨度 ≤2 個月時逐事件標「月 日」。全部用**個管師截圖的真實資料**驗證通過。屬 c+1。
+
+
+---
+
+## V5.26.2
+
+**修:勾了病程時序圖,但 HTML 投影片沒有 📈 按鈕(新增坑 #51)**
+
+**根因是順序寫錯。**
+
+V5.25.0 把時序圖從「產獨立投影片」改成「按鈕 + 新分頁」時,**沒把資料累積那段往前搬**:
+
+```js
+var _pathoBtn = ... + (_nTl>0 ? '📈按鈕' : '');   ← 這時 _nTl 還沒算
+slides.push('<section ...' + _pathoBtn + ...);
+
+var _nTl = 0;                                      ← 到這裡才算,太晚
+if(c.showTimeline && c.timeline.length){ _nTl = ...; }
+```
+
+原本那段寫在 `slides.push()` 之後**是對的**(它本來就是在產投影片),但改成按鈕後,`_nTl` 必須在**組裝按鈕之前**算好。
+
+**實際行為比想像更隱蔽**:
+
+| 現象 | 原因 |
+|---|---|
+| 按鈕永遠不出現 | `var _nTl` 變數提升 → 組按鈕時是 `undefined` → `undefined > 0` 為 false |
+| 第 2 個個案可能錯位 | `var` 是函式作用域,會拿到前一個個案的殘值 |
+
+**位置驗證(修前)**:組按鈕 `494943` < `slides.push` `495361` < `_nTl` 賦值 `497037`
+
+已把該段搬到 `_pushImgWin` 系列旁邊(組按鈕之前)。
+
+**我在 V5.15.0 為同樣理由寫過註解「先累積再組按鈕」,這次改時序圖時卻漏掉了。**
+
+**最值得記的是驗證方式的盲點**
+
+當時的驗證只檢查「字串存在」與「語法正確」—— **兩者都通過**。但:
+
+> **執行順序錯誤,既不是語法錯誤,也不會讓字串消失。**
+
+凡是「A 要在 B 之前算好」的相依,驗證就必須比對兩者的**位置或實際執行結果**,不能只檢查存在性。
+
+**已補上的驗證**:
+1. 比對 `_nTl` 賦值 / 組按鈕 / `slides.push` 三者的位置順序
+2. node 端到端模擬三種個案:
+
+| 個案 | 勾選 | 事件數 | 結果 |
+|---|---|---|---|
+| 甲 | ✗ | 1 | 無按鈕 ✓ |
+| 乙 | ✓ | 2 | **📈 病程時序(2)** ✓ |
+| 丙 | ✓ | 0 | 無按鈕 ✓ |
+
+
+**摘要**:修「勾了病程時序圖但 HTML 沒有按鈕」(坑#51):V5.25.0 改成按鈕模式時,資料累積那段仍留在 slides.push() 之後,但按鈕在 push 之前組裝 → 組按鈕時 _nTl 因變數提升是 undefined,按鈕永不出現(且 var 函式作用域會讓下一個個案拿到殘值錯位)。把該段搬到組按鈕之前。補上「位置順序驗證 + node 端到端模擬」
+
+
+**開發敘事**:V5.26.2 修「勾了病程時序圖,但產出的 HTML 沒有 📈 按鈕」(坑 #51)。**根因是順序**:V5.25.0 把時序圖從「產獨立投影片」改成「按鈕 + 新分頁」時,**沒把資料累積那段往前搬** —— 原本寫在 `slides.push()` 之後是對的(它本來就在產投影片),但改成按鈕後 `_nTl` 必須在**組裝按鈕之前**算好。實際行為比想像更隱蔽:`var _nTl` 有**變數提升**,組按鈕時是 `undefined` → `undefined>0` 為 false → 按鈕永不出現;而 `var` 是函式作用域,第 2 個個案還會拿到第 1 個的殘值造成**錯位**。位置驗證(修前):組按鈕 494943 < slides.push 495361 < `_nTl` 賦值 497037。已搬到 `_pushImgWin` 系列旁邊。**我在 V5.15.0 為同樣理由寫過註解「先累積再組按鈕」,這次卻漏掉了。** 最值得記的是**驗證方式的盲點**:當時只檢查「字串存在」與「語法正確」—— 兩者都通過,但**執行順序錯誤既不是語法錯誤,也不會讓字串消失**。凡是「A 要在 B 之前算好」的相依,驗證必須比對兩者的**位置或實際執行結果**。已補:三者位置順序比對 + node 端到端模擬三種個案(沒勾 → 無按鈕、勾了有 2 筆事件 → 顯示「病程時序(2)」、勾了但無事件 → 無按鈕),全部正確。屬 c+1。
+
+
+---
+
+## V5.26.1
+
+**乳攝檢視恢復「報告 + 圖同頁」**
+
+**這是修我自己在 V5.15.1 造成的退步。**
+
+當時問個管師「乳攝報告要放哪」,他選了 B(報告也進新分頁、個案頁不動)。我理解成「**報告獨立成第一頁**」—— 但他的意思是「**不要動個案頁**」。改版前的乳攝投影片本來就是**左報告右圖、同一頁**。
+
+**新版面:三欄 2 : 4 : 4**(個管師指定)
+
+```
+┌────────┬─────────────┬─────────────┐
+│  報告  │    R-MLO    │    R-CC     │
+│   2    │      4      │      4      │
+└────────┴─────────────┴─────────────┘
+```
+
+- 兩張圖**橫向並排** —— 乳攝 MLO/CC 是直式影像,並排比上下排更能用到畫面高度
+- 超過 2 張時,圖區內部自動分格,整體仍維持「報告 2 : 圖區 8」
+- 只有「完全沒有圖」時,報告才單獨成頁
+- 標題改成「報告 ・ 乳房攝影(2 張)」
+
+**報告欄自動換行**
+
+報告欄只佔 2,長英文字(`spiculated`、`microcalcifications`)會擠成直條。加上 `word-break:break-word` + `overflow-wrap:anywhere`,寧可多幾行也不擠壓。
+
+**順帶修掉一個過期文字**
+
+編輯畫面寫著「乳攝影像(最多2張)」,但 **V5.17.0 已放寬到 6 張**,而且與下方顯示的「已選 N / 6」矛盾。
+
+這是坑 #40 的同類問題:**底層改了,UI 說明沒跟著改**。
+
+**教訓**:使用者選項的語意要確認到底 —— 「報告也進新分頁」與「報告獨立成一頁」是**兩件事**。我當時沒追問就實作,結果做出使用者沒要求的版面改變。
+
+
+**摘要**:乳攝檢視恢復「報告+圖同頁」:V5.15.1 我把報告獨立成第一頁是誤解個管師的意思(他選 B 是指「不要動個案頁」,不是「報告要單獨一頁」)——改版前的乳攝投影片本來就是左報告右圖。改成三欄 **2:4:4**(報告 2、兩張圖各 4,橫向並排,適合直式 MLO/CC);報告欄加 word-break/overflow-wrap 自動換行避免擠成直條;只有「完全沒有圖」時報告才單獨成頁。順帶修掉編輯畫面「乳攝影像(最多2張)」過期文字(V5.17.0 已放寬到 6 張)
+
+
+**開發敘事**:V5.26.1 乳攝檢視恢復「報告 + 圖同頁」。**這是修我自己在 V5.15.1 造成的退步** —— 當時問個管師「乳攝報告要放哪」,他選 B(報告也進新分頁、個案頁不動),我理解成「報告獨立成第一頁」,但他的意思是「**不要動個案頁**」;改版前的乳攝投影片本來就是**左報告右圖同一頁**。個管師這次明確指出:「乳攝若只有 2 張,報告頁跟那 2 張要在同一頁,跟以前一樣」。**做法**:有報告時與**第一組圖同頁**左右分欄,只有「完全沒有圖」時報告才單獨成頁;比例依個管師指定改成**三欄 2:4:4**(報告 2、兩張圖各 4),圖片**橫向並排** —— 乳攝 MLO/CC 是直式影像,並排比上下排更能用到畫面高度;超過 2 張時圖區內部自動分格,整體仍維持「報告 2 : 圖區 8」。報告欄只佔 2 會讓長英文字(spiculated/microcalcifications)擠成直條,加 `word-break:break-word` + `overflow-wrap:anywhere` 自然換行。標題改「報告 ・ 乳房攝影(2 張)」。**順帶修掉一個過期文字**:編輯畫面寫「乳攝影像(最多2張)」,但 V5.17.0 已放寬到 6 張,而且與下方 `buildGenericImgArea` 顯示的「已選 N / 6」矛盾 —— 這是坑 #40 的同類問題(底層改了、UI 說明沒跟著改)。屬 c+1。**教訓**:使用者選項的語意要確認到底 —— 「報告也進新分頁」與「報告獨立成一頁」是兩件事,我當時沒追問就實作,結果做出使用者沒要求的版面改變。
+
+
+---
+
+## V5.26.0
+
+**病程時序圖依審稿修正 P0 + P1(新增坑 #49、#50)**
+
+這輪外部審稿抓到**兩個真實錯誤,而且都是我違反自己定的規則**。
+
+**P0-1:視覺補上了資料裡沒有的語意(坑 #49)**
+
+我把全身治療軌的相鄰事件自動用箭頭連起來:
+
+```
+Lenvatinib ●────→ HAIC
+```
+
+但資料只有 `date` / `type` / `label`,**沒有 `endDate`、沒有療程銜接關係**。醫師看到會理解成「Lenvatinib 持續到 5/22」或「HAIC 是它的後線」—— **這是臨床誤導**。
+
+**最該記的是**:我在同一個檔案的註解裡寫了「絕不推論疾病狀態、因果、治療反應」,卻用視覺畫出了因果。我當時只想到「不從 label 自由文字推論」,**沒想到「從結構化欄位的相鄰關係推論」也是推論**。
+
+已直接移除。要畫真正的 treatment bar,得先有 `startDate` / `endDate`。
+
+**P0-2/3:為了防重疊而移動節點(坑 #50)** ⭐
+
+前一版用 `layout(list, 240)` 強制相鄰事件至少隔 240px:
+
+| 事件間隔 | 舊版圖上距離 | **新版** |
+|---|---|---|
+| 05-22 → 05-26(4 天) | 240px | **34px** |
+| 05-26 → 05-29(3 天) | 240px | **25px** |
+| 05-29 → 06-02(4 天) | 240px | **34px** |
+
+**圖上的水平距離不再代表時間距離** —— 這比標籤重疊嚴重得多,因為那是 timeline 的根本性質。
+
+我當初這麼做,是為了解決個管師說的「標籤一定要清楚」。**但我解錯了層次:該讓的是標籤,不是節點。**
+
+修法:
+- 節點永遠 `xOf(ms(date))`,忠於真實日期
+- 標籤用**上下錯層 + 引線(leader line)連回節點**
+- **只在真的會碰撞時才錯開**(不是 `qi % 2` 的固定樣式)
+
+實測:10 個節點全部落在精確日期座標。
+
+**P1 五項**
+
+| 項目 | 說明 |
+|---|---|
+| 移除疾病 Band 背景 | 審稿說背景色塊「像被選取的 table row 而不是主軸」—— 很準,那是「區塊」的視覺語言不是「軸」的。改用線本身粗細(5.5px)建立權重 |
+| supporting lanes 移除 baseline | 全圖只有疾病軸是真正的 timeline,其餘只是共用時間座標的事件 |
+| `GAP_DAYS` 45 → **90**、`GAP_W` → 110 | 45 天太敏感,實測會產生 2 個 gap 讓畫面破碎 |
+| gap 只在疾病軸標一次 | 底部不重複 |
+| 時間軸改**年份分組** | 取代 `2025-10` + `OCT` 的資訊重複 |
+
+**正式版移除底部圖表說明區**(個管師要求)。
+
+**兩個教訓進坑庫**:
+- **#49** 「不推論」的界線要涵蓋**視覺**,不只涵蓋文字解析。判準:這條線、這個形狀,資料裡有對應欄位嗎?
+- **#50** 視覺化的「**不可協商屬性**」要先辨識出來 —— timeline 是「位置 = 時間」,長條圖是「長度 = 數值」。避讓與美化都不能碰它
+
+
+**摘要**:病程時序圖依審稿修 P0+P1(坑#49/#50):(P0-1)移除全身治療相鄰事件自動箭頭 —— 資料無 endDate,箭頭是視覺憑空生出的因果語意;(P0-2/3)**節點回歸真實日期座標**,前版 layout(240) 強制推開導致「圖上距離不代表時間」,改成只移標籤 + 引線連回、且只在真會碰撞時錯開;(P1)移除疾病 Band 背景改用線本身建立權重、supporting lanes 移除自身 baseline、GAP_DAYS 45→90 GAP_W→110、gap 只標一次、時間軸改年份分組。正式版移除底部說明區
+
+
+**開發敘事**:V5.26.0 病程時序圖依外部審稿修 P0+P1 —— **這輪審稿抓到我兩個真實錯誤,而且都是我違反自己定的規則**。**(坑#49)視覺補上資料沒有的語意**:我把全身治療軌的相鄰事件自動用箭頭連起來(`Lenvatinib ●────→ HAIC`),但資料只有 `date`/`type`/`label`,**沒有 endDate、沒有療程銜接關係** —— 醫師會讀成「持續到」或「後線銜接」,屬臨床誤導。**最值得記的是我在同一個檔案的註解裡寫了「絕不推論因果、治療反應」,卻用視覺畫出了因果** —— 我當時只想到「不從自由文字推論」,沒想到「從結構化欄位的相鄰關係推論」也是推論。直接移除;要畫 treatment bar 得先有 `endDate`。**(坑#50)為了防重疊而移動節點**:前版 `layout(list,240)` 強制相鄰事件隔 240px,結果相差 3-4 天的四筆治療在圖上等距排開 —— **圖上的水平距離不再代表時間距離**,這比標籤重疊嚴重得多,因為那是 timeline 的根本性質。我當初這麼做是為了解決個管師說的「標籤一定要清楚」,**但解錯了層次:該讓的是標籤,不是節點**。改成 node 永遠用 `xOf(ms(date))`、label 上下錯層 + 引線連回節點、且 stagger 只在真會碰撞時啟用(不是 `qi%2` 固定樣式)。實測 10 個節點全部落在精確日期座標(05/22→1294、05/26→1328,差 34px = 4 天)。**(P1 五項)**:移除疾病 Band 背景改用線本身粗細建立權重(審稿說背景色塊「像被選取的 table row 而不是主軸」,很準 —— 那是「區塊」的視覺語言不是「軸」的);supporting lanes 移除自身 baseline(全圖只有疾病軸是真正的 timeline,其餘只是共用時間座標的事件);GAP_DAYS 45→90、GAP_W→110(45 天太敏感,實測會產生 2 個 gap 讓畫面破碎);gap 只在疾病軸標一次;時間軸改年份分組取代 `2025-10`+`OCT` 的重複。個管師要求正式版移除底部圖表說明區。**兩個教訓進坑庫**:「不推論」的界線要涵蓋視覺不只文字;視覺化的「不可協商屬性」(timeline 是位置=時間、長條圖是長度=數值)不能為了避讓或美化而犧牲。屬 b+1。
+
+
+---
+
+## V5.25.0
+
+**病程時序圖(Event-band Timeline)重做**
+
+從「有啟用但畫面很慘」做到「醫師一眼看得懂」。
+
+**原本的問題**:蛇行折返式 SVG —— 標籤重疊、第二列反向讀、底部大量留白、看不出治療關係。
+
+**新設計**
+
+| 項目 | 內容 |
+|---|---|
+| **五軌分法** | 疾病事件 / 檢查證據 / 全身治療 / 局部治療 / 追蹤其他 |
+| **疾病軸為主線** | 紅色帶箭頭主線獨立置頂,不只是「那一軌比較亮」 |
+| **其餘軌淡化** | 橫線只是對齊用,不是資訊 |
+| **長空窗壓縮** | 虛線 + 標月數,底部軸也標 |
+| **治療持續箭頭** | 全身治療軌相鄰事件連起來 |
+| **逐案決定** | 勾「產出時包含病程時序圖」才出按鈕 |
+| **按鈕 + 新分頁** | 📈 病程時序,與四種影像同模式(不再插獨立投影片) |
+
+**AI 判讀 —— 個管師零額外負擔**
+
+要畫出「醫師看得懂」的圖,需要「轉折點」「治療反應」這類語意資訊。但 timeline 只有 `date`/`type`/`label` 三欄,硬猜會重演坑 #30(從自由文字猜結構化欄位)。
+
+個管師提出的解法:**沿用既有的「AI 整理 → JSON → 匯入」工作流**
+
+```
+填完 timeline → 點「🤖 AI 判讀」→ 複製提示詞(含該個案完整臨床資料)
+→ 貼給院內 AI → 貼回 JSON → 看摘要 → [全部採用] / [只採用轉折點]
+```
+
+**守住的界線**:
+- 判讀結果在圖上明確標「AI」
+- 只寫進 `_ai` 命名空間,**不覆蓋任何原始欄位**
+- 匯入時顯示摘要讓個管師選採用範圍(**不逐筆確認**,避免又變手填)
+- 提示詞明令「判斷不出來給 na,不要猜」「不建議治療方案」
+
+**位置演算法踩過一次坑**
+
+第一版:「超出右界就整軌等比拉開」→ **讓相差 7 天的三筆治療橫跨整個 8 個月的軸**,嚴重失真。
+
+改用標籤佈局的標準解法:**前向推開 + 後向回夾** —— 只壓縮真正擁擠的區段,其餘維持真實時間比例。
+
+**修掉審稿示意圖的 bug**:`bandOf()` 回傳第一個匹配,同一事件不會重複畫在兩軌(實測 `RT 250cGy` 只出現 1 次;審稿的示意圖出現 2 次)。
+
+
+**摘要**:病程時序圖(Event-band Timeline)重做:(1)逐案勾選「產出時包含病程時序圖」;(2)不再產獨立投影片,改個案標題列 📈 按鈕 + 新分頁(與四種影像同模式);(3)五軌分法(疾病事件/檢查證據/全身治療/局部治療/追蹤其他),疾病軸畫成紅色帶箭頭主線置頂,其餘軌淡化只作對齊;(4)長空窗壓縮 + 虛線標月數;(5)**AI 判讀**:沿用「AI 整理→JSON→匯入」工作流,判讀轉折點與治療反應,個管零額外填寫,結果標「AI」且只寫入 _ai 命名空間
+
+
+**開發敘事**:V5.25.0 病程時序圖(Event-band Timeline)重做 —— 從「有啟用但畫面很慘」到「醫師一眼看得懂」。**起點**:個管師問時序圖有沒有啟用,查證後發現編輯畫面/檢視模式/HTML 投影片三處都有跑(Word 沒有),但產出的是**蛇行折返 SVG**:標籤重疊、第二列反向讀、大量留白。**設計歷程(值得記)**:先產實圖檢視 → 提三種方案 → 個管師要「有圖的感覺、一頁看完」→ 定 Event-band → 外部審稿三輪修正。**關鍵取捨**:審稿最初提的 Disease Spine/因果鏈/Clinical Storyboard 都需要「疾病狀態、治療反應、第幾線」等語意資訊,但 timeline 只有 `date`/`type`/`label` 三欄 —— 硬猜會重演坑 #30。**個管師提出的解法很好**:沿用既有「AI 整理→JSON→匯入」工作流,讓 AI 讀完整臨床脈絡後判讀「轉折點」與「治療反應」,個管師**零額外填寫負擔**。守住的界線:判讀結果明確標「AI」、只寫進 `_ai` 命名空間不覆蓋原始欄位、匯入時顯示摘要讓個管師選採用範圍(不逐筆確認,避免又變手填)、prompt 明令「判斷不出來給 na,不要猜」「不建議治療方案」。**視覺設計(個管師與審稿共同修正)**:疾病軸畫成紅色帶箭頭主線獨立置頂(不只是「那軌比較亮」)、其餘軌橫線大幅淡化(只是對齊用不是資訊)、長空窗壓縮成固定寬 + 虛線標月數(底部說明明講「橫向距離不等於實際時間比例」以免誤讀)、標題列標「病程 N 個月(M 筆)」、圖例只列本圖用到的類型、拿掉黃色垂直 NOW 線(會與紅色主線競爭焦點)。**位置演算法(踩過一次坑)**:第一版「超出右界就整軌等比拉開」→ 讓相差 7 天的三筆治療橫跨整個 8 個月的軸,嚴重失真;改用標籤佈局的標準解法「前向推開 + 後向回夾」,只壓縮擁擠區段。**修掉審稿示意圖的 bug**:`bandOf()` 回傳第一個匹配,同一事件不會重複畫在兩軌(實測 RT 只出現 1 次)。屬 b+1。
+
+
+---
+
+## V5.24.3
+
+**修:影像檢視器的左右頁鈕遮住圖片名稱**
+
+個管師截圖回報:多圖頁面時,右下角的導覽鈕(‹ › 🔍)壓在圖片說明文字上。
+
+**與坑 #6 同源** —— `.pnav` 是 `position:fixed`,不佔文件流,所以內容會一路排到視窗底,右下角那張圖的 `.pcap` 就被蓋住。
+
+**修法**(沿用坑 #6 的解法):
+
+| 項目 | 改動 |
+|---|---|
+| `.pbody` / `.pbody.prep` | 底部保留導覽鈕高度 `calc(2vh + clamp(48px,7vh,78px))` |
+| `.pnav` | 縮小一階(bottom / right / padding 各降) |
+| `.pcap` | `nowrap + ellipsis` → **最多折兩行**(`-webkit-line-clamp:2`)+ `word-break:break-all` |
+
+`.pcap` 那項是順手改的:長檔名(如 `messageImage_1776818710105_0`)原本只看得到前半段。
+
+**這一版最值得記的是過程**
+
+改完第一次跑**坑 #48 的固化檢查**(把 `extraJs` 用 node 實際求值,再對求值結果 `node --check`)—— **立刻抓到 SyntaxError**:
+
+```
+/tmp/p3.js:142
+  +'/* V5.24.3 修:導覽鈕(.pnav)是 position:fixed 不佔文件流...
+   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: Invalid or unexpected token
+```
+
+我把多行中文註解寫進了 **CSS 字串裡**,產出的 JS 因此斷行。**註解必須放在模板字串外面。**
+
+這證明那個檢查值得每次動 `extraJs` 都跑 —— 因為 `index.html` 本身永遠是合法的,**錯的是它產出的東西**。
+
+
+**摘要**:修影像檢視器版面:導覽鈕(.pnav position:fixed)壓住右下角圖片說明(.pcap)—— 與坑 #6 同源。.pbody/.prep 底部保留導覽鈕高度 calc(2vh+clamp(48px,7vh,78px));導覽鈕縮小;.pcap 從 nowrap+ellipsis 改最多兩行(長檔名原本只看得到前半)。**過程中坑 #48 的固化檢查立刻抓到我把多行註解寫進 CSS 字串**,導致產出的 JS 斷行 —— 註解必須放在字串外
+
+
+**開發敘事**:V5.24.3 修影像檢視器版面(個管師截圖回報:多圖頁的左右頁鈕遮住圖片名稱)。**與坑 #6 同源** —— `.pnav` 是 `position:fixed` 不佔文件流,內容會一路排到視窗底,右下角那張圖的說明文字 `.pcap` 就被壓住。修法沿用坑 #6 的解法:`.pbody` 與 `.pbody.prep` 底部保留導覽鈕高度 `calc(2vh + clamp(48px,7vh,78px))`,導覽鈕本身也縮小一階(bottom/right/padding 各降);另外 `.pcap` 原本是 `white-space:nowrap + ellipsis`,長檔名(如 `messageImage_1776818710105_0`)幾乎只看得到前半,改成 `-webkit-line-clamp:2` 最多折兩行 + `word-break:break-all`。**這版最值得記的是過程**:改完第一次跑「坑 #48 固化檢查」(把 extraJs 用 node 實際求值再 `node --check` 求值結果)**立刻抓到 SyntaxError** —— 我把多行中文註解寫進了 CSS 字串裡,產出的 JS 因此斷行。**註解必須放在模板字串外面**。這證明那個檢查值得每次動 extraJs 都跑,因為 index.html 本身永遠是合法的,錯的是它產出的東西。屬 c+1。
+
+
+---
+
+## V5.24.2
+
+**修:影像按鈕有顯示張數,但點了沒反應(新增坑 #48)**
+
+個管師提供**實際產出的 HTML 檔**,反查一次就定位到問題。
+
+**反查方法**:把產出檔的每個 `<script>` 區塊抽出來,逐一 `node --check`:
+
+```
+script[0] 長度     2350  語法 OK
+script[1] 長度  1259871  語法 FAIL  ← 含 openImgWindow
+   錯誤: 第 78 行  +'<div class="pbody prep">'+_esc(data.report).replace(/
+```
+
+**regex 中間斷行了。**
+
+**根因**
+
+`extraJs` 是**模板字串(反引號)**。裡面寫的 `\n` 會被 JS 當成**跳脫序列 → 變成真的換行字元**,而不是保留成 `\` + `n` 兩個字元。
+
+所以產出的 HTML 裡變成:
+
+```js
+.replace(/
+/g,'<br>')          ← regex 不能跨行 → SyntaxError
+```
+
+**一個語法錯誤讓整個 `<script>` 區塊都不執行** → `window.openImgWindow` 從未被定義 → 按鈕的 onclick 找不到函式 → **靜默無反應**。
+
+症狀完全吻合:**翻頁正常**(那在另一個 script 區塊)、**只有影像按鈕沒反應**。
+
+這是 V5.15.1 加乳攝報告頁時留下的。
+
+**修法**:模板字串內所有要保留成字面量的反斜線都要加倍 —— `/\n/g` 寫成 `/\\n/g`。
+
+**同一版的診斷程式碼也踩了同一個坑**:V5.24.1 為了讓失敗會說話而加的 alert 訊息也用了 `\n`,一起修掉(否則診斷版本身也會壞)。
+
+**驗證方法已固化**
+
+把 `extraJs` 抽出來用 node **實際求值**,再對求值結果 `node --check`:
+
+```
+產出的 JS 語法: ✅ OK
+openImgWindow 有定義: True
+regex 完整未斷行: True
+```
+
+**光檢查 `index.html` 本身抓不到這種錯** —— index.html 是合法的,錯的是它**產出的東西**。
+
+**教訓**:「產生程式碼的程式碼」要多一層跳脫意識。每經過一層引號/反引號,反斜線就要加倍一次。
+
+
+**摘要**:修「影像按鈕有張數但點了沒反應」(坑#48):extraJs 是模板字串,內含的 `\n` 被當跳脫序列變成真換行 → 產出的 JS 出現 regex 斷行與字串跨行 → SyntaxError → 整段 script 不執行 → openImgWindow 從未定義。反查方法:抽出產出檔的每個 script 區塊逐一 node --check。修法:模板字串內反斜線加倍;V5.24.1 診斷用的 alert 也踩同一坑一併修
+
+
+**開發敘事**:V5.24.2 修「影像按鈕有顯示張數但點了完全沒反應」(坑 #48)。**個管師提供實際產出的 HTML 檔,反查一次就定位**:把產出檔的每個 `<script>` 區塊抽出來逐一 `node --check`,發現第二個區塊在**第 78 行語法錯誤** —— `.replace(/\n/g,'<br>')` 在產出檔裡變成 **regex 中間斷行**。**根因**:`extraJs` 是**模板字串(反引號)**,裡面寫的 `\n` 被 JS 當成跳脫序列**變成真的換行字元**,而不是保留成 `\`+`n` 兩個字元。一個語法錯誤讓**整個 script 區塊都不執行** → `window.openImgWindow` 從未定義 → onclick 找不到函式 → **靜默無反應**(症狀完全吻合:翻頁正常因為那在另一個 script 區塊)。**這是 V5.15.1 加乳攝報告頁時留下的**。修法:模板字串內所有要保留成字面量的反斜線加倍(`/\\n/g`)。**同版的診斷程式碼也踩同一坑** —— V5.24.1 為了讓失敗會說話而加的 alert 訊息也用了 `\n`,一起修掉(否則診斷版本身也會壞)。**驗證方法已固化**:把 `extraJs` 抽出來用 node **實際求值**,再對求值結果 `node --check` —— 光檢查 index.html 本身**抓不到這種錯**,因為 index.html 是合法的,錯的是它**產出的東西**。教訓:「產生程式碼的程式碼」要多一層跳脫意識,每經過一層引號/反引號,反斜線就要加倍一次。屬 c+1。
+
+
+---
+
+## V5.24.1
+
+**影像按鈕的失敗改成明確回報**
+
+原本 `openImgWindow` 開頭是 `if(!data) return;` —— **無聲失敗**,點了什麼都不會發生。改成明確告知是「資料未載入」「索引鍵找不到」還是「彈出視窗被擋」。
+
+(這一版的診斷程式碼本身也踩了坑 #48,已於 V5.24.2 修正。)
+
+
+**摘要**:openImgWindow 的失敗改成明確回報(原本 `if(!data)return` 是無聲失敗)
+
+
+---
+
+## V5.24.0
+
+**UI 尺度重整(純視覺,零功能與資料風險)**
+
+依外部 UI 審稿,查證後採納核心項目。
+
+**查證發現的失衡**
+
+| 項目 | 原值 | 問題 |
+|---|---|---|
+| `body` | 14px | — |
+| **個案卡片輸入框** | **12px** | **比 body 小兩級**(每天工作的地方反而最小) |
+| `label` | 10px + `uppercase` + `.09em` | `uppercase` **對中文完全無作用**;字距讓中文細碎 |
+| `.fsec` 區段標題 | 10px | **比內文還小**,失去定位作用 |
+
+字級分布更能說明:10px 70 處、11px 126 處、**12px 158 處**,而 **14px 只有 16 處**。
+
+**做了七項**
+
+| # | 改動 |
+|---|---|
+| ① | 主工作區 820 → **980px** |
+| ② | 主要 input/textarea 12 → **14px**(含 25 處 inline) |
+| ③ | `label` 10 → 12px,移除 uppercase 與過大字距 |
+| ④ | `.fsec` 10 → **13px** + 加上下留白 |
+| ⑤ | `.cg2` gap 6 → 10/12px |
+| ⑥ | 修 V5.23.0 的 `.fg-gap>label` 問題 |
+| ⑦ | `.struct-row` 加淡背景框 |
+
+**① 的關鍵決策:以個管師的 20 吋為準,不是開發者的 27 吋**
+
+20 吋常見 1440~1600 寬,扣掉 sidebar 248px 後 980 舒適。**刻意不衝 1024**,以免 1440 寬的機器邊界太緊。
+
+**⑥ 修的是 V5.23.0 自己造成的問題**
+
+`.fg-gap>label{color:#8A5A1F}` —— 因為 `.fg-gap` 一直存在,**填完後 label 仍是警告色**,看起來像永遠沒補完。警告現在只留在「空白輸入框底色」與「待補」badge。
+
+**審稿誤判一項**:第 10 項說個案卡片「↑↓ 與 × 太近」,但查證**個案卡片根本沒有 ↑↓ 排序鈕**(那是圖片卡片的 ◀▶),不需處理。
+
+**明確不做的四項**
+
+| 項目 | 理由 |
+|---|---|
+| 手機相關全部 | 個管師說明「用手機開的機率極低,因為需要電腦查資料」。改沒人用的路徑只有風險沒有收益 |
+| ECOG/CFS select 簡化 | 審稿自承是 polishing;改了可能讓人找不到分級說明 |
+| 拿掉主治醫師小 label | 第二/第三主治是選填,label 有提示作用 |
+| 基本資料 asymmetric grid | 要實際看畫面調,改了不一定更好 |
+
+**結果**:字級分布 12px 158→126、14px 17→42。
+
+**驗收提醒**:開發者用 27 吋、個管師用 20 吋,**同樣 14px 在 20 吋上看起來更大**。驗收應以個管師感受為準;若覺得太鬆可再往回調(純 CSS,成本低)。
+
+
+**摘要**:UI 尺度重整(純視覺,零功能/資料風險):主工作區 820→980px(以個管師 20 吋為準,不衝 1024);主要輸入 12→14px(原本 body 是 14 但工作區小兩級,含 25 處 inline);label 10→12px 並移除對中文無作用的 uppercase 與過大字距;.fsec 10→13px + 加留白(長卡片的定位 landmark);.cg2 gap 6→10/12px;修 V5.23.0 的 .fg-gap>label 填完仍是警告色;struct-row 加淡背景框讓「日期+內容是一組」可辨。字級分布 12px 158→126、14px 17→42
+
+
+**開發敘事**:V5.24.0 UI 尺度重整(依外部 UI 審稿,查證後採納核心項目;純視覺,零功能與資料風險)。**查證發現的失衡**:`body` 是 14px,但**每天工作的個案卡片輸入框只有 12px**(比 body 小兩級);`label` 10px 且帶 `text-transform:uppercase`(**對中文完全無作用**)與 `.09em` 字距(讓中文顯得細碎);`.fsec` 區段標題只有 10px,**比內文還小**,失去長卡片裡的定位作用。字級分布佐證:10px 70 處、11px 126 處、**12px 158 處**,而 **14px 只有 16 處**。**做七項**:①主工作區 820→**980px**;②主要 input/textarea 12→14px(含 25 處 inline);③label 10→12px 並移除 uppercase 與過大字距;④`.fsec` 10→13px + 上下留白;⑤`.cg2` gap 6→10/12px;⑥**修 V5.23.0 自己造成的問題** —— `.fg-gap>label{color:#8A5A1F}` 因為 `.fg-gap` 一直存在,**填完後 label 仍是警告色**看起來像永遠沒補,警告改只留在空白輸入框底色;⑦`.struct-row` 加淡背景框(病理/檢查/治療多筆時原本只靠 5px margin,容易看錯哪個日期配哪段文字)。**①的關鍵決策:以個管師的 20 吋螢幕為準,不是開發者的 27 吋** —— 20 吋常見 1440~1600 寬,扣掉 sidebar 248px 後 980 舒適,**刻意不衝 1024** 以免 1440 寬機器邊界太緊。**審稿誤判一項**:第 10 項說個案卡片「↑↓ 與 × 太近」,但查證**個案卡片根本沒有 ↑↓ 排序鈕**(那是圖片卡片的 ◀▶),不需處理。**明確不做**:手機相關全部不動(個管師說明「用手機開的機率極低,因為需要電腦查資料」—— 我原本把 iOS 聚焦自動放大當技術理由,在此情境不成立;改沒人用的路徑只有風險沒有收益)、ECOG/CFS select 簡化(審稿自承是 polishing)、拿掉主治醫師小 label(第二/第三選填,label 有提示作用)、基本資料 asymmetric grid(要實際看畫面調)。字級分布改善:12px 158→126、14px 17→42。屬 b+1。**驗收提醒**:開發者 27 吋、個管師 20 吋,同樣 14px 在 20 吋上看起來更大,**驗收以個管師感受為準**;覺得太鬆可再往回調(純 CSS,成本低)。
+
+
+---
+
+## V5.23.0
+
+**強化「AI 整理 → JSON 匯入」主要工作流**
+
+個管師說明實際工作流程:**個案先用院內 AI 匯整資訊、轉 JSON 後匯入,再逐欄查看修改**。這是主要輸入方式,但系統原本把它當輔助功能對待。
+
+**1. 修最常見的問題:日期重複顯示**
+
+檢查 / 治療 / 病理的渲染格式本來就是「**名稱（日期）**」+ content,但 AI 從病歷抄過來時常把日期也寫進 content:
+
+```
+CT（2026-04-01）
+   CT abdomen 2026-04-01: no distant metastasis    ← 日期又出現一次
+```
+
+**兩層防護**(因為院內 AI 是否遵守 prompt 無法控制):
+
+| 層 | 做法 |
+|---|---|
+| 治本 | prompt 加規則:「content 不要重複寫名稱與日期」 |
+| 保底 | 匯入時 `_stripDupDate` / `_stripDupName` 自動清理 |
+
+**清理刻意做得保守** —— 只清「與 `date` 欄**完全相同**」的日期,而且只清開頭 / 結尾 / 括號內。實測確認:
+
+| content | 結果 |
+|---|---|
+| `2026-04-01 CT abdomen: ...` | ✅ 清掉開頭日期 |
+| `CT abdomen: ... (2026-04-01)` | ✅ 清掉結尾日期 |
+| `Regression compared with 2025-11-18 study` | ✅ **完全不動**(中間有意義的比較日期) |
+
+markers 另外處理:content 若是序列(含 `→`),`date` 欄就多餘,自動清空。
+
+**2. 匯入報告**
+
+AI 產出常有缺(病歷本身不全,或 AI 漏抓)。原本只顯示「已匯入 3 筆」,要逐張打開才知道缺什麼。現在直接攤開:
+
+```
+已匯入 3 筆，其中 2 筆需要注意：
+
+● 9000016 測○丁
+    缺少：病理、癌指數
+● 9000017 測○戊
+    ⚠ 病歷號與現有個案重複
+    缺少：討論方向
+
+其餘 1 筆資料完整。
+```
+
+toast 另外顯示自動清理了幾處重複。
+
+**3. 缺漏欄位高亮**
+
+診斷 / 現病史 / 討論方向空白時,**淡黃底 + 標籤變色**,填了自動消失。直接對應「匯入後逐欄查看修改」的動作 —— 打開卡片一眼看到要補哪裡。
+
+**刻意不做的**:
+- 「AI 匯入待確認」標記 —— 個管師本來就會逐欄看,多一個要點的按鈕反而是負擔
+- **timeline 不納入 prompt** —— 依個管師指示,timeline 功能本身還沒調好(產出畫面不理想),是下一版的重點更新,現在不急著讓 AI 產生
+
+
+**摘要**:強化「AI 整理→JSON 匯入」主要工作流:(1)匯入自動清理 content 內與 date/name 重複的部分(_stripDupDate/_stripDupName,只清開頭結尾與括號內、不動中間有意義的比較日期);markers 序列型自動清空多餘 date;(2)匯入報告 —— 攤開每筆缺哪些欄位(診斷/現病史/病理/檢查/治療/討論方向)+ 重複病歷號警告;(3)缺漏欄位淡黃底高亮(fg-gap),填了自動消失;(4)prompt 補「content 不要重複名稱與日期」規則。timeline 依個管師指示不納入(下版重點)
+
+
+**開發敘事**:V5.23.0 強化「院內 AI 整理 → JSON 匯入」這條**主要輸入工作流**(個管師說明:個案是先用院內 AI 匯整資訊、轉 JSON 後匯入,再逐欄查看修改)。**(1)修最常見的問題 —— 日期重複顯示**:exams/treatments/pathologies 的渲染格式本來就是「名稱（日期）」+ content,但 AI 從病歷抄過來時常把日期也寫進 content → 畫面上出現兩次。**兩層防護**:prompt 加明確規則(治本),匯入時 `_stripDupDate`/`_stripDupName` 自動清理(保底,因為院內 AI 是否遵守 prompt 無法控制)。**清理很保守**:只清「與 date 欄**完全相同**」的日期,而且只清開頭/結尾/括號內 —— node 實測確認「compared with 2025-11-18 study」這類**中間有意義的比較日期完全不動**。markers 另外處理:content 若是序列(含 →)則 date 欄多餘,自動清空(prompt 本來就有此規則,但 AI 不一定遵守)。**(2)匯入報告**:AI 產出常有缺(病歷不全或 AI 漏抓),原本只顯示「已匯入 N 筆」,要逐張打開才知道缺什麼。改成匯入後直接攤開「哪幾筆缺診斷/現病史/病理/檢查/治療/討論方向」+ 重複病歷號警告,並在 toast 顯示自動清理了幾處。**(3)缺漏欄位高亮**:診斷/現病史/討論方向三個關鍵欄位空白時套 `.fg-gap` 淡黃底 + 標籤變色,填了自動消失(靠 `:placeholder-shown`),直接對應「匯入後逐欄查看修改」的動作。**刻意不做**:C「AI 匯入待確認標記」—— 個管師本來就會逐欄看,多一個要點的按鈕反而是負擔;timeline 依個管師指示不納入 prompt(timeline 功能本身還沒調好,是下一版重點)。屬 b+1。
+
+
+---
+
+## V5.22.0
+
+**前期追蹤與醫療小組改版**
+
+個管師回報這兩區不好用,外部審稿也指出同樣問題。**但業務釐清才是這版的關鍵**。
+
+**先講一個差點做錯的判斷**
+
+審稿以為「醫療小組」是短事項,建議砍成「討論事項 + 處理結果」兩欄。但跟個管師確認後才知道它實際是:
+
+> 病人初診斷住院時,書面請各科給意見。各科基於「**當下資料**」判斷(病理、影像可能還沒出來)。
+> 後續檢查結果出來後,到 MDT **重新確認當初的治療方向是否還正確**。
+
+所以欄位**不能砍** —— 問題在「欄位名跟實際要填的內容對不上」。
+
+**1. 醫療小組:改顯示標籤(底層欄位不動)**
+
+個管師定出的四段結構:
+
+| 顯示標籤 | 底層欄位 | placeholder |
+|---|---|---|
+| 之前現病史 | `cc` | 當時臨床狀況、已完成與待完成的檢查 |
+| **多專科建議** | `discussion` | 各科建議及已執行之治療 |
+| **最新情況** | `summary` | 目前檢查結果、治療反應 |
+| **治療決策** | `decision` | 維持原方向 / 調整（說明） |
+
+**底層欄位名完全不動** → 既有資料、Word 簡報、HTML 投影片全部不受影響。
+
+**2. 前期追蹤:改三段 + 修掉資料被丟掉的問題**
+
+原本只有一格「追蹤說明」,而且 `autoImportPrevFollowups()` **只帶姓名/醫師/日期,把上次的 `decision` 丟掉了**。
+
+等於:**系統知道這個人要追蹤,卻不告訴個管師為什麼要追蹤** —— 個管師還得回去翻上一場會議記錄。
+
+改成三段:
+
+| 段落 | 來源 |
+|---|---|
+| **上次決議** | 自動帶入上次的 `decision`(沒有則退 `summary`),**唯讀顯示** |
+| **本次追蹤重點** | 新欄位 `followFocus` |
+| **目前結果** | 沿用原有 `note` |
+
+**舊資料相容**:原本填在「追蹤說明」的內容**留在「目前結果」不搬動**。
+
+**3. 三種卡片加色標籤**
+
+解決「個案討論、醫療小組、前期追蹤三種長得太像,分不出來」的根本困擾:
+
+| 區塊 | 標籤色 |
+|---|---|
+| 個案討論 | `#3A4550`(深霧灰藍) |
+| 醫療小組 | `#7A8C6E`(橄欖綠) |
+| 前期追蹤 | `#5B8FA8`(霧藍)+ 顯示上次會議日期 |
+
+**版型不動**,只加識別。
+
+**實測**:decision 優先退 summary ✅、兩者皆空不顯示區塊 ✅、`followNext=false` 已結案不帶入 ✅、舊 note 留在目前結果 ✅。
+
+**這版的教訓**:外部審稿看得出「欄位重複」,但**看不出業務語意**。砍欄位前一定要先問使用者這區實際在做什麼,否則會砍掉真正需要的東西。
+
+
+**摘要**:前期追蹤與醫療小組改版(個管師回報不好用):(1)前期追蹤改三段 — 上次決議(自動帶入上次 decision‖summary,唯讀)/ 本次追蹤重點(新欄位 followFocus)/ 目前結果(沿用 note);修掉 autoImportPrevFollowups 只帶 demographic、把 decision 丟掉的問題;(2)醫療小組改顯示標籤(之前現病史/多專科建議/最新情況/治療決策)+ placeholder 引導,**底層欄位名不動**;(3)三種卡片加色標籤區別(個案討論/醫療小組/前期追蹤)
+
+
+**開發敘事**:V5.22.0 前期追蹤與醫療小組改版(個管師回報這兩區不好用,外部審稿也指出同樣問題)。**業務釐清是這版的關鍵** —— 審稿以為醫療小組是「短事項」建議砍成兩欄,但個管師說明後才知道它是:**病人初診斷住院時書面請各科給意見,各科基於「當下資料」判斷(病理/影像可能還沒出來),後續檢查結果出來後到 MDT 重新確認治療方向是否正確**。所以欄位不能砍,問題在「欄位名跟實際要填的內容對不上」。個管師定出四段結構:之前現病史 / 多專科建議及已執行之治療 / 目前最新情況 / 之後治療決策(維持‖調整)。**做法:只改顯示標籤與 placeholder,底層欄位名(cc/discussion/summary/decision)完全不動** —— 既有資料、Word/HTML 產出全部不受影響。**(2)前期追蹤改三段**:原本只有一格「追蹤說明」,而 `autoImportPrevFollowups` **只帶姓名/醫師/日期,把上次的 decision 丟掉** —— 等於「系統知道這人要追蹤,卻不告訴個管為什麼要追蹤」,個管得回去翻上一場記錄。改成「上次決議(自動帶 `c.decision||c.summary`,唯讀顯示)/ 本次追蹤重點(新欄位 followFocus)/ 目前結果(沿用 note)」。**舊資料相容**:原本填在「追蹤說明」的內容留在「目前結果」不搬動(個管師確認照此)。**(3)三種卡片加色標籤**(個案討論 #3A4550 / 醫療小組 #7A8C6E / 前期追蹤 #5B8FA8),解決「三種長得太像分不出來」的根本困擾,版型不動。node 實測:decision 優先退 summary ✅、兩者皆空不顯示區塊 ✅、followNext=false 已結案不帶入 ✅、舊 note 留在目前結果 ✅。屬 b+1。**教訓**:外部審稿看得出「欄位重複」但看不出業務語意 —— 砍欄位前一定要先問使用者這區實際在做什麼,否則會砍掉真正需要的東西。
+
+
+---
+
+## V5.21.0
+
+**資料層工廠重構 —— 修掉一個已經存在 11 個版本的 schema bug**
+
+這輪重構**不是架構潔癖**。查證外部審稿時實測比對兩個 case 建立入口,發現真實問題:
+
+| 入口 | flags | pathologyImages | surgicalImages |
+|---|---|---|---|
+| 手動新增(`addItem`) | ✅ | ✅ | ✅ |
+| **JSON 匯入** | ❌ | ❌ | ❌ |
+
+更值得記的是:CLAUDE.md 的 **V5.10.1 紀錄寫著「匯入補 flags」** —— 表示當時**只補了讀取端(讀 `d.flags`),沒補建立端**。一個欄位補一半,**持續 11 個版本沒被發現**,因為渲染端到處 `||[]` 防禦,不會報錯,只會靜靜地少東西。
+
+**做法:單一工廠**
+
+`createCase(cid, data, opts)` / `createItem()` —— **同時負責 default 與 normalize**:
+
+- 給空物件 → 完整空白 case
+- 給匯入資料 → 補齊缺漏欄位、修正型別
+
+**關鍵:不為統一而抹平行為差異**
+
+| 差異 | 處理 |
+|---|---|
+| 手動新增帶癌別預設科別、匯入不帶 | `opts.withDeptDefault` 區分 |
+| markers 去重(匯入專屬業務邏輯) | 留在呼叫端,不進工廠 |
+
+**加 schema 自我檢查**
+
+`assertCaseSchema(c)` —— 匯入後檢查,缺欄位就 console 警告。把「靠人記得補欄位」變成「程式自己發現」(同坑 #36 的 `_assertConfigConsistency`、V5.19.0 的 QA 預檢)。
+
+**② section accessor —— 刻意只換一部分(新增坑 #47)**
+
+系統有 57 處直接寫 `S.meeting.sections[cid]…`,但**不能全部替換**:
+
+`getSection()` 內含 `ensureSec()`。若把「唯讀渲染」「存在性檢查」「migration」也換成 accessor,會**意外建立原本不存在的 section** —— 把「不存在就是不存在」變成「一讀就被建出來」。
+
+所以**只替換 8 處 mutation / CRUD path**,其餘 55 處刻意保留。
+
+**③ ensureArray** —— 收掉 5 處防禦碼,保持極小,不往上發展成微型 framework。
+
+**實測結果**:
+
+| 檢查 | 結果 |
+|---|---|
+| 兩入口 schema | ✅ **完全一致(31 欄位)** |
+| 三個缺漏欄位 | ✅ 全部補齊 |
+| 行為差異保留 | ✅ 手動 `["一般外科::","",""]` vs 匯入 `["","",""]` |
+| 壞資料 normalize | ✅ 非陣列/null/型別錯誤都修正 |
+| schema 斷言 | ✅ 能抓出缺漏 |
+
+**明確不做的兩項**(審稿本輪已接受):
+- **④ Viewer 共用** → 降級為「Do not touch until needed」,觸發條件是「同一 bug 需要兩邊修第二次」
+- **⑤ genHTMLSlides 三層架構** → 審稿撤回 P1,因 PPTX 已於 V5.13.0 停用、無 PDF 需求,ROI 不足
+
+**這輪最值得記住的判準**(來自審稿,已寫入坑庫):
+
+> **不是看到重複就抽;是看到「重複已經造成資料不一致」才優先抽。**
+
+
+**摘要**:資料層工廠重構(修真 bug,坑#46/#47):實測發現 JSON 匯入建立的 case **缺 flags/pathologyImages/surgicalImages**(V5.10.1 只補了讀取端)。建 createCase/createItem 單一工廠(同時 default + normalize),兩入口統一走工廠且保留各自行為差異(withDeptDefault);加 assertCaseSchema 自我檢查。另建 getSection/getSectionList/getSectionItem 與 ensureArray,**只替換 8 處 mutation path**,渲染與 migration 刻意不動(避免 ensureSec 產生幽靈 section)。實測兩入口 schema 完全一致(31 欄位)
+
+
+**開發敘事**:V5.21.0 資料層工廠重構 —— **這輪不是架構潔癖,是修一個已經發生的 bug**(坑 #46)。查證外部審稿①時實測比對兩個 case 建立入口,發現 **JSON 匯入建立的 case 缺 `flags` / `pathologyImages` / `surgicalImages` 三個欄位**;更值得記的是 CLAUDE.md 的 **V5.10.1 寫著「匯入補 flags」—— 當時只補了讀取端沒補建立端**,一個欄位補一半持續 11 個版本沒被發現(渲染端到處 `||[]` 防禦,不會炸只會靜靜少東西)。**做法**:建 `createCase(cid,data,opts)` / `createItem()` 單一工廠,同時負責 default 與 normalize;`addItem` 與 JSON 匯入都改走工廠。**關鍵是不為統一而抹平行為差異** —— 手動新增帶癌別預設科別、匯入不帶,用 `opts.withDeptDefault` 區分;markers 去重是匯入專屬業務邏輯留在呼叫端。加 `assertCaseSchema()` 匯入後自我檢查(同坑 #36 `_assertConfigConsistency`、V5.19.0 QA 預檢的思路:把「靠人記得」變成「程式發現」)。**另做 ②③**:建 `getSection`/`getSectionList`/`getSectionItem` 與 `ensureArray`,但**依審稿的修正意見刻意只替換 8 處 mutation path**(坑 #47)—— `getSection()` 內含 `ensureSec()`,若唯讀渲染或 migration 也換,會**意外建立原本不存在的 section**、改變「不存在就是不存在」的語意,故 55 處保留。node 實測:兩入口 schema **完全一致(31 欄位)**、三個缺漏欄位補齊、行為差異保留(手動 `["一般外科::","",""]` vs 匯入 `["","",""]`)、壞資料 normalize 正確、斷言能抓缺漏。**明確不做**:④Viewer 共用(審稿本輪已接受降級為 "Do not touch until needed",觸發條件是同一 bug 需兩邊修第二次)、⑤genHTMLSlides 三層(審稿本輪也撤回 P1,因 PPTX 已停用、無 PDF 需求,ROI 不足)。屬 b+1。
+
+
+---
+
+## V5.20.0
+
+**依外部架構審稿做第一批重構(功能行為完全不變)**
+
+收到一份架構級審稿,提了 12 項可抽共用層、列出 5 個最值得改。逐項查證後**全部屬實**,但只做風險低且真正減少 bug 源的三項。
+
+**① 圖片找檔統一(新增坑 #43)**
+
+同一張圖有**兩條 code path**:
+
+| 路徑 | 用哪個函式 |
+|---|---|
+| 編輯畫面預覽 | `_imgGetFile()` |
+| HTML 產出 | `genHTMLSlides()` 內的 `_getFileByEnum()` |
+
+**這正是坑 #31 的成因** —— 當時修好「含括號檔名讀不到」,只修到預覽那條,產出那條沒改,造成「預覽看得到、產出卻少一張」。
+
+產出端刪掉自己那份,統一呼叫 `_imgGetFile()`;另抽 `_fileToDataUrl()`(原本兩端各寫一份 FileReader)。
+
+**③ 搬移演算法統一(新增坑 #44)**
+
+`imgMove`(◀▶)用 **swap**、`imgReorder`(拖曳)用 **splice**。
+
+移一格時兩者結果相同,**所以不是現行 bug**。但 swap **跨多格會錯**:
+
+| `A B C D` 把 D 移到最前 | 結果 |
+|---|---|
+| splice(正確) | `D A B C` |
+| swap(錯誤) | `D B C A` |
+
+統一成 `moveArrayItem()` + `_moveImage()` 共同核心,兩個函式各縮成一行。
+
+**⑥ 拿掉 monkey patch(新增坑 #45)**
+
+`buildSlidesHTMLOnly()` 為了「只產生 HTML 不下載」,**把 `document.body.appendChild` 整個換掉**以攔截下載用的 `<a>`。patch 期間**任何**其他 appendChild 都會經過那層。
+
+改成 `genHTMLSlides({download, silent})` 參數化。**無參數呼叫維持原行為**,既有按鈕零影響。順帶淘汰 V5.19.0 為同樣目的加的全域旗標 `window._slidesSilent`。
+
+**明確不做的三項(附理由)**
+
+| 項目 | 不做的理由 |
+|---|---|
+| ② `createCase` 統一 | 實測兩處欄位數 30 vs 14 差異大,但**需先查證 import 少的欄位是漏還是刻意** —— 查清楚再說 |
+| ④ Viewer 共用引擎 | 動的是**開會當下會用到的東西**,產出的 HTML 是離線靜態檔,**壞掉會在會議現場才發現**。風險不對稱,等真的第三次漏改再做 |
+| ⑤ `genHTMLSlides` 三層架構 | 實測 **994 行**確實過大,但審稿的動機是「未來 HTML/PDF/PPTX 吃同一 model」—— **PPTX 已於 V5.13.0 停用、也沒有 PDF 需求**。為用不到的擴展性做大重構不划算 |
+
+**三個教訓進坑庫**:
+- **#43** 同一件事有兩個入口時,**要先合併再修 bug**
+- **#44** 「現在結果碰巧相同」不代表兩套演算法安全 —— 使用情境一擴大就分岔
+- **#45** 需要 monkey patch 通常是「函式做太多事」的訊號,正解是把副作用抽成參數
+
+
+**摘要**:依外部架構審稿做第一批重構三項(不改功能行為):(坑#43)圖片找檔統一走 _imgGetFile,刪掉產出端重複的 _getFileByEnum,另抽 _fileToDataUrl —— 這是坑 #31 的成因;(坑#44)imgMove(swap)與 imgReorder(splice)統一成 moveArrayItem + _moveImage,實測 swap 跨多格會錯;(坑#45)拿掉 buildSlidesHTMLOnly 的 monkey patch document.body.appendChild,改 genHTMLSlides(opts) 參數化,順帶淘汰 window._slidesSilent 全域旗標
+
+
+**開發敘事**:V5.20.0 依外部架構審稿做第一批重構(審稿提 12 項、列 5 個最值得改;評估後只做風險低且真正減少 bug 源的三項,②④⑤ 明確不做)。**(坑#43)圖片找檔兩條 code path**:編輯畫面預覽走 `_imgGetFile()`、HTML 產出走 `genHTMLSlides()` 內的 `_getFileByEnum()` —— **這正是坑 #31 的成因**(當時修含括號檔名只修到預覽,產出沒改)。產出端刪掉自己那份統一呼叫,另抽 `_fileToDataUrl()`(原本兩端各一份 FileReader)。**(坑#44)同一功能兩套演算法**:`imgMove` 用 swap、`imgReorder` 用 splice。移一格時結果相同**所以不是現行 bug**,但 swap 跨多格會錯 —— node 實測 `A B C D` 把 D 移到最前:splice 得 `D A B C`(對)、swap 得 `D B C A`(錯)。統一成 `moveArrayItem` + `_moveImage` 共同核心。**(坑#45)monkey patch**:`buildSlidesHTMLOnly` 為了「只產生不下載」而替換 `document.body.appendChild` 攔截 `<a>`,patch 期間任何 appendChild 都經過那層。改成 `genHTMLSlides({download,silent})` 參數化,**無參數呼叫維持原行為**(既有按鈕零影響),順帶淘汰 V5.19.0 的全域旗標 `window._slidesSilent`。**明確不做的**:②`createCase` 統一(實測兩處欄位數 30 vs 14 差異大,但需先查證 import 少的欄位是漏還是刻意,查清楚再說);④Viewer 共用引擎(動的是開會當下會用到的東西,產出的 HTML 是離線靜態檔,壞掉會在會議現場才發現 —— 風險不對稱,等真的第三次漏改再做);⑤`genHTMLSlides` 三層架構(實測 **994 行**確實過大,但審稿的動機是「未來 HTML/PDF/PPTX 吃同一 model」,而 PPTX 已於 V5.13.0 停用、也沒有 PDF 需求 —— 為用不到的擴展性做大重構不划算;若要動只做機械式切分不做架構分層)。屬 b+1。**三個教訓進坑庫**:同一件事有兩個入口要先合併再修 bug;「現在結果碰巧相同」不代表兩套演算法安全;需要 monkey patch 通常是「函式做太多事」的訊號。
+
+
+---
+
+## V5.19.1
+
+**改會議日期的資料防護(新增坑 #42)**
+
+個管師問「寫入會議內容後能不能改日期」。查證後發現一個**窄但真實**的資料遺失路徑。
+
+**查證結果分三種情況**:
+
+| 情況 | 結果 |
+|---|---|
+| **單癌別會議** | ✅ **完全安全** —— sections 存在 `mdt_m_*` 裡,不碰 `mdt_sec_*` |
+| **合併會議,改成沒人用過的日期** | ⚠️ 資料完整,但**舊 key 變孤兒**留在 localStorage |
+| **合併會議,改成「已有另一場同癌別會議」的日期** | 🔴 **會覆蓋掉那場的資料** |
+
+**根因**:section key 是 `mdt_sec_{癌別}_{日期}`,**沒有會議 ID**。兩場不同會議只要癌別與日期相同,就共用同一個 key。
+
+**做法:刻意不改 key 結構**
+
+改成 `{meetingId}_{癌別}` 要寫 migration,把三台主機上**所有歷史會議**的 section 搬過去 —— **只有一次機會跑對**,而專案沒有自動化測試、也無法在真實資料上預演。風險遠大於它解決的窄情境(分機作業下,唯一的觸發路徑是「延期到一個已建好同癌別會議的日期」)。
+
+改為**三道防護**:
+
+1. `openMtgRecord` 記下 `m._loadedDate` → 儲存時比對,得知日期是否被改過
+2. 改過就查 `getIdx()` 有無「**別場、同日、癌別有交集**」的會議 → 有就明確警告:
+
+   > 注意:2026-08-20 已經有另一場會議(消化道癌+肝膽胰癌),使用到相同的癌別。
+   > 若繼續儲存,那一場的個案資料會被這場覆蓋。
+   > 建議:改用其他日期,或先處理掉那一場會議。
+
+3. **確認新 key 全部寫入成功後**,才清掉舊日期的孤兒(**順序不可反** —— 寫入失敗時保留舊資料,免得兩邊都沒有)
+
+**四情境實測**:
+
+| 情境 | 結果 |
+|---|---|
+| 改成空的日期 | ✅ 不打擾 + 自動清孤兒 |
+| 改成已有同癌別會議的日期,選「取消」 | ✅ 警告 + 中止 + 對方資料完好 |
+| 同日但**不同癌別**(分機作業常見) | ✅ 不誤報 |
+| 沒改日期 | ✅ 完全不觸發 |
+
+**教訓(坑 #42)**:當 key 由「**業務欄位**」組成而非唯一 ID 時,**任何業務欄位可被編輯就等於 key 可變**。要嘛 key 用不可變的 ID,要嘛在編輯該欄位時做衝突偵測。這裡選後者是**權衡不是最佳解** —— 若未來真的出現同機同日同癌別多場的需求,還是要回頭改結構。
+
+
+**摘要**:改會議日期的資料防護(坑#42):合併會議的 section key 是「癌別+日期」無會議 ID,改日期若撞到另一場同癌別會議會覆蓋其資料。加三道防護:記 _loadedDate 判斷日期是否被改、改過就偵測同日同癌別的別場會議並警告(可選擇繼續)、確認新 key 寫入成功後才清舊日期孤兒。刻意不改 key 結構(migration 風險大於收益)。四情境實測:危險情境攔下、日常操作不打擾
+
+
+**開發敘事**:V5.19.1 改會議日期的資料防護(個管師問「寫入內容後能不能改日期」,查證後發現一個窄但真實的資料遺失路徑,坑 #42)。**查證結果分三種**:(1)**單癌別會議** —— sections 存在 `mdt_m_*` 裡不碰 `mdt_sec_*`,改日期完全安全;(2)**合併會議改成空日期** —— 資料完整但**舊 key 變孤兒**留著佔空間;(3)🔴 **合併會議改成「已有另一場同癌別會議」的日期** —— section key 是 `mdt_sec_{癌別}_{日期}` **沒有會議 ID**,儲存會**直接覆蓋掉那場的資料**。**做法刻意不改 key 結構**:改成 `{meetingId}_{癌別}` 要寫 migration 搬三台主機的所有歷史 section,**只有一次機會跑對**,而專案無自動化測試也無法在真實資料上預演 —— 風險遠大於它解決的窄情境(個管師分機作業,同機不會有同日同癌別兩場;唯一觸發路徑是「延期到一個已建好同癌別會議的日期」)。改為三道防護:`openMtgRecord` 記 `m._loadedDate` → 儲存時比對得知日期被改過 → 查 `getIdx()` 有無「別場、同日、癌別交集」的會議,有就明確警告(說明會被覆蓋、建議改用其他日期)並讓使用者決定 → **確認新 key 全部寫入成功後**才 `delSec` 清舊孤兒(順序不可反,寫入失敗時保留舊資料以免兩邊都沒有)。node 四情境實測:改成空日期不打擾且清孤兒 ✅、撞到同癌別會議會警告且取消後對方資料完好 ✅、同日不同癌別不誤報 ✅(分機作業常見)、沒改日期完全不觸發 ✅。屬 c+1。**教訓進坑庫**:key 由「業務欄位」組成而非唯一 ID 時,任何業務欄位可被編輯就等於 key 可變 —— 要嘛用不可變 ID,要嘛在編輯該欄位時做衝突偵測;這裡選後者是**權衡不是最佳解**,若未來真有同機同日同癌別多場的需求,仍要回頭改結構。
+
+
+---
+
+## V5.19.0
+
+**HTML 投影片三項強化(依第二份外部審稿選做)**
+
+審稿提了 10 項,評估後選做 3 項。
+
+**#7 產出 QA 預檢 —— 我評估中最有價值的一項**
+
+原本讀不到的圖片會**直接靜默略過**:
+
+```js
+if(!src) return '';   // 少一張圖,使用者完全不會知道
+```
+
+這跟坑 #29(特殊議程無聲不產出)、坑 #33(NAS 謊報成功)是**同一類「無聲失敗」**,而且已經害過一次 —— V5.14 之前括號檔名讀不到,是看到破圖才發現;如果那張圖剛好被 `return ''` 濾掉,連破圖都看不到。
+
+現在產出前會跳出檢查:
+
+```
+產出前檢查
+──────────────────────
+✓ 共 42 頁
+✓ 影像 37 / 39 張已載入
+
+✗ 有 2 張影像讀取失敗，不會出現在投影片中：
+    9000019 病理影像：CT(20250401)
+    9000017 影像：MRI-T2
+
+△ 3 個個案沒有填「討論方向」：
+    9000018 測○己、...
+──────────────────────
+
+確定 = 仍然產生　　取消 = 回去修正
+```
+
+**只提醒不阻擋**。HTML 分享等自動流程會跳過對話框(`_slidesSilent`),不打斷。
+
+**#2 Case Navigator(☰ 會議目錄)**
+
+產 slides 時順手記錄 `_slideMeta`,產出的 HTML 內建目錄抽屜:
+
+- 依**癌別分組**
+- 點一下**直接跳到該個案**
+- **目前個案自動高亮**(停在該案的影像頁時仍高亮該案)
+
+30+ 頁的會議要回第 7 個病人,不用一直翻。
+
+**#9 導覽列閒置淡出**
+
+靜止 3 秒後導覽列降到 18% 透明度,滑鼠/鍵盤/觸控一動就恢復。更像簡報模式,也降低擋住右下角內容的機會。
+
+**審稿另外 7 項的評估結論**:
+
+| 項目 | 結論 |
+|---|---|
+| 影像 Viewer 改 overlay | **反對** — V5.15.0 明確選過新分頁,理由是**可拉第二螢幕與投影片並列**,overlay 做不到 |
+| 自動防溢位拆頁 | 方向對,但產出當下量不到最終渲染高度;先用 QA 的「內容過長」警告代替 |
+| 共用 SlideViewer 引擎 | 診斷正確(主頁 `go()` 與影像頁 `pgo()` 兩套重複),但屬大重構且無自動化測試 → **列觀察**,等再出一次 bug 再做 |
+| 註記持久化 | **反對** — HTML 是獨立檔案,localStorage 不跟著分享走;且「畫線另存變慢」的舊問題還沒查清 |
+| nav safe zone | 坑 #6 已修過 |
+| Before/After 比較 | 尺寸需人工輸入 = 多一個會忘記填的欄位,暫緩 |
+| 討論方向放最醒目 | 屬版面偏好,`disc-bar` 已存在,實際投影後再調即可 |
+
+
+**摘要**:HTML 投影片三項強化(依外部審稿選做):(#7)產出 QA 預檢 — 全程累計「應有/實載」圖片數,產出前把讀取失敗的影像、沒填討論方向、內容過長、單頁>6張一次攤開,只提醒不阻擋(修「圖片靜默消失」的無聲失敗);(#2)Case Navigator ☰ 目錄 — 產 slides 時建 _slideMeta,目錄依癌別分組、可直接跳頁、目前個案自動高亮;(#9)導覽列閒置 3 秒淡出,滑鼠/鍵盤/觸控喚醒。分享等自動流程以 _slidesSilent 跳過對話框
+
+
+**開發敘事**:V5.19.0 HTML 投影片三項強化(第二份外部審稿提 10 項,評估後個管師選做 3 項)。**(#7 產出 QA 預檢 — 我評估中最有價值的一項)**:原本 `if(!src)return''` 讀不到的圖**直接靜默略過**,少一張圖使用者完全不會知道 —— 這跟坑 #29(無聲不產出)、坑 #33(NAS 謊報成功)是同一類「無聲失敗」,而且已經害過一次(V5.14 之前括號檔名讀不到,是看到破圖才發現;若被 `return ''` 濾掉連破圖都看不到)。做法:`_qa` 全程累計 `expectImgs/loadedImgs` 與缺漏清單,另檢查「沒填討論方向」「內文過長(>1400 字)」「單頁 >6 張」,產出前用一個對話框攤開,**只提醒不阻擋**(確定=仍然產生 / 取消=回去修正)。`window._slidesSilent` 讓 HTML 分享等自動流程跳過對話框不打斷。**(#2 Case Navigator)**:產 slides 時順手 `_slideMeta.push({idx,cancer,chartNo,name,dx})`,產出的 HTML 內建 ☰ 目錄抽屜 —— 依癌別分組、點擊直接 `go(idx)`、`markNavCur()` 依目前頁自動高亮(用 `m.idx<=c` 找最後一個,所以停在個案的影像頁時仍高亮該個案)。30+ 頁時要回第 7 個病人不用一直翻。**(#9 導覽列閒置淡出)**:靜止 3 秒降到 opacity .18,mousemove/keydown/touchstart 喚醒 —— 更像簡報模式,也降低擋住右下內容的機會。**審稿另外 7 項的評估結論**:反對「影像 Viewer 改 overlay」(個管師在 V5.15.0 明確選過新分頁,理由是**可拉第二螢幕與投影片並列**,overlay 做不到);「自動防溢位拆頁」方向對但產出當下量不到最終渲染高度,先用 QA 的「內容過長」警告代替;「共用 SlideViewer 引擎」診斷正確(主頁 go() 與影像頁 pgo() 兩套重複)但屬大重構、無自動化測試,列觀察等再出一次 bug 再做;「註記持久化」反對(HTML 是獨立檔案,localStorage 不跟著分享走,且「畫線另存變慢」的舊問題還沒查清);「nav safe zone」坑 #6 已修過。屬 b+1。
+
+
+---
+
+## V5.18.1
+
+**依外部程式審稿修 5 項(圖片架構收尾)**
+
+收到一份品質很高的外部審稿,三個 P1/P2 逐一查證**全部屬實**。
+
+**P1 — 分頁線跟錯對象(新增坑 #39)**
+
+`pageBreak` 存在**圖片物件**上,排序時跟著圖片跑。結果:設好「第 1 頁 2 張、第 2 頁 4 張」後,只是拖一張圖,**整個版面結構就變了**。
+
+問題在語意:分頁線描述的是**版面結構**(這頁幾張),拖曳做的是**換內容** —— 兩者綁在一起使用者無法預測。
+
+修法不動 schema:排序前 `_snapBreaks()` 記下分頁線的**位置索引**,排序後 `_applyBreaks()` 套回**相同位置**。
+
+> **換的是圖片,分頁線留在原位。**
+
+實測 `A B｜C D` 把 D 拖到 B 前面:
+
+| | 結果 |
+|---|---|
+| 舊(跟圖走) | `A D B｜C` — 版面 2+2 變成 3+1 |
+| **新(跟位置)** | **`A D｜B C` — 維持 2+2,只換內容** |
+
+**順帶解決 P3**:套回時跳過 index 0,`imgMove` 原本缺的 normalize 自動補上(原本只有 `imgReorder` 有做)。
+
+**P1 — 乳攝拿不到新功能(新增坑 #40)**
+
+`IMG_KINDS.mammo` 早在 V5.16.0 就備妥,但 `buildMammoImgArea()` **仍是獨立的舊 renderer**,沒走 `buildGenericImgArea()`。其他四種都走了,只有乳攝沒有。
+
+結果:V5.17/V5.18 加的排序 ◀▶、拖曳、⏎ 分頁點、一鍵排版、已選 N/上限 —— **乳攝全部沒有**。
+
+**這是坑 #37 的直接重演,而且更隱蔽** —— 因為註冊表已經有 mammo,看起來像已經統一了。
+
+已收斂進共用 renderer,只保留乳攝專屬的 `maxImgs:6`。
+
+**P2 — 雙真相來源(新增坑 #41)**
+
+特殊議程的編輯畫面可以設 ⏎ 分頁點,但**產出的 HTML 完全不理會**,仍照舊的 `sp.imgsPerSlide` 排版 → 「**畫面看到 A、輸出卻按照 B**」。
+
+統一到 pageBreak(它是 imgsPerSlide 的**超集合**:能表達 2+4、1+2+4,不只 4+4+4)。**舊資料相容**:若圖片沒有 pageBreak 但有 `imgsPerSlide`,自動換算成等效分頁線,既有排版不變。
+
+**P2 — 每頁 >6 張加 soft warning**
+
+不阻擋,只顯示淡黃提示「本頁超過 6 張,投影時可能不易辨識」,並在數量列顯示各頁張數(如「共 3 頁(2+4+1)」)。
+
+**三個教訓進坑庫**:
+- **#39** 屬於位置的資訊,別存在會被移動的物件上
+- **#40** 「已加進註冊表」≠「已走共用路徑」—— 要 grep 確認呼叫端真的走了
+- **#41** 升級資料模型時,舊模型要一次拔乾淨,否則會出現「畫面與輸出不一致」且不會報錯
+
+
+**摘要**:依外部審稿修 5 項:(坑#39,P1)pageBreak 改「跟位置走」不跟圖片走 — _snapBreaks/_applyBreaks 排序前後轉換,順帶解決 P3(imgMove 缺 normalize);(坑#40,P1)乳攝仍是舊 renderer 沒走 buildGenericImgArea,拿不到新功能,收斂;(坑#41,P2)特殊議程編輯端用 pageBreak、輸出端卻用 imgsPerSlide 的雙真相,統一 pageBreak 並自動換算舊資料;(P2)每頁 >6 張加 soft warning 不阻擋 + 顯示各頁張數
+
+
+**開發敘事**:V5.18.1 依外部程式審稿修 5 項(審稿品質很高,三個 P1/P2 逐一查證全部屬實)。**(坑#39,P1)分頁線跟錯對象**:`pageBreak` 存在圖片物件上,排序時跟著圖片跑 → 拖一張圖整個版面結構變掉(2+2 變 3+1)。分頁線語意是**版面結構**、拖曳語意是**換內容**,不該綁一起。修法不動 schema:`_snapBreaks` 記下分頁線**位置索引**,排序後 `_applyBreaks` 套回**相同位置** —— 換的是圖片、分頁線留原位;套回時跳過 index 0,**順帶解決 P3**(`imgMove` 原本缺 normalize,只有 `imgReorder` 有)。實測 `A B|C D` 拖 D 到 B 前:舊 `A D B|C`(亂)→ 新 `A D|B C`(維持 2+2)。**(坑#40,P1)乳攝拿不到新功能**:`IMG_KINDS.mammo` 早在 V5.16.0 備妥,但 `buildMammoImgArea()` 仍是獨立舊 renderer,其他四種都走 `buildGenericImgArea` 只有它沒走 → 排序/拖曳/分頁點/一鍵排版/數量顯示全都沒有。**這是坑 #37 的直接重演且更隱蔽**(註冊表有 mammo,看起來像已統一)。收斂,只保留 `maxImgs:6`。**(坑#41,P2)雙真相來源**:特殊議程編輯端可設 pageBreak,輸出端卻仍讀 `sp.imgsPerSlide` → 「畫面看到 A、輸出照 B」。統一 pageBreak(它是 imgsPerSlide 的超集合),舊資料若無 pageBreak 則依 imgsPerSlide 自動換算等效分頁線,既有排版不變。**(P2)soft guardrail**:每頁 >6 張不阻擋,只顯示淡黃提示「投影時可能不易辨識」,並在數量列顯示各頁張數(如「共 3 頁(2+4+1)」)。屬 c+1。**三個教訓進坑庫**:位置資訊別存在會移動的物件上;「已加進註冊表」≠「已走共用路徑」;升級資料模型要把舊模型一次拔乾淨。
+
+
+---
+
+## V5.18.0
+
+**圖片功能強化 — 第二批(檢視器排版 4 項),11 項需求收尾**
+
+**4. 分頁點:每頁張數可以不同**
+
+個管師要的是「**第一頁 2 張、第二頁 4 張**」。所以設計上用 **`pageBreak` 分頁點**而不是「每頁固定 N 張」—— 只有前者能讓每頁張數不同。
+
+編輯畫面每張圖片卡片有一顆 **「⏎ 換頁 / ⏎ 同頁」** 切換鈕(第一張永遠是新頁,不給設):
+
+```
+圖1 [第1頁起]  圖2 [⏎同頁]              → 第 1 頁 2 張
+圖3 [⏎換頁]    圖4 [⏎同頁] 圖5 圖6      → 第 2 頁 4 張
+```
+
+檢視器依分頁點分組,**每組依張數自動選格線**:
+
+| 張數 | 排版 |
+|---|---|
+| 1 | 全幅 |
+| 2 | 左右並排 |
+| 3–4 | 2 × 2 |
+| 5–6 | 3 × 2 |
+| 7+ | 自動(`ceil(√n)` 欄) |
+
+多圖同頁時,標題顯示「影像(4 張)」,每張下方帶自己的題字。
+
+**6. 一鍵套用排版**
+
+圖片區下方有「每頁 **1 張 / 2 張 / 4 張**」快速鈕,自動設好所有分頁點,不用一張張點。**設完仍可手動微調**。
+
+**7. 拖曳排序**
+
+圖片卡片可直接拖曳。實作為 **整段搬移(非交換)**—— 把第 4 張拖到第 1 位會變成 `D A B C`,符合直覺。
+
+細節:
+- 只允許**同一組圖片內**排序(比對癌別 / 類型 / 個案索引)
+- 題字 input 設 `draggable="false"`,否則選字會誤觸拖曳
+- 搬移後自動清除第一張的分頁點(第一張本來就是新頁)
+
+**10. 檢視器頁碼修正**
+
+總頁數原本用 `images.length` 計算,但加了報告頁(乳攝)和多圖分頁後**會算錯**。改用實際頁數。
+
+**順帶清理:移除失效的舊下拉**
+
+V5.15.0 把相關影像/手術照片改成按鈕檢視後,編輯畫面的「每頁 1/2/4 張」下拉**就完全沒作用了**,但 UI 還留著 —— 這是個誤導。本版移除。
+
+**特殊議程的下拉保留** —— 它仍有獨立投影片,那個設定仍然有效。
+
+**實測**:個管師的 2+4 範例完全符合、一鍵套用(2張×3頁、4+2)正確、格線 1~9 張容量皆足、拖曳搬移與分頁點清除正確。
+
+**至此 11 項需求全部完成。**
+
+
+**摘要**:圖片功能強化第二批(檢視器排版 4 項):(4)分頁點 pageBreak —— 卡片「⏎ 換頁」toggle,檢視器依此分組、每頁張數可不同(第1頁2張+第2頁4張),多圖用 grid(1/2/4/6/自動);(6)一鍵套用「每頁1/2/4張」自動設分頁點;(7)拖曳排序 imgReorder(整段搬移非交換,搬完清除首張 pageBreak);(10)頁碼總數改用實際頁數(原用 images.length,含報告頁會算錯)。移除 V5.15.0 後失效的舊「每頁N張」下拉(相關影像/手術),特殊議程的保留
+
+
+**開發敘事**:V5.18.0 圖片功能強化第二批(檢視器排版,11 項需求收尾)。**(4)分頁點**:個管師要「第一頁 2 張、第二頁 4 張」—— 用 `pageBreak` 旗標而非「每頁固定 N 張」,因為前者才能讓每頁張數不同。編輯畫面每張卡片一顆「⏎ 換頁/同頁」toggle(第 0 張永遠是新頁不給設),檢視器 `_pushImgWin` 帶出 `brk`,依此把圖分組;每組依張數自動選格線(1=全幅 / 2=左右 / 3-4=2×2 / 5-6=3×2 / 7+=`ceil(sqrt(n))` 自動),`.pgrid` + `.pcell` CSS,多圖時標題顯示「影像(N 張)」、每張下方帶題字。**(6)一鍵套用**:「每頁 1/2/4 張」快速鈕,`imgApplyLayout` 依 `j%n===0` 批次設分頁點,設完仍可手動微調。**(7)拖曳排序**:`.img-card` 加 `draggable`,document 層事件委派(dragstart/dragend/dragover/drop),`imgReorder` 是**整段搬移非交換**(拖到第 1 位 = D A B C 而非交換);限同一組圖片內排序(比對 cid/imgtype/idx/si);題字 input 設 `draggable=false` 否則選字會觸發拖曳;搬完清除首張 `pageBreak`。**(10)頁碼**:`pn` 原本用 `data.images.length`,加了報告頁與多圖分頁後會算錯,改用 `_pages.length`。**順帶清理**:移除 V5.15.0 之後就失效的舊「每頁 N 張」下拉(相關影像 `imgsPerSlide`、手術 `surgImgsPerSlide`)—— 改按鈕檢視後那個設定完全沒作用但 UI 還在,是個誤導;**特殊議程的保留**(它仍有獨立投影片,設定仍有效)。node 實測:個管師範例 2+4 完全符合、一鍵套用 2張×3頁 與 4+2 正確、格線 1~9 張容量皆足、拖曳搬移與 pageBreak 清除正確。屬 b+1。**11 項需求至此全部完成**。
+
+
+---
+
+## V5.17.0
+
+**圖片功能強化 — 第一批(編輯畫面 7 項)**
+
+個管師提了 4 項需求,我評估後追加 7 項,共 11 項分兩批做。本版是編輯畫面的部分。
+
+**1. 手動排序** — 每張圖片加上 ◀ ▶ 移動按鈕
+
+`imgMove()` 走 V5.16.0 建立的 `IMG_KINDS` 註冊表 —— **寫一次,五種圖片全部生效**。這正是上一版重構的回報。越界不動作,只有真正移動才標記變更。
+
+**2. 張數上限放寬**
+
+| 類型 | 之前 | 現在 |
+|---|---|---|
+| 相關影像 | 5 | **20** |
+| 乳攝 | 2 | **6** |
+| 病理 / 手術 / 特殊議程 | 99 | 99(不變) |
+
+乳攝的 2 張限制散在三處(`data-max` 與兩處硬編碼),已一併改。
+
+**3. 乳攝上傳補預載原檔名**
+
+原本乳攝上傳存的 `caption` 是空字串。畫面雖然會 fallback 顯示檔名,但**存進資料的是空值,匯出 JSON 就掉了**。其他四種路徑本來就有預載,補上這一處。
+
+**5. 特殊議程清除補上確認視窗**
+
+V5.16.0 重構時發現「清除特殊議程影像」原本**沒有確認**,當時依「重構不偷改行為」原則保留並回報,本版正式補上。
+
+**8. 顯示「已選 N / 上限」** — 達到上限時轉紅並標註「已達上限」。
+
+**9. 選超過上限改為明確提示**
+
+原本 `.slice(0, maxN)` 是**無聲截斷** —— 你勾了 10 張、只進 5 張,卻沒有任何提示。現在會明確告知：「將取前 5 張,略過後面 5 張。」
+
+**11. 清除按鈕顯示張數** — 「✕ 清除全部(7 張)」,誤觸時較容易察覺。
+
+**⚠️ 順帶發現一個遺留問題**
+
+V5.15.0 把相關影像/手術照片改成按鈕 + 檢視器後,編輯畫面的「**每頁 1/2/4 張**」下拉選單**已經失效**(檢視器目前固定一頁一張),UI 還留著但沒有作用。第二批會一併重做。
+
+**第二批(V5.18.0)預告**:分頁點 + 檢視器多圖排版、一鍵套用排版、拖曳排序、檢視器頁碼。
+
+
+**摘要**:圖片功能強化第一批(編輯畫面 7 項):(1)手動排序 ◀▶(imgMove 走 IMG_KINDS 註冊表,五種圖片一次生效);(2)上限放寬 相關影像 5→20、乳攝 2→6(含 data-max 與兩處硬編碼);(3)乳攝上傳補預載原檔名(原存空字串,匯出 JSON 會掉);(5)特殊議程清除補 confirm(V5.16.0 發現的缺陷);(8)顯示「已選 N/上限」;(9)選超過上限改明確提示(原本 slice 無聲截斷);(11)清除按鈕顯示張數
+
+
+**開發敘事**:V5.17.0 圖片功能強化第一批(個管師提 4 項需求,我追加 7 項,共 11 項分兩批做;本版是編輯畫面的 7 項)。**(1)手動排序**:每張圖加 ◀▶ 移動鈕,`imgMove()` 走 V5.16.0 的 `IMG_KINDS` 註冊表 —— **寫一次五種圖片全生效**(這就是上一版重構的回報);越界不動作、只有真正移動才 markDirty。**(2)上限放寬**:相關影像 5→20、乳攝 2→6(三處:data-max 與兩處硬編碼 `images.length>=2`)。**(3)乳攝預載原檔名**:原本 `caption:''`,雖然畫面會 fallback 顯示 name,但**存進資料的是空字串,匯出 JSON 就掉了**;其他四種路徑本來就有預載。**(5)特殊議程清除補 confirm**(V5.16.0 重構時發現原本缺這道保護,當時依「重構不偷改行為」原則保留並回報,本版正式補上)。**(8)數量顯示**「已選 N / 上限」,達上限時轉紅並標註。**(9)上限提示**:原本 `.slice(0,maxN)` 是**無聲截斷** —— 勾 10 張只進 5 張卻無任何提示;改成明確告知「將取前 N 張,略過後面 M 張」。**(11)清除按鈕顯示張數**「✕ 清除全部(7 張)」,誤觸較易察覺。node 實測排序含越界保護全對。**第二批(V5.18.0)預告**:分頁點 + 檢視器多圖排版、一鍵套用排版、拖曳排序、檢視器頁碼。**另發現遺留問題**:V5.15.0 把相關影像/手術改成按鈕後,編輯畫面的「每頁 1/2/4 張」下拉**已失效**(檢視器固定一頁一張),第二批會一併重做。屬 b+1。
+
+
+---
+
+## V5.16.0
+
+**圖片操作重構:註冊表收斂(技術債清理)**
+
+坑 #37 已經揭露「同一邏輯複製 5 份 → 修 bug 只修到一份」的代價。V5.14.0 先收斂了 preview,本版把剩下的一併處理。
+
+**收斂範圍**:`del`×4 + `clear`×5 + `caption`×2 + `delImg()` + `addpathimg` 的重繪 —— 約 **95 行**近乎相同的程式碼。
+
+**分析發現**:五種圖片的差異其實只有 **6 個變數**
+
+| 類型 | 資料路徑 | 容器 | DOM id | 重繪函式 | 索引參數 |
+|---|---|---|---|---|---|
+| 病理 | `c.pathologyImages` | cases | `pathimgs-` | `buildPathImgArea` | idx |
+| 手術 | `c.surgicalImages` | cases | `surgimgs-` | `buildSurgicalImgArea` | idx |
+| 相關影像 | `c.images` | cases | `imgs-` | `buildImgArea` | idx |
+| 乳攝 | `c.mammo.images` | cases | `mammo-imgs-` | `buildMammoImgArea` | idx |
+| 特殊議程 | `sp.images` | **special** | `special-img-area-` | `buildSpecialImgArea` | **si** |
+
+其餘邏輯 100% 相同(`ensureSec` → 找物件 → 改陣列 → `markDirty` → 重繪)。
+
+**做法**:建立 `IMG_KINDS` 註冊表(單一真相)+ 5 個核心函式(`_imgOwner` / `_imgRedraw` / `imgDel` / `imgClear` / `imgSetCaption`),11 個 handler 各縮成 1–2 行。**約 95 行 → 約 45 行**,而且未來加新圖片類型**只要加一列**。
+
+**重構鐵律:不在重構中偷改行為**
+
+保留三個真實差異:
+1. 乳攝是**巢狀** `c.mammo.images`,取用前確保 `c.mammo` 存在
+2. 特殊議程掛在 `sections[cid].special`(不是 cases),重繪用 `innerHTML`(其他用 `replaceWith`)→ 用 `mode` 旗標區分
+3. 各自的 confirm 訊息不同
+
+**⚠️ 發現一個不一致(原樣保留,回報使用者決定)**:`clearspecialimgs`(清除特殊議程影像)**原本就沒有 confirm 確認**,其他四種都有。清除是破壞性操作,這是缺陷 —— 但重構時不偷改行為,先原樣保留並回報。
+
+**順帶強健化**(防禦性,非行為改變):
+- `imgDel` 加索引存在檢查(原本 `c.pathologyImages.splice()` 若欄位不存在會拋例外)
+- `_imgKindByField` 查不到回 `null` 不動作(原本可能靜默寫進錯的陣列)
+
+**為什麼選保守方案**:HTML 的 `data-action` 名稱**維持不變**,只收斂 handler 內部。這專案沒有自動化測試,大範圍改 HTML 產生器風險高;保守方案已拿到 90% 的維護價值(邏輯單一、修 bug 不會漏改)。
+
+**實測**:node 模擬 8 種情境 —— 刪病理/乳攝(巢狀)/特殊議程(不同容器)、改題字、清空、刪不存在的索引、不存在的個案、無 mammo 物件 —— 全部行為正確,`markDirty` 呼叫次數精準。
+
+
+**摘要**:圖片操作重構(坑#38):建 IMG_KINDS 註冊表 + _imgOwner/_imgRedraw/imgDel/imgClear/imgSetCaption 五個核心,收斂 del×4 + clear×5 + caption×2 + delImg + addpathimg 重繪(約 95 行→約 45 行)。保守方案:HTML action 名稱不變只改 handler 內部。保留三個真實差異(mammo 巢狀 / special 用 innerHTML 且無 confirm / 各自 confirm 訊息)。node 實測 8 種情境含邊界全對
+
+
+**開發敘事**:V5.16.0 圖片操作統一重構(以資深工程師視角做的技術債清理,坑 #38)。坑 #37 已揭露「同一邏輯複製 5 份 → 修 bug 只修到一份」的代價,V5.14.0 先收斂 preview,本版把剩下的 **del×4 + clear×5 + caption×2 + `delImg()` + `addpathimg` 重繪**(約 **95 行**近乎相同的程式碼)一併收斂。**分析**:五種圖片的差異只有 **6 個變數**(資料路徑/容器/DOM id/重繪函式/索引參數名/標籤),其餘 100% 相同。**做法**:建 `IMG_KINDS` 註冊表(單一真相)+ 5 個核心函式(`_imgOwner`/`_imgRedraw`/`imgDel`/`imgClear`/`imgSetCaption`)+ `_imgKindByField`(HTML 的 data-imgtype 是資料欄位名,要轉 kind),11 個 handler 各縮成 1-2 行,約 45 行。**重構鐵律:不偷改行為** — 保留三個真實差異:mammo 巢狀 `c.mammo.images`、special 掛 `sections[cid].special` 且重繪用 `innerHTML`(以 `mode` 旗標區分)、各自的 confirm 訊息;**`clearspecialimgs` 原本就沒有 confirm(已知缺陷,原樣保留並回報個管師決定)**。順帶強健化(防禦非行為改變):`imgDel` 加索引存在檢查(原本欄位不存在會拋例外)、`_imgKindByField` 查不到回 null 不動作(原本會靜默寫進錯陣列)。**選保守方案**(HTML action 名稱不變):此專案無自動化測試,大改 HTML 產生器風險高,保守方案已拿到 90% 維護價值。node 實測 8 情境(含刪不存在索引/不存在個案/無 mammo 物件等邊界)全部正確。屬 b+1。**未決**:special 清除要不要補 confirm(等個管師決定)。下版優先:個管師實測圖片增刪改 + 錄音切割院內網路測試。
+
+
+---
+
+## V5.15.1
+
+**乳攝也改按鈕模式 — 四種圖片全部統一**
+
+延續 V5.15.0,把最後一種(乳房攝影)也改成同樣的模式。個案標題列現在最多四顆按鈕:
+
+```
+9000099  王○明  女性，52 歲  VS 李醫師   🔬 病理影像(3)  📷 手術照片(2)  🖼 影像(5)  📸 乳房攝影(2)
+```
+
+**乳攝的特殊之處**:它原本的投影片是「左邊報告文字、右邊圖片」兩部分。如果整張改成按鈕,報告文字就會從投影片消失。
+
+**做法(個管師選擇 B)**:報告文字也進新分頁 —— 檢視器的**第一頁顯示報告**,後面接圖片。個案頁完全不動。
+
+**邊界處理**:如果有報告但圖片讀不到,檢視器**仍然開得起來**(只顯示報告頁)—— 因為報告本身就有臨床價值,不該因為圖載不到就整個打不開。按鈕數字也對應處理。
+
+**實作細節**:`_pushImgWin` 加上選填的 `report` 參數;檢視器是獨立產生的 HTML,不能用主程式的 `escA`,所以就地定義 `_esc` 做跳脫;報告頁 `.pbody.prep` 可捲動、左對齊、換行轉 `<br>`。
+
+**實測**(三種情境):
+
+| 情境 | 總頁數 | 第一頁 |
+|---|---|---|
+| 報告 + 2 圖 | 3 | 報告頁 |
+| 只有報告(圖讀不到) | 1 | 報告頁 |
+| 無報告 + 3 圖(病理) | 3 | 第一張圖 |
+
+初始顯示頁數皆正確為 1 頁。
+
+
+**摘要**:乳攝也改按鈕模式(第 4 顆 📸 乳房攝影),獨立投影片移除。乳攝與前三種的差異是它有「報告文字+圖」兩部分 → _pushImgWin 加選填 report 參數,檢視器把報告當第一頁(個管師選 B:個案頁不動);有報告但圖讀不到時仍可開啟(報告本身有價值)。至此四種圖片全部統一為「標題列按鈕 + 新分頁檢視」
+
+
+**開發敘事**:V5.15.1 乳攝比照改為按鈕模式,四種圖片全部統一。個案標題列第 4 顆 📸 乳房攝影,原「左報告右圖」的獨立投影片移除。**乳攝與前三種的結構差異**:它的投影片有「報告文字 + 圖片」兩部分,若整張改按鈕,報告文字會從投影片消失。個管師選 B(報告也進新分頁、個案頁不動)—— `_pushImgWin` 加**選填 report 參數**,檢視器 `_pages` 組裝時把報告當**第一頁**(`.pbody.prep` 可捲動、左對齊、`\n`→`<br>`),圖片接在後面;無報告時維持第一張圖為初始頁(`isFirst=(!data.report&&i===0)`)。**邊界處理**:`if(!list.length&&!report)return 0` —— 有報告但一張圖都載不到時**仍建立檢視器**(報告本身有臨床價值),按鈕數量用 `_nMammo||(_mammoRep?1:0)`。檢視器是獨立產生的 HTML 不能用主程式 `escA`,就地定義 `_esc`。node 實測三情境:報告+2圖→3頁報告在前、只有報告→1頁、無報告3圖→第一張圖為初始頁,初始顯示頁數皆為 1。屬 c+1。下版優先:個管師實測四顆按鈕 + 錄音切割院內網路測試。
+
+
+---
+
+## V5.15.0
+
+**圖片統一 — 階段二:三種圖片呈現一致 + 修放大鏡模糊**
+
+**1. 相關影像、手術照片改成「標題列按鈕 + 新分頁」**
+
+原本只有**病理影像**是「個案標題列一顆 🔬 按鈕,點了開新分頁看」(V5.2.1)。相關影像和手術照片則各自**產獨立投影片排在個案後面** —— 個案之間被一堆圖片頁隔開。
+
+本版統一:個案標題列現在最多三顆按鈕(有圖才顯示)
+
+```
+9000099  王○明  男性，74 歲  VS 陳醫師   🔬 病理影像(3)  📷 手術照片(2)  🖼 影像(5)
+```
+
+實作:`_pathoData` 通用化成 `_imgWinData`(key `ci-N::type`)+ `_pushImgWin()` 累積函式,三種圖片走同一套;`openPathoWindow` 通用化成 `openImgWindow`,**沿用原有檢視器的放大鏡與頁面導覽**(重用比重寫安全 —— 圖片邏輯已經踩過坑 #29 / #31 / #37)。
+
+**細節**:按鈕上的張數是「**實際載得到的張數**」。`_pushImgWin` 會濾掉讀不到檔的圖(src 空),按鈕在它之後才組裝 —— 所以不會顯示假的數字。
+
+**為什麼選新分頁而不是同頁彈窗**:個管師明說「跟病理一樣」;病理檢視器從 V5.2.1 用到現在已實戰驗證;可以拉到第二螢幕跟投影片並列比較;不必新寫一套檢視器。
+
+**保留不動**:乳攝(嵌在個案頁內,不是後頁)、特殊議程(不屬於個案,本身就是要展示的內容)。
+
+**2. 修放大鏡放大後模糊**
+
+根源是**壓縮參數各做各的**:
+
+| 圖片來源 | 最大邊 | JPEG 品質 |
+|---|---|---|
+| 資料夾圖(fromFolder) | 不壓縮 | 原檔(最清晰) |
+| 病理上傳 | 2400px | 0.82 |
+| **乳攝上傳** | **1200px** | **0.75**(最糊) |
+
+放大鏡固定放大 **3.5 倍**,來源只有 1200px 時已超過原始像素 → 插值 → 糊。
+
+修法:
+- 乳攝上傳統一成 **2400px / 0.82**(與病理一致)
+- 兩個放大鏡(主投影片 `_magCv` + 檢視器 `_pmCv`)加上 `imageSmoothingQuality='high'`
+
+> 註:如果影像是從**資料夾**選的,本來就不壓縮、已是最清晰 —— 模糊只發生在「直接上傳」的圖。
+
+
+**摘要**:圖片統一階段二:(1)相關影像/手術照片不再產獨立投影片排在個案後面,改成個案標題列三顆按鈕(🔬病理/📷手術/🖼影像)+ 新分頁檢視,與病理一致;openPathoWindow 通用化成 openImgWindow,key 'ci-N::type';(2)修放大鏡模糊 — 乳攝上傳壓縮 1200px/0.75 與病理 2400/0.82 不一致,統一成 2400/0.82,兩個放大鏡加 imageSmoothingQuality='high'。按鈕張數用實際載得到的張數(讀不到檔的自動濾掉,不顯示假數字)
+
+
+**開發敘事**:V5.15.0 圖片統一階段二(排版與呈現)。**(1)三種圖片呈現統一**:個管師要求「圖片不要放在個案後頁,而是跟病理一樣有個標示按了才顯示」。原本病理是「標題列按鈕 🔬 + 新分頁檢視」(V5.2.1),但相關影像與手術照片各自產**獨立投影片排在個案後面**,造成個案之間被一堆圖片頁隔開。改法:`_pathoData` 通用化成 `_imgWinData`(key `ci-N::type`)+ `_pushImgWin()` 累積函式,三種圖片走同一套;個案標題列產**三顆按鈕**(🔬病理影像 / 📷手術照片 / 🖼影像,有圖才顯示);`openPathoWindow` 通用化成 `openImgWindow`,標題與分類標籤由資料帶入,**沿用原有檢視器的放大鏡與導覽**(重用比重寫安全 — 圖片邏輯已踩過坑 #29/#31/#37)。**關鍵細節**:`_pushImgWin` 回傳「實際載得到的張數」(src 空的自動濾掉),按鈕在它之後才組裝 → 讀不到檔時不會顯示假數字。**視窗形式選新分頁而非同頁 overlay** 的理由:個管師明說「跟病理一樣」、病理檢視器已實戰驗證、可拉第二螢幕與投影片並列、不必新寫檢視器。**保留不動**:乳攝(嵌在個案頁內非後頁)、特殊議程(不屬個案,本身即展示內容)。**(2)修放大鏡模糊**:根源是壓縮參數各做各的 — 資料夾圖不壓縮(最清晰)、病理上傳 2400px/0.82、**乳攝上傳只有 1200px/0.75**(最糊);放大鏡固定放大 3.5 倍,1200px 來源會超過原始像素。修:乳攝統一成 2400/0.82;兩個放大鏡(主投影片 `_magCv` + 檢視器 `_pmCv`)加 `imageSmoothingQuality='high'`。屬 b+1。下版優先:個管師實測三顆按鈕與放大鏡清晰度 + 錄音切割院內網路測試。
+
+
+---
+
+## V5.14.0
+
+**圖片嵌入統一強化 — 階段一:統一底層(外觀不變)**
+
+個管師指出「病理跟手術跟影像類似但流程不同」。盤點後確認系統有 **5 種圖片**(病理影像、手術照片、相關影像、乳攝、特殊議程),圖片相關的 `data-action` 共 **23 個**,其中 **preview / del / clear 各重複 5 套**。
+
+**盤點時揭露一個重要事實**:
+
+V5.11.4 修的坑 #31(含括號檔名 `CT(20250401).jpg` 預覽失敗)—— **當時只修到「相關影像」那一處**。病理影像、手術照片、乳攝、特殊議程這 4 處**到現在都還有同樣的 bug**。
+
+而且這 5 處預覽**全都沒處理子資料夾(`subFolder`)**,但產投影片的載圖邏輯有 → 造成「**編輯畫面預覽看不到,但投影片印得出來**」的詭異落差。
+
+**本版做法(階段一)**:
+
+抽出兩個統一核心:
+- `_imgGetFile(name, subFolder)` — 統一找檔:先試 `getFileHandle`(快),失敗改**列舉資料夾比對**(對含括號等特殊字元穩),並支援**子資料夾**
+- `_imgPreview(img, label)` — 統一預覽:有 dataUrl 直接顯示,否則走 `_imgGetFile`
+
+5 個 preview handler 全部收斂成一行呼叫。HTML 端 4 處按鈕補上 `data-subfolder`(順便修掉病理 `data-name` 尾端的多餘空格)。
+
+**實測**:一般檔名 / 含括號 / 中文檔名 / 子資料夾+括號 全部找得到,不存在的正確回傳 null。
+
+**階段一刻意不動 del / clear**:它們雖然也重複 5 套,但**沒有 bug**,動它們要改 5 處 DOM 重繪邏輯,風險收益不划算 —— 留到階段二做排版時一起整理。
+
+**階段二預告**(排版強化,待確認):
+- 病理與乳攝補上「每頁張數」控制(目前只有相關影像 / 特殊議程 / 手術有,而且手術的欄位名還不一樣)
+- 每頁張數增加 3 / 6 選項
+- 依圖片實際比例自動選版型 —— 解決「直式病理切片塞進 2×2 橫向格子,左右大量留白、圖看起來很小」
+
+
+**摘要**:圖片統一底層(階段一,外觀不變):抽出 _imgGetFile(統一找檔,含列舉退回+subFolder)與 _imgPreview(統一預覽),5 個 preview handler 全部收斂。**揭露並修坑#37**:坑#31 當時只修到 previewrelatedimg,病理/手術/乳攝/特殊議程 4 處括號檔名仍失敗;且 5 處全不支援 subFolder。HTML 4 處按鈕補 data-subfolder。del/clear 暫不動(無 bug,階段二一起整理)
+
+
+**開發敘事**:V5.14.0 圖片嵌入統一強化(階段一:統一底層,外觀完全不變)。個管師指出「病理跟手術跟影像類似但流程不同」— 盤點後確認系統有 **5 種圖片**(病理/手術/相關影像/乳攝/特殊議程),圖片相關 `data-action` 共 **23 個**,其中 **preview/del/clear 各重複 5 套**。**這次揭露一個重要事實(坑#37)**:V5.11.4 修的坑 #31(含括號檔名 getFileHandle 失敗)**當時只修到 previewrelatedimg 一處**,病理/手術/乳攝/特殊議程 4 處**至今仍有同樣 bug**;而且 5 處預覽**全都沒處理 subFolder**(子資料夾的圖一律預覽失敗),但產投影片的 `_loadImgsToCache` 有 → 造成「編輯畫面看不到、投影片卻印得出來」的落差。**做法**:抽出 `_imgGetFile(name,subFolder)`(getFileHandle → 失敗改列舉比對 → 支援子資料夾)+ `_imgPreview(img,label)`,5 個 handler 收斂成一行呼叫;HTML 端 4 處按鈕補 `data-subfolder`(順便修掉病理 data-name 尾端多餘空格)。node 實測:一般/括號/中文/子資料夾+括號 全部找得到,不存在的正確回 null。**階段一刻意不動 del/clear**(它們純重複但沒 bug,風險收益不划算,留到階段二做排版時一起整理)。**階段二預告**(排版強化,待確認後做):病理與乳攝補上「每頁張數」控制(目前只有相關影像/特殊議程/手術有)、每頁張數增加 3/6 選項、依圖片實際比例自動選版型(解決直式病理切片塞進 2×2 橫向格子造成「圖太小」)。屬 b+1。下版優先:階段二排版強化 + 錄音切割院內網路測試。
+
+
+---
+
+## V5.13.6
+
+**修三個設定與日期的錯誤(外部審稿 P1)**
+
+P0 的資料安全問題修完後(V5.13.5),接著處理「會出錯但不會弄丟資料」這一層。
+
+**1. 早上開會時日期會錯一天**
+
+取「今天」用的是 `toISOString()` —— 那是 **UTC 日期**。台灣 00:00~07:59 對應 UTC 前一天,所以會算成昨天。而 MDT **早上 07:30-08:30 那幾場正好落在錯誤區間**,不是理論問題:
+
+- 新建會議的預設日期變成**昨天**
+- 「只能建立今天或未來的會議」的檢查會把**今天的會議擋掉**
+- 行事曆的「今天」高亮標到前一格
+
+修法:建立 `todayTaipei()` 統一取台灣時區日期,5 處全部替換。用 `en-CA` locale 是因為它剛好輸出 ISO 格式(`2026-08-13`),可以直接跟會議日期字串比較(`zh-TW` 會輸出 `2026/8/13`,會破壞比較)。
+
+實測:台灣 8/13 早上 7:30 → 舊寫法算成 `2026-08-12`(錯)、新寫法 `2026-08-13`(對)。
+
+**2. 部分癌別的預設會議室存成空值**
+
+`DEFAULT_C` 的預設會議室字串跟 `DEFAULT_LOCS` 選項清單**對不起來**:
+- 消化道癌 / 肝膽胰癌:`彰濱-1F  人文會議室`(**雙空格**,而且名稱與清單裡的「人文藝術館會議室」不同)
+- 泌尿道癌:`彰濱-7F  愛書人會議室`(**雙空格**)
+
+`<select>` 是完全比對,對不上就沒有選中的選項 → 儲存時地點變空值。
+
+有意思的是:系統早就有一個 migration 表要把舊的「人文會議室」改名成「人文藝術館會議室」,但**產生資料的預設值本身沒跟著改** —— 修了資料沒修來源。
+
+**3. 癌別英文代碼表過期,英文檔名 fallback 成中文**
+
+`CANCER_EN_CODES` 還在用舊的癌別 ID(`gi`/`hbp`/`gu`/`chest`/`blood_lymph`),但實際 ID 早已改成 `digestive`/`hepatobiliary`/`urology`/`thoracic`/`lymphoma`。查表查不到就 fallback 成 ID 本身,而且**不會報錯**,所以一直沒人發現。
+
+**加上自動一致性檢查**(審稿建議中最划算的一項):
+
+新增 `_assertConfigConsistency()`,啟動時自動檢查:
+- 每個癌別都要有對應的英文代碼
+- 每個癌別的預設會議室都要存在於 `DEFAULT_LOCS`
+
+有問題只在 console 警告、不阻斷啟動。一個函式就擋住未來所有同類的「表過期」問題。
+
+
+**摘要**:審稿 P1 批三項:(坑#34)UTC 日期→台灣日期,建 todayTaipei() 用 en-CA locale 輸出 ISO 格式,5 處替換(早上開會日期錯一天/被擋);(坑#35)3 處預設會議室與 DEFAULT_LOCS 不一致(雙空格+名稱不符)→ select 存空值;(坑#36)CANCER_EN_CODES 用舊癌別 ID 導致英文檔名 fallback → 更新 5 個。加 _assertConfigConsistency() 啟動自動檢查代碼與會議室一致性
+
+
+**開發敘事**:V5.13.6 審稿 P1 批三項(P0 的資料安全修完後,處理「會出錯但不會弄丟資料」這層)。**(坑#34)UTC 日期**:`new Date().toISOString().slice(0,10)` 取的是 UTC 日期,台灣 00:00~07:59 會算成前一天 — 而 MDT 早上 07:30-08:30 那幾場**正好落在錯誤區間**,後果是新建會議預設日期變昨天、「只能建今天或未來」把今天擋掉、行事曆今天標錯格。修:建 `todayTaipei()` 用 **en-CA locale**(剛好輸出 ISO 格式 YYYY-MM-DD,可直接跟會議 date 比較;zh-TW 會輸出 `2026/8/13` 破壞字串比較),5 處全換。實測台灣 8/13 07:30 → 舊 `2026-08-12` 錯、新 `2026-08-13` 對。**(坑#35)預設會議室不一致**:消化道/肝膽胰的 loc 寫 `彰濱-1F  人文會議室`(雙空格+名稱不同)、泌尿寫 `彰濱-7F  愛書人會議室`(雙空格),都不在 DEFAULT_LOCS 中 → `<select>` exact match 找不到 option → 存空值。有趣的是系統早有 migration 要把舊值改成「人文藝術館會議室」,但 DEFAULT_C 的預設值沒跟著改(修了資料沒修來源)。個管師確認就是「彰濱-1F 人文藝術館會議室」,3 處改成與清單完全一致。**(坑#36)癌別英文代碼過期**:CANCER_EN_CODES 還用舊 ID(blood_lymph/chest/gi/hbp/gu),實際已是 lymphoma/thoracic/digestive/hepatobiliary/urology → `CANCER_EN_CODES[id]||id` 查不到就靜默 fallback 成中文 ID。更新 5 個。**加自動一致性檢查** `_assertConfigConsistency()`(審稿建議中最划算的一項):啟動時檢查「每個癌別都要有英文代碼」+「每個預設 loc 都要在 DEFAULT_LOCS 中」,console 警告不阻斷 — 一個函式擋住未來所有同類脫節。屬 c+1。下版優先:審稿中期批(versioned migration、輕量版並行編輯衝突偵測)+ 錄音切割院內網路測試。
+
+
+---
+
+## V5.13.5
+
+**修兩個會「弄丟資料 / 謊報成功」的嚴重問題(外部審稿 P0)**
+
+備份可靠性確認後(V5.13.4),開始修外部程式審稿指出的最高風險項。
+
+**問題 1:「清除測試資料」可能刪光所有會議**
+
+`clearTestData()` 按鈕標示「真實資料不受影響」,但實際判斷測試資料的條件是「**這場會議有沒有癌別**」—— 而正式會議本來就有癌別,等於把**全部會議都當測試資料刪掉**,還會清空整個會議索引。
+
+修法:
+- 產生測試資料時打上 `isTestData` 標記
+- 清除時**只刪有這個標記的**,逐筆從索引移除(不再清空整個索引)
+- 加第二道保護:清除前明確顯示「將清除 X 場測試、保留 Y 場正式」,沒有測試資料就直接擋下不執行
+
+實測:2 場測試 + 2 場正式 → 只清掉 2 場測試,正式完整保留,連測試會議的各癌別 section 也一併清乾淨。
+
+**問題 2:NAS 同步/備份失敗卻顯示成功**
+
+`writeMtgToNAS` 和 `backupToNAS` 把錯誤 `catch` 掉之後照常結束,呼叫端不管真假都當成功 —— 個管師看到「同步成功」,但資料其實沒寫進 NAS;每日備份失敗還會被標記「今日完成」,導致當天不再重試。
+
+修法:
+- `writeMtgToNAS` 回傳真實成敗(`{ok:true/false}`),呼叫端只在真成功才計數,失敗記入 `failed`
+- `backupToNAS` 回傳成敗,只有真成功才標記「今日備份完成」（失敗當天會再試）
+- 同步若有寫入失敗,明確跳出警告「⚠ 有 X 筆寫入失敗,請檢查 NAS 連線後重試」
+
+**本版不做**:審稿其他 P1/P2 項(日期時區、會議室、英文代碼)留下一版;section 結構仍不動(分機作業天然規避)。
+
+
+**摘要**:審稿 P0 批(會弄丟/謊報資料):(坑#32)clearTestData 用 cids?.length 判斷把真實會議當測試刪光 + 清空整個 idx → 改成只認 isTestData 標記、逐筆移除、正式會議>0 據實告知不誤刪;(坑#33)NAS writeMtgToNAS/backupToNAS 錯誤被 catch 吞掉謊報成功 → 改回傳真實成敗,失敗不標記今日完成、有失敗顯示警告。node 實測 clearTestData 精準只刪測試
+
+
+**開發敘事**:V5.13.5 審稿 P0 批(備份確認可靠後,先修「會真的弄丟或謊報資料」的兩個最危險項)。**(坑#32)clearTestData 嚴重資料遺失**:「清除測試資料」按鈕寫「真實資料不受影響」,但 `idx.filter(m=>m.cids?.length)` 把所有有癌別的會議都當測試(真實會議本來就有 cids)→ 全刪,還 `removeItem('mdt_idx')` 清空索引。修:generateTestData 打 `isTestData:true` 標記、saveLocal 的 idx entry 帶標記、clearTestData 只刪標記為測試的 + 逐筆移除不清空 idx + 「X 測試/Y 正式、沒測試就不刪」第二道保護。node 實測:2 測試 2 正式 → 只刪 2 測試,正式完整保留。**(坑#33)NAS 謊報成功**:writeMtgToNAS/backupToNAS 的 catch 吞掉錯誤照常 resolve,呼叫端 pushed++ / _markNasBackupToday() 不管真假 → 個管師看到「同步成功」但沒寫進 NAS、每日備份失敗仍標記今日完成(當天不再試)。修:writeMtgToNAS 回 {ok}、backupToNAS 回 boolean,呼叫端只在真成功才計數/標記,失敗記 results.failed 並 showSaveToast 警告。**教訓**:破壞性操作不能用間接特徵猜要刪什麼(要明確標記);錯誤被 catch 但不回傳 = 靜默謊報成功(async 成敗要沿呼叫鏈往上傳)。屬 c+1。下版優先:審稿 P1 批(UTC→Taipei 日期、預設會議室不一致、癌別 en code 過期)+ 錄音切割院內網路測試。
+
+
+---
+
+## V5.13.4
+
+**全資料庫備份可靠性補強(大升級前的保命索)**
+
+大升級前需要一個能 100% 完全還原的備份。動手前先對現有的「完整匯出 / 完全還原」做了體檢(讀碼 + 模擬往返測試),結論:
+
+**核心會議資料是可靠的** — 會議索引、各會議本體、合併會議的各癌別 section、設定、會議室、醫師、檢查類型這 8 項,匯出再還原逐 byte 一致。
+
+**但發現 4 個偏好設定沒被備份**,還原後會遺失:`mdt_ai`(AI 提示詞)、`mdt_cr_template`(CR 範本)、`mdt_html_theme_*`(HTML 主題)、`mdt_html_fname_lang_*`(檔名語言)。
+
+**本版三項補強**:
+
+1. **補齊 4 個遺漏偏好** — 匯出時多存一個 `prefs` 區塊(固定 key 直接存、per-user 的掃前綴),還原時讀回。舊備份檔沒有這區塊就跳過(向後相容)
+
+2. **還原前智慧後悔藥** — 還原是破壞性操作。程式先看「這台目前有沒有資料」:
+   - **空機器**(新機 / 重灌)→ 不問,直接還原(沒東西要保護,避免產生無意義空備份)
+   - **已有資料**→ 跳提示問「還原前要先備份現狀嗎?」,選了就下載「還原前備份.json」當後悔藥
+
+3. **匯出前完整性檢查** — 偵測「索引有列但實際資料已遺失」的孤兒會議,提醒個管師這幾場救不回
+
+**往返測試結果**:V5.13.3 是「8 項一致、4 項遺失」→ V5.13.4 是「**13 項全一致、0 遺失**」。
+
+**本版刻意不碰的**:
+- section key 結構 — 因為同一天不同癌別是在**不同主機**分別作業,單機上不會出現「同日同癌別兩場」,key 相撞的隱患在實際工作流程中天然規避,不需要動這個大結構
+- 合併語意(idx 合併 / 上限)— 這版只確保「完全還原到新機器」,合併之後再說
+
+
+**摘要**:全資料庫備份可靠性補強(大升級前的保命索):(1)補齊 4 個遺漏偏好進 export/import(mdt_ai/mdt_cr_template/mdt_html_theme_*/mdt_html_fname_lang_*,後兩者 per-user 要掃前綴);(2)還原前智慧後悔藥 — 只在「這台已有資料」時才問要不要先備份現狀,空機器直接還原;(3)匯出前完整性檢查,偵測 idx 有列但 mdt_m_ 遺失的孤兒。往返實測從「8 一致 4 遺失」→「13 全一致 0 遺失」。不碰 section 結構(分機作業天然規避撞 key)
+
+
+**開發敘事**:V5.13.4 全資料庫「完整匯出→完全還原」可靠性補強 — 大升級前要有能 100% 救回的備份,所以先確保備份本身完整。**做這版前先做了體檢**:讀 exportAllJSON/importAllJSON + node 往返實測,結論是「核心會議資料(mdt_idx/mdt_m_*/mdt_sec_*/mdt_cfg/mdt_locs/mdt_drs/mdt_exam_types)8 項逐 byte 一致、可靠」,但發現 **4 個偏好 key 沒被備份**(mdt_ai AI提示詞/mdt_cr_template CR範本/mdt_html_theme_* 主題/mdt_html_fname_lang_* 檔名語言;後兩者後綴是 S.user.id per-user)。**三項補強**:(1)export 加 prefs 物件(_collectPrefs 掃固定 key + 前綴 key),import 讀回(舊備份檔無 prefs 欄位就跳過,向後相容);(2)還原前「智慧後悔藥」— 只在 getIdx().length>0(這台已有資料)時才問要不要先下載現狀備份,空機器/新機/重灌不問,避免產生無意義空備份檔;(3)匯出前 _checkBackupIntegrity 偵測孤兒(idx 有列但 mdt_m_ 找不到),警告救不回。**往返實測**:V5.13.3 是「8 一致 + 4 遺失」→ V5.13.4 是「13 全一致 + 0 遺失」。**這版刻意不碰的**:section key 改結構(個管師確認同日不同癌別是分機作業,單機不會有同日同癌別兩場 → key 撞的隱患天然規避,不需大改);idx 合併/slice 上限(屬合併語意,這版只做「完全還原到新機器」不做合併);審稿其他項(clearTestData/NAS 謊報/UTC 日期等)等備份確認可靠後再排。屬 c+1。下版優先:審稿 P0 批(clearTestData 改 isTestData 標記 + NAS 謊報成功修正)+ 錄音切割院內網路測試。
+
+
+---
+
+## V5.13.3
+
+**癌指數也改分組標籤**
+
+個管師要求「不同的癌指數也做一眼可以看清楚的標示」。
+
+**原本的問題**:癌指數是純文字用 `\n` 串接 —
+
+```
+AFP： 3.62(2024-12-18)→3.60(2025-02-17)→4.10(2025-03-06)→3.43(2025-05-
+21)→3.97(2025-08-26)→...
+PIVKA-II： 579.0(2023-12-19)→148.0(2025-03-06)→...
+```
+
+單一指數的數值串很長會**自動換行**,AFP 的第二行跟 PIVKA-II 黏在一起,分不出哪一行屬於哪個指數。
+
+**修法**:改用跟病理 / 檢查相同的分組格式 —
+- **指數名稱當深色小標籤**(run 層 shading,只包住文字)
+- **數值縮排 8pt**
+- **組間留白 4pt**
+
+至此 **病理 / 癌指數 / 檢查 / 治療 四個欄位視覺完全統一**。
+
+**順手重構**:`_DATEHDR` 更名為 `_GRPHDR`(group header)。這個樣式現在不只用在日期,也用在指數名稱,原名語意不準確;4 處引用一起改。
+
+
+**摘要**:癌指數也改分組標籤格式(AFP/PIVKA-II 等指數名稱當深色小標籤 + 數值縮排),原本純文字長串換行後分不出哪行屬哪個指數。順便把 _DATEHDR 更名 _GRPHDR(現在日期與指數名稱共用此樣式)。病理/癌指數/檢查/治療四欄視覺完全統一
+
+
+**開發敘事**:V5.13.3 癌指數也改分組標籤 — 個管師要求「不同的癌指數也做一眼可以看清楚的標示」。原本癌指數是純文字 `AFP： 3.62(2024-12-18)→3.60(2025-02-17)→...` 用 `\n` 串接,**單一指數的數值串很長會自動換行**,AFP 換行後跟 PIVKA-II 黏在一起,分不出哪一行屬於哪個指數。修法:改用跟病理/檢查相同的 `lines` 分組格式 — **指數名稱當深色小標籤(run 層 shading)+ 數值縮排 8pt + 組間留白 4pt**。至此 **病理 / 癌指數 / 檢查 / 治療 四欄視覺完全統一**。順便把 `_DATEHDR` 更名 `_GRPHDR`(group header)— 這個樣式現在不只用在日期,也用在指數名稱,原名語意不準;4 處引用一起改。屬 c+1。下版優先:長官看新版 Word 簡報回饋 + 錄音切割院內網路測試。
+
+
+---
+
+## V5.13.2
+
+**Word 簡報再修兩點:區塊不跨頁 + 日期標籤縮短**
+
+**(1) 「病理被截斷顯示不完全」**
+
+先查證:病理的資料結構只有 `date` / `content` 兩個欄位,渲染沒有漏欄位 → **不是資料問題,是排版問題**。
+
+真正原因:長欄位(病理、檢查)跨頁時,Word 把表格列切成兩半,**第二頁只剩右側內容、左側的「病理」「檢查」標籤不會重複出現** → 讀起來就像被截斷。
+
+修法:`mkBlock` 的 `TableRow` 加 **`cantSplit:true`** — 區塊放不下就整塊移到下一頁,標籤與內容永遠在同一頁。(單一區塊若本身就超過一整頁,Word 仍會自動切,不會卡死)
+
+**(2) 「日期項目的長度太長」**
+
+V5.13.1 的日期底色用 **paragraph shading**,而 Word 的 paragraph shading **一定是整行寬** → 深色長條橫貫整欄,視覺太重。
+
+修法:`ln.fill` 改成套在 **run 層**(`mkRun` 的 `shading`)→ 底色**只包住日期文字**,像膠囊標籤。這跟 V5.9.5 做 DOCX flags 色塊是同一個技巧。
+
+`ln.shaded`(沒給 fill)維持 paragraph 層淺灰 → **DOCX 記錄的治療欄外觀完全不變**。
+
+**驗證**:docx 實跑 — 日期底色在 run 層 7 個、paragraph 層 0 個(確認不再整行寬)、`cantSplit` 14 個。
+
+
+**摘要**:Word 簡報再修兩點:(1)日期標籤底色從 paragraph shading 改 run shading — 只包住文字像膠囊,不再撐滿整行(個管師回報「日期項目的長度太長」);(2)mkBlock 的 TableRow 加 cantSplit,欄位區塊不跨頁 — 原本長欄位跨頁時第二頁沒有左側標籤,看起來像「被截斷顯示不完全」
+
+
+**開發敘事**:V5.13.2 Word 簡報再修個管師回報的兩點。**(1)「病理被截斷顯示不完全」** — 先查證病理 struct 只有 `date`/`content` 兩欄,渲染沒漏欄位,所以**不是資料問題是排版問題**:長欄位(病理/檢查)跨頁時,Word 把表格列切成兩頁,**第二頁只剩內容、左側標籤欄不會重複** → 看起來就像被截斷。修法:`mkBlock` 的 `TableRow` 加 **`cantSplit:true`**,區塊放不下就整塊移到下一頁,標籤與內容永遠在一起(單一區塊若本身超過一整頁,Word 仍會自動切,不會卡死)。**(2)「日期項目的長度太長」** — V5.13.1 的日期底色用 **paragraph shading**,而 paragraph shading **一定是整行寬**,深色長條視覺太重。修法:`ln.fill` 改成套在 **run 層**(`mkRun` 的 `shading`),底色只包住日期文字像膠囊標籤;`ln.shaded`(無 fill)維持 paragraph 層淺灰,**不動 record 模式治療欄的原外觀**。**驗證**:docx 實跑 — run 層日期底色 7 個、paragraph 層 0 個(確認不再整行寬)、cantSplit 14 個。**教訓**:Word 的 paragraph shading 無法只包文字,要做「膠囊標籤」必須用 run 層 shading(跟 V5.9.5 的 DOCX flags 色塊同一個技巧);表格跨頁時標籤欄不重複是 Word 預設行為,長內容區塊要 cantSplit。屬 c+1。下版優先:長官看新版 Word 簡報回饋 + 錄音切割院內網路測試。
+
+
+---
+
+## V5.13.1
+
+**Word 簡報格式優化:日期分組更清楚 + 欄位重排**
+
+個管師看過 V5.13.0 實際產出後回饋兩點。
+
+**(1) 不同日期的檢查/病理要一眼可辨**
+
+原本問題:
+- **檢查**:日期標題行用 `shaded`(底色 `F5F7F8`)太淡,多筆擠在一起分不出組
+- **病理**:更嚴重 — 是**純文字用 `\n` 串接**,完全沒有分組,兩三筆日期的病理報告黏成一大段
+
+修法:擴充 `mkBlock` 的 `lines` 支援三個新樣式參數
+| 參數 | 作用 |
+|---|---|
+| `fill` | 自訂底色(蓋過 shaded 的預設淺灰) |
+| `gap` | 該行之前留白(pt) |
+| `color` | 文字色 |
+
+日期標題行統一改成 **深藍灰底(`C.mid`)+ 白字 + 非首筆上方留白 4pt**,病理也改成同樣的日期分組格式(日期當標題行、內容縮排)。**病理 / 檢查 / 治療三欄視覺統一**。
+
+**(2) 欄位順序重排**
+
+`診斷 → 現病史 → 過去病史 → 病理 → 癌指數 → 檢查 → 治療 → 討論方向`
+
+- **討論方向移到最後**(當結尾)
+- **癌指數移到病理與檢查之間**
+
+**風險控制**:
+- 治療欄用 `_TRHDR` 判斷模式 — **只有 Word 簡報用深色底,DOCX 記錄維持原本淺灰**,不動長官已習慣的會議記錄外觀
+- `lines` 的 `color` 改成「未指定就不設」。(我一度寫成預設 `C.dark`,那會讓現有記錄的治療欄文字從黑變深藍灰 — 自己驗證時抓到並修掉)
+
+**驗證**:docx 實跑產出 — 深色日期標題 7 個、組間留白 2 個、欄位順序完全符合要求。
+
+
+**摘要**:Word 簡報格式優化:(1)mkBlock 的 lines 擴充 fill/gap/color,病理·檢查·治療的日期標題行改「深色底白字 + 組間留白 4pt」讓不同日期一眼可辨(原 shaded 的 F5F7F8 太淡);(2)病理從純文字 \n 串接改成日期分組格式;(3)欄位重排 診斷→現病史→過去病史→病理→癌指數→檢查→治療→討論方向(討論方向殿後、癌指數移到病理與檢查之間)。record 模式外觀完全不動
+
+
+**開發敘事**:V5.13.1 Word 簡報格式優化(個管師看過 V5.13.0 實際產出後的兩點回饋)。**(1)不同日期一眼可辨**:原本 `lines` 的 `shaded` 用 `C.bg=F5F7F8` 太淡,多筆檢查擠在一起分不出組;而**病理更慘 — 是純文字用 `\n` 串接**,完全沒有分組。修法:擴充 `mkBlock` 的 `lines` 支援 `fill`(自訂底色)/`gap`(組間留白 pt)/`color`(文字色),日期標題行統一改 `_DATEHDR = {fill:C.mid, color:'FFFFFF', bold}` 深色底白字 + 非首筆 `gap:4`;病理也改成同樣的日期分組格式(日期當標題行、內容縮排 8pt)。三個欄位(病理/檢查/治療)視覺統一。**(2)欄位重排**:診斷→現病史→過去病史→**病理→癌指數→檢查**→治療→**討論方向**(討論方向殿後當結尾、癌指數移到病理與檢查之間)。**風險控制**:`_TRHDR` 讓治療只在 deck 模式用深色底,**record 模式維持原淺灰**,不動長官已習慣的會議記錄外觀;`lines` 的 `color` 改成「未指定就不設」(原本我一度寫成預設 `C.dark`,會讓現有記錄的治療欄文字從黑變深藍灰 — 自己抓到並修掉)。**驗證**:docx 實跑 — 深色日期標題 7 個、組間留白 2 個、欄位順序 `診斷→現病史→過去病史→病理→癌指數→檢查→治療→討論方向` 完全正確。屬 c+1。下版優先:長官看過新版 Word 簡報的回饋 + 錄音切割院內網路測試。
+
+
+---
+
+## V5.13.0
+
+**長官習慣 Word:「PPTX 簡報」改為「Word 簡報」**
+
+長官還是習慣看 Word 檔、不用 PPTX,所以把產出 PPTX 的按鈕改成產出 Word。
+
+**兩種 Word 的分工**(並存,各有用途):
+
+| 按鈕 | 用途 | 內容 |
+|---|---|---|
+| **Word 簡報**(新) | 會前 / 會中,給長官看個案資料 | **一案一頁**,完整臨床欄位:診斷、現病史、過去病史、病理、檢查、治療、討論方向、癌指數 |
+| **DOCX 記錄**(原有) | 會後正式會議記錄 | 診斷、治療、**討論摘要、決策結論** |
+
+Word 簡報的欄位與順序**照抄原本 PPTX 個案頁**,確保長官拿到的內容跟以前一樣,只是換成 Word 格式。
+
+**實作方式:genDOCX 加 `mode` 參數,不另寫新函式**
+
+`genDOCX(mode)` — `'record'`(預設,原記錄)/ `'deck'`(新簡報)。兩者共用 `mkBlock` / `mkCaseHdr` / `mkSecHdr` 等視覺 helper。
+
+這樣做的理由:另寫一個 `genWordDeck()` 要複製約 200 行 helper,之後改 Word 樣式得改兩份、容易不一致。共用之後**改一處兩種產出自動同步**。而且 `genDOCX()` 無參數呼叫行為完全不變,現有「DOCX 記錄」按鈕零風險。
+
+**genPPTX 的處理**:程式碼**保留但移除 UI 入口**(依專案「極度謹慎刪除」原則,加 ⚠️ 停用註記說明可回復)。因為沒有人呼叫,PptxGenJS 不會被載入,不產生任何啟動成本。若確定不再需要,下次大改版可整段移除。
+
+**順手修一個小 bug**:舊版產完 DOCX 後把按鈕文字還原成 `DOCX 會議記錄`,但 HTML 上原本寫的是「DOCX 記錄」— 產一次後按鈕文字就變了。已改成還原正確文字。
+
+**驗證**:用 docx 7.8.2 實跑產出 — `<w:pageBreakBefore/>` 在 2 案時正確出現 1 次(一案一頁)、8 個欄位全在、確認不含會後的討論摘要/決策結論、flags 色塊正常。
+
+
+**摘要**:長官習慣 Word 不用 PPTX → 「PPTX 簡報」按鈕改「Word 簡報」。做法:genDOCX 加 mode 參數('record' 預設 / 'deck' 新增),共用 mkBlock/mkCaseHdr 等 helper 避免複製 200 行。deck = 會前個案簡報(一案一頁 pageBreakBefore,完整臨床欄位 診斷/現病史/過去病史/病理/檢查/治療/討論方向/癌指數,不出會後的討論摘要/決策結論)。genPPTX 保留但無 UI 入口。順修按鈕文字還原不一致
+
+
+**開發敘事**:V5.13.0 長官習慣 Word 不用 PPTX,「PPTX 簡報」按鈕改為「**Word 簡報**」。**關鍵設計決定**:不另寫新函式,而是 **genDOCX 加 `mode` 參數**(`'record'` 預設 = 原 DOCX 記錄 / `'deck'` = 新 Word 簡報),兩者共用 `mkBlock`/`mkCaseHdr`/`mkSecHdr` 等視覺 helper — 避免複製 200 行 helper 造成雙份維護,以後改 Word 樣式只要改一處兩種產出自動一致。`genDOCX()` 無參數呼叫行為完全不變(現有 DOCX 記錄按鈕零風險)。**兩種 Word 的分工**:記錄 = 會後正式文件(診斷/治療/**討論摘要/決策結論**);簡報 = 會前個案資料(**一案一頁** `pageBreakBefore`,完整臨床欄位 診斷/現病史/過去病史/病理/檢查/治療/討論方向/癌指數,**不出**會後才填的摘要決策)。欄位與順序照抄原 PPTX 個案頁,確保長官拿到的內容跟以前一樣只是換格式。**genPPTX 保留程式碼但移除 UI 入口**(依「極度謹慎刪除」原則,加 ⚠️ 停用註記說明可回復;因無人呼叫,PptxGenJS 不會載入無啟動成本)。**順修**:舊版 `btn.textContent='DOCX 會議記錄'` 跟 HTML 上的「DOCX 記錄」不一致 → 產一次後按鈕文字就變了,改用 `_btnLabel` 還原正確文字。**驗證**:用 docx 7.8.2 實跑產出 — `<w:pageBreakBefore/>` 2 案出現 1 次 ✓、8 個欄位全在 ✓、無討論摘要/決策結論 ✓、flags 色塊 3 個 ✓。屬 b+1。下版優先:長官實際看 Word 簡報後的版型回饋 + 錄音切割院內網路測試。
+
+
+---
+
+## V5.12.0
+
+**新功能:整合錄音切割台(AudioSplitter V3.3.0)**
+
+個管師錄下 MDT 會議後,要把錄音切成小段才能做逐字稿(檔案太大不能一次上傳)。本版把原本獨立的 AudioSplitter(1891 行 / 84KB)整合進 MDT,產出區「主力產出」加第 6 顆**「錄音切割」**按鈕,點了在 MDT 裡開彈窗使用。
+
+**整合方式:iframe 彈窗(不是直接內嵌)**
+
+整合前做了衝突盤點,發現直接內嵌會出事:
+
+| 項目 | 衝突 |
+|---|---|
+| 全域 `VERSION` | 🔴 AudioSplitter 有 `const VERSION="V3.3.0"` — 直接內嵌會**蓋掉 MDT 版號** |
+| CSS class | ⚠️ 12 個撞名,且是 `row`/`meta`/`primary`/`left`/`bar` 這種通用名 → 樣式互相污染 |
+| 函式名 / HTML id / localStorage | ✅ 0 撞名 |
+
+改用 iframe 後:**同源沙盒 → 變數與樣式完全隔離,但功能不受限**(檔案上傳、AudioContext、下載都正常),而且 AudioSplitter 未來可獨立升版,不用改一行。
+
+**順手修掉一個 CDN 風險**:AudioSplitter 原本用 `cdnjs.cloudflare.com` 載 lamejs(MP3 編碼)。但 MDT 檔頭註明「CDN:jsdelivr(院內確認可用)」— 表示院內只驗證過 jsdelivr,**cdnjs 不一定通得過**。已改成 `cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js`(路徑用 `npm pack` 驗證過套件內確實是 `package/lame.min.js`)。
+
+**其他實作細節**:
+- 主力產出 grid 從固定 5 欄改 `auto-fit minmax(112px,1fr)` — 固定 6 欄在小視窗會把按鈕文字擠爆
+- iframe `src` **延遲到第一次開啟才設**,避免拖慢 MDT 啟動
+- 關閉時**不清空 src** → 關掉再開,已載入的錄音與切點還在
+- 不做 ESC / 點背景關閉 → 避免作業中誤觸
+
+**⚠️ 打包規則改為六檔**:`AudioSplitter.html` 必須跟 `index.html` 放同一層,否則按鈕會開出空白頁。
+
+
+**摘要**:新功能:整合錄音切割台(AudioSplitter V3.3.0)。用 iframe 彈窗載入 AudioSplitter.html(因 VERSION 全域 + 12 個通用 CSS class 撞名,直接內嵌會壞);lamejs CDN 由 cdnjs 改 jsdelivr(對齊 MDT,院內確認可用);主力產出加第 6 顆「錄音切割」按鈕,grid 改 auto-fit 防窄螢幕擠爆;src 延遲載入。**打包規則改六檔**(多帶 AudioSplitter.html)
+
+
+**開發敘事**:V5.12.0 整合錄音切割台 — 個管師錄下 MDT 會議後要切成小段做逐字稿(檔案太大不能一次上傳),把獨立的 AudioSplitter V3.3.0(1891 行 / 84KB)整合進來。**整合方式選 iframe 彈窗而非直接內嵌**,因為整合前的衝突盤點發現:(1)🔴 AudioSplitter 有 `const VERSION="V3.3.0"`,直接內嵌會**蓋掉 MDT 版號**;(2)⚠️ 12 個 CSS class 撞名且都是 `row`/`meta`/`primary`/`left`/`bar` 這種通用名 → 樣式互相污染;(3)✅ 函式名 / HTML id / localStorage 都 0 撞名。iframe 是**同源沙盒**:變數與樣式完全隔離、功能不受限(檔案上傳/AudioContext/下載都正常)、AudioSplitter 可獨立升版不用改一行。**順手修 CDN 風險**:AudioSplitter 原用 `cdnjs.cloudflare.com` 載 lamejs,但 MDT 檔頭註明「CDN:jsdelivr(院內確認可用)」— 表示院內只驗證過 jsdelivr,cdnjs 不一定通。改成 `cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js`(路徑用 npm pack 驗證過,套件內確實是 `package/lame.min.js`)。**UI**:主力產出加第 6 顆「錄音切割」,grid 從固定 5 欄改 `auto-fit minmax(112px,1fr)` — 固定 6 欄在小視窗會把按鈕文字擠爆。**iframe src 延遲到第一次開啟才設**,避免拖慢 MDT 啟動;關閉不清空 src,讓個管師關掉再開時已載入的錄音與切點還在;不做 ESC/點背景關閉,避免作業中誤觸。**打包規則五檔→六檔**:`AudioSplitter.html` 必須跟 index.html 同層,否則按鈕開出空白。屬 b+1。下版優先:個管師實測錄音切割(院內網路能否載到 jsdelivr 的 lamejs)+ NAS 同步觀察期。
+
+
+---
+
+## V5.11.4
+
+**修 bug:檔名含括號時 HTML 影像頁破圖**
+
+個管師回報 HTML 投影片的影像頁**破圖**(只看到破圖 icon 和 `CT(20250401)` 這種文字),並實測發現**把檔名的括號拿掉就正常**。
+
+**根因**:讀取資料夾影像用的 `getFileHandle(檔名)`,對含 `(` `)` 等特殊字元的檔名(如 `CT(20250401).jpg`)可能直接比對失敗(瀏覽器/作業系統對檔名正規化的處理不一致)→ 檔案讀不到 → 圖片 `src` 變空字串 → 破圖(但 `alt` 文字還在,所以看得到檔名文字)。
+
+**修法**:加**退回機制** `_getFileByEnum()`:
+1. 先試 `getFileHandle(檔名)`(快)
+2. 失敗就**列舉整個資料夾**,逐一比對 `ent.name === 檔名`(穩)
+
+**兩處都修**:
+- `_loadImgsToCache`(產投影片時的影像預載)
+- `previewrelatedimg`(編輯畫面的「預覽」按鈕,原本也是直接 `getFileHandle`)
+
+順手把 3 處 `alt="..."` 改用 `escA()` 轉義(caption 若含引號會破壞 HTML 屬性)。
+
+**新增坑 #31**:File System Access API 的 `getFileHandle` 不是萬能,檔名含特殊字元要有列舉退回。個管師用「日期加括號」命名影像完全合理,不該要求他們改檔名遷就程式。
+
+
+**摘要**:修 bug(新坑 #31):檔名含括號(CT(20250401).jpg)時 getFileHandle 找不到檔 → HTML 影像頁破圖。加 _getFileByEnum() 退回機制:getFileHandle 失敗改列舉資料夾比對 ent.name。預載 + 預覽兩處都修;順手 3 處 alt 加 escA
+
+
+**開發敘事**:V5.11.4 修 bug:HTML 投影片影像頁破圖(新坑 #31)。個管師實測關鍵線索「**把檔名括號拿掉就正常**」→ 根因是 `getFileHandle(img.name)` 對含 `(` `)` 的檔名(`CT(20250401).jpg`)比對失敗(瀏覽器/OS 檔名正規化差異),讀不到檔 → `_pathImgCache` 空 → `src` 空字串 → 破圖(alt 文字仍在,所以看得到 `CT(20250401)` 但沒圖)。修法:加 `_getFileByEnum(dirHandle,fname)` 退回機制 — 先試 `getFileHandle`,失敗就**列舉資料夾** `dirHandle.values()` 逐一比對 `ent.name===fname`。**兩處都修**:`_loadImgsToCache`(產投影片預載)+ `previewrelatedimg`(編輯畫面預覽按鈕,原本也是直接 getFileHandle)。順手把 3 處 `alt` 改用 `escA()`(caption 含引號會破壞屬性)。**教訓**:File System Access API 的 `getFileHandle` 不是萬能,檔名含特殊字元要有列舉退回;個管師用日期加括號命名完全合理,不該要求他們改檔名遷就程式。屬 c+1。下版優先:錄音切割工具整合(AudioSplitter)+ NAS 同步觀察期。
+
+
+---
+
+## V5.11.3
+
+**修 bug:肝膽胰癌 HCC 個案的癌別標籤被誤標成「腎臟癌」**
+
+個管師回報:做**肝膽胰癌** HTML 投影片,個案診斷是 HCC(肝細胞癌),但右上角癌別標籤卻顯示**「腎臟癌」**。
+
+**根因(兩個問題疊加)**:
+- 系統有個 `getSubGroup()` 函式,是給**泌尿道癌**分子群用的(膀胱/攝護腺/腎臟/輸尿管/睪丸),它從診斷文字猜。但**沒限定癌別,對所有癌別都跑** → 肝膽胰癌也被拿去猜泌尿子群
+- 你的診斷含 `right adrenal metastasis`(右**腎上腺**轉移)。**adrenal(腎上腺)這個字裡面包含 renal**,被 `/renal/` 命中 → 判成腎臟癌。但腎上腺是內分泌器官,跟腎臟是不同器官
+- 標籤取值 `getSubGroup(c)||癌別名`,猜到腎臟癌就蓋掉真正的「肝膽胰癌」
+
+**修法(兩層防護)**:
+1. `getSubGroup` 只在**泌尿道癌**才啟用 — 其他癌別根本不去猜泌尿子群
+2. `renal` 判斷加邊界,排除 `adrenal`(腎上腺)、`腎上腺`
+
+**驗證**:regex 實測 — `right adrenal metastasis` 不再誤判(→ 正確顯示肝膽胰癌);真正的 `Renal cell carcinoma` / `腎細胞癌` / `kidney` 仍正確判腎臟癌。
+
+**新增坑 #30**:從自由文字猜結構化欄位很危險 — 醫學縮寫互相包含(adrenal⊃renal、hepatic⊂hepatocellular),regex 要加邊界,而且猜測要限定在相關範圍才跑。呼應 JSON 匯入「absent 欄位留空不推斷」的原則。
+
+
+**摘要**:修 bug(新坑 #30):做肝膽胰癌 HTML,HCC 診斷含「adrenal(腎上腺)」被 getSubGroup 的 /renal/ 誤判成腎臟癌標籤。根因 getSubGroup 沒限癌別(對所有癌別跑泌尿子群猜測)+ renal regex 太寬含 adrenal。修法:限 cid==='urology' 才啟用 + renal 排除 adrenal(腎(?!上腺))。regex 實測 adrenal 不誤判、真腎癌仍命中
+
+
+**開發敘事**:V5.11.3 修 bug:做肝膽胰癌 HTML,HCC 個案的癌別標籤卻顯示「腎臟癌」(新坑 #30)。根因兩個疊加:(1)`getSubGroup(c)`(泌尿道癌分子群用)**沒限定癌別、對所有癌別都跑**;(2)診斷 `right adrenal metastasis`(右腎上腺轉移)的 **adrenal 含 renal 字串**,被 `/renal/` 命中判成腎臟癌;(3)L6175 標籤 `getSubGroup(c)||ca.name` 猜到就蓋掉真癌別名,且即使 useSubGroups=false 不啟用分組頁,標籤仍單獨呼叫 getSubGroup。修法兩層防護:`getSubGroup` 開頭 `if(cid!=='urology')return null`(非泌尿道癌不猜)+ regex 排除 adrenal(`(^|[^d])renal` 且 `腎(?!上腺)`)。node 實測:right adrenal metastasis→null ✓、真 Renal cell carcinoma/kidney→仍腎臟癌 ✓。教訓:從自由文字猜結構化欄位很危險,醫學縮寫互相包含(adrenal⊃renal),regex 要加邊界且限定範圍才跑。屬 c+1。下版優先:個管師實測各癌別 HTML 標籤正確 + NAS 同步觀察期。
+
+
+---
+
+## V5.11.2
+
+**修 bug:特殊議程有輸入,但 HTML 投影片完全不顯示**
+
+個管師回報:輸入了「特殊議程」(如「115年品質指標選定」含 5 張影像),按 HTML 投影片產出後**完全沒有特殊議程**,而且沒有任何錯誤訊息。
+
+**根因(不在渲染,在上游資料預載)**:
+特殊議程的**渲染程式碼一直都在**。壞的是資料夾圖片的**預載迴圈寫死只跑 `cases`**:
+
+```js
+for(const c of (m.sections[cid]?.cases||[])){   // ← 只有個案討論
+```
+
+但特殊議程存在 `sections[cid].special`,不在 `cases` 裡 → `sp.images` 從沒被載進 `_pathImgCache`。
+
+**無聲失敗的連鎖**(這是最難查的地方):
+1. `src = img.dataUrl || _pathImgCache[key] || ''` → 空字串
+2. `if(!src) return ''` → 該圖被丟掉
+3. `.filter(Boolean)` → 圖陣列變空
+4. `if(!_sImgH.length) continue` → **整張投影片根本不產出**(不是空白頁,是沒有這頁)
+
+另外 `_needsFolder`(判斷要不要跳「授權資料夾」對話框)**也只檢查 cases** → 若只有特殊議程有資料夾圖片,**連授權都不會問**,cache 必定是空的。
+
+**修法**:
+1. 載圖邏輯抽成 `_loadImgsToCache(imgs)` 共用函式
+2. 預載迴圈 `cases` 跑完,再跑 `_sec.special`
+3. `_needsFolder` 加上 `_hasFolderImg(sp.images)` 檢查
+
+**新增坑 #29**:跟坑 #19(followupHTML 寫死 `'cases'`)同源 — **寫死區塊名稱**是本專案的慣性錯誤。凡是 `sections[cid].xxx` 的迭代,都要問「這裡該不該也跑 special / team / events / followups?」。加新資料區塊時要 grep 所有「按區塊迭代」的地方,不能只加渲染邏輯。
+
+
+**摘要**:修 bug(新坑 #29):特殊議程有圖但 HTML 投影片完全不產出。根因 buildSlidesHTMLOnly 的圖片預載迴圈寫死只跑 cases,special 的圖沒進 _pathImgCache → src 空 → 圖被濾掉 → 整張投影片 continue 掉。_needsFolder 也只檢查 cases 導致連授權都不問。修法:載圖抽 _loadImgsToCache() 共用函式 + 迴圈加跑 special + 授權檢查加 special
+
+
+**開發敘事**:V5.11.2 修 bug:特殊議程輸入了但 HTML 產出不顯示(新坑 #29)。根因不在渲染 — 特殊議程的渲染程式碼(L6316/6362/6425/6514)一直都在,壞的是**上游資料預載**:`buildSlidesHTMLOnly` 的資料夾圖片預載迴圈**寫死只跑 `cases`**,特殊議程存在 `sections[cid].special` 不在 cases 裡 → `sp.images` 從沒進 `_pathImgCache` → `src=img.dataUrl||_pathImgCache[key]||''` 空 → `if(!src)return''` 丟掉 → `filter(Boolean)` 變空 → `if(!_sImgH.length)continue` → **整張投影片不產出且無聲失敗**。而且 `_needsFolder`(要不要跳授權資料夾)**也只檢查 cases**,只有特殊議程有圖時連授權都不會問。修法:(1)載圖抽 `_loadImgsToCache()` 共用函式;(2)迴圈 cases 跑完再跑 `_sec.special`;(3)`_needsFolder` 加 special 檢查。**教訓**:跟坑 #19(followupHTML 寫死 'cases')同源 — **寫死區塊名稱**是本專案慣性錯誤,凡 `sections[cid].xxx` 迭代都要問「該不該也跑 special/team/events/followups?」。加新資料區塊時要 grep 所有「按區塊迭代」處,不能只加渲染。屬 c+1。下版優先:個管師實測特殊議程 HTML 產出 + NAS 同步觀察期。
+
+
+---
+
+## V5.11.1
+
+**會議小抄改一頁 5 案(原 8 案太擠)**
+
+個管師實用 V5.11.0 後回報:一頁 8 案**太多、太擠**。本版改成**一頁 5 案**,多出來的空間全部拿去加大書寫區:
+
+| 項目 | V5.11.0(8 案) | V5.11.1(5 案) |
+|---|---|---|
+| 每案高度 | 33mm | **52mm** |
+| 標題列 | 6mm | 7mm(病歷號/姓名 10pt→11pt) |
+| 每區行數 | 3 條 | **5 條** |
+| 每條行高 | 7mm | **7.5mm** |
+
+**頁面計算**:A4 297mm − 上下邊界 20mm = 277mm 可用;扣頁首約 12mm 剩 265mm;5 × 52mm = 260mm,有 5mm 餘裕不溢頁。`page-break-inside:avoid` 仍在,個案不會被切到跨頁。
+
+書寫容量實際變大很多:每案從「3 行 × 7mm」變「**5 行 × 7.5mm**」,兩區合計從 6 行變 **10 行**。
+
+
+**摘要**:會議小抄改一頁 5 案(V5.11.0 的 8 案個管師回報太擠):每案 33→52mm、標題列 6→7mm、每區書寫 3→5 條線、行高 7→7.5mm。頁面計算 277-12=265mm,5×52=260mm 不溢頁
+
+
+**開發敘事**:V5.11.1 會議小抄改一頁 5 案 — 個管師實用 V5.11.0 後回報「一頁 8 個太多」。改 5 案/頁,**多出的空間全拿去加大書寫區**(不是只把行拉長留白):每案 33→52mm、標題列 6→7mm(病歷號/姓名 10→11pt)、**每區書寫 3→5 條線**、行高 7→7.5mm,兩區合計從 6 行變 **10 行**。頁面計算:A4 277mm 可用 − 頁首 12mm = 265mm,5×52=260mm 留 5mm 餘裕不溢頁;`page-break-inside:avoid` 保留,個案不跨頁。8 案時會自動分成 2 頁(5+3)。屬 c+1(既有功能的版面調整)。**教訓**:紙本產出的「一頁幾個」很難用算的定案,要個管師實際印出來手寫過才知道 — V5.11.0 我算過 33mm 理論可行,但實用就是擠。下版優先:個管師再次實印回饋 + NAS 同步觀察期。
+
+
+---
+
+## V5.11.0
+
+**新功能:會議小抄(可列印 A4 / 存 PDF)**
+
+個管師需求:開會時要**手寫**記錄醫師講的內容,但每次都要自己抄病歷號、姓名 — 很煩。本版產一份「標題已印好、下面留空白格」的小抄,列印帶進會議室手寫,會後照著打進系統。
+
+**版面設計(A4 直印,一頁 8 案)**:
+- **標題列(精簡)**:編號 + 病歷號 + 姓名 + 性別年齡 + 討論原因標籤 + 主治醫師
+- **書寫區**:「討論摘要」(左 60%)/「決策結論」(右 40%)**左右並排**,各 3 條虛線格
+- 每案 33mm、`page-break-inside:avoid`(不會被切到跨頁)
+
+**為什麼兩區左右並排**:8 案/頁時每案只分到 3.2cm 高。若兩區上下疊,每條線只剩 5mm 手寫會擠;改成左右並排能用到 A4 的**寬度**,每條線維持 7mm,手寫舒服。
+
+**兩區對應系統欄位**:「討論摘要」「決策結論」就是會後填寫的兩個欄位 — 手寫時已經分好類,會後直接照打,不用再自己整理。
+
+**技術選擇:瀏覽器列印,不用 jsPDF**
+- 點「會議小抄」→ 開新分頁 → 自動跳列印對話框 → 可直接印,或選「另存為 PDF」
+- **不用 jsPDF 的原因**:中文 PDF 要嵌中文字型,檔案暴增數 MB 且容易變豆腐字;瀏覽器列印由系統處理中文,零負擔
+- 彈窗被擋時**自動退回下載 HTML**(開啟後 Ctrl+P 一樣能印/存 PDF)
+
+按鈕位置:產出區「主力產出」第 5 顆(LINE / HTML 投影片 / PPTX / DOCX / **會議小抄**)。
+
+
+**摘要**:新功能「會議小抄」genPrintSheet():可列印 A4 一頁 8 案(標題精簡 + 討論摘要左60%/決策結論右40% 各 3 條虛線格,每案 33mm 不跨頁)。走瀏覽器列印(window.open + 自動 print,可另存 PDF),不用 jsPDF 避免中文字型問題;彈窗被擋自動退回下載 HTML。主力產出加第 5 顆按鈕(grid 4→5 欄)
+
+
+**開發敘事**:V5.11.0 新功能「會議小抄」— 個管師開會要手寫記錄,但每次得自己抄病歷號姓名很煩。做 `genPrintSheet()`:A4 直印一頁 8 案,標題精簡(編號+病歷號+姓名+性別年齡+flags+主治醫師)已印好,下面留書寫格。**版面關鍵**:8 案/頁時每案僅 33mm 高,兩區若上下疊每條線只剩 5mm 難寫 → 改「討論摘要(左60%)/決策結論(右40%)」**左右並排**用到 A4 寬度,每條線維持 7mm。兩區刻意對應系統會後填寫欄位,手寫已分類、會後直接照打。**技術**:走瀏覽器列印(`window.open` 寫入 HTML + onload 自動 `window.print()`,列印對話框可「另存為 PDF」),**不用 jsPDF** — 中文 PDF 要嵌字型(檔案暴增數 MB / 易豆腐字),瀏覽器列印無此問題;彈窗被擋時自動退回下載 HTML(Ctrl+P 一樣可印)。`</script>` 用 `'</scr'+'ipt>'` 拆寫避免提早關閉。CSS 用 mm 單位 + `@page{size:A4 portrait;margin:10mm}` + `page-break-inside:avoid` 確保不跨頁。主力產出 grid 4→5 欄加「會議小抄」按鈕。屬 b+1(新功能,依 Kit V1.20.0 b 可超過 9)。下版優先:NAS 同步觀察期 + 個管師實機列印回饋(紙本手寫空間夠不夠)。
+
+
+---
+
+## V5.10.5
+
+**對齊 SELA Starter Kit V1.21.0(純文件層)**
+
+從 Kit V1.18.0 升到 V1.21.0(跨 3 版)。依坑 #40 四級分類選擇性對齊:
+
+**對齊的**:
+- 坑 #14 補 **V1.20.0 版號進位澄清** — Kit 明定「只有第三碼(c)逢十進位,第二碼(b)可超過 9」。所以 MDT 現在的 V5.10.x(b=10)是合法的,不需要進位到大版號。消除舊坑 #14「第三碼最大 9」被誤讀成「b 也最大 9」的歧義
+- 坑庫加 **#28**:Python `re.sub` 注入資料會解讀 `\u`(中文)、`\1` 等跳脫字元 → 改檔注入一律用 `str.replace`(對齊 Kit V1.21.0 坑 #63)。這是給維護者的提醒,非系統內問題
+- 九之三章節補 V1.19~1.21 新規範對應
+
+**已符合/不適用的**:
+- 坑 #59 inline SVG gradient id 衝突 — MDT 無 SVG gradient
+- 坑 #60 PWA blob manifest — MDT 用實體 manifest 檔
+- 坑 #61 UI 改名不動變數 — V5.8.7 已遵守
+- 坑 #62 刪欄位查依賴 — 呼應 MDT 謹慎刪除原則
+- references/ 三參考專案 — MDT 已成熟,不需要
+
+**升版**:只動 CLAUDE.md + SELA-handoff,不動程式 → c+1。
+
+
+**摘要**:對齊 SELA Starter Kit V1.21.0(從 V1.18.0,純文件層 c+1):坑 #14 補 V1.20.0 版號進位澄清(只有 c 逢十進位,b 可超過 9,MDT b=10 合法);坑庫加 #28(Python re.sub 注入用 str.replace,對齊 Kit #63,給維護者);九之三加 V1.19~1.21 新規範對應(#59/#60/#61/#62 已符合或不適用,references 不做)。不動程式
+
+
+**開發敘事**:V5.10.5 對齊 SELA Starter Kit V1.21.0(從 V1.18.0 跨 3 版,純文件層 c+1)。詳讀 Kit 全部規範後依坑 #40 四級分類選擇性對齊。**對齊的**:(1)坑 #14 補 V1.20.0 版號進位澄清 — Kit V1.20.0 明定「只有 c 逢十進位,b 可超過 9」,所以 MDT 現在 b=10(V5.10.x)完全合法,不需進位 a,消除坑 #14「第三碼最大 9」被誤讀成「b 也最大 9」的歧義;(2)坑庫加 #28 — Python re.sub 注入資料會解讀 `\u`/`\1` 跳脫(對齊 Kit V1.21.0 坑 #63),改檔注入一律用 str.replace,這是給維護者(我)的陷阱非系統內問題;(3)九之三加 V1.19~1.21 新規範對應。**已符合/不適用的**:坑 #59 inline SVG gradient(MDT 無 gradient)、#60 PWA blob manifest(MDT 用實體 manifest+無 SW)、#61 UI 改名不動變數(V5.8.7 已遵守)、#62 刪欄位查依賴(呼應謹慎刪除)、references 三參考專案(MDT 已成熟不需要)。**不動程式**(CLAUDE.md 1 檔=c+1)。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統(flags V5.9.4~5.9.5 已做大部分,可重評) + NAS 同步觀察期。
+
+
+---
+
+## V5.10.4
+
+**HTML 投影片個案標題微調：性別中文化 + 拉開間隔 + 放大標籤**
+
+個管師回報 HTML 投影片個案標題的兩個易讀性問題：
+
+**1. `M/74 ECOG 1` 改成更易讀**
+- 性別中文化：`M` → `男性`、`F` → `女性`
+- 年齡加單位：`74` → `74 歲`
+- 各段拉開間隔（性別年齡 / ECOG / 衰弱量表 之間用 em space 明顯分隔）
+- 結果：`男性，74 歲　　ECOG 1`
+- **只改 HTML 投影片**：新增 `caseDemoHTML()` 專用函式，DOCX/PPTX 仍用簡潔的 `M/74 ECOG 1`（投影幕/文件空間有限，保持精簡）
+
+**2. 討論原因標籤放大**
+- 字級 `.5em` → `.62em`、padding `2px 9px` → `3px 12px`、圓角加大
+- 「首次討論」「複雜案例」「多重共病」等標籤更醒目好讀
+
+只動 HTML 投影片主個案標題，前期追蹤標題、DOCX、PPTX 不受影響。
+
+
+**摘要**:HTML 投影片個案標題微調:(1)新增 caseDemoHTML() 性別中文化(男性/女性)+ 年齡加「歲」+ em space 拉開間隔(只 HTML,DOCX/PPTX 仍用 caseDemo 簡潔版);(2)flags 標籤放大 .5em→.62em + padding 加大。只動主個案標題
+
+
+**開發敘事**:V5.10.4 HTML 投影片個案標題微調 — 個管師回報易讀性兩點:(1)`M/74 ECOG 1` 改「男性，74 歲　　ECOG 1」(性別中文化 + 年齡加歲 + em space U+2003 ×2 拉開段間);(2)flags 討論原因標籤放大(.5em→.62em + padding 2px9px→3px12px + 圓角加大)。**關鍵**:新增 HTML 專用 `caseDemoHTML(c)`,**不動 caseDemo**(DOCX/PPTX 投影幕/文件空間有限,仍用簡潔 M/74 ECOG 1)。只改主個案標題(L6146-6147),前期追蹤標題/DOCX/PPTX 不受影響。屬 c+1。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統(flags V5.9.4~5.9.5 已做大部分,可重評) + NAS 同步觀察期。
+
+
+---
+
+## V5.10.3
+
+**修姓名遮蔽 bug：4 字以上不再被壓成 3 字**
+
+個管師回報：病人姓名 4 個字時，系統只遮中間一個字，強迫顯示成 3 個字（如「王大明華」變「王○華」），應該要能正確顯示 4 字遮蔽。
+
+**根因**：`maskName` 舊邏輯是 `首字 + ○ + 尾字`，不管原本幾個字都壓成 3 字。
+
+**修法**：改成「首字 + (中間字數個○) + 尾字」，保留原姓名長度：
+- 1 字：不遮（如「王」）
+- 2 字：「王○」
+- 3 字：「王○明」（不變）
+- **4 字：「王○○華」**（修正，原本錯成「王○華」）
+- 5 字：「司○○○明」
+
+複姓 4 字（如「歐陽大明」→「歐○○明」）也正確。1~3 字行為跟以前完全一致（向後相容，舊資料顯示不變）。
+
+影響範圍：所有用到 maskName 的地方（HTML 投影片、DOCX、PPTX 個案標題的姓名遮蔽）一次到位。
+
+
+**摘要**:修姓名遮蔽 bug:maskName 舊邏輯「首+○+尾」把 4 字以上壓成 3 字(王大明華→王○華)。改「首+(中間字數個○)+尾」保留長度(王○○華)。1~3 字向後相容。影響 HTML/DOCX/PPTX 所有姓名遮蔽
+
+
+**開發敘事**:V5.10.3 修姓名遮蔽 bug — 個管師回報病人 4 個字時系統只遮中間一個字、強迫顯示成 3 字(王大明華→王○華)。根因:maskName 舊邏輯 `n[0]+'○'+n[n.length-1]` 不管幾字都壓成「首+○+尾」3 字。修法:改 `n[0]+'○'.repeat(n.length-2)+n[n.length-1]` 保留原姓名長度(王○○華、司○○○明)。1~3 字行為向後相容不變。影響所有用 maskName 的地方(HTML 投影片/DOCX/PPTX 個案標題姓名遮蔽)一次到位。屬 c+1 bug fix。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統(註:flags 標籤 V5.9.4~5.9.5 已做大部分,可重新評估) + NAS 同步觀察期。
+
+
+---
+
+## V5.10.2
+
+**對齊 SELA Starter Kit V1.18.0（純文件層）**
+
+從 Kit V1.15.0 升到 V1.18.0（跨 3 版）。詳讀 Kit 全部規範後，依坑 #40「鐵律/建議/順便/不做」四級分類做選擇性對齊（MDT 是成熟專案，不適合全套重做）。
+
+**對齊的**：
+- CLAUDE.md 加 **theme-color「N 處真相清單」**（依 Kit 坑 #42）— MDT 換主題色時有 5 處要一起改：CSS `:root`、PPTX 的 JS 色票、DOCX 的 JS 色票、HTML `theme-color`、webmanifest。比 Kit 範例多一處，因為 PPTX/DOCX 各有獨立配色
+- 加 **handoff 評估紀律**（Kit 鐵律 #0）
+- Kit 對齊紀錄更新到 V1.18.0 + 記錄不適用的 Kit 坑（醫療藥物給付類不適用，因 MDT 是會議管理非藥物決策工具）
+
+**不做的**：
+- HTML 分享子資料夾保持 `slides`（Kit 文件寫 `Share`，但 MDT 已用 `slides` 上線，改了舊連結會失效，屬「不做」級並回流建議 Kit 更正）
+
+**升版**：只動 2 個文件檔（CLAUDE.md + SELA-handoff.md），不動程式 → c+1。
+
+
+**摘要**:對齊 SELA Starter Kit V1.18.0(從 V1.15.0,純文件層 c+1):CLAUDE.md 加 theme-color「N 處真相清單」(依坑 #42,MDT 5 處)+ handoff 評估紀律(鐵律 #0)+ Kit 對齊紀錄升 V1.18.0;SELA-handoff 加四級分類對齊報告 + slides/Share 回流建議。HTML 分享子資料夾保持 slides(坑 #40「不做」級)。不動程式
+
+
+**開發敘事**:V5.10.2 對齊 SELA Starter Kit V1.18.0(從 V1.15.0 跨 3 版,純文件層 c+1)。詳讀 Kit 全部規範後依坑 #40「鐵律/建議/順便/不做」四級分類做選擇性對齊。**對齊的**:(1)CLAUDE.md 加 theme-color「N 處真相清單」(依坑 #42,MDT 共 5 處 — CSS :root、PPTX 的 JS 色票、DOCX 的 JS 色票、HTML theme-color、webmanifest;比 Kit 範例多一處因為 PPTX/DOCX 各有獨立配色系統);(2)加 handoff 評估紀律(鐵律 #0 — 完成版本前走評估,符合條件就產出否則明寫跳過理由);(3)Kit 對齊紀錄升 V1.18.0 + 記錄不適用的 Kit 坑(醫療章 #51/#52 藥物給付不適用,因 MDT 是會議管理非藥物決策)。**不做的**:HTML 分享子資料夾保持 `slides`(Kit §8 寫 Share,但 MDT 已用 slides 上線,改了舊連結失效,屬坑 #40「✗ 不做」級,回流建議 Kit 更正)。SELA-handoff 加四級分類對齊報告 + slides/Share 回流建議。**不動程式**(2 文件檔 = c+1)。下版優先:「(8-其他特殊複雜個案)」討論原因快速標籤系統 + NAS 同步觀察期。
+
+
+---
+
+## V5.10.1
+
+**JSON 個案匯入/匯出欄位盤點 — 補齊缺漏,三方對齊**
+
+全面盤點「匯出 `exportCaseJSON` / 匯入 `importCaseJSON` / AI 提示詞 `genImportPrompt`」三方的欄位對應,發現缺漏並補齊。
+
+**發現的缺漏**:
+- **`flags`（討論原因標籤,V5.9.4 新增）**:🔴 三方全缺 — 匯出沒帶、匯入沒讀、prompt 沒定義。個案做 JSON 交換時標籤會遺失
+- **`doctors`/`doctor`（主治醫師）**:🟠 匯出漏帶（匯入有讀）+ prompt 沒定義 — 匯出再匯入會掉主治醫師,AI 轉換也不會產生
+- **`pathologyImages`/`timeline`/`note`**:🟡 匯出漏帶（匯入有讀）— 往返會掉這些次要欄位
+
+**修法**:
+- 匯出補 6 欄:doctors、doctor、flags、pathologyImages、timeline、note
+- 匯入補 1 欄:flags（其餘匯入本來就有讀）
+- prompt 補 2 欄定義:doctors（AI 可填主治醫師）、flags（**固定輸出空陣列,不推斷** — 討論原因是個管師主觀臨床判斷,不該 AI 自動標,留給個管師會議時手動勾）
+
+**驗證**:往返一致性測試 — 匯出 27 個資料欄位,匯入全部都讀,**無任何掉資料欄位**。
+
+**設計判斷（flags 為何不讓 AI 判斷）**:topics 是看資料客觀對應（有 exams 就勾影像討論）,可自動化;但 flags（緊急/復發轉移等）是主觀臨床重要性判斷,從病歷文字推斷易誤標,違反系統「prompt 嚴格不推斷」原則,故 prompt 定義但固定留空。
+
+
+**摘要**:JSON 個案匯入/匯出欄位盤點補齊:匯出補 doctors/doctor/flags/pathologyImages/timeline/note(原本漏帶往返掉資料);匯入補 flags;prompt 補 doctors(AI 可填)+flags(固定留空不推斷)。往返一致性驗證無掉資料
+
+
+**開發敘事**:V5.10.1 JSON 個案匯入/匯出欄位盤點補齊 — 全面交叉比對「匯出 exportCaseJSON / 匯入 importCaseJSON / AI 提示詞 genImportPrompt」三方欄位對應,找出缺漏:**(1)flags 討論原因標籤(V5.9.4 新增)三方全缺** — 匯出沒帶、匯入沒讀、prompt 沒定義,JSON 交換掉標籤;**(2)doctors/doctor 主治醫師匯出漏帶**(匯入有讀)+ prompt 沒定義,匯出再匯入掉醫師;**(3)pathologyImages/timeline/note 匯出漏帶**(匯入有讀)往返掉資料。修法:匯出補 6 欄、匯入補 flags、prompt 補 doctors(AI 可填)+flags(**固定輸出空陣列不推斷** — 討論原因是個管師主觀臨床判斷,違反「prompt 嚴格不推斷」原則,留手動勾)。往返一致性驗證:匯出 27 個資料欄位匯入全讀,無掉資料。**教訓**:新增個案欄位(如 V5.9.4 flags)時,必須同步檢查匯出/匯入/prompt 三方,否則新欄位無法透過 JSON 交換 — 這是「單一真相 schema」要管三個地方對齊的延伸(類似 CLAUDE.md 章法二的業務對映表)。
+
+
+---
+
+## V5.10.0
+
+**PPTX 簡報全面升級 — 版型 / 配色 / 字級 / 章節頁全部重做**
+
+個管師要求「系統內建 PPTX 每次按都變漂亮」。完整重寫 `genPPTX`（保留所有區塊 + 溢位換頁邏輯），套用全新設計系統。
+
+**配色系統**（霧藍 DNA + 清楚層次）：
+- 主色 `#3A4550` 深霧灰藍（標題列、章節主色）
+- 強調 `#4A7C8E` 霧藍（小標、章節色條）
+- 輔色 `#7A8C6E` 橄欖綠（決策結論、章節變化）
+- 背景 `#F4F6F8`、卡片白、文字深 `#2C3540`
+
+**版型升級**：
+- **標題頁**：深色全幅 + 大襯線標題（32pt）+ 同心方塊裝飾 + 霧藍分隔線（原本是左細條白底）
+- **章節頁**：左深色大色塊 + 超大編號（01/02）+ 橄欖綠細條 + 大癌別名（38pt），有「翻章節」儀式感
+- **個案主頁**：白卡片版型（左淺色標籤欄 + 右白卡內容欄細框），字級放大（內文 11.5pt，原 10.5pt），**標題列下方加討論原因標籤**（色塊膠囊，跟 HTML/DOCX 一致）
+- **前期追蹤頁**：白卡片版型重做（原本是深色格子）
+- **討論記錄頁**：雙色卡片（摘要霧藍左條白卡 / 決策橄欖綠左條淺綠卡）
+- **影像頁**：深色底質感提升（#1A2129）
+
+**保留的關鍵邏輯**：個案主頁的溢位自動換頁（內容超過一頁自動開續頁 + 續頁標題列）、結構化資料（pathologies/exams/treatments/markers）+ 舊字串 fallback、討論議題 chips。
+
+**順帶修正**：個案主頁「討論」標籤改成「討論方向」（對齊 V5.8.7 全系統改名,PPTX 之前漏改）；治療改成「日期 名稱 / 換行縮排內容」格式（跟 DOCX V5.8.5 一致）。
+
+**三個產出標籤狀態**：HTML ✓（V5.9.4）、DOCX ✓（V5.9.5）、PPTX ✓（V5.10.0）— 全部一致。
+
+
+**摘要**:PPTX 簡報全面升級:完整重寫 genPPTX,新配色系統(深霧灰藍/霧藍/橄欖綠)+ 版型重做(標題頁深色全幅、章節頁大編號、個案頁白卡片、討論記錄雙色卡)+ 字級放大 + 加討論原因標籤。保留溢位換頁。順修「討論」→「討論方向」+ 治療縮排格式
+
+
+---
+
+## V5.9.5
+
+**DOCX 會議記錄也顯示討論原因標籤**
+
+V5.9.4 加了 5 個討論原因標籤並修好 HTML 投影片顯示，但 DOCX 仍未帶。個管師確認「會議記錄也要看得到」，本版補上。
+
+**做法**：DOCX 個案標題列（深色橫條，原本是「編號 病歷號 姓名 年齡性別 VS 醫師」）尾端加討論原因標籤，用色塊文字（該標籤顏色當底色 + 白字 + 細空格模擬膠囊），配色跟 HTML / 編輯介面一致。
+
+**設計選擇**：標籤放標題列同一行（非獨立一行），因為標籤是個案身分的延伸屬性，同行語意連貫，且不增加每個個案的行高（會議記錄常有 10+ 個案）。
+
+**範圍**：HTML 投影片 + DOCX 記錄都顯示標籤。PPTX 簡報仍不帶（個管師未要求）。
+
+
+**摘要**:DOCX 會議記錄個案標題列尾端加討論原因標籤（色塊文字 shading,配色跟 HTML 一致）。範圍:HTML+DOCX 都顯示,PPTX 仍不帶
+
+
+---
+
+## V5.9.4
+
+**個案討論原因標籤:加 2 個 + 修 HTML 投影片沒顯示的 bug**
+
+個管師要求在原本 3 個討論原因標籤（首次討論、複雜案例、緊急）外，再加 **復發轉移** + **多重共病**，並回報「選完標籤但產生的 HTML 投影片沒出現這些 tag」。
+
+**改動 1：標籤從 3 個 → 5 個**
+- 新增「復發轉移」（紫 #8E44AD）、「多重共病」（墨綠 #2C7A6B）
+- 統一成全域 `FLAG_LIST` 陣列 + `flagColor(fl)` 函式，3 處渲染（編輯卡片徽章 / 選擇器 / 點擊 toggle）都改用，避免配色散落不一致
+
+**改動 2：修 bug — HTML 投影片沒顯示標籤**
+- 根因：投影片產出（`buildSlidesHTMLOnly`）完全沒讀 `c.flags`，所以選了標籤也不會出現在投影片
+- 修法：個案標題（病歷號 + 姓名後）加 flags 標籤渲染，實心小膠囊，配色跟編輯介面一致
+
+**注意**：DOCX 記錄、PPTX 簡報目前**仍未帶 flags**（個管師本次只要求 HTML；正式文件要不要顯示標籤待確認）。
+
+
+**摘要**:個案討論原因標籤加 2 個（復發轉移/多重共病）共 5 個 + 修 bug（投影片沒讀 c.flags 所以選了不顯示）。統一 FLAG_LIST + flagColor helper,3 處渲染改用。DOCX/PPTX 暫未加 flags（待確認）
+
+
+---
+
+## V5.9.3
+
+**產出區分組分層 — 功能不刪只重排**
+
+個管師回報產出區 11 個按鈕平鋪太擠。分析後確認**每個功能都不同、沒有真正重複**,問題是「沒有分層」。改成兩組:
+
+**主力產出**(4 個常用,每場會議必用):
+LINE 通知、HTML 投影片、PPTX 簡報、DOCX 記錄
+
+**資料交換與分享**(加分組標題,預設展開,跟舊版一樣都看得到):
+HTML 分享、Excel 匯出、Excel 匯入、JSON 批次匯入、JSON 個案匯出、JSON 完整匯出、AI 匯入提示詞(收在最底,個管師少用)
+
+**重排原則**:
+- HTML 分享(需 GitHub token,進階)從主力移到資料區
+- AI 匯入提示詞(只有開發者 Sela 用)收到資料區最底
+- 11 個按鈕全保留,onclick/id 一個沒動,純視覺重排
+- 加兩個分組標題 + 一條分隔線,讓「主力」跟「資料交換」一眼分得開
+
+**按鈕用途分析**(確認非重複):
+- HTML 投影片 vs HTML 分享:下載本機 vs 上傳 GitHub 產連結(共用核心)
+- JSON 完整匯出 vs 個案匯出:整場會議備份 vs 個案臨床資料交換
+- Excel vs JSON 匯出:同資料不同格式,個管師依習慣選
+
+
+**摘要**:產出區分組分層:11 按鈕分「主力產出(LINE/HTML投影片/PPTX/DOCX)」+「資料交換與分享(HTML分享/Excel匯出入/JSON匯入出/AI提示詞)」兩組,加分組標題。功能不刪、onclick/id 全保留,純重排
+
+
+---
+
+## V5.9.2
+
+**修 logo 白邊 — favicon 套組改透明圓角**
+
+個管師回報 V5.9.1 後 sidebar/登入頁的 MDT logo「圖示不是透明邊角,會有很醜的白邊」。
+
+**根因**:Gemini 生圖輸出的 PNG 是 **RGB 模式(無 alpha 透明通道)**,圓角方形 logo 的**四個角是白色**(生圖時的白背景)。在深色 sidebar 上,方形圖的四個白角露出來 = 白邊。
+
+**修法**:用 Pillow 重新產 favicon 套組,加 18%(app icon 標準)圓角遮罩,**圓角外切成透明**:
+- favicon-16x16 / 32x32 / android-chrome 192/512 → RGBA 透明圓角
+- favicon.ico(multi-res 16/32/48)→ 透明圓角
+- **apple-touch-icon 特例**:iOS 會自己加圓角遮罩,所以做成「**霧藍底滿版不透明**」(避免 iOS 加圓角時透明區變黑)
+
+**關鍵知識**:
+- 不能簡單「白色 → 透明」去背,因為 logo 主體(身影/桌面/MDT 字)也是白色,會被誤刪
+- 正解是「圓角遮罩」:只把圓角**外**變透明,圓角**內**全部內容保留
+- apple-touch-icon 用霧藍底不透明(iOS app icon 規範)
+
+**坑 #27 新增**:AI 生圖的 logo PNG 常是 RGB 白底,當 app icon 用在深色背景會露白角。要嘛用圓角遮罩切透明,要嘛在生圖 prompt 就要求透明背景。
+
+
+**摘要**:修 logo 白邊:Gemini 生圖 PNG 是 RGB 白底,圓角方形四角露白。用 Pillow 圓角遮罩(18%)切透明重產 favicon 套組;apple-touch-icon 特例做霧藍底滿版(iOS 自加圓角)。新坑 #27
+
+
+---
+
+## V5.9.1
+
+**修 V5.9.0 出貨後個管師回報的 2 個 bug**
+
+**Bug 1: 頁面左上角浮出一個 `>` 字元**
+- 截圖頂端有個明顯的 `>` 飄在頁面外
+- 根因:L609 `</style>>` — `</style>` 後**多打了一個 `>`**(V5.8.8 加 `<meta name="theme-color">` 時 str_replace 編輯意外加進去)
+- 修法:`</style>>` → `</style>`
+
+**Bug 2: 系統內 UI 仍顯示 SELA logo 而非 MDT logo**
+- 個管師回報「最新版沒有出現子程式的 logo」— 截圖左上角 sidebar 還是 SELA 橘色框
+- 根因:V5.9.0 換 favicon 套組但**漏改兩處 inline base64 SELA JPEG**:
+  - L616:登入頁 `sh-login` 的 logo(56×56,margin-bottom:28px)
+  - L655:sidebar `.sb-logo` 的 logo(26×26,gap:9px)
+- 這兩處用 `<img src="data:image/png;base64,/9j/4AAQ...">` 寫死,**不引用 favicon/ 內任何檔案**,所以 V5.9.0 換 favicon 完全沒影響
+- 修法:兩處 `src` 改成 `favicon/android-chrome-192x192.png`(MDT logo PNG),style 保留(56×56 跟 26×26 不變)
+- **附加效果**:檔案瘦身 ~10KB(兩個 5.4KB base64 拿掉)
+
+**坑 #26 新增**:**換主 logo 時不能只換 favicon/ 套組**,必須 grep 整個 index.html 找出**所有 inline base64 圖片**跟 **內嵌 SVG**,逐處改到。V5.9.0 漏改這兩處,個管師看到「外面分頁圖是 MDT,但開系統還是 SELA」的不一致狀態。
+
+
+**摘要**:修 V5.9.0 出貨後 2 個 bug:(1)L609 多餘 `>` 字元(V5.8.8 編輯意外打進),(2)兩處 inline base64 SELA JPEG(L616 登入頁 + L655 sidebar)漏改 → 改引用 `favicon/android-chrome-192x192.png`。新坑 #26:換主 logo 必須 grep inline base64 跟 SVG
+
+
+---
+
+## V5.9.0
+
+**換 MDT 主 logo — 雙軌品牌**(MDT 主身分 + SELA 平台微標)
+
+依 Starter Kit V1.15.0 §14.3 範本 B(醫療專業型)為 MDT 設計專屬 logo,個管師用 Gemini 生圖完成:**俯視圓桌 + 6 個身影圍坐 + 中心個案焦點 + MDT 字**,#5A7A8B 北歐霧藍背景。
+
+**整合範圍(V1.15.0 §9 雙軌共存規則)**:
+
+| 用途 | V5.8.x 之前 | V5.9.0 |
+|---|---|---|
+| favicon.ico / 16x16 / 32x32 | SELA 橘壁虎 | **MDT logo**(圍桌 + 個案焦點)|
+| apple-touch-icon 180px | SELA | **MDT** |
+| android-chrome 192/512 | SELA | **MDT** |
+| 右下角微標(`sela-credit`)| `favicon-32x32.png` | **改引用 `favicon/sela.svg`**(SELA 品牌仍存在)|
+| `<head>` SVG icon link | `sela.svg` | **移除**(避免 SVG/PNG 不一致;PNG 套組已足夠)|
+| theme-color | `#5A7A8B` | 不動 |
+| `mdt-1024.png` | — | **新增**(高解析備用)|
+
+**安全網**:`favicon-sela-backup/` 目錄保留原 SELA favicon 套組(萬一需要回退)。
+
+**設計理念**:
+- 主體「圍桌 + 中心焦點」直接譬喻 MDT(Multi-Disciplinary Team)精神:**個案在中心、多專科環繞**
+- 跟 SELA 主 logo「壁虎守護」的「守護一個對象」精神同源(DNA 繼承)
+- 不繼承壁虎(醫療型不適合,V1.15.0 §14.3 規定)
+- 16×16 favicon 仍可辨識「圍著一個圓」的輪廓
+
+**設計檢核**(V1.15.0 §15):13 項中 11 ✓ / 1 需測試 / 1 不適用 — 設計優秀
+
+
+**摘要**:換 MDT 主 logo:Gemini 生圖(圍桌+6 身影+中心焦點),依 Kit V1.15.0 §14.3 範本 B 醫療專業型設計。雙軌共存:favicon/PWA = MDT,右下角微標仍 SELA(改引用 sela.svg)。產出 5 個 PNG 套組 + ico + 1024 備用
+
+
+---
+
+## V5.8.8
+
+**對齊 SELA Starter Kit V1.15.0**(從 V1.7.1 跳 8 個小版本):個管師交付新版 Starter Kit,主要對齊三件事。
+
+**1. theme-color 改北歐霧藍 `#5A7A8B`**(V1.8.1 起的新規範)
+- Kit V1.8.1 起區分「**品牌色**」(SELA 橘 #F36825,logo 用,不變)vs「**介面色**」(theme-color、PWA 啟動畫面,依 app 主題)
+- 醫療型 app 預設 `#5A7A8B` 北歐霧藍(V1.15.0 §14.3),避免橘色帶來的「警示/警告」聯想
+- `<head>` 的 `<meta name="theme-color">` 跟 `site.webmanifest` 的 `theme_color` 同步改
+
+**2. 加 `favicon/sela.svg` + `<head>` SVG icon link**
+- 從 Starter Kit `logo/svg/sela.svg` 拷貝進 `favicon/`
+- `<head>` 加 `<link rel="icon" type="image/svg+xml" href="favicon/sela.svg">` 放在 ico/png 之前 — 現代瀏覽器優先 SVG,任何大小都銳利
+- favicon/ 從 7 個檔案 → 8 個
+
+**3. SELA-handoff.md 更新 Kit 版本標記 + 加 V1.15.0 對齊紀錄**
+- Kit 版本標記從 V1.7.1 → V1.15.0
+- 加對齊表:已對齊的 3 項 + 不複製進 MDT 的 2 項(子 app logo prompt 範本、共通檢核清單,需要時去 Starter Kit 取)
+- 理由:MDT 的 CLAUDE.md 章法第十條「上下文密度檢查 — 不會被下次 Claude 引用的段落要砍」 → 子 app prompt 對 MDT 後續會議無用,留指引即可
+
+**logo 本身不變**(品牌色鐵律):仍是 SELA 橘 + 白壁虎。**只變介面色**。
+**系統 UI 不變**:MDT UI 是霧藍 / 灰色系(`--fog-*`),原本就跟 SELA 橘無關,改 theme-color 不會造成 UI 不一致。
+
+
+**摘要**:對齊 SELA Starter Kit V1.15.0(從 V1.7.1):theme-color `#F36825`→`#5A7A8B`(品牌色 vs 介面色分離,醫療型預設北歐霧藍);加 `favicon/sela.svg` + `<head>` SVG icon link;SELA-handoff 更新對齊紀錄
+
+
+---
+
+## V5.8.7
+
+**「討論要點」全系統一律改名「討論方向」**:V5.8.6 個管師回報「醫療小組三欄(討論要點/摘要/決策)名稱容易搞混」,建議改成更明確的命名:
+
+| 舊 | 新 | 角色定位 |
+|---|---|---|
+| 討論要點 | **討論方向** | 會議要討論什麼方向(會前填,提醒個管師跟進什麼) |
+| 摘要 | 摘要 | 會議當下/會後的摘要 |
+| 決策 | 決策 | 結論(會後填) |
+
+**改名範圍** — 全系統 7 處 + placeholder:
+- L3325:個案討論編輯介面 label
+- L3362:醫療小組/必要事件編輯介面 label + placeholder(`本次MDT討論的主要議題` → `本次MDT要討論的方向`)
+- L3376:teamViewHTML(view 模式)顯示
+- L6208:HTML 投影片 sections 標籤
+- L6800:**CSV 匯入向後相容**:`r['討論方向']||r['討論要點']||r['討論']` 三層 fallback
+- L6912:CSV 匯出欄位名稱
+- L7093:AI prompt 說明
+
+**程式變數 `discussion` 完全不動**,只改顯示文字。**舊 CSV 匯入仍能正確讀取**(`r['討論要點']` fallback)。
+
+**DOCX 不加 discussion 欄**(個管師決定):「討論方向」是個管師提醒自己「會議要討論什麼」的會前筆記,不需要在會議記錄出現。DOCX 醫療小組 / 必要事件仍維持兩欄(討論摘要 + 決策)。
+
+
+**摘要**:「討論要點」全系統 7 處改名「討論方向」(個案討論/醫療小組/必要事件/CSV/投影片/AI prompt 一致);CSV 匯入向後相容(舊「討論要點」欄位 fallback);DOCX 不動,仍只出 2 欄(摘要+決策)
+
+
+---
+
+## V5.8.6
+
+**修坑 #19(累積 10+ 版未修的歷史坑) — 前期追蹤改名同步寫到個案討論**:V5.8.5 後個管師回報「改前期追蹤的名字,實際上同步改到個案討論,而且 DOCX 上前期追蹤完全沒名字沒病歷號」。
+
+**根因(坑 #19,V5.0.0 發現)**:`followupHTML(cid, i, d, type='followups')` 函數內 5 處 `upd` 呼叫都**寫死 `'cases'`** 而不是用 `${type}`。`upd(cid, type, i, field, value)` 是動態派發到 `S.meeting.sections[cid][type][i]`,收到 `'cases'` 就去 cases 陣列存取。導致:
+- `cases[i]` 不存在 → 編輯靜默失敗(個管師以為有存)
+- `cases[i]` 存在 → **改到個案討論第 i 個的同欄位,資料污染**
+- followups[i] 從沒被更新 → DOCX 內 f.chartNo / f.name 取出空值
+
+**修法**:L3336 + L3340 兩行內 5 處 `upd('${cid}','cases',${i},...)` → `upd('${cid}','${type}',${i},...)`。涉及欄位:chartNo(2 處)、name、prevDate、note。Cases editor 內的 13 處 `'cases'` 維持不動(那是正確的寫死)。
+
+**驗證**:Node syntax check + 桌面演練(改前期追蹤名字 → 寫到 sec.followups[0].name,cases 不受影響)。坑 #19 標記為 ✅ V5.8.6 修。
+
+
+**摘要**:修坑 #19(累積 10+ 版未修):followupHTML 內 L3336+L3340 五處 `upd('${cid}','cases',${i},...)` 寫死 → 改 `'${type}'`。前期追蹤改名不再污染個案討論,DOCX 名字病歷號正常出現
+
+
+---
+
+## V5.8.5
+
+**DOCX 治療欄樣式升級 — 標題行灰底粗體 + 移除編號 + 詳細內容縮排**:V5.8.4 後個管師上傳截圖,手動標記想要的治療樣式 — 治療標題行(日期 + 治療名稱 + `:`)灰底粗體,後面詳細內容**不要前置編號**(`[1] [2] [3]` 多餘)。
+
+**設計細節**:
+- 治療標題行樣式:`(date) name :` 整行 → 灰底(`C.bg #F5F7F8`)+ 粗體
+- 詳細內容:縮排 8pt(twip 160)讓視覺層次清楚
+- **去掉編號**:從 `[1] (date) name : content` → `(date) name :\n    content`(2 行)
+- 灰底選 `C.bg` 而非 `C.dark`,**避免跟決策結論的深色標籤搶眼球**(決策結論才是最高優先級)
+
+**`mkBlock` 函式擴充**:加 `opts.lines`(array of `{text, shaded, bold, indent}`)— 如果有給就走「每行獨立樣式」邏輯,否則走舊的「content 字串 + `\n` 分割,每行同樣式」邏輯。**非破壞性,舊呼叫不影響**。
+
+**舊資料相容**:`c.treatment`(舊版單一字串欄位)走原邏輯,只有 `c.treatments`(陣列)走新樣式。
+
+XML 驗證:3 個治療標題灰底 + 3 個詳細內容縮排 160 twips ✓
+
+
+**摘要**:DOCX 治療欄樣式升級:標題行 `(date) name :` 灰底粗體、詳細內容縮排 8pt、去掉 `[i]` 編號;mkBlock 擴充 `opts.lines` 支援每行獨立樣式
+
+
+---
+
+## V5.8.4
+
+**DOCX 視覺微調 × 3(個管師回報 V5.8.3 後可優化點)**:V5.8.3 正確修好 layout 後,個管師回報 3 個優化點:
+
+**1. mkCaseHdr 標題列右側凸出 → 跟 mkBlock 寬度對齊**
+- V5.8.3 mkCaseHdr 仍用 `WidthType.PERCENTAGE` 100%,跟 mkBlock 的 DXA 9000 twips 不對齊,視覺上標題列右邊凸出一小段
+- 修法:mkCaseHdr 也改用 `WidthType.DXA` 9000 twips + `columnWidths` + `layout=FIXED`,跟 mkBlock 完全對齊
+
+**2. mkBlock cell 加垂直置中**
+- 之前標籤跟內容預設靠頂部對齊,內容多行時標籤頂在最上面,視覺感不對等
+- 修法:兩個 cell 加 `verticalAlign: VerticalAlign.CENTER`,標籤跟內容垂直置中對齊
+
+**3. 標籤欄 12% → 14%**
+- 12% 太窄,「決策結論」「討論摘要」4 字標籤會擠成兩行
+- 14% 剛好可單行容納 4 個中文字,易讀性提升
+- 對應 twip:1080 → 1260,右欄 7920 → 7740(差 180 twip 內容欄,影響極小)
+
+需要 import 加 `VerticalAlign`。XML 驗證:每個 mkBlock 兩個 vAlign=center、Tables 全有 tblLayout=fixed。
+
+
+**摘要**:DOCX 視覺微調 × 3:mkCaseHdr 改用 DXA+layout=FIXED(修右側凸出);mkBlock cell 加垂直置中;標籤欄 12%→14%(讓 4 字標籤單行)
+
+
+---
+
+## V5.8.3
+
+**V5.8.2 沒真正修好,V5.8.3 才是完整修法**:個管師回報 V5.8.2 出貨後**仍然格式跑掉**(標籤欄超寬、內容欄超窄)。
+
+**根因**:V5.8.2 雖把 width 改成 DXA(絕對 twip),但**沒指定 `layout=fixed`** → Word 端仍會 autofit,把 DXA 當「建議值」。XML 內缺 `<w:tblLayout w:type="fixed"/>`。
+
+**正確修法**:在 mkBlock 的 Table 加 `layout: TableLayoutType.FIXED`,搭配 V5.8.2 的 DXA + columnWidths 才完整。三件套缺一不可:
+1. `width: DXA` 絕對 twip
+2. `columnWidths: [1080, 7920]` 陣列
+3. `layout: TableLayoutType.FIXED` ← V5.8.3 補上
+
+更新坑 #25:「docx Table 嚴格控制欄寬三件套」+ 加教訓「真實內容測試 vs 預覽」。
+
+
+**摘要**:V5.8.2 沒真正修好(個管師回報仍格式跑掉):mkBlock 加 `layout:TableLayoutType.FIXED`,搭配 V5.8.2 DXA+columnWidths 三件套才完整。更新坑 #25 + 教訓「真實內容測試 vs 預覽」
+
+
+---
+
+## V5.8.2
+
+**修 V5.8.1 引入的 layout 跑掉 regression**:個管師回報 V5.8.1 出貨後「**整個 DOCX 格式跑掉了**」— 左欄被擠到 ~50%、右欄變超窄一條、本來 1-2 頁變 3 頁。
+
+**根因(坑 #25)**:V5.8.1 把診斷從純 Paragraph 改用 mkBlock,但 diagnosis 內容常 200+ 字一行。docx Table 在沒指定 `layout=fixed` 也沒指定 `columnWidths` 時,Word 用 auto layout algorithm 重算欄寬,**無視 cell 的 `width:PERCENTAGE`,根據內容字數猜算**。長 diagnosis 觸發 Word 把標籤欄擠寬到 50%。
+
+**修法**:`mkBlock` 寬度從 `WidthType.PERCENTAGE` 改成 `WidthType.DXA`(絕對 twip)+ 加 `columnWidths` 陣列。A4 可用寬度約 9000 twips(扣邊距),12% ≈ 1080(標籤),88% ≈ 7920(內容)。Word 100% 服從 DXA。
+
+新增坑 #25 — 「docx Table 要嚴格控制欄寬時用 DXA,別用 PERCENTAGE」。
+
+
+**摘要**:修 V5.8.1 引入的 DOCX layout 跑掉(坑 #25,但未完整修):mkBlock 寬度從 PERCENTAGE 改 DXA 絕對 twip + columnWidths,解決長 diagnosis 觸發 Word auto layout 把標籤欄擠寬到 50% 的問題
+
+
+---
+
+## V5.8.1
+
+**DOCX 個案討論視覺一致性兩項微調**:V5.8.0 出貨後個管師回報:
+
+**1. 診斷欄位沒外框 — 跟其他欄位視覺不一致**
+- V5.8.0 結構:**標題列 → 純 Paragraph 診斷 + 細線 → mkBlock 治療 → mkBlock 討論摘要 → mkBlock 決策結論**
+- 個管師看到「**有 4 個有外框、診斷單獨沒外框**」覺得不一致
+- 修法:**診斷也改用 `mkBlock`,左欄加「診斷」標籤**,跟其他四個欄位一致;同時刪除診斷下方那條多餘細線(V5.6.1 加邊框之前留下的視覺分隔線,現在 mkBlock 自身有邊框,線多餘)
+- 套用範圍:個案討論 / 醫療小組 / 必要事件 三處診斷(前期追蹤本來就沒 diagnosis 欄位)
+
+**2. 預設字體改成黑體(微軟正黑體)**
+- 全 DOCX 內 27 處 `font:'新細明體'`(serif 明體)→ `font:'微軟正黑體'`(sans-serif 黑體)
+- 黑體比明體在數位螢幕跟列印筆畫均勻,可讀性更高
+- 跨平台保護:Word 在 Mac 自動 fallback 到 PingFang TC,Linux fallback 到 Noto Sans CJK(docx 7.8.2 的 `font` 參數只接受單一字串,但 Word 自動替代機制可靠)
+
+
+**摘要**:DOCX 視覺一致性兩項微調:診斷也用 mkBlock(個案討論/醫療小組/必要事件三處,刪掉診斷下方多餘細線);字體 27 處從「新細明體」改成「微軟正黑體」(跨平台 Word 自動 fallback)
+
+
+---
+
+## V5.8.0
+
+**DOCX 個案討論視覺優化 — 三項合併**:個管師回報 V5.7.1 出貨的 DOCX 雖然格式正確,但「**治療欄資訊混亂、決策結論不夠突出**」,本版做三項視覺優化:
+
+**1. 治療欄日期前置 + 編號**
+- 舊:`Laparoscopic S8 hepatectomy(2020-06-11) : Initial HCC treatment...`
+- 新:`[1] (2020-06-11) Laparoscopic S8 hepatectomy : Initial HCC treatment...`
+- 編號 `[1] [2] [3]` 讓多個治療事件視覺上明確分隔
+- 日期前置讓眼睛快速掃過時序
+
+**2. 治療欄字級縮小(12 → 10)**
+- 治療是「資訊性」內容,不該跟摘要/決策同字級搶眼球
+- 字級縮小後,治療框視覺重量降低,決策結論才能「跳出來」
+
+**3. 決策結論加強(emphasis 深色標籤)**
+- mkBlock 加 `opts.emphasis=true` 參數
+- 標籤背景:淺灰 `C.bg` → 深灰 `C.dark`
+- 標籤文字:`C.mid`(暗灰) → 白色
+- 視覺效果類似「個案標題列」風格,讓「決策結論」一眼看見「這個是重點」
+- 個案討論 / 醫療小組 / 必要事件 / 前期追蹤 四處的決策結論**全部一致加 emphasis**
+
+### 副改動:`mkBlock` 函式擴充
+
+**舊**:`mkBlock(label, content, isEmpty)`
+**新**:`mkBlock(label, content, isEmpty, opts)`,opts 支援:
+- `opts.emphasis=true` → 標籤深色背景 + 白色文字
+- `opts.contentSize=N` → 自訂內容字級(預設 12)
+
+擴充非破壞性(opts 預設 `{}`,舊呼叫不受影響)。
+
+
+**摘要**:DOCX 個案討論視覺優化:治療日期前置+編號 `[i] (date) name`、治療字級 12→10、決策結論 emphasis(標籤深色背景+白字);`mkBlock` 擴充 `opts={emphasis, contentSize}` 參數
+
+
+---
+
+## V5.7.1
+
+**修 V5.7.0 引入的 regression — 前期追蹤會後填寫面板「繼續追蹤/結案」按鈕視覺異常**:個管師回報「點繼續追蹤/結案沒反應」。
+
+**根因**:V5.7.0 加 `postfup-summary` / `postfup-decision` 兩個 textarea 後,event handler 內的 `[data-action^="postfup-"]` **prefix match selector 變得太寬**,把新加的兩個 textarea 也誤匹配進去,當成按鈕處理:加上 `btn` className、改 `style.opacity='0.5'`,讓 textarea 視覺上半透明、像被禁用。
+
+**修法**:把 prefix match 改成**精確匹配兩個 toggle 按鈕**:
+```js
+// 修前
+.querySelectorAll('[data-action^="postfup-"]')
+// 修後
+.querySelectorAll('[data-action="postfup-ongoing"],[data-action="postfup-closed"]')
+```
+
+新增坑 #24 記錄此類「新增元素時忘記檢查既有 prefix selector 是否會誤匹配」陷阱。
+
+
+**摘要**:修 V5.7.0 regression:前期追蹤面板「繼續/結案」按鈕視覺異常,因為新加的 postfup-summary/decision textarea 被 prefix match selector `[data-action^="postfup-"]` 誤匹配當按鈕處理。改精確匹配 ongoing+closed 兩個。新增坑 #24
+
+
+---
+
+## V5.7.0
+
+**會後填寫面板擴充 + DOCX 同步加區段**:個管師回報「會後填寫面板只能填個案討論的摘要決策,前期追蹤 / 醫療小組 / 必要事件 都無法填寫結論」。本版兩大改動:
+
+**1. 會後填寫面板擴充**
+
+- **前期追蹤**:在原有「繼續追蹤 / 結案」按鈕下方,加上**討論摘要 + 決策結論**兩個 textarea(舊版完全沒有,V5.7.0 新增 `f.summary` / `f.decision` 欄位)
+- **醫療小組**(新增整個區段):每位成員加**討論摘要 + 決策結論**(資料欄位 V5.2.0 早已存在,只是會後填寫面板沒呈現)
+- **必要事件**(新增整個區段):同上
+- 共用卡片產生器 `_mkTeamCard(cid, arr, arrType, t, ti)`,`arrType='team'/'events'` 區分,避免重複 code
+- 資料寫入 `savePostMtg` 加 4 個新 selector:`postfup-summary` / `postfup-decision` / `postteam-summary` / `postteam-decision`(後兩者用 `arrtype` 區分 team/events)
+
+**2. DOCX 同步擴充**
+
+V5.6.x 之前 DOCX 只有「前期追蹤 → 個案討論 → 特殊議程」,**完全沒有醫療小組 / 必要事件**。本版補上:
+- 前期追蹤:在原有狀態 badge 之後加 `if(f.summary) mkBlock` + `if(f.decision) mkBlock`
+- 醫療小組:在個案討論之後、特殊議程之前新增整個區段(`mkSecHdr('醫療小組')` + 每位成員 `mkCaseHdr` + diagnosis + summary + decision)
+- 必要事件:同上,獨立區段(`mkSecHdr('必要事件')`)
+- 醫療小組 / 必要事件 DOCX 區段沿用 V5.6.2 的 mkBlock 邊框 + 12% 左欄樣式
+
+**舊資料相容**:沒填過 summary/decision 的舊資料,面板 textarea 為空、DOCX 內 `if(f.summary)` 為 false 不 push,完全不影響舊行為。
+
+
+**摘要**:會後填寫面板擴充:前期追蹤 / 醫療小組 / 必要事件 三區段都加摘要+決策 textarea;DOCX 同步加(讓醫療小組 / 必要事件 出現在會議記錄,且前期追蹤帶摘要決策)
+
+
+---
+
+## V5.6.2
+
+**DOCX `mkBlock` 兩個視覺微調**:V5.6.1 加邊框後個管師回饋兩點:
+- **左欄太寬**:`16% → 12%`,右欄相應 `84% → 88%`,內容空間多 4%,個管師寫長文時換行頻率降低
+- **項與項中間留白太多**:cell 內 paragraph `spacing` 從 `{before:pt(0), after:pt(2)}` 改 `{before:0, after:0}`,移除每個 cell 內 paragraph 預設的「下方 2pt 空白」,讓多行內容更緊湊;表格之間原本就無顯式空白段,間距收緊後框與框視覺上更貼近(像截圖那樣連續排列)
+- 邊框樣式不動(沿用 V5.6.1 細灰 SINGLE size:4 color:'CFD8DC')
+
+
+**摘要**:DOCX mkBlock 左欄 16%→12%、cell paragraph 行距收緊(before:0/after:0),回應 V5.6.1 後個管師「左欄太寬+項與項間距太多」回饋
+
+
+---
+
+## V5.6.1
+
+**DOCX 個案討論區塊 mkBlock 加細灰邊框**:個管師上傳了希望的會議記錄格式截圖(左標籤右內容、有清楚灰色邊框)。對比現行 DOCX 發現結構已經是「左 16% 標籤欄(淺灰底)+ 右 84% 內容欄」的表格,**只是 `borders` 全設 `BorderStyle.NONE`**,看起來像沒有框。本版改成 `BorderStyle.SINGLE size:4 color:C.divider`(沿用現行 `'CFD8DC'` 淺灰常數),讓每個 mkBlock 都有清楚的細灰邊框。多欄位結構保留(現病史 / 過去病史 / 病理 / 治療 / 討論摘要 / 決策結論 各自一個 mkBlock,各自加邊框),跟個管師需求一致。
+
+
+**摘要**:DOCX mkBlock 加細灰邊框(SINGLE size:4 color:C.divider),讓「左標籤右內容」表格樣式更清楚對應個管師會議記錄需求
+
+
+---
+
+## V5.6.0
+
+**JSON 個案匯出可選打包圖片成 zip**:個管師回報「匯出個案 JSON 後想連帶把圖片一起打包帶走」。本版實作:
+- **inline JSZip 3.10.1**(MIT License,壓縮後 ~96KB)— 內網醫院能用,不靠 CDN
+- **產出區加勾選框**「☐ 附圖片打包 zip」(預設不勾,**舊行為完全保留**)
+- 勾選後,點「JSON 個案匯出」→ 走 `_exportCaseJSONWithImagesZip` 分支
+- **zip 結構**(對齊 V5.3.0 子資料夾規則):
+  ```
+  頭頸癌_2026-05-21_個案.zip
+  ├── cases.json                  (跟舊版 JSON 格式 100% 一樣,無 dataUrl)
+  └── images/
+      ├── 9000014/                (病歷號子資料夾)
+      │   ├── pathology_HE.jpg
+      │   ├── pathology_IHC.jpg
+      │   ├── surgical_OP1.jpg
+      │   ├── related_CT.jpg
+      │   └── mammo_R-CC.jpg       (乳癌才有)
+      └── _no_chartno_1/          (沒填病歷號的 fallback)
+  ```
+- **三種圖片來源全支援**:
+  - `dataUrl` 已存 → `fetch(dataUrl) → blob → zip.file()`
+  - `fromFolder` + handle 在 → 從資料夾讀(支援 V5.3.0 subFolder 兩層)
+  - `fromFolder` + handle 沒授權 → 跳 `confirm` 請使用者選資料夾
+- **錯誤穩健**:單張讀檔失敗不中斷,累積到 `failedImgs[]`,結尾 toast + alert 列出失敗清單
+- 壓縮:DEFLATE level 6(平衡速度跟大小)
+- 影響 index.html 大小:530KB → 627KB(+97KB),GitHub Pages gzip 後實際傳輸 ~30KB,可接受
+
+
+**摘要**:JSON 個案匯出可選打包圖片成 zip(inline JSZip ~96KB);UI 加勾選框「附圖片打包 zip」;zip 結構對齊 V5.3.0 子資料夾(images/[病歷號]/[類型]_[檔名]);三種圖來源全支援(dataUrl/fromFolder 已授權/未授權跳 confirm)
+
+
+---
+
+## V5.5.0
+
+**兩項新功能合併**:
+
+**1. HTML 投影片檔名語言切換(中文 / 英文)**
+
+過去 HTML 檔名固定中文(`2026-05-21_頭頸癌多專科會議.html`),個管師回報「外院分享或存 NAS 時想要英文檔名」。本版實作:
+- **8 個癌別 cancer code 對映表**(`CANCER_EN_CODES`):
+  - `head_neck → HeadNeck` / `blood_lymph → BloodLymph` / `chest → Chest` / `breast → Breast`
+  - `gi → GI` / `hbp → HBP` / `gu → GU` / `gynecology → Gyn`
+- **設定頁配色 bar 加「檔名 中 / EN」切換**(沿用 V4.6.2 theme-strip 風格)
+- 偏好存 `localStorage.mdt_html_fname_lang_<userId>`,**每個個管師獨立記憶**
+- 多癌別合開時用底線串接:`2026-05-21_HeadNeck_BloodLymph_MDT.html`
+- 中文預設不變:`2026-05-21_頭頸癌+血液淋巴癌多專科會議.html`
+
+**2. 個案大欄位多行輸入支援**
+
+過去 textarea 內按 Enter 換行,但 HTML 投影片產出時換行被擠掉變成一行。本版修法:**5 個欄位**渲染時加 `.replace(/\n/g,'<br>')` 讓換行轉成 HTML `<br>`:
+- 診斷 diagnosis(case + team 投影片兩處)
+- 家族史 familyHistory
+- 討論 discussion
+- 現病史 cc(原本已支援,保留)
+- 過去病史 ph(原本已支援,保留)
+
+**舊資料完全相容**:沒換行的字串 replace 後結果不變,行為跟舊版一致。
+
+
+**摘要**:HTML 投影片檔名中/英可選(`CANCER_EN_CODES` + `getHtmlFnameLang/setHtmlFnameLang`,設定頁切換);5 個個案大欄位渲染加 `\n→<br>` 多行支援
+
+
+---
+
+## V5.4.0
+
+**記住上次登入者**:個管師基本上都各自有自己的電腦,共用情況少見 — 但每次打開系統還要點一次「選擇使用者」摩擦感累積。本版實作:
+- **`pickUser` 寫入** `localStorage.setItem('mdt_last_user', uid_)`
+- **`renderLogin` 讀取**:有 lastUser → 該按鈕加橘色邊框 + 右上「上次」標籤;觸發 1.5 秒倒數 toast「1.5 秒後自動以 [姓名] 登入」+ 取消按鈕
+- **共用電腦 fallback**:若另一位個管師想用同台電腦,點 toast「取消」→ timer 清除,正常選人
+- **safe 機制**:lastUser 在 USERS 已不存在(主檔變更)→ 不啟動 toast,正常選人邏輯;`pickUser` 內先 `_cancelAutoLogin` 避免快過倒數時雙觸發
+- 改動小(~30 行),風險低(純前端 localStorage,不動資料結構)
+
+
+**摘要**:記住上次登入者(localStorage `mdt_last_user`)+ 1.5 秒倒數自動登入 toast(取消按鈕讓共用電腦 fallback)
+
+
+---
+
+## V5.3.0
+
+**兩項改動合併出貨**:
+
+**1. 子資料夾匯入支援(主要新功能)**
+
+個管師回報「整個會議用到的圖片太多,混在一個資料夾很難找」。經討論決定:**個管師願意手動建一個病人一個資料夾,以病歷號為名**。本版實作:
+- **4 個選圖入口**(病理 / 手術 / 相關影像 / 乳攝)進入時,先試 `_resolveSubFolder(imgFolderHandle, c.chartNo)`,找到該病歷號子資料夾就用,找不到 fallback 到根目錄(向後相容)
+- **特殊議程佐證圖**(失聯率病人)先試 `p.chartNo` 子資料夾,再試 `_特殊議程`,最後 fallback 到根目錄
+- **圖檔儲存格式**新增 `subFolder` 欄位,讀檔時 `imgFolderHandle.getDirectoryHandle(subFolder).getFileHandle(name)` 兩層查找
+- **modal 標題**顯示子資料夾路徑:「📂 20260521 頭頸癌 / **9000014**」讓個管師知道當前位置
+- **`_pathImgCache` cache key 改用 `subFolder/name`** 避免不同子資料夾同名檔(`HE.jpg`)互相覆蓋
+- 共用工具函式 `_resolveSubFolder(rootHandle, subName)` 試讀子資料夾、失敗回 null 讓呼叫端 fallback
+- **舊資料完全相容**:沒 `subFolder` 欄位的圖檔(`undefined`)走平面 `getFileHandle`,跟 V5.2.x 行為一致
+
+**2. 修 V5.2.1 引入的 regression — 病理新分頁放大鏡功能消失**
+
+個管師回報「病理影像獨立到新分頁後,主投影片有的放大鏡(L 鍵)新分頁沒有了」。根因:`openPathoWindow` 開的新分頁用 `.ps` class,但放大鏡跟滾輪 zoom 邏輯只綁定在 `.img-slide`,新分頁不繼承。修法:**完整搬移**主投影片的放大鏡 + 滾輪 zoom + 雙擊重設邏輯到新分頁 inline JS,改用 `.ps` selector;新增 `🔍` 按鈕、L 鍵快捷、Esc 雙態(放大鏡開 → 先關放大鏡,再 Esc 才關視窗)。新分頁的 inline JS 透過真實產出後跑 Node syntax check 確認語法 OK。
+
+
+**摘要**:子資料夾匯入支援(以病歷號分,4 入口全改 + 失聯率佐證圖 _特殊議程);修 V5.2.1 引入的病理新分頁放大鏡 regression(完整搬移 zoom + 放大鏡邏輯到新分頁)
+
+
+---
+
+## V5.2.1
+
+**HTML 投影片病理影像改「按鈕觸發新分頁」**:個管師回報「病理影像插在報告裡讓整份投影片變很冗長」(例如一個個案有 5 張染色,變成個案投影片後緊接 5 張染色投影片,連續播 6 頁才到下一個案,翻頁很煩)。本版調整:
+- **HTML 投影片產出時,病理影像不再 push 成獨立 slides**(原本一張影像一張投影片的邏輯移除)
+- **個案主投影片標題列加按鈕**「🔬 病理影像(N)」— `N` 是該個案的影像數量;沒影像則不顯示
+- **點按鈕** → JS 用 `window.open('','_blank')` 開新分頁,即時組裝完整 HTML 投影片格式(含病歷號姓名、染色標題、進度條、上下切換)
+- **新分頁** 完全獨立,可用鍵盤左右切換、Esc 關閉;不影響原投影片
+- **「病理切片影像集中」勾選框移除**(原本「勾了= 病理影像統一放最後」的選項,在新行為下沒意義)
+- 技術:`_pathoData` 全域物件儲存每個個案的影像 base64,按鈕點擊時呼叫 `openPathoWindow(caseId)`;HTML 大小不變(影像 base64 一樣只存一次,只是從 slides 字串移到 `__casePathos` 變數);手術照片邏輯不動
+
+
+**摘要**:HTML 投影片病理影像改「主投影片按鈕觸發新分頁」 — 不再 push 獨立 slides,window.open + document.write 開新頁;移除「病理切片集中」勾選框
+
+
+---
+
+## V5.2.0
+
+**醫療小組 / 必要事件欄位擴充**:個管師回報需求 — 醫療小組的人員除了病歷號姓名外,還需要看到年齡與性別(快速判斷)+ 家族史(乳癌、消化道癌等遺傳相關病史的會議常用)。本版三處同步擴充:
+- **編輯介面 `teamHTML`**:抬頭區加「年齡 / 性別」欄(複用 `caseHTML` 一樣的 input+select 配置);現病史下面新增「**家族史(選填)**」textarea
+- **閱覽介面 `teamViewHTML`**:抬頭顯示 caseDemo(性別/年齡)— 只在有填時顯示;rows 加家族史(只在有填時 push)
+- **HTML 投影片 `_trackSlide`**:標題列加 `.cd` 顯示 caseDemo;sections 加家族史(在現病史之後);兩者都只在有填時才出現
+
+**舊資料完全相容**:沒有 `age/gender/familyHistory` 欄位的舊個案會自動忽略這些新欄位(`undefined` 邏輯運算為 falsy,跳過渲染)— 顯示跟 V5.1.x 一模一樣,個管師打開不會看到任何變化。
+
+
+**摘要**:醫療小組/必要事件加「年齡 / 性別」+「家族史」三欄,三介面(編輯/閱覽/HTML 投影片)同步擴充;舊資料相容(沒填不顯示)
+
+
+---
+
+## V5.1.4
+
+**HTML 投影片標記工具加「字色變更」**:除了原本的 5 色螢光筆(背景色),新增 **5 色字色按鈕**(A 樣式),讓使用者在投影片現場標記時有兩種獨立工具。字色用對比強烈的飽和暗色:紅 `#D32F2F` / 藍 `#1976D2` / 綠 `#388E3C` / 橘 `#F57C00` / 紫 `#7B1FA2`。字色變更時 wrapper 是 `<span class="fc">` 加 `color` + `font-weight:600`(略加粗增加辨識),跟螢光筆的 `<mark>` 分開。Toolbar 結構:5 螢光圓 → 分隔線 → 5 字色 A → 分隔線 → ✕ 清除。「✕ 清除」同時清螢光筆 `<mark>` + 字色 `<span class="fc">` 兩種標記(無論精準或全清)。Toolbar 寬度估算更新(舊 200px → 新 320px,避免靠視窗邊緣時超出)。
+
+
+**摘要**:HTML 投影片標記工具加 5 色字色按鈕(<span class="fc">);hlClear 同時清 mark+fc;toolbar 寬度更新
+
+
+---
+
+## V5.1.3
+
+**HTML 投影片兩個 bug fix**:
+- **螢光筆「清除」改成精確清除**:過去 `hlClear()` 用 `document.querySelectorAll('mark').forEach(...)` **無條件清掉本頁所有 mark**,個管師回報「畫了五個標記想清掉一個結果全沒了」。改成「**選取範圍內精確清除**」:有 `_hlSel`(剛選取的範圍)→ 用 `Range.intersectsNode()` 找與範圍重疊的 mark,只清這些;沒選取 → 加 `confirm` 二次確認後才清全頁(保留原行為作為「清全頁」入口,避免誤觸)
+- **個案投影片年齡字級加大**:`.cd`(caseDemo:性別/年齡/ECOG/CFS)桌面字級 `clamp(14px,1.5vw,22px)` → `clamp(16px,1.8vw,26px)`(1080p 從 22 → 26px,+4px),Mobile media query 同步加大 `clamp(13px,3.5vw,20px)` → `clamp(15px,4vw,24px)`。個管師回報「年紀字型略小」,跟旁邊「.cdr 主治醫師 23px」、「.cdx 診斷 28px」對比明顯偏小,本版調整後跟主治醫師字級接近,跟診斷的層級也合理
+
+
+**摘要**:HTML 投影片螢光筆「清除」改成精確清除(用 Range.intersectsNode);個案年齡 .cd 字級加大(22→26px)
+
+
+---
+
+## V5.1.2
+
+**AI 匯入提示詞 markers 段落改寫 — 序列 marker 不填 date 欄**:個管師回報 AI 匯入後序列 marker(像 AFP `1.64(2023-05-15)→134(2026-05-04)`)被 AI 自動填入「最早一筆日期」到 date 欄,造成日期欄顯示一個日期,但其實趨勢有 2 個日期都已寫在 content 字串內,date 欄那個日期反而是冗餘 + 誤導(個管師要手動刪)。修法:改 prompt 明確區分序列 vs 單筆 — **序列(content 含「→」符號)→ date 一律填空字串**;單筆(content 無「→」)→ date 填那個時間點。加錯誤示範 + 正確示範雙範例,讓 AI 對齊。只改 prompt 文字,系統解析邏輯不動。
+
+
+**摘要**:AI 匯入 prompt markers 序列 marker date 欄改填空字串(避免冗餘 + 誤導);加序列 vs 單筆雙範例
+
+
+---
+
+## V5.1.1
+
+**HTML 投影片特殊議程 inline display:flex 蓋掉 CSS 顯示控制 bug 修正**:個管師回報「填失聯率後,HTML 投影片產出時 7 頁都只剩失聯率,個案投影片消失」。透過比對使用者實機產出的兩份 HTML 檔(填失聯率前 / 填失聯率後)精準定位:`slides` 陣列正確產出 7 個 section,個案投影片**並沒有消失** — 真正原因是**特殊議程投影片的 inline style 含 `display:flex`**,CSS 優先級「inline > class」,結果 `display:flex` 覆蓋了 `.slide { display:none }`,讓特殊議程投影片**永遠顯示**;加上 `.slide { position:absolute; inset:0 }`(絕對定位填滿視窗),失聯率投影片**疊在所有其他投影片之上,蓋掉個案內容**。
+
+**影響範圍**:不只失聯率 — **完治率 / 失聯率 / 留治率 / 訪視率 4 個特殊議程主表 + 病人清單共 4 處 inline style** 都有同樣 bug。任何個管師按「特殊議程」+「HTML 投影片」都會踩到。
+
+**修法**:4 處 inline style 移除 `display:flex;`(保留 `flex-direction:column`)。讓 `display` 完全由 `.slide`/`.slide.on` CSS class 控制 — `.slide.on { display:flex }` 已存在,切換時會正常套用。新坑 #23 入帳:CSS 優先級 inline > class,不該在 inline style 寫 `display:xxx` 跟 class 競爭。
+
+
+**摘要**:修「特殊議程 inline display:flex 覆蓋 .slide CSS class」造成 4 率投影片永遠顯示蓋掉個案的 bug;4 處全部修
+
+
+---
+
+## V5.1.0
+
+**姓名遮蔽 bug + 7 癌別 defaultDept 補齊(兩個獨立修正)**:
+- **姓名遮蔽兩字 bug**:個管師回報「林一」遮蔽後變成「林0一」三字。根因:`maskName` 兩字邏輯 `n[0]+'0'+n[1]` 沒拿掉末字。修法 `n[0]+'○'`(只留首字 + 圓圈)。**順便把遮蔽符號從數字 `0` 改成 `○`(U+25CB WHITE CIRCLE)** — 正體中文媒體標準遮蔽符號,視覺更清楚不會混淆數字。三字邏輯同步改:「陳0明」→「陳○明」。8 種姓名情境壓測全過(兩字/三字/四字/單字/空值/null)
+- **7 癌別補齊 defaultDept**:過去只有「乳癌」設了 `defaultDept:'一般外科'`,其他 7 個癌別在新增個案時第一主治欄留空,個管師要每次手選。本版補齊:頭頸癌→口腔外科、血液淋巴癌→血液腫瘤科、胸腔癌→胸腔外科、消化道癌→一般外科、肝膽胰癌→一般外科、泌尿道癌→泌尿科、婦癌→婦產科。設定依據:該癌別第一個 memberKey 科別(代表主治流向最常見的科別)
+- **舊資料相容**:已存的歷史會議個案不受影響(maskName 是顯示時動態調用,不存進 localStorage);defaultDept 只影響「新增空白個案」的初值,不動既有個案
+
+
+**摘要**:姓名遮蔽兩字 bug 修(林一→林○);遮蔽符號從 `0` 改 `○`(U+25CB);7 癌別補齊 defaultDept(乳癌已有,其他 7 個新加)
+
+
+---
+
+## V5.0.3
+
+**AI 匯入 JSON 容錯解析**:個管師回報「**Unexpected token '`', "```json [ "...**」JSON 格式錯誤。根因:AI(claude.ai)即使 prompt 寫「不要加 markdown 符號」,仍經常在 JSON 前後加 ```json ... ``` markdown 圍籬,系統直接 `JSON.parse` 炸開。雙管齊下解決:**(1) 系統端容錯** — 新工具函式 `_parseAIJSON(raw)` 自動剝除 markdown 圍籬(```json / ```)、處理 UTF-8 BOM、智慧引號(curly quotes)→ 直引號、容錯 AI 加的前言/結語(抓第一個 `[` 到最後一個 `]` 的合法 JSON 區塊),文字框匯入(L5542)和檔案匯入(L6741)兩處入口都改用;**(2) prompt 加強** — 開頭加「【輸出格式絕對規則】」區塊,含錯誤示範跟正確示範,要求 AI「第一個字必須是 `[`,最後一個字必須是 `]`」。10 種真實 AI 輸出情境壓測全過。
+
+
+**摘要**:AI 匯入 JSON 容錯:新 `_parseAIJSON` 工具(剝 markdown 圍籬/BOM/智慧引號/前後綴文字);prompt 加強格式規則(範例展示)
+
+
+---
+
+## V5.0.2
+
+**AI 匯入提示詞精準化(genImportPrompt)**:從一筆真實 AI 產出的 JSON 反饋發現兩個常見偏差,在 prompt 加明文修正:
+- **markers**:加「值與括號間不可有空格」明文 + 單時間點範例 `{"name":"AFP","content":"8.96(2026-04-02)"}`(過去 AI 常產出 `"8.96 (2026-04-02)"` 多了空格);加「同一 marker name 在陣列中只能出現一次」明文(避免 AI 把多時間點寫成多筆,系統會自動去重但格式應由 AI 一次到位);marker 範例增列 HCC 常用的 PIVKA-II
+- **topics**:加智慧勾選原則 — exams 有內容→勾影像、pathologies 有內容→勾病理、diagnosis 含 cTNM/pTNM/分期→勾分期、treatments 有內容或診斷提及 RT/Chemo/標靶→勾治療策略;加註「通常 MDT 個案 3-4 項都會勾」(過去 AI 常偷懶只勾 2 項,跟個案實際資料豐富度不匹配)
+- 本版**只改 prompt 文字**,系統解析邏輯不動。下次個管師按「AI 匯入提示詞」複製到 claude.ai,生成的 JSON 會更貼齊規範
+
+
+**摘要**:AI 匯入提示詞 markers 加「不可有空格」明文 + 單時間點範例 + PIVKA-II;topics 加智慧勾選原則(資料對應規則)
+
+
+---
+
+## V5.0.1
+
+**HTML 投影片視覺修正(配合 V5.0.0 新加的 team/events 投影片)**:
+- **字級調大**:V5.0.0 加的 `_trackSlide` 沒設響應式字級,在 1080p 投影機現場字看起來只有 ~16px 太小。改用 `clamp()` 響應式 — label `clamp(15px,1.5vw,22px)`、內文 `clamp(17px,1.8vw,26px)`,1080p 投影現場 ≈ 22 / 26px,跟個案討論主投影片的 `.cdx` 字級一致
+- **「尚未填寫」白字 bug**:V5.0.0 寫 `rgba(255,255,255,.5)` 白字,但投影片背景是白的 → 看不到。修成 `rgba(0,0,0,.4)` 黑字
+- **HTML 投影片字型 fallback chain 優化**:過去 `'Noto Sans TC','Microsoft JhengHei',Helvetica,sans-serif` 中英文混排英文 fallback 結果不一致(視作業系統而定)。改成 `-apple-system,BlinkMacSystemFont,'Helvetica Neue','Noto Sans TC','PingFang TC','Microsoft JhengHei',Helvetica,Arial,sans-serif` — 英文 sans-serif 字型在前(SF Pro / Helvetica Neue 等)、中文字型在後(Noto Sans TC / PingFang TC / 微軟正黑),跨 macOS / Windows / iPad 視覺都是「中英文都無襯線、調性一致」
+
+
+**摘要**:HTML 投影片 _trackSlide 字級改 clamp 響應式;修「尚未填寫」白字 bug;字型 fallback chain 加英文 sans-serif 在前(SF Pro/Helvetica Neue)
+
+
+---
+
+## V5.0.0
+
+**醫療小組 / 必要事件 加入 5 個討論欄位**:過去這兩個區塊只能填病歷號+姓名+主治+備註(共用 `followupHTML`),本版讓它們**達到接近個案討論的核心欄位**:診斷、現病史、討論要點、摘要、決策(5 個 textarea)。設計取捨:不做 100% 等同個案討論(否則涉及影像/病理/治療列表/marker/timeline 等 struct 操作,牽涉 100+ 處 `cases` 寫死的程式碼,風險過大且超出實際使用需求)。新增獨立 `teamHTML(cid,i,d,type)` 與 `teamViewHTML(cid,i,d,type)` 兩個函數,team/events 共用;`upd` 用 `${type}` 動態派發,正確指向各自陣列(避免 followupHTML 既有的「`upd` 寫死 `'cases'`」歷史 bug — 那個 bug 不順便修,留待下版單獨處理)。HTML 投影片產出:過去 team/events 合併成「**1 張 5 欄表格**」,本版改成**每筆獨立投影片**(類似個案討論版面),含病歷號+姓名+主治+診斷標題列 + 已填欄位內容區。舊資料(V4.9.0 之前無新欄位)完全相容 — 顯示「(尚未填寫討論內容)」不會 crash。
+
+**版本號跳到 V5.0.0**:不是因為大改版,而是因為 V4.9.0 已到 y=9,按章法手冊「**每碼最大 9 逢十進位**」規則,y+1 自動進位 x+1。
+
+
+**摘要**:醫療小組/必要事件加 5 個討論欄位(診斷/現病史/討論要點/摘要/決策);獨立 teamHTML/teamViewHTML 函數;HTML 投影片改每筆獨立(非合併表格);舊資料相容
+
+
+---
+
+## V4.9.0
+
+**LINE 通知多癌別自動合併**:過去發 LINE 通知只能取「目前 active 癌別」,多癌別合開的會議要逐個切換產出兩份訊息,使用者要手動合併或重複發送。本版改成**取所有勾選癌別自動合併產出一份 LINE 訊息**,只改一行 `cids=[getOutputCid()||S.cids[0]]` → `S.cids`(若有則全取)。會議名稱在多癌別時自動合成「**X、Y多專科團隊會議**」(會議名稱欄位輸入會被覆蓋),單癌別仍用個管師輸入的標題。出席人員段:各癌別獨立列召集人 + 核心成員(**不去重**,跨癌別共用成員仍會兩段都列,符合既有範例慣例)。會議說明段:依癌別分段「`頭頸癌:`、`血液淋巴癌:`」,個案區塊不變。其他產出 (PPTX/DOCX/HTML/Excel/JSON) 行為不變(各自一個癌別一份)。
+
+
+**摘要**:LINE 通知多癌別合開時自動合併(改 genLine cids 來源 + 會議名稱動態合成);其他產出不變
+
+
+---
+
+## V4.8.2
+
+**Kit 版本標記從 V1.6.0 → V1.7.1**:Kit 升到 V1.7.1(V1.7.0 收 SelaTrip 反饋加坑 #37/#38、V1.7.1 修「handoff 機制執行率」)。`SELA-handoff.md` 加「提案前檢查紀錄」一小段,明寫已執行 V1.7.0 加的兩個檢查(grep Kit 避免重複、踩坑 vs 跨平台知識分類)。本案 6 條反饋未被 Kit V1.7.0/V1.7.1 採納(V1.7.0 收的是 SelaTrip 不是 MDT),仍有效;V1.7.0 新增的 #37/#38 與 MDT 無交集(MDT 不接外部 API、不用雲端 schema migration)。本版無程式變動。
+
+
+**摘要**:Kit 版本標記 V1.6.0 → V1.7.1;handoff 加「提案前檢查紀錄」(回應 V1.7.0 兩個檢查);無程式變動
+
+
+---
+
+## V4.8.1
+
+**加 `SELA-handoff.md`**(對齊 SELA Starter Kit V1.6.0「回流通道機制」規範):依 `templates/SELA-handoff-template.md` 七節結構產出,給 Kit 升級用 — SELA 升 Kit 時看 handoff 直接判斷哪些經驗值該回流,不用挖整份 CLAUDE.md。本案 handoff 內容包括:6 條跨專案通用觀察(2 條坑、2 條設計模式、2 條結構建議)+ 6 條留在 MDT 不回流的業務邏輯 + 對 Kit V1.7.0 的 6 項必做行動清單。本版無程式變動。
+
+
+**摘要**:加 `SELA-handoff.md`(Kit V1.6.0 回流通道機制);無程式變動
+
+
+---
+
+## V4.8.0
+
+**對齊 SELA Starter Kit V1.6.0 規範**:
+- 加入 SELA favicon 套組(`favicon/` 目錄,7 個檔案;含 ico、PNG 多尺寸、apple-touch-icon、site.webmanifest)
+- index.html `<head>` 加 favicon links 與 `theme-color="#F36825"`(SELA 橘)
+- 右下角加 SELA 浮動 logo(fixed 32x32px,不擋 UI;hover 放大 + 不透明度提升)— 連結到 `github.com/Sela1227`
+- 加 `.gitignore`(用 Kit 模板,擋 .DS_Store / Thumbs.db / 機密 / 暫存區)
+- zip 檔名格式從 `MDT_V*.zip`(底線)改為 `MDT V*.zip`(空格,符合 Git Pusher 慣例)
+- site.webmanifest 客製化:name="MDT 會議管理系統"、相對路徑(GitHub Pages 子路徑相容)
+- 程式無功能變動;純品牌資產 + 部署規範對齊
+
+
+**摘要**:對齊 SELA Starter Kit V1.6.0:加 favicon 套組、theme-color、右下角 SELA logo、.gitignore;zip 命名改空格(`MDT V*.zip`);無程式功能變動
+
+
+---
+
+## V4.7.1
+
+**CFS 字樣全面中文化為「衰弱量表」**:把 V4.7.0 各處輸出裡的 `CFS` 改成 `衰弱量表`,跟 UI label 用詞一致。共 5 處變動:`caseDemo` 工具函數、閱覽模式 header、`genAI` 與 `genAIInline` 兩個 AI prompt(同時也精簡掉「CFS X(衰弱量表)」這種重複括號)。內部保留:程式碼變數名 `c.cfs`、HTML title tooltip 仍寫 "Clinical Frailty Scale (CFS)"(滑鼠 hover 給專業使用者對照)、`genImportPrompt` 仍同列中英文(讓 AI 從病歷抽取時兩個術語都認得)、Excel 匯入接受英文「CFS」當欄名別名(向後相容)。
+
+
+**摘要**:CFS 字樣全面改成「衰弱量表」(5 處輸出);程式變數 cfs 跟 tooltip/匯入別名/AI 抽取術語保留
+
+
+---
+
+## V4.7.0
+
+**新增 ECOG + 衰弱量表(CFS)欄位**:個案編輯區「基本資料」段(年齡/性別下方、主治醫師上方)新增「ECOG / 衰弱量表」一列。ECOG 0–4 五個選項各附中文說明(0=活動正常 / 1=輕症狀可工作 / 2=臥床<50%可自理 / 3=臥床≥50%部分自理 / 4=完全臥床無法自理);CFS 1–9(臨床衰弱量表標準);兩欄都選填、預設留空。資料同步打通到:閱覽模式 header(僅有值才顯示)、PPTX 個案頁標題列、DOCX 表頭、HTML 投影片個案頁、Excel 匯出新增 2 欄、Excel/JSON 匯入接受新欄位、AI 提示詞(`genAI`、`genAIInline`、`genImportPrompt`)欄位定義加 ecog/cfs 並附完整中文說明文字讓 AI 能正確判讀病歷。新工具函數 `caseDemo(c)` 統一格式化(性別/年齡 + ECOG + CFS),共 9 處呼叫。舊資料無 ecog/cfs 欄位完全相容。
+
+
+**摘要**:個案新增 ECOG + 衰弱量表(CFS)兩欄;caseDemo 工具統一格式;PPTX/DOCX/HTML/Excel/JSON/AI prompt 全打通
+
+
+---
+
+## V4.6.6
+
+**影像檢查日期欄被誤刪 bug**:個案編輯區「影像檢查」選了 CT/MRI 等檢查類型後,日期選擇欄整個消失。原因:`onExamTypeChange` 用 `sel.nextElementSibling.tagName === 'INPUT'` 條件刪除「自訂類型輸入欄」,沒區分 type — 而日期欄正好是緊跟 select 的 `<input type="date">`,被一併誤刪。修法:加 `inp.type !== 'date'` 條件,只刪自訂類型(type 非 date)的 INPUT。順便修「其他」分支同類 bug:當 sibling 是日期欄時也會誤判「已有 input」而不插入自訂類型欄。
+
+
+**摘要**:修影像檢查選 CT/MRI 後日期欄被誤刪的 bug:onExamTypeChange 加 type='date' 例外
+
+
+---
+
+## V4.6.5
+
+**婦科 → 婦產科**:修兩處資料一致性 bug — `DEFAULT_C.gynecology.conv` 從 `婦科::吳宏明醫師` 改成 `婦產科::吳宏明醫師`(主檔的「婦科」科別不存在,只有「婦產科」);`migrateCFGConv` 的 nameMap 同步修正。順便加自動修補 — 已部署 V4.6.4 之前版本的個管師 localStorage 裡 `CFG.gynecology.conv` 仍有「婦科::」殘留,下次啟動時 `migrateCFGConv` 會自動把任何 `conv` 或 `memberKeys` 開頭的「婦科::」替換為「婦產科::」(冪等,不踩使用者編輯)。歷史會議資料的個案醫師欄不修動(immutable 原則)。
+
+
+**摘要**:婦癌召集人「婦科::吳宏明醫師」修成「婦產科::」(主檔本來就只有婦產科);migrateCFGConv 加自動修補已部署的 localStorage
+
+
+---
+
+## V4.6.4
+
+使用說明書檔名從中文改英文 — `使用說明書.md` → `USER_GUIDE.md`,避免中文檔名在 Windows 解壓 zip 時變亂碼。CLAUDE.md 內檔名引用同步替換,中文「使用說明書」當作術語保留(自然中文文字仍用)。
+
+
+**摘要**:使用說明書檔名 `使用說明書.md` → `USER_GUIDE.md`(避免中文檔名亂碼)
+
+
+---
+
+## V4.6.3
+
+**章法升級**:從本版起,每次發布都附三份文件 + 一份使用說明書(共 4 份,V4.6.4 改英文檔名為 `USER_GUIDE.md`)。使用說明書是給三位個管師看的快速上手指南,以工作情境組織(開會前→會議當下→會後追蹤→設定維護),不寫技術術語。打包檢查清單:`index.html` + `README.md` + `CLAUDE.md` + `USER_GUIDE.md` 缺一不可。
+
+
+**摘要**:章法升級:每版必附「USER_GUIDE.md」(個管師導向);打包檢查 4 份檔不可缺
+
+
+---
+
+## V4.6.2
+
+色票條位置微調:從 5 主按鈕之下搬到之上,讓下方的 share link / Excel / JSON / AI 等按鈕區保持視覺連續性,不被中間插入的色票條中斷。功能不變。
+
+
+**摘要**:色票條從 5 主按鈕之下搬到之上,維持下方 share/Excel/JSON 按鈕區的視覺連續性
+
+
+---
+
+## V4.6.1
+
+HTML 配色選擇從「設定→系統」搬到「產出區」:會議畫面產出按鈕 grid 下方一條色票橫條,5 顆迷你色票直接點換色,即時 toast 回饋。設定頁的配色區塊完全移除(不重複)。`renderThemePicker` 改寫為 `renderThemeStrip`,在 `renderEditor` 用 `setTimeout(...,0)` 渲染避免 DOM 競態。使用情境改善:個管師在產出當下能直接調色,不用切到設定頁再回來。
+
+
+**摘要**:HTML 配色選擇從設定頁搬到產出區:renderThemeStrip 色票橫條,即時點選即時回饋;設定頁區塊完全移除
+
+
+---
+
+## V4.6.0
+
+HTML 投影片配色模板:設定→系統頁新增「HTML 投影片配色」區塊,5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比)。每位個管師獨立記憶(localStorage `mdt_html_theme_{userid}`),三人可以各自選不同偏好。預設「彰濱經典」色值跟舊版寫死的色完全一致 — 沒主動換配色的使用者沒有任何視覺差異。實作上是把 `:root{--dk:...;--acc:...;--lt:...}` 三個 CSS 變數抽成 `HTML_THEMES` 常數,`genHTMLSlides` 讀當前 user 的 theme 套到 `:root`。
+
+
+**摘要**:HTML 投影片配色模板:HTML_THEMES 5 個風格(彰濱經典/暖陽/森林/薰衣草/高對比);設定→系統頁新增配色選擇區;每位個管師獨立記憶
+
+
+---
+
+## V4.5.0
+
+科別整組上下排序:設定→醫師分頁,每個科別標頭列新增「▲」「▼」按鈕(放在重命名/刪除前),點擊把該科別所有醫師整組搬到上/下個科別位置;最上方的科別「▲」灰、最下方「▼」灰(跟單醫師排序的邊界處理一致);新函數 `moveDept(dept, dir)` 直接重排 `DRS` 陣列(不另存科別順序,因為 `[...new Set(DRS.map(d=>d.dept))]` 自然反映順序);若歷史 DRS 有同科別交錯排列,移動後會自然合併到一起
+
+
+**摘要**:科別整組上下排序:moveDept(dept,dir) 重排 DRS 陣列;科別標頭列加 ▲▼ 按鈕,邊界灰化
+
+
+---
+
+## V4.4.0
+
+**版本號規則修正**:從這版開始嚴格進位 — 第三碼最大就是 9,超過 9 直接 y+1, z=0(以前長期容許 V4.3.45 這種第三碼 ≥ 10 是錯誤)。本版原為 V4.3.45,套規則後重新編號為 V4.4.0。
+
+內容(沿用原 V4.3.45):修補 V4.3.43 主檔遷移失效根因——刪除舊版重複定義的 9 個函數(loadAll、migrateLOCS、migrateDRS、migrateCFG、migrateCFGConv、saveAll、mkStr、getMemberStr;舊版 L7812-7921),原本因 JS 後者覆蓋前者導致新版的 `_migrateDrsDepts()` 從未執行;修「耳鼻咙科→耳鼻喉科」typo;設定→醫師分頁新增「重新套用主檔遷移」按鈕,執行完顯示『重命名 N 位、新增 M 位、更新 X 個癌別』統計訊息;按鈕冪等可重複按、保留使用者手動新增的醫師
+
+
+**摘要**:(原 V4.3.45,因版本號規則修正——第三碼最大 9 超過要進位——重新編號)修主檔遷移根因:刪舊版 9 個重複函數;修咙→喉 typo;醫師分頁加「重新套用主檔遷移」按鈕
+
+
+---
+
+## V4.3.44
+
+NAS 跨機同步刪除標記傳播：新增 `_canDelete()` 權限工具與 `writeTombstoneToNAS()` — 刪除會議時自動寫 NAS tombstone（{deleted:true, version+1, deletedAt, deletedBy}）；`syncWithNAS` 收到 tombstone 後刪除本地、且不會把已刪會議「升級」回正常檔；tombstone 90 天後自動清理；補修 `deleteCurMtg`（會議內刪除）與 `confirmBatchDelete`（批次刪除）漏掉的 createdBy 權限檢查；批次刪除遇到任一筆無權限即整批擋下並列出哪幾筆
+
+
+**摘要**:NAS 同步刪除傳播:_canDelete + writeTombstoneToNAS;補 deleteCurMtg/confirmBatchDelete 權限檢查;tombstone 90 天 TTL
+
+
+---
+
+## V4.3.43
+
+會後填寫功能：產出區新增「會後填寫」按鈕；全螢幕 panel 依癌別分組顯示前期追蹤（結案/繼續追蹤）和個案討論（摘要/結論/不列入下次追蹤）；存檔後寫回 meeting；autoImportPrevFollowups 加 followNext 和 ongoing 過濾
+
+
+**摘要**:移除乳房外科、歐金俊移至大腸直腸外科、DRS 遷移函數
+
+
+**摘要**:DOCX 個案抬頭配色改為 #3A4550（同程式 UI）
+
+
+---
+
+## V4.3.42
+
+
+**摘要**:整合主檔：15科、35醫師、頭頸外科拆分、消化/婦科更名
+
+
+---
+
+## V4.3.41
+
+
+**摘要**:NAS 跨機同步：syncWithNAS + writeMtgToNAS，登入同步 + 存檔推送
+
+
+---
+
+## V4.3.40
+
+
+**摘要**:刪除保護：createdBy 檢查 + 批次刪除 disabled
+
+
+---
+
+## V4.3.39
+
+
+**摘要**:依 CLAUDE.md playbook 重寫 CLAUDE.md；砍舊版本歷程；加下版優先清單
+
+
+---
+
+## V4.3.37
+
+
+**摘要**:hotfix：_groupPath 未在 genHTMLSlides 宣告導致 HTML 產出失敗
+
+
+---
+
+## V4.3.36
+
+
+**摘要**:DOCX 六修：院名癒→癌、空案過濾、移討論主題行、空欄簡化、診斷治療分隔線
+
+
+---
+
+## V4.3.35
+
+
+**摘要**:DOCX 字型大小修正：pt()=twip 用於間距，sz()=半點 用於字型
+
+
+---
+
+## V4.3.34
+
+
+**摘要**:複製會議功能（閱覽模式右上角，選目標日期，完整複製）
+
+
+---
+
+## V4.3.33
+
+
+**摘要**:會後填寫按鈕視覺優化（深藍漸層，全寬，加說明副標）
+
+
+---
+
+## V4.3.32
+
+
+**摘要**:會後填寫 panel：摘要/結論/追蹤狀態一次填完；followNext/ongoing 自動帶入
+
+
+---
+
+## V4.3.31
+
+DOCX 會議記錄全面改版：定位改為「會議決議確認單」；深藍色個案標題色塊；只保留診斷/治療/討論摘要/決策結論；前期追蹤加結案狀態；移除簽署欄，改為頁尾記錄者+日期；字型統一新細明體 12pt；頁邊距縮小優化手機閱讀
+
+
+**摘要**:DOCX 改版：決議確認單格式，個案標題色塊，12pt，移簽署欄
+
+
+---
+
+## V4.3.30
+
+【第一批】跨機同步前置：新增 createdBy 欄位至 newMeetingObj；canEditMeeting() 判斷是否為建立者；非建立者的會議顯示「建立者：XXX」badge，編輯按鈕 disabled；enterEditMode() 加權限檢查
+
+
+---
+
+## V4.3.29
+
+NAS 備份改為每天首次啟動時觸發（登入後 3 秒背景執行），移除每次存檔觸發；新增 _shouldNasBackupToday / _markNasBackupToday 輔助函數
+
+
+---
+
+## V4.3.28
+
+設定頁重整：11個tab → 7個tab（地點/醫師/癌別/檢查項目/影像資料夾/備份/系統）；備份tab整合共享資料夾+NAS+備份還原+空間使用；系統tab整合AI+GitHub+測試資料
+
+
+---
+
+## V4.3.27
+
+NAS 自動備份：設定頁新增 NAS tab（選取資料夾/測試/狀態）；每次 saveMeeting 後背景執行 backupToNAS()（含全部圖片 base64）；最多保留 10 份，靜默失敗不中斷操作
+
+
+---
+
+## V4.3.26
+
+「病理切片影像集中」checkbox 移至資料夾狀態列同排右側（margin-left:auto），grid 5欄全為按鈕
+
+
+---
+
+## V4.3.25
+
+「病理切片影像集中」checkbox 移入 HTML 投影片格內（flex column），grid 維持 5 欄整齊
+
+
+---
+
+## V4.3.24
+
+修正放大鏡座標偏移：病理切片投影片使用 object-fit:contain 置中圖片，letterbox 留白導致座標偏移；改為先計算實際渲染區域（offX/offY）再換算像素座標，所有使用 contain 的圖片均修正
+
+
+---
+
+## V4.3.23
+
+HTML 投影片新增「病理切片影像集中於各癌別結尾」checkbox：勾選後各癌別所有個案主頁先產出，病理切片影像統一移至該癌別最後；手術/相關/乳攝影像不受影響
+
+
+---
+
+## V4.3.22
+
+特殊議程影像補加「清除全部」按鈕（buildSpecialImgArea 補 clearAction + delegation）；選圖對話框補檔名顯示（同 pickimgfolder 格式：baseName + ext badge + hover）
+
+
+---
+
+## V4.3.21
+
+整併 buildImgArea / buildPathImgArea / buildSurgicalImgArea / buildSpecialImgArea 四個函數為一個通用 buildGenericImgArea，各原函數保留為薄包裝層，省約 40KB
+
+
+---
+
+## V4.3.20
+
+移除死碼 addImg()（直接上傳相關影像，已無任何呼叫點），僅此一函數，其餘不動
+
+
+---
+
+## V4.3.19
+
+localStorage 管理三改：①索引上限從 30 提升至 100 筆 ②saveLocal 自動清除孤兒 mdt_m_ key ③設定頁新增儲存空間使用量儀表板（進度條 + 會議筆數 + 圖片佔用）
+
+
+---
+
+## V4.3.18
+
+特殊議程 HTML 投影片右上角標籤改為「特殊議程」，不顯示癌別名稱
+
+
+---
+
+## V4.3.17
+
+特殊議程閱覽模式加入影像預覽按鈕（fromFolder 走 imgFolderHandle 讀取）
+
+
+---
+
+## V4.3.16
+
+前期追蹤帶入後預設收合（_autoImported 標記）；新增前期追蹤時也預設收合；刪除前期追蹤需二次確認；特殊議程圖片選擇器顯示完整檔名
+
+
+---
+
+## V4.3.15
+
+類別順序：「其他」移至最後；自動儲存改為 silent 模式（不切回閱覽），只有手動按儲存才切換
+
+
+---
+
+## V4.3.14
+
+特殊議程（非四率）新增影像上傳：📂 從共用資料夾選取、每頁張數（1/2/4）、img-slide 頁產出（支援放大縮小、放大鏡）
+
+
+---
+
+## V4.3.13
+
+修正四率 chips 無法點選：data-action 誤植在 class attribute 內，造成 delegation 找不到目標
+
+
+---
+
+## V4.3.12
+
+四率 HTML 投影片產出：完治率（統計摘要 + 未完治病人分頁 + 佐証圖片）；失聯率/留治率/訪視率（多癌別統計表 + 病人清單 + 佐証圖片）；達標綠色/未達標紅色
+
+
+---
+
+## V4.3.11
+
+乳攝投影片加 img-slide class；滾輪縮放改追蹤 _zoomTarget（多圖頁每張獨立縮放）；放大鏡改 elementFromPoint；四率 chips 加入所有類別供切換
+
+
+---
+
+## V4.3.10
+
+事件軸視覺優化：節點按日期比例分佈（A）+ 節點大小依類型分級（dx/surgery=14, chemo/rt=9, follow/imaging=7）+ 線條 2px
+
+
+---
+
+## V4.3.9
+
+三率編輯模式（失聯率/留治率/訪視率）：多癌別行輸入、失聯率額外欄（總收案數/死亡個案）、即時達標顏色、指標定義預設文字可儲存；完治率重建並加達標顏色；全面改 data-action delegation
+
+
+---
+
+## V4.3.2
+
+*（穩定基準）*
+
+刪除有資料的個案需二次確認；事件軸新增時改為逐筆 append（不重渲染所有列）
+
+
+---
+
+## V4.3.1
+
+修正治療事件軸無法手動新增（addStruct/delStruct/updStruct 加入 timeline 處理）；每頁張數選單移至標籤旁
+
+
+---
+
+## V4.3.0
+
+新功能：治療事件軸（蛇形 SVG Timeline）—編輯模式含「從治療記錄帶入」；閱覽模式 SVG；HTML 投影片最後頁深色背景
+
+
+---
+
+## V4.2.24
+
+HTML 投影片影像區塊改為自動填滿：依每頁張數（1/2/4）以 CSS Grid 均分滿版，保留 2vh 2.5vw 邊距；病理影像同步加入邊距
+
+
+---
+
+## V4.2.23
+
+乳攝 HTML 分頁比例改 2:4:4（說明20%，影像各40%）；相關影像/手術照片編輯欄新增每頁張數選擇（1/2/4）
+
+
+---
+
+## V4.2.22
+
+修正乳攝清除後無法新增：addmammoimg / delmammoimg 改用 replaceWith（避免 innerHTML 嵌套 mammo-imgs 容器）；caption 欄位樣式加框線加深色，明顯度提升
+
+
+---
+
+## V4.2.21
+
+修正 buildImgArea / buildMammoImgArea 缺少 const cap= 定義，導致編輯模式 cap is not defined 錯誤
+
+
+---
+
+## V4.2.20
+
+修正 HTML 投影片 _pathImgCache 只讀病理影像：擴充為同時讀入手術/相關/乳攝三種 fromFolder 影像
+
+
+---
+
+## V4.2.19
+
+HTML 投影片檔名改為「日期_癌別多專科會議.html」（如 2026-04-20_乳癌多專科會議.html）
+
+
+---
+
+## V4.2.18
+
+四種影像（病理/手術/相關/乳攝）加入可編輯說明欄：預設顯示檔名，點擊可輸入自訂描述，存檔後保留
+
+
+---
+
+## V4.2.17
+
+閱覽模式加入手術照片區塊（previewsurgimg），補齊與病理影像、乳攝、相關影像相同的預覽功能
+
+
+---
+
+## V4.2.16
+
+修正相關影像預覽失效：改用 data-action="previewrelatedimg" + event delegation（同乳攝修正模式）
+
+
+---
+
+## V4.2.15
+
+修正乳攝預覽失效：閱覽模式乳攝按鈕改用 data-action="previewmammoimg" + event delegation，不再用 onclick 內嵌 base64
+
+
+---
+
+## V4.2.14
+
+修正儲存後未返回閱覽模式：saveMeeting setTimeout 改為儲存後切換 S.viewMode=true 並呼叫 renderEditor
+
+
+---
+
+## V4.2.13
+
+修正乳攝照片跑到相關影像：elOk/elR 改依 type 選擇正確 DOM 元素；addmammoimg 加入壓縮（最長邊 1200px，JPEG 0.75）解決卡頓
+
+
+---
+
+## V4.2.12
+
+HTML 投影片下載/分享檔名改為「日期_癌別.html」（如 2026-04-20_乳癌.html）
+
+
+---
+
+## V4.2.11
+
+還原至 V4.2.5 基礎，只移除 extraJs 中誤植的 Ctrl+S handler（S.meeting 引用），暫不刪除重覆碼
+
+
+---
+
+## V4.2.5
+
+影像資料夾雙層架構：設定根目錄後自動按日期+癌別建立子目錄（如 20260416 乳癌）；亦可手動為每場會議自訂資料夾；優先順序：自訂 > 根目錄子目錄 > 根目錄
+
+
+---
+
+## V4.2.4
+
+影像資料夾改為每場會議各自設定，以 meeting.id 為 key 存 IndexedDB；進入會議自動恢復，有記錄但未授權時顯示「點此恢復授權」
+
+
+---
+
+## V4.2.3
+
+影像資料夾改用 IndexedDB 持久化：設定一次，重新開啟 App 自動恢復授權；設定頁新增「影像資料夾」tab 集中管理
+
+
+---
+
+## V4.2.2
+
+修正 JSON 匯入病人消失：renderCasesInner 在合併會議時呼叫 loadMergedSections 覆蓋尚未儲存的新個案；改為直接 DOM 操作 append
+
+
+---
+
+## V4.2.1
+
+caseHTML 預設收合（cc-collapsed）；addItem 新卡片先移除 cc-collapsed 再收合其他；doImportCase 匯入後展開最後一筆
+
+
+---
+
+## V4.2.0
+
+renderEditor 初始化 S.activeCid；getOutputCid 驗證 activeCid 在 S.cids 內；autoImportPrevFollowups 加 try/catch 防止新建會議失敗
+
+
+---
+
+## V4.1.9
+
+新增個案時自動收合其他個案（accordion 恢復）；JSON 匯入後自動展開並捲動到最後匯入的個案
+
+
+---
+
+## V4.1.8
+
+修正 HTML 投影片 / HTML 分享失敗：cases.forEach 結尾括號錯置於 surgical images forEach 之前，導致 c is not defined
+
+
+---
+
+## V4.1.7
+
+修正 HTML 分享上傳失敗：shareHTMLSlides 缺少 async 關鍵字導致 await 語法錯誤；移除殘留的 existUrl/token 未定義死碼
+
+
+---
+
+## V4.1.6
+
+合併開會各癌別獨立產出（LINE/HTML/PPTX/DOCX/Excel/JSON 均依目前 tab 產出）；產出區顯示目前產出癌別並可一鍵切換
+
+
+---
+
+## V4.1.5
+
+標籤「前次醫療小組日期」改名為「上次多專科日期」；新建會議自動帶入：個案討論 + 醫療小組同時帶入前期追蹤
+
+
+---
+
+## V4.1.4
+
+前期追蹤卡片加入 ▶/▼ 收合圖示；產出第三排按鈕統一為 grid repeat(5,1fr)
+
+
+---
+
+## V4.1.3
+
+followupHTML 加入收合/展開；自動帶入的前期追蹤預設收合（cc-collapsed）
+
+
+---
+
+## V4.1.2
+
+新建會議自動帶入上次同癌別個案至前期追蹤
+
+
+---
+
+## V4.1.1
+
+修正 JSON.stringify(all) 在 onclick 造成字串外洩；改用全域變數 _fupImportCid/_fupImportAll
+
+
+---
+
+## V4.1.0
+
+週備份提醒；個案標記（首次/複雜/緊急）可複選；歷史決策側欄；本月統計摘要
+
+
+---
+
+## V4.0.2
+
+產出末排 AI 按鈕改 flex；前期追蹤帶入清單改固定欄位寬度
+
+
+---
+
+## V4.0.1
+
+「從歷史帶入」改至前期追蹤；openFollowupImport 以勾選帶入
+
+
+---
+
+## V4.0.0
+
+自動儲存每 2 分鐘；離開提醒 beforeunload；個案↑↓排序；跨會議個案搜尋；從歷史帶入前期追蹤
+
+
+---
+
+## V3.9.6
+
+產出按鈕改 CSS Grid repeat(5,1fr)，三排等寬填滿
+
+
+---
+
+## V3.9.5
+
+新增 Breast SONO；影像檢查選「其他」可自填
+
+
+---
+
+## V3.9.4
+
+AI 匯入 prompt 更新：exams/markers/familyHistory/topics 說明精確化
+
+
+---
+
+## V3.9.3
+
+個案輸入頁面 UI 整理：年齡/性別合併、診斷3行、過去病史副標籤、癌指數移臨床資料、影像檢查改名、會議記錄用 fsec
+
+
+---
+
+## V3.9.2
+
+還原：會議日期與結構欄位不預填今天
+
+
+---
+
+## V3.9.1
+
+病理/檢查/治療/癌指數新增日期不預填（還原）；儲存後保持編輯模式
+
+
+---
+
+## V3.9.0
+
+首頁「+ 新建」按鈕；openNewModal 預填癌別日期；新個案預設展開；Ctrl+S 儲存；選科別自動帶入醫師
+
+
+---
+
+## V3.8.8
+
+所有影像資料夾選取按鈕標籤統一；乳攝選取按鈕永遠顯示
+
+
+---
+
+## V3.8.7
+
+移除列印/PDF；產出按鈕重新排列；資料夾授權提示移頂部
+
+
+---
+
+## V3.8.6
+
+pathImgFolderHandle 與 imgFolderHandle 合併為單一資料夾授權
+
+
+---
+
+## V3.8.5
+
+for await 改用 _folderEntries() helper，修正 Chrome SyntaxError
+
+
+---
+
+## V3.8.0
+
+LINE 通知 tag() 改依 ca.id 分組查找，修正癌別誤判
+
+
+---
+
+## V3.7.0
+
+GitHub 分享已分享清單（複製連結/開啟/刪除）
+
+
+---
+
+## V3.6.0
+
+extraJs 獨立 script block 修正多層跳脫；合併會議 bug 修正
+
+
+---
+
+## V3.5.0
+
+GitHub Pages 投影片分享功能（HTML 分享按鈕）
+
+
+---
+
+## V3.4.0
+
+HTML 投影片手術照片區；病理染色影像資料夾模式
+
+
+---
+
+## V3.3.0
+
+JSON 批次匯入/匯出；AI 匯入提示詞；per-key merge loadAll
+
+
+---
+
+## V3.2.0
+
+乳攝欄位（mammo）；家族史欄位；phChips 結構統一
+
+
+---
+
+## V3.1.0
+
+highlight toolbar（五色）；病理染色影像欄位
+
+
+---
+
+## V3.0.9
+
+修復 genLine tag is not a function；HTML 投影片改左右兩欄
+
+
+---
+
+## V3.0.8
+
+addStruct/delStruct 改局部 DOM，不跳頁
+
+
+---
+
+## V3.0.7
+
+編輯模式預設展開；LINE 通知顯示子癌別
+
+
+---
+
+## V3.0.6
+
+新增個案依癌別預選第一主治科別
+
+
+---
+
+## V3.0.5
+
+診斷/現病史多行；Bone scan；癌指數區塊；HTML 投影片圖片頁
+
+
+---
+
+## V3.0.4
+
+HTML 投影片：診斷移入深色標題列
+
+
+---
+
+## V3.0.3
+
+HTML 投影片：依診斷自動子分組（膀胱/攝護腺/腎臟等）
+
+
+---
+
+## V3.0.2
+
+HTML 投影片病理渲染重寫；Excel 匯入功能
+
+
+---
+
+## V3.0.1
+
+移除 isOwn 編輯限制，任何登入者可編輯所有癌別
+
+
+---
+
+## V3.0.0
+
+個案卡片預設收合；閱覽模式單獨編輯按鈕
+
+
+---
+
+## V2.9.9
+
+HTML 投影片：病歷號/姓名加粗放大、&nbsp; 亂碼修正、膠囊型導覽
+
+
+---
+
+## V2.9.8
+
+HTML 投影片：字體放大、topics chip 加大、側邊導覽列
+
+
+---
+
+## V2.9.7
+
+HTML 投影片全面改版：表格式佈局、癌別色彩、字體放大
+
+
+---
+
+## V2.9.6
+
+HTML 投影片全版 flex 佈局；修正 </script> 洩漏 bug
+
+
+---
+
+## V2.9.5
+
+（跳過，版本含嚴重 bug）
+
+
+---
+
+## V2.9.4
+
+個案可收合；新增個案選擇對話框；列印 CSS 修正
+
+
+---
+
+## V2.9.3
+
+列印改 A4 橫向
+
+
+---
+
+## V2.9.2
+
+列印/PDF 改善：會議標題頁、隱藏 UI、每案獨頁
+
+
+---
+
+## V2.9.1
+
+新增匯入個案 JSON 功能（+ 附匯入用 prompt）
+
+
+---
+
+## V2.9.0
+
+新增列印/PDF 功能（@media print + window.print）
+
+
+---
+
+## V2.8.7
+
+修正 PPTX/Excel 下載：明確 appendChild+click
+
+
+---
+
+## V2.8.6
+
+PPTX 標題列簡化；診斷移入內容列
+
+
+---
+
+## V2.8.5
+
+修正 PPTX/Excel 下載權限問題（arraybuffer→Blob）
+
+
+---
+
+## V2.8.4
+
+檢查/治療兩行版面；PPTX 個案自動多頁
+
+
+---
+
+## V2.8.3
+
+修正新增條目日期消失；PPTX 行高更保守
+
+
+---
+
+## V2.8.2
+
+病理/檢查/治療欄位排版改善
+
+
+---
+
+## V2.8.1
+
+修正 V2.8.0 SyntaxError：PPTX split 換行符
+
+
+---
+
+## V2.8.0
+
+病理改多筆條列；PPTX addRow 動態行高修正重疊
+
+
+---
+
+## V2.7.7
+
+LINE 通知每位病人加癌別標籤【癌別名】
+
+
+---
+
+## V2.7.6
+
+LINE 通知格式全面重寫：統一縮排，顯示癌別
+
+
+---
+
+## V2.7.5
+
+DOCX 補齊所有欄位；DOCX/LINE 加入醫療小組/必要事件
+
+
+---
+
+## V2.7.4
+
+修正醫療小組/必要事件 addItem/delItem/upd 的 cid 傳遞
+
+
+---
+
+## V2.7.3
+
+LINE 通知個案列加入診斷
+
+
+---
+
+## V2.7.2
+
+修正 genLine 個案醫師：c.doctor→getDoctorStr(c)
+
+
+---
+
+## V2.7.1
+
+Excel 去遮蔽；JSON 全量備份/還原（含影像），可跨裝置合併
+
+
+---
+
+## V2.7.0
+
+新增 Excel 匯出（5 個 sheet：個案/檢查/治療/前期追蹤/會議資訊）
+
+
+---
+
+## V2.6.7
+
+所有輸出函數醫師欄位改用 getDoctorStr()，相容新舊格式
+
+
+---
+
+## V2.6.6
+
+醫師名稱去 dept 前綴；新增必要事件區塊
+
+
+---
+
+## V2.6.5
+
+醫療小組移到特殊議程前；按鈕文字修正
+
+
+---
+
+## V2.6.4
+
+新增醫療小組區塊；消化/乳/肝膽地點→一樓人文；migrateCFG
+
+
+---
+
+## V2.6.3
+
+migrateCFG()：修正頭頸/血淋地點（localStorage 覆蓋 DEFAULT 問題）
+
+
+---
+
+## V2.6.2
+
+林伯儒不列聯絡人；合併顯示多個管師；新地點；migrateLOCS
+
+
+---
+
+## V2.6.1
+
+聯絡人合併所有癌別負責人
+
+
+---
+
+## V2.6.0
+
+檢查下拉選單+設定管理；術語統一（現病史/過去病史/檢查）
+
+
+---
+
+## V2.5.6
+
+儲存後隱藏放棄編輯按鈕；PPTX 補齊 PH/病理/Exam/治療欄位
+
+
+---
+
+## V2.5.5
+
+討論項目 chips 修 BUG-001；delegation 區塊重寫；PH 顯示 HTN(+) 格式
+
+
+---
+
+## V2.5.4
+
+PPTX 前期追蹤動態行高；PH chips 顯示在閱覽/LINE
+
+
+---
+
+## V2.5.3
+
+Exam/治療 textarea 多行；特殊議程類別 chips
+
+
+---
+
+## V2.5.2
+
+PH chips delegation 修正；Exam/治療欄位比例調整
+
+
+---
+
+## V2.5.1
+
+修正 drSelect2→drSelDept；新增 toggleTopic()；更新 genTestData
+
+
+---
+
+## V2.5.0
+
+個案表單大改版：PHchips、病理欄、Exam/治療條列、M/F 性別
+
+
+---
+
+## V2.4.2
+
+影像說明欄（上傳時可填說明）；閱覽模式顯示影像清單+說明+預覽按鈕
+
+
+---
+
+## V2.4.1
+
+BUG-001 修正：buildImgArea 改用 data-action+事件委派，影像按鈕真正可用
+
+
+---
+
+## V2.4.0
+
+追蹤說明/討論要點改 textarea；addImg 加 setTimeout+addEventListener
+
+
+---
+
+## V2.3.1
+
+PPTX 前期追蹤加說明列；DOCX 個案討論聚焦摘要/結論
+
+
+---
+
+## V2.3.0
+
+手機底部 tab 導覽 + 頂部列 + 使用者切換 Sheet
+
+
+---
+
+## V2.2.4
+
+日曆格子四邊框；renderCalendar 改 DOM 操作
+
+
+---
+
+## V2.2.3
+
+手機日曆縮短癌別名；歷史記錄 flex-wrap
+
+
+---
+
+## V2.2.2
+
+手機 UI 全面優化（底部 tab + 設定 tab 縮短 + 行事曆標題）
+
+
+---
+
+## V2.2.1
+
+歷史記錄視覺優化：癌別標籤去色、按鈕層次、月份標頭色調
+
+
+---
+
+## V2.2.0
+
+歷史記錄/開會列表移除版本號，單行顯示
+
+
+---
+
+## V2.1.9
+
+migrateDRS() + migrateCFGConv()：自動修正 localStorage 舊資料
+
+
+---
+
+## V2.1.8
+
+conv 欄位補 dept:: 前綴；breast/lymphoma/hepatobiliary 補 defaultSlot
+
+
+---
+
+## V2.1.7
+
+腫瘤內科→消化內科；張正雄/劉大智移血液腫瘤科；侯柏年移出影像診斷科
+
+
+---
+
+## V2.1.6
+
+腫瘤外科→一般外科；王威群移頭頸外科；歐金俊移一般外科；召集人下拉修正
+
+
+---
+
+## V2.1.5
+
+醫師清單合併重複科別；時間改下拉（早會/午會）；聯絡人唯讀；README 重整
+
+
+---
+
+## V2.1.4
+
+癌別設定改 DOM 渲染（修正空白行）；醫師科別預設收合；預載資料重設計
+
+
+---
+
+## V2.1.3
+
+癌別設定：每個癌別各自有「儲存」按鈕
+
+
+---
+
+## V2.1.2
+
+聯絡人自動帶入；新建會議 Zoom 預設空白；癌別設定新增 defaultSlot
+
+
+---
+
+## V2.1.1
+
+修正 deleteMtg 漏到 </html> 之後導致程式碼顯示在頁面
+
+
+---
+
+## V2.1.0
+
+刪除四碼確認；修正影像上傳（需先 appendChild 再 click）
+
+
+---
+
+## V2.0.5
+
+移除 17 重複函數、36 廢棄 CSS
+
+
+---
+
+## V2.0
+
+*.x*
+
+影像支援；PPTX 全新排版；智慧開啟模式；前期追蹤卡片樣式；歷史記錄
+
+
+---
+
+## V1.9
+
+*.x*
+
+行事曆首頁、weeknum 每月一次、月份歷史分組；V1.9.1–V1.9.4：行事曆 bug 修正
+
+
+---
+
+## V1.8
+
+*.x*
+
+行事曆首頁上線；V1.8.1–V1.8.2：語法 bug 修正
+
+
+---
+
+## V1.7.0
+
+合併開會分 tab 編輯；地點/時間/召集人改下拉；醫師管理可新增科別
+
+
+---
+
+## V1.6.0
+
+Noto Sans TC 字型；合併開會分開存（mdt_sec）
+
+
+---
+
+## V1.5
+
+*.x*
+
+排程/記錄模式分離；登入頁版本號；編輯流程修正
+
+
+---
+
+## V1.4.0
+
+基礎功能：閱覽/編輯、設定、AI、LINE、PPTX/DOCX
+
+
+---

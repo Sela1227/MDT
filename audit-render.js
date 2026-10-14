@@ -1,7 +1,8 @@
 const {JSDOM}=require('jsdom');
 const fs=require('fs');
+const FILE=require('path').join(__dirname,'index.html');/* V5.70.0:相對路徑,preflight 從任何目錄都能跑 */
 const errs=[];
-const dom=new JSDOM(fs.readFileSync('/home/claude/index.html','utf8'),{
+const dom=new JSDOM(fs.readFileSync(FILE,'utf8'),{
   runScripts:'dangerously', url:'https://localhost/',
   beforeParse(w){
     w.scrollTo=()=>{}; w.indexedDB=undefined;
@@ -194,6 +195,23 @@ setTimeout(async ()=>{
     if(miss.length||!html.length)bad++;
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
 
+  // ── [V5.72.0] 投影片不得出現重複標籤;前期追蹤標題樣式要在 ──
+  console.log('\n=== [V5.72.0] 投影片重複字眼 / .th 樣式 ===');
+  try{
+    run("var s=S.meeting.sections['head_neck'];"
+      +"s.cases=[createItem('head_neck','cases',{chartNo:'9000001',name:'測試一',diagnosis:'dx',discussion:'d',cc:'cc',ph:'ph',"
+      +"pathologies:[{date:'2024-01-01',content:'SCC'}],exams:[{name:'CT',date:'2024-01-02',content:'mass'}],treatments:[{name:'手術',date:'2024-02-01',content:'op'}],"
+      +"markers:[{name:'SCC',content:'1.2'}],genomics:[{name:'KRAS/NRAS/BRAF',content:'not detected'},{name:'MSI',content:'MSS'}],showGenomics:true},{})];"
+      +"s.events=[];s.followups=[createItem('head_neck','followups',{chartNo:'9000002',name:'測試二',summary:'追蹤'},{})];"
+      +"S.meeting.version=2;saveLocal(S.meeting);_dirty=false;");
+    const html=String(await run("genHTMLSlides()")||'');
+    const d2=new JSDOM(html).window.document;
+    const dup=[];d2.querySelectorAll('tr').forEach(function(tr){const l=tr.querySelector('.rl'),v=tr.querySelector('.rv');if(!l||!v)return;const lab=l.textContent.trim();if(lab&&v.textContent.indexOf(lab)>=0)dup.push(lab);});
+    const thOk=/\.th\{font-size:clamp\(/.test(html)&&html.indexOf('}NaN.')<0;
+    console.log('  表格列標籤重複:',dup.length?'🔴 '+dup.join(','):'✅ 無','| .th 樣式:',thOk?'✅':'🔴 遺失(+ + 變 NaN)');
+    if(dup.length||!thOk)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
+
   // ── [V5.56.0] tlLayout 純函式(審核第八節 #7/#8/#11/#12/#13/#14)──
   console.log('\n=== [Hybrid TL] tlLayout 純函式 ===');
   try{
@@ -220,7 +238,77 @@ setTimeout(async ()=>{
     if(fail.length)bad++;
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
 
+  // ── [V5.69.0] 雙機 NAS 模擬(審核附錄 A)—— 單機永遠測不到 S-1/M-1/M-3 這一類 ──
+  console.log('\n=== [雙機 NAS] S-1 / M-1 / M-2 / M-3 ===');
+  try{
+    const NAS=new Map();let nasDown=false;
+    const mkDir=()=>({name:'sync',kind:'directory',async getDirectoryHandle(){return this;},
+      async getFileHandle(n,o){if(!NAS.has(n)&&!(o&&o.create)){const e=new Error('nf');e.name='NotFoundError';throw e;}
+        return{kind:'file',name:n,async getFile(){return{async text(){return NAS.get(n)||'';}};},async createWritable(){if(nasDown)throw new Error('NAS down');let b='';return{async write(s){b+=s;},async close(){NAS.set(n,b);}};}};},
+      async *values(){for(const n of [...NAS.keys()])yield await this.getFileHandle(n);},async removeEntry(n){NAS.delete(n);}});
+    const boot2=(uid)=>new Promise(res=>{const dom2=new JSDOM(fs.readFileSync(FILE,"utf8"),{runScripts:"dangerously",url:"https://localhost/",
+      beforeParse(w2){w2.scrollTo=()=>{};w2.indexedDB=undefined;w2.alert=()=>{};w2.confirm=()=>true;w2.fetch=()=>Promise.reject(new Error("x"));w2.console.error=()=>{};w2.console.warn=()=>{};w2.console.log=()=>{};w2.HTMLElement.prototype.scrollIntoView=function(){};}});
+      setTimeout(()=>{const r2=c=>dom2.window.eval(c);dom2.window.nasHandle=mkDir();r2(`S.user=USERS.find(function(u){return u.id==='${uid}';});S.viewMode=false;S.meetingMode='record';var fd=document.getElementById('f-date');if(fd)fd.value='2026-10-15';`);res(r2);},3500);});
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
+    const A=await boot2('lin'),B=await boot2('yang'),A2=await boot2('lin');
+    let ok=0,n=0;const C=(name,cond)=>{n++;if(cond)ok++;else console.log('  🔴 '+name);};
+    // S-1:林改 HN、楊改 LY
+    const seed=A(`(function(){S.cids=['head_neck','lymphoma'];S.meeting=newMeetingObj(S.user.id,['head_neck','lymphoma']);S.meeting.id='M1';S.meeting.date='2026-10-15';S.meeting.version=1;S.meeting.rev='r1';['head_neck','lymphoma'].forEach(ensureSec);S.meeting.sections.head_neck.cases=[createItem('head_neck','cases',{chartNo:'HN',summary:'HN舊'},{})];S.meeting.sections.lymphoma.cases=[createItem('lymphoma','cases',{chartNo:'LY',summary:'LY舊'},{})];saveLocal(S.meeting);return JSON.stringify(S.meeting);})()`);
+    [B,A2].forEach(x=>x(`saveLocal(${seed});`));NAS.set('mdt_m_M1.json',seed);
+    await A(`(async()=>{S.cids=['head_neck','lymphoma'];S.meeting=await _loadMtg('M1');_resetEditState();S._snapshot=JSON.stringify(S.meeting);S.meeting.sections.head_neck.cases[0].summary='HN-by-lin';_dirty=true;await _doSave({});})()`);await wait(250);
+    await B(`(async()=>{S.cids=['head_neck','lymphoma'];S.meeting=await _loadMtg('M1');_resetEditState();S._snapshot=JSON.stringify(S.meeting);S.meeting.sections.lymphoma.cases[0].summary='LY-by-yang';_dirty=true;await _doSave({});})()`);await wait(250);
+    const n1=JSON.parse(NAS.get('mdt_m_M1.json'));
+    C('S-1 兩區段皆保留',n1.sections.head_neck.cases[0].summary==='HN-by-lin'&&n1.sections.lymphoma.cases[0].summary==='LY-by-yang');
+    C('N-1 savedBy 是姓名',n1.savedBy==='楊靜雯'&&n1.savedById==='yang');
+    C('M-1 NAS 檔無 _pushedRev',n1._pushedRev===undefined);
+    // M-1:A 再存兩次,B 都收得到
+    for(const d of ['d2','d3']){await A(`(async()=>{S.meeting=await _loadMtg('M1');_resetEditState();S._snapshot=JSON.stringify(S.meeting);S.meeting.sections.head_neck.cases[0].summary='${d}';_dirty=true;await _doSave({});})()`);await wait(250);const rs=JSON.parse(await B("(async()=>JSON.stringify(await syncWithNAS()))()"));C('M-1 B 收到 '+d,rs.updated===1&&!rs.conflicts&&B("loadLocal('M1').sections.head_neck.cases[0].summary")===d);}
+    // N-2:同一人兩台衝突 → 選本機 → 再存不衝突
+    await A2(`(async()=>{S.cids=['head_neck','lymphoma'];S.meeting=await _loadMtg('M1');_resetEditState();S._snapshot=JSON.stringify(S.meeting);S.meeting.sections.head_neck.cases[0].summary='HN-A2';_dirty=true;await _doSave({});})()`);await wait(250);
+    const o2=JSON.parse(await A(`(async()=>{S.meeting.sections.head_neck.cases[0].summary='HN-A';_dirty=true;const r=await _doSave({});return JSON.stringify({r:r,k:S.conflict&&S.conflict.kind});})()`));
+    C('N-2 同一人兩台 → NAS 衝突視窗',o2.r===false&&o2.k==='nas');
+    await A("resolveConflict('local')");await wait(300);
+    C('N-2 選本機 → NAS 更新',JSON.parse(NAS.get('mdt_m_M1.json')).sections.head_neck.cases[0].summary==='HN-A');
+    // M-3:離線存檔 → 別台推 → 開啟保留 → 存檔合併
+    A(`S.cids=['head_neck','lymphoma'];S.meeting=newMeetingObj(S.user.id,['head_neck','lymphoma']);S.meeting.id='M3';S.meeting.date='2026-10-15';S.meeting.version=1;S.meeting.rev='m1';['head_neck','lymphoma'].forEach(ensureSec);S.meeting.sections.head_neck.cases=[createItem('head_neck','cases',{chartNo:'H',decision:'h0'},{})];S.meeting.sections.lymphoma.cases=[createItem('lymphoma','cases',{chartNo:'L',decision:'l0'},{})];saveLocal(S.meeting);localStorage.setItem('mdt_pushed_M3','m1');`);
+    const s3=A("JSON.stringify(S.meeting)");NAS.set('mdt_m_M3.json',s3);B(`saveLocal(${s3});`);
+    nasDown=true;await A(`(async()=>{S.meeting=await _loadMtg('M3');_resetEditState();S._snapshot=JSON.stringify(S.meeting);S.meeting.sections.head_neck.cases[0].decision='hA-off';_dirty=true;await _doSave({});})()`);await wait(250);nasDown=false;
+    await B(`(async()=>{S.cids=['head_neck','lymphoma'];S.meeting=await _loadMtg('M3');_resetEditState();S._snapshot=JSON.stringify(S.meeting);S.meeting.sections.lymphoma.cases[0].decision='lB';_dirty=true;await _doSave({});})()`);await wait(250);
+    await A(`(async()=>{S.meeting=await _loadMtg('M3');S.cids=S.meeting.cids;_resetEditState();S._snapshot=JSON.stringify(S.meeting);_dirty=true;await _doSave({});})()`);await wait(250);
+    const n3=JSON.parse(NAS.get('mdt_m_M3.json'));
+    C('M-3 離線修改保留 + 別台區段併入',n3.sections.head_neck.cases[0].decision==='hA-off'&&n3.sections.lymphoma.cases[0].decision==='lB');
+    // P-1(V5.69.1):先開高版號會議 X 再開同號不同 rev 的合併會議 Y → base 不得殘留 X 的版號
+    A(`S.cids=['head_neck'];S.meeting=newMeetingObj(S.user.id,['head_neck']);S.meeting.id='MX';S.meeting.date='2026-11-19';S.meeting.version=21;S.meeting.rev='x21';ensureSec('head_neck');saveLocal(S.meeting);localStorage.setItem('mdt_pushed_MX','x21');`);
+    NAS.set('mdt_m_MX.json',A("JSON.stringify(S.meeting)"));
+    A(`S.cids=['head_neck','lymphoma'];S.meeting=newMeetingObj(S.user.id,['head_neck','lymphoma']);S.meeting.id='MY';S.meeting.date='2026-10-15';S.meeting.version=3;S.meeting.rev='y3a';['head_neck','lymphoma'].forEach(ensureSec);S.meeting.sections.head_neck.cases=[createItem('head_neck','cases',{chartNo:'H',summary:'orig'},{})];S.meeting.sections.lymphoma.cases=[createItem('lymphoma','cases',{chartNo:'L',summary:'orig'},{})];saveLocal(S.meeting);localStorage.setItem('mdt_pushed_MY','y3a');`);
+    const my=JSON.parse(A("JSON.stringify(S.meeting)"));my.rev='y3b';my.savedBy='楊靜雯';my.savedById='yang';my.sections.lymphoma.cases[0].summary='LY-by-yang';NAS.set('mdt_m_MY.json',JSON.stringify(my));
+    await A(`(async()=>{S.cids=['head_neck'];S.meeting=await _loadMtg('MX');_resetEditState();})()`);
+    const bv=A("S._baseVer");
+    await A(`(async()=>{S.cids=['head_neck','lymphoma'];S.meeting=await _loadMtg('MY');_resetEditState();S._snapshot=JSON.stringify(S.meeting);var fd=document.getElementById('f-date');if(fd)fd.value='2026-10-15';S.meeting.sections.head_neck.cases[0].summary='HN-by-lin';_dirty=true;await _doSave({});})()`);await wait(250);
+    const ny=JSON.parse(NAS.get('mdt_m_MY.json'));
+    C('P-1 開 X(v21) 後開 Y:base 不殘留(X 的 baseVer='+bv+')',A("S._baseVer")!==21);
+    C('P-1 存檔後楊的 LY 仍在',ny.sections.head_neck.cases[0].summary==='HN-by-lin'&&ny.sections.lymphoma.cases[0].summary==='LY-by-yang');
+    // Q-1(V5.70.1):本機空間滿(本機失敗、NAS 成功)→ 重新開啟要拉回 NAS 的新版,不可拿本機舊版回蓋
+    A(`S.cids=['head_neck'];S.meeting=newMeetingObj(S.user.id,['head_neck']);S.meeting.id='MQ';S.meeting.date='2026-10-15';S.meeting.version=1;S.meeting.rev='q1';ensureSec('head_neck');S.meeting.sections.head_neck.cases=[createItem('head_neck','cases',{chartNo:'Q',decision:'v-old'},{})];saveLocal(S.meeting);localStorage.setItem('mdt_pushed_MQ','q1');`);
+    NAS.set('mdt_m_MQ.json',A("JSON.stringify(S.meeting)"));
+    A(`window.__origSet=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(String(k).indexOf('mdt_m_')===0){const e=new Error('quota');e.name='QuotaExceededError';throw e;}return window.__origSet.call(this,k,v);};window.alert=function(){};`);
+    await A(`(async()=>{S.meeting=await _loadMtg('MQ');S.cids=S.meeting.cids;_resetEditState();S._snapshot=JSON.stringify(S.meeting);S.meeting.sections.head_neck.cases[0].decision='NEW-important';_dirty=true;await _doSave({silent:true});})()`);await wait(250);
+    A(`Storage.prototype.setItem=window.__origSet;`);
+    C('Q-1 本機失敗時 NAS 已有新版',JSON.parse(NAS.get('mdt_m_MQ.json')).sections.head_neck.cases[0].decision==='NEW-important');
+    C('Q-1 本機失敗時不記推送紀錄',A("localStorage.getItem('mdt_pushed_MQ')")==='q1');
+    const oq=JSON.parse(await A(`(async()=>{const m=await _loadMtg('MQ');S.meeting=m;S.cids=m.cids;_resetEditState();return JSON.stringify({d:m.sections.head_neck.cases[0].decision,keep:!!S._keepMine});})()`));
+    C('Q-1 重新開啟拉回 NAS 新版、不設 keepMine',oq.d==='NEW-important'&&!oq.keep);
+    // R-1(V5.71.0):本機失敗後「不關頁」清出空間再存 → 不可跳「和自己衝突」
+    A(`window.__origSet=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(String(k).indexOf('mdt_m_')===0){const e=new Error('quota');e.name='QuotaExceededError';throw e;}return window.__origSet.call(this,k,v);};`);
+    await A(`(async()=>{S.meeting.sections.head_neck.cases[0].decision='R1-first';_dirty=true;await _doSave({silent:true});})()`);await wait(250);
+    A(`Storage.prototype.setItem=window.__origSet;document.getElementById('cf-modal').classList.remove('open');S.conflict=null;`);
+    const r1=JSON.parse(await A(`(async()=>{S.meeting.sections.head_neck.cases[0].cc='R1-more';_dirty=true;const ok=await _doSave({});return JSON.stringify({ok:ok,modal:document.getElementById('cf-modal').classList.contains('open')});})()`));await wait(250);
+    C('R-1 不關頁再存不跳自我衝突',r1.ok!==false&&!r1.modal&&JSON.parse(NAS.get('mdt_m_MQ.json')).sections.head_neck.cases[0].cc==='R1-more');
+    console.log('  '+ok+'/'+n+(ok===n?' ✅':' 🔴'));
+    if(ok!==n)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,120));bad++;}
+
   console.log('\n=== 總計錯誤 ===');
-  console.log('  ', errs.length, errs.length?'':'✅');
+  const _tot=errs.length+bad;console.log('  ', _tot, _tot?'🔴':'✅');
   process.exit(bad?1:0);
 },5000);

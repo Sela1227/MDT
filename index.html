@@ -24,13 +24,13 @@
 :root{
   --fog-dk:#3A4550;--fog:#637281;--fog-lt:#9BAAB6;--fog-xlt:#C8D3DA;--fog-h:#455060;
   --white:#FFFFFF;--surface:#F7F8FA;--cream:#EFF1F4;--cream-dk:#E3E6EA;
-  --text:#1C2128;--textmd:#445060;--textlt:#7A8A96;
+  --text:#1C2128;--textmd:#445060;--textlt:#637281;/* V5.66.0 ④:原 #7A8A96 在白底對比不足,小字看不清 */
   --border:#CDD4DA;--blt:#DDE2E7;
   --ok:#2C5438;--okbg:#E3EFE7;--err:#622020;--errbg:#F0E3E3;--warn:#7A5A1A;--warnbg:#F5EDD8;
   --sb-w:248px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans TC',system-ui,sans-serif;background:var(--cream);color:var(--text);min-height:100vh;font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased}
+body{font-family:'Noto Sans TC',system-ui,sans-serif;background:var(--cream);color:var(--text);min-height:100vh;font-size:14px;line-height:1.65;-webkit-font-smoothing:antialiased}
 h1,h2,h3{font-family:'Noto Sans TC',system-ui,sans-serif;font-weight:700;line-height:1.15}
 .shell{display:none;min-height:100vh}.shell.active{display:block}
 #sh-login.active{display:flex}#sh-app.active{display:flex;align-items:flex-start}
@@ -378,6 +378,10 @@ textarea{resize:vertical}
    不是掛在 .cases-section —— 寫成 `.mtg-record .cases-section:not(.view-mode)` 永遠不成立。
    正確寫法:兩個 class 都在 wrap,所以用 `.mtg-record:not(.view-mode)`。 */
 .mtg-record:not(.view-mode) #mtg-actionbar{display:flex}
+/* V5.67.0 UI 第二輪④:閱覽模式也顯示固定列,只放「前往產出」 */
+.mtg-record.view-mode #mtg-actionbar{display:flex}
+.mtg-record.view-mode #mtg-actionbar .ab-edit-only{display:none}
+.mtg-record:not(.view-mode) #mtg-actionbar .ab-view-only{display:none}
 @media print{ #mtg-actionbar{display:none!important} }
 
 /* ════ V5.40.0 輸入介面一致化 第 1 步:CSS class 取代手抄 inline style ════
@@ -538,15 +542,26 @@ textarea{resize:vertical}
   #content{padding-bottom:56px}
 }
 
+#cf-modal.overlay{z-index:2100}/* V5.69.0 M-5:衝突視窗要壓過決議面板(2000),否則面板裡存檔觸發衝突看不到 */
+/* V5.67.0 UI 第二輪②:收合列第二列(診斷 + 討論問題),收合時就能判斷要不要打開 */
+.casetop2{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:0 12px 8px 34px;font-size:12px;cursor:pointer;line-height:1.5}
+.casetop2:empty{display:none}.ct2-dx{color:var(--textmd)}.ct2-q{color:var(--acc);font-weight:500}
+.casecard:not(.cc-collapsed) .casetop2{display:none}
+/* V5.66.0 UI 優化②:情境列 */
+.ctx-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--textmd);padding:7px 12px;margin:0 0 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px}
+.ctx-bar .sep{color:var(--blt)}.ctx-bar .ed{color:var(--warn);font-weight:600}
+/* V5.66.0 UI 優化⑤:更多工具手機至多兩欄;儲存列疊在底部導覽之上 */
+@media(max-width:768px){.out-more-grid{grid-template-columns:repeat(2,1fr)!important}
+  #mtg-actionbar{bottom:calc(56px + env(safe-area-inset-bottom,0px))}}/* mobile-nav 在此斷點固定顯示 56px,儲存列疊其上 */
 @media(max-width:480px){
   .lg-title{font-size:24px}
-  .c-hdr button.btn-b.btn-sm{font-size:10px;padding:4px 8px}
+  .c-hdr button.btn-b.btn-sm{font-size:12px;padding:4px 8px}/* V5.66.0 ④:不再縮到 10px */
   .cal-cell{min-height:42px;padding:2px}
-  .cal-event{font-size:8px;padding:1px 3px;border-radius:2px}
-  .cal-dow{font-size:8px}
+  .cal-event{font-size:11px;padding:1px 3px;border-radius:2px}/* V5.66.0 ④:8px 不可讀 */
+  .cal-dow{font-size:11px}
   .wrap{padding:6px 8px}
   .btn{padding:6px 12px;font-size:12px}
-  .btn-sm{padding:4px 9px;font-size:11px}
+  .btn-sm{padding:4px 9px;font-size:12px}
   /* History: stack layout on tiny screens */
   /* V5.39.0 F-3:小螢幕時固定列的按鈕換行,不要擠爆 */
   #mtg-actionbar{padding:7px 12px!important}
@@ -858,8 +873,14 @@ textarea{resize:vertical}
                改成編輯模式下固定在底部,捲到哪都按得到。
                (同時收斂第一輪 U-2 的「五顆功能相同的儲存鍵」—— 這一顆是隨時可及的那顆。) ════ -->
           <div id="mtg-actionbar">
-            <span id="actionbar-msg" style="font-size:12px;color:var(--textlt)"></span>
-            <span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <!-- V5.67.0 UI 第二輪③:編輯 / 同步 / 內容三種狀態分開,互不代替 -->
+            <span style="display:flex;gap:12px;align-items:center;font-size:12px;flex-wrap:wrap">
+              <span id="actionbar-msg" style="color:var(--textlt)"></span>
+              <span id="actionbar-sync" style="color:var(--textlt)"></span>
+              <span id="actionbar-content" style="color:var(--textlt);cursor:pointer" onclick="_gotoTodo()" title="點擊前往待填"></span>
+            </span>
+            <span class="ab-view-only" style="margin-left:auto"><button class="btn btn-b btn-sm" onclick="document.querySelector('.output-section').scrollIntoView({behavior:'smooth',block:'start'})">前往產出 ↓</button></span>
+            <span class="ab-edit-only" style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
               <!-- V5.44.0:三顆產出鍵(LINE 通知 / HTML 投影片 / 會議小抄)移除。
                    V5.39.0(F-3)加它們的理由是「產出鍵在整頁最底部,8 個個案要滑過全部才按得到」——
                    但個管師指出:**編輯模式時根本不需要產出那些**。
@@ -874,7 +895,7 @@ textarea{resize:vertical}
 
         <!-- Output: only visible in VIEW mode -->
         <div class="section output-section">
-          <div class="sec-hdr"><span class="sec-title">產出</span><span class="sec-sub">已完稿，可匯出</span></div>
+          <div class="sec-hdr"><span class="sec-title">產出</span><span class="sec-sub" id="output-scope-sub">產生會議文件</span></div>
           <div class="sec-body">
             <!-- 資料夾授權：優先顯示 -->
             <div id="output-cid-label" style="display:none;gap:8px;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:12px;margin-bottom:8px"></div>
@@ -889,43 +910,40 @@ textarea{resize:vertical}
               <button class="btn btn-b btn-sm" id="btn-audit-imgs" style="font-size:12px;padding:3px 10px" onclick="auditMeetingImages().catch(function(e){console.error(e);alert('檢查失敗:'+(e&&e.message||e));})">🔍 檢查影像</button>
               <button class="btn btn-b btn-sm" id="btn-audio" style="font-size:12px;padding:3px 10px" onclick="openAudioSplitter()">🎙 錄音切割</button>
             </div>
-            <div style="margin-bottom:8px">
-              <button onclick="openPostMtgPanel()" style="width:100%;padding:10px 16px;background:linear-gradient(135deg,#2E5F8A,#1a3f5c);color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(46,95,138,.35);transition:opacity .15s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'"><span style="font-size:16px">&#9998;</span>會後填寫（摘要、結論、追蹤狀態）<span style="font-size:11px;opacity:.8;margin-left:4px">▶</span></button>
-            </div>
             <!-- V5.38.0 F-4:配色一年改不到幾次,卻佔著產出區最顯眼的第一排,
                  把真正要按的按鈕往下推。收進可點的摘要行,零功能損失。 -->
             <details style="margin-bottom:8px">
               <summary style="cursor:pointer;list-style:none;font-size:11px;color:var(--textlt);padding:4px 2px">▸ 投影片配色（點此更換）</summary>
               <div id="theme-strip" style="display:flex;gap:6px;align-items:center;margin-top:6px;padding:6px 8px;background:var(--surface);border:1px solid var(--blt);border-radius:4px;font-size:11px"></div>
             </details>
-            <!-- V5.9.3: 產出區分組分層 — 主力 4 按鈕 + 資料交換區,功能不刪只重排 -->
-            <!-- 分組標題:主力產出 -->
-            <div style="font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--textlt);margin:2px 0 7px;text-transform:uppercase">主力產出</div>
-            <!-- 主力 4 按鈕(LINE / HTML 投影片 / PPTX / DOCX) -->
-            <!-- V5.12.0: 主力產出增為 6 顆,改 auto-fit 讓窄螢幕自動換行(固定 6 欄在小視窗會擠爆按鈕文字) -->
+            <!-- ════ V5.66.0 UI 優化①:產出區按「任務」分組(審核建議)————
+                 會前通知 / 開會資料 / 決議與紀錄 / 更多工具。
+                 「HTML 分享」從摺疊區搬到「HTML 投影片」旁 —— 兩者是準備會議資料的連續動作,
+                 藏在 Excel/JSON 之間是 V5.36.1 收摺疊時的誤傷。
+                 「會後填寫」按鈕改名「填寫會議決議」並歸入決議組(會議當下也可填,不是只有會後)。 ════ -->
+            <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--textlt);margin:10px 0 6px">會前通知</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
-              <!-- V5.43.4:LINE 通知從 btn-a(深底)改成 btn-b,與其餘產出按鈕一致。
-                   原本深色**沒有規則可循** —— 13 顆產出按鈕只有「LINE 通知」與
-                   「AI 生成摘要」是深色,而兩者重要性天差地遠(一個每場都用、
-                   一個收在摺疊區一年用不到幾次)。深色在設計上意味「主要動作」,反而誤導。
-                   **深色從此只代表一件事:需要串接 AI 才能用**(目前只有 AI 生成摘要)。
-                   連同 font-weight:600 一起拿掉,才會跟旁邊四顆真的一樣。 -->
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
-              <button class="btn btn-b" id="btn-html-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genHTMLSlides().catch(function(e){console.error(e);alert('投影片產生失敗：'+(e&&e.message||e)+'\n\n請截圖回報。');})">HTML 投影片</button>
-              <!-- V5.13.0: 長官習慣 Word 不用 PPTX → 本顆由「PPTX 簡報」改為「Word 簡報」(genDOCX('deck'));genPPTX 函式保留但已無 UI 入口 -->
-              <button class="btn btn-b" id="btn-worddeck" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX('deck')">Word 簡報</button>
-              <button class="btn btn-b" id="btn-docx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genDOCX()">DOCX 記錄</button>
-              <!-- V5.11.0: 會議小抄(可列印 A4 / 存 PDF,一頁 8 案,現場手寫用) -->
-              <button class="btn btn-b" id="btn-sheet" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genPrintSheet()">會議小抄</button>
+            </div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--textlt);margin:10px 0 6px">開會資料</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-html-slides" onclick="genHTMLSlides().catch(function(e){console.error(e);alert('投影片產生失敗：'+(e&&e.message||e)+'\n\n請截圖回報。');})">HTML 投影片</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-share-slides" onclick="shareHTMLSlides()">HTML 分享</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-worddeck" onclick="genDOCX('deck')">Word 簡報</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-sheet" onclick="genPrintSheet()">會議小抄</button>
+            </div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--textlt);margin:10px 0 6px">決議與紀錄</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-postmtg" onclick="openPostMtgPanel()"><span style="font-size:15px;margin-right:4px">&#9998;</span>填寫會議決議</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-docx" onclick="genDOCX()">DOCX 記錄</button>
             </div>
             <div id="slide-share-link"></div>
             <!-- ════ V5.36.1 U-3:一年用兩次的 Excel/JSON 匯入匯出,不該和每場會議都要按的三顆並排。
                  不刪任何功能,只是收進摺疊區 —— UI 減法最容易犯的錯是把「少用」當成「該刪」,
                  一年用兩次的 JSON 批次匯入,用到的那兩次通常是在救火。 ════ -->
             <details id="out-advanced">
-            <summary style="cursor:pointer;list-style:none;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--textlt);margin:12px 0 7px;text-transform:uppercase;border-top:1px solid var(--blt);padding-top:12px">▸ 資料交換與分享（點此展開）</summary>
-            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px">
-              <button class="btn btn-b" id="btn-share-slides" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="shareHTMLSlides()">HTML 分享</button>
+            <summary style="cursor:pointer;list-style:none;font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--textlt);margin:12px 0 7px;border-top:1px solid var(--blt);padding-top:12px">▸ 更多工具（Excel / JSON / AI 提示詞，點此展開）</summary>
+            <div class="out-more-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;margin-bottom:6px">
               <button class="btn btn-b" id="btn-xlsx" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="genXLSX()">Excel 匯出</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="document.getElementById('xl-import-input').click()">Excel 匯入</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="document.getElementById('json-import-input').click()">JSON 批次匯入</button>
@@ -1173,7 +1191,7 @@ textarea{resize:vertical}
                   <input type="password" id="ai-key" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:13px">
                   <div class="tlt" style="margin-top:5px;line-height:1.7">
                     Claude 申請：<a href="https://console.anthropic.com" target="_blank" style="color:var(--fog)">console.anthropic.com</a> &rarr; API Keys &rarr; Create Key<br>
-                    Key 僅儲存在本機瀏覽器，不會傳送到任何地方。
+                    Key 只存在這台電腦，只會送往您選擇的 AI 服務商驗證。
                   </div>
                 </div>
                 <div class="fg">
@@ -1707,7 +1725,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.64.1';
+const VERSION='V5.72.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1944,7 +1962,7 @@ function flagColor(fl){
 }
 /* V4.7.0: 個案性別/年齡/ECOG/CFS 統一字串 — 用於 PPTX/DOCX/HTML/AI prompt */
 function caseDemo(c){
-  var s=(c.gender||'M')+'/'+(c.age||'—');
+  var s=(c.gender||'—')+'/'+(c.age||'—');
   if(c.ecog)s+='  ECOG '+c.ecog;
   if(c.cfs)s+='  衰弱量表 '+c.cfs;
   return s;
@@ -2011,7 +2029,9 @@ function download(blob,filename){const url=URL.createObjectURL(blob);const a=doc
    ③超過上限明確告知,**絕不靜默丟棄**;④移除自動孤兒清理(改設定頁手動,見 cleanOrphanKeys);
    ⑤保留錯誤型別供呼叫端判斷是否為容量問題(P0-4)。 */
 const IDX_MAX=2000;
-function saveLocal(m,opts){try{
+function saveLocal(m,opts){
+  /* V5.69.0 M-1:從 NAS 拉下來的版本 = 本機沒有未推送 → pushed 對齊,否則下次同步誤判成「本機有未推送修改」永遠不拉 */
+  try{if(opts&&opts.fromSync&&m&&m.id&&m.rev)localStorage.setItem('mdt_pushed_'+m.id,m.rev);}catch(e){}try{
   localStorage.setItem('mdt_m_'+m.id,JSON.stringify(m));
   const idx=getIdx(),ei=idx.findIndex(i=>i.id===m.id);
   /* V5.31.1 N-5(複審):索引改依會議日期排序後,側欄「最近」變成「日期最新的 4 場」——
@@ -2094,6 +2114,7 @@ function loadLocal(id){
        特殊議程只能從根目錄選,所以 fromFolder 且無 subFolder 的一律是根目錄。 */
     try{_tagSpecialRootImgs(m);}catch(e){}
     try{_tlEnsureIds(m);}catch(e){}/* V5.56.0 */
+    if(m&&m._pushedRev!==undefined)delete m._pushedRev;/* V5.69.0 M-1:V5.68.0 寫進去的舊欄位,讀進來就剝掉 */
     return m;
   }catch(e){return null;}
 }
@@ -2148,7 +2169,8 @@ function renderLogin(){
 }
 async function pickUser(uid_){
   if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
-  _cancelAutoLogin();S.user=USERS.find(u=>u.id===uid_);if(S.user)try{localStorage.setItem('mdt_last_user',uid_);}catch(e){}showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步:新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');}/* V5.13.5: 有寫入失敗就明確警告,不再靜默謊報成功 */if(r.failed){showSaveToast('⚠ NAS 同步有 '+r.failed+' 筆寫入失敗,請檢查 NAS 連線後重試');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(_ok){if(_ok)_markNasBackupToday();/* V5.13.5: 只有真成功才標記今日完成,失敗當天會再試 */}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
+  _cancelAutoLogin();S.user=USERS.find(u=>u.id===uid_);if(S.user)try{localStorage.setItem('mdt_last_user',uid_);}catch(e){}showShell('app');renderSidebar();showHome();restoreRootHandle();restoreNasHandle().then(function(){updateNasStatus();if(nasHandle){syncWithNAS().then(function(r){if(r.added||r.updated||r.deleted){renderSbRecent();renderHistory();showSaveToast('NAS 同步:新增 '+r.added+' 、更新 '+r.updated+' 、刪除 '+r.deleted+' 筆');
+      if(r&&r.conflicts&&_conflictToastOnce()){showSaveToast('⚠ '+r.conflicts+' 場會議兩台內容不同，開啟該會議時會請您選擇');}/* V5.65.0 S-1 ⑤ */}/* V5.13.5: 有寫入失敗就明確警告,不再靜默謊報成功 */if(r.failed){showSaveToast('⚠ NAS 同步有 '+r.failed+' 筆寫入失敗,請檢查 NAS 連線後重試');}}).catch(function(e){console.warn('syncWithNAS:',e);});}if(_shouldNasBackupToday()){setTimeout(function(){backupToNAS().then(function(_ok){if(_ok)_markNasBackupToday();/* V5.13.5: 只有真成功才標記今日完成,失敗當天會再試 */}).catch(function(e){console.warn('NAS daily backup:',e);});},5000);}});const v=document.getElementById('sb-ver');if(v)v.textContent=VERSION}
 
 /* ════ Sidebar ════ */
 function renderSidebar(){
@@ -2206,7 +2228,7 @@ function deleteCurMtg(){
   showDelConfirm(title,()=>{
     /* V4.3.44: 寫 NAS tombstone */
     if(nasHandle&&local)writeTombstoneToNAS(S.meeting.id,local).catch(function(e){console.warn('NAS tombstone:',e);});
-    localStorage.removeItem('mdt_m_'+S.meeting.id);
+    localStorage.removeItem('mdt_m_'+S.meeting.id);localStorage.removeItem('mdt_pushed_'+S.meeting.id);
     localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(x=>x.id!==S.meeting.id)));
     if(S.cids)S.cids.forEach(cid=>{try{delSec(cid,S.meeting.date)}catch{}});
     showSaveToast('會議已刪除');renderSbRecent();goBackFromMeeting();
@@ -2226,7 +2248,7 @@ function deleteMtg(id,e){
   showDelConfirm(title,function(){
     /* V4.3.44: 先寫 NAS tombstone(若有同步)再刪本地 */
     if(nasHandle)writeTombstoneToNAS(id,local).catch(function(e){console.warn('NAS tombstone:',e);});
-    localStorage.removeItem('mdt_m_'+id);
+    localStorage.removeItem('mdt_m_'+id);localStorage.removeItem('mdt_pushed_'+id);
     localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(function(x){return x.id!==id;})));
     renderSbRecent();renderHistory();
     showSaveToast('會議已刪除');
@@ -2700,6 +2722,7 @@ document.addEventListener('keydown',function(e){
       dyn.remove();return;
     }
     const ov=[...document.querySelectorAll('.overlay.open, .img-modal.open')].pop();
+    if(ov&&ov.id==='cf-modal'){e.preventDefault();return;}/* V5.69.0 M-2:衝突視窗不可用 Esc 關 —— 關了 S.meeting 與畫面就對不上 */
     if(ov){e.preventDefault();ov.classList.remove('open');return;}
   }
   /* ③ Ctrl/Cmd + Enter = 在「建立會議」對話框直接送出 */
@@ -2977,10 +3000,35 @@ async function startNewMtgForCancer(){
   renderEditor();restoreImgFolderHandle();showView('meeting');
 }
 async function _loadMtg(id){
-  const local=loadLocal(id);if(!local){alert('找不到會議資料');return null}
+  S._pendingNasMerge=false;S._keepMine=false;S._baseRev=undefined;S._baseVer=undefined;/* V5.69.0/V5.69.1 P-1:每次開會議先清,含 base —— 任何分支漏設只會讓合併多做一次(安全方向),不會讓合併被跳過(覆蓋方向) */
+  let local=loadLocal(id);if(!local){alert('找不到會議資料');return null}
+  /* V5.65.0 S-1 ③:開會議先拉 NAS —— 原本只查舊版共享資料夾,不讀 NAS sync/ 的同名檔,整天不登出就整天看不到別台的修改 */
+  if(nasHandle){
+    const nas=await _readNasMtg(id);
+    const pushed=localStorage.getItem('mdt_pushed_'+id);
+    const unpushed=!!(local.rev&&pushed&&local.rev!==pushed);
+    if(nas&&!nas.deleted&&(nas.version||0)>(local.version||0)){
+      if(unpushed){
+        /* V5.69.0 M-3:本機有「已存但推 NAS 失敗」的修改 → 不覆蓋。開本機版,base 設成最後推送成功那版,
+           存檔時必進合併分支,把 NAS 上別人的區段併進來、我的保留。 */
+        S._baseRev=pushed;S._baseVer=0;S._pendingNasMerge=true;S._keepMine=true;/* 離線修改已存進本機,跟快照比看不出來,合併時我負責的癌別一律保留 */
+      }else{saveLocal(nas,{fromSync:true});local=nas;}
+    }
+    /* V5.69.0 M-2/M-4:同號不同 rev **不在開啟時彈窗** —— V5.68.0 N-7 在這裡 return null,呼叫端沒跑 renderEditor/showView,
+       畫面還是上一場,選「本機」會把上一場的日期寫進這場(實測 10/15 變 11/19);而且二選一會整份丟掉另一位個管師的區段。
+       照常開本機版,存檔前的合併邏輯本來就會依癌別區段合併,同一人兩台才跳衝突視窗。 */
+    else if(nas&&!nas.deleted&&(nas.version||0)===(local.version||0)&&nas.rev&&local.rev&&nas.rev!==local.rev){
+      S._pendingNasMerge=true;
+      /* V5.69.0 M-3:同號不同 rev 且本機有未推送修改(離線存的 v2 撞上別台推的 v2)→ 我的區段也要保留 */
+      if(unpushed){S._keepMine=true;S._baseRev=pushed;S._baseVer=0;}
+      else{S._baseRev=local.rev;S._baseVer=local.version||0;}/* V5.69.1 P-1:沒設就殘留上一場的版號,上一場版號大就跳過合併 → 對方區段被整份覆蓋 */
+    }
+  }
   const shared=await loadShared(local),conflict=detectConflict(shared,local);
   if(conflict){showConflict(conflict);return null}
-  return shared&&shared.version>=local.version?shared:local;
+  const picked=shared&&shared.version>=local.version?shared:local;
+  if(!S._pendingNasMerge){S._baseRev=picked.rev||null;S._baseVer=picked.version||0;}/* 記下「我是從哪一版開始改的」;M-3 已設過就不覆蓋 */
+  return picked;
 }
 async function openMtgById(id,editMode=false){
   if(!(await _confirmLeave()))return;/* V5.48.0 R-4 */
@@ -3022,8 +3070,30 @@ async function openMtgRecord(id,editMode=false){
   setSbActive(m.cids.find(c=>S.user.cancers.includes(c)));
   renderEditor();restoreImgFolderHandle();showView('meeting');
 }
-function showConflict(c){S.conflict=c;const fmt=m=>`<div class="csr"><span class="csr-k">版本</span><span class="csr-v">v${m.version}</span></div><div class="csr"><span class="csr-k">儲存者</span><span class="csr-v">${m.savedBy||'—'}</span></div><div class="csr"><span class="csr-k">時間</span><span class="csr-v">${m.savedAt?new Date(m.savedAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):'—'}</span></div>`;document.getElementById('cf-shared').innerHTML=`<div class="csl ${c.newerIs==='shared'?'newer':''}">共享資料夾 ${c.newerIs==='shared'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.shared)}`;document.getElementById('cf-local').innerHTML=`<div class="csl ${c.newerIs==='local'?'newer':''}">本機備份 ${c.newerIs==='local'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.local)}`;document.getElementById('cf-note').textContent=`建議使用 v${Math.max(c.shared.version,c.local.version)}`;document.getElementById('cf-modal').classList.add('open')}
-async function resolveConflict(choice){document.getElementById('cf-modal').classList.remove('open');const winner=choice==='shared'?S.conflict.shared:S.conflict.local;saveLocal(winner);await saveShared(winner);S.meeting=winner;_resetEditState();/* V5.46.1 R-3 */S.cids=winner.cids;setSbActive(winner.cids.find(c=>S.user.cancers.includes(c)));renderEditor();restoreImgFolderHandle();showView('meeting');S.conflict=null}
+function showConflict(c){S.conflict=c;const fmt=m=>`<div class="csr"><span class="csr-k">版本</span><span class="csr-v">v${m.version}</span></div><div class="csr"><span class="csr-k">儲存者</span><span class="csr-v">${escA(m.savedBy||'—')}</span></div><div class="csr"><span class="csr-k">時間</span><span class="csr-v">${m.savedAt?new Date(m.savedAt).toLocaleString('zh-TW',{hour12:false,timeZone:'Asia/Taipei'}):'—'}</span></div>`;document.getElementById('cf-shared').innerHTML=`<div class="csl ${c.newerIs==='shared'?'newer':''}">${c.kind==='nas'?'NAS 上的版本':'共享資料夾'} ${c.newerIs==='shared'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.shared)}`;document.getElementById('cf-local').innerHTML=`<div class="csl ${c.newerIs==='local'?'newer':''}">${c.kind==='nas'?'這台電腦正在編輯的版本':'本機備份'} ${c.newerIs==='local'?'<span class="rec-badge">建議</span>':''}</div>${fmt(c.local)}`;document.getElementById('cf-note').textContent=`建議使用 v${Math.max(c.shared.version,c.local.version)}`;document.getElementById('cf-modal').classList.add('open')}
+/* V5.68.0 N-2:NAS 衝突視窗。標籤依 kind 顯示「NAS 上的版本 / 這台電腦正在編輯的版本」 */
+function showNasConflict(nas){
+  S.conflict={kind:'nas',shared:nas,local:S.meeting,newerIs:'shared'};
+  showConflict(S.conflict);
+}
+async function resolveConflict(choice){
+  if(S.conflict&&S.conflict.kind==='nas'){
+    const nas=S.conflict.shared;
+    document.getElementById('cf-modal').classList.remove('open');
+    if(choice==='local'){
+      /* 「用我的」:明確表示我看過 NAS 版,用我的覆蓋 → base 對齊 NAS,走正常存檔(會寫 NAS) */
+      S._baseRev=nas.rev;S._baseVer=nas.version||0;
+      S.meeting.version=Math.max(S.meeting.version||0,nas.version||0);
+      S.conflict=null;await saveMeeting();
+    }else{
+      if(!confirm('改用 NAS 上的版本，這台電腦尚未儲存的修改會捨棄。確定？')){document.getElementById('cf-modal').classList.add('open');return;}
+      saveLocal(nas,{fromSync:true});S.meeting=nas;S._baseRev=nas.rev;S._baseVer=nas.version||0;
+      _resetEditState();renderEditor();S.conflict=null;showSaveToast('已改用 NAS 上的版本');
+    }
+    return;
+  }
+  /* 舊版共享資料夾的衝突 */
+  document.getElementById('cf-modal').classList.remove('open');const winner=choice==='shared'?S.conflict.shared:S.conflict.local;saveLocal(winner);await saveShared(winner);S.meeting=winner;_resetEditState();/* V5.46.1 R-3 */S.cids=winner.cids;setSbActive(winner.cids.find(c=>S.user.cancers.includes(c)));renderEditor();restoreImgFolderHandle();showView('meeting');S.conflict=null}
 
 /* ════ Settings ════ */
 function showStab(id,el){document.querySelectorAll('.stab').forEach(s=>s.classList.remove('on'));document.querySelectorAll('#st-tabs .tab').forEach(n=>n.classList.remove('active'));document.getElementById('stab-'+id).classList.add('on');el.classList.add('active');if(id==='examtypes')renderExamTypesTab();if(id==='imgfolder')updateImgFolderSettingsStatus();}
@@ -3687,7 +3757,7 @@ function renderCasesInner(){
     el.innerHTML=casesPane(cids[0]);
   } else {
     // Merged meeting: load per-cancer sections first
-    let tabsHtml='<div class="tabs" id="ctabs">';
+    let tabsHtml='<div id="ctx-bar" class="ctx-bar"></div><div class="tabs" id="ctabs">';/* V5.66.0 UI 優化②:情境資訊列 */
     myFirst.forEach((id,i)=>{
       const isOwn=S.user.cancers.includes(id);
       const who=isOwn?'':' ('+( getPartnerUser(id)?.name||'')+')';
@@ -4109,7 +4179,7 @@ function buildImgArea(cid,i,d,ty){
    _imgGetFile 在子資料夾找不到時會**靜默退回根目錄抓同名檔**:
      try{scan=await imgFolderHandle.getDirectoryHandle(subFolder,...)}
      catch(_e){scan=imgFolderHandle;}          ← 這一行
-   個管師把 1453274/ 改名成「1453274 林○吉」(人之常情)之後,
+   個管師把 0000001/ 改名成「0000001 測○試」(人之常情)之後,
    下次產投影片就會退回根目錄;而 IMG_0001.jpg / 1.jpg 是相機與掃描器的
    預設命名,撞名機率極高 → **A 病人的病理影像會貼到 B 病人的投影片上**。
    更糟的是產出前 QA 只看「src 有沒有值」,掛錯病人的圖 src 一定有值 → 算成功。
@@ -4196,7 +4266,7 @@ async function rebindMeetingImages(opts){
        這是四段驗證裡**唯一**能發現「拿到別人影像」的機制(前三段只驗路徑,驗不出內容)。
        原本的流程會把它當成「需要重新綁定」,重新定位時**不傳 size**(跳過指紋檢查),
        再用新檔案大小覆蓋 img.size —— **等於無聲拆掉警報**,而且預覽清單顯示
-       「1453274 林○吉」→「1453274 林○吉」(從到相同)使用者根本看不出發生什麼事。
+       「0000001 測○試」→「0000001 測○試」(從到相同)使用者根本看不出發生什麼事。
        一律列入 fail 交人工確認,絕不自動處理。
        用 code 判斷而非中文訊息正則 —— 訊息文字日後一改,正則會悄悄失效。 */
     if(vr.code==='FINGERPRINT'){
@@ -4467,7 +4537,7 @@ function _showImgAuditReport(rows,onFix){
    取代原本的靜默 fallback:
      try{scan=await imgFolderHandle.getDirectoryHandle(subFolder,...)}
      catch(_e){scan=imgFolderHandle;}        ← 已移除
-   那一行會在個管師把「1453274/」改名成「1453274 林○吉」之後,
+   那一行會在個管師把「0000001/」改名成「0000001 測○試」之後,
    退回根目錄抓同名檔(IMG_0001.jpg 是相機預設命名,撞名機率極高)
    → A 病人的病理影像貼到 B 病人的投影片上,而產出前 QA 抓不到。
 
@@ -4877,7 +4947,8 @@ function caseHTML(cid,i,d,type,opts){
      會產生相同的 id(cc-head_neck-cases-0),展開/收合與各種 getElementById 會抓錯卡片。 */
   const _isEv=_ty==='events';
   return`<div class="casecard cc-collapsed" id="cc-${cid}-${_ty}-${i}">
-<div class="casetop" data-action="togglecase" data-card="cc-${cid}-${_ty}-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-${_ty}-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag ${_isEv?'sec-tag-team':'sec-tag-case'}">${_isEv?'必要提報':'個案討論'}</span>${_isEv&&d.eventStatus?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${d.eventStatus==='已結案'?'#8A9BA8':d.eventStatus==='已討論待改善'?'#8A5A1F':'#B3261E'};color:#fff;margin-left:4px;flex-shrink:0">${escA(d.eventStatus)}</span>`:''}${(d.flags||[]).map(function(fl){const c2=flagColor(fl);return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+fl+'</span>';}).join('')}${d._aiImported?`<span class="ai-badge" data-action="confirmai" data-ty="${_ty}" data-cid="${cid}" data-idx="${i}" title="逐欄確認後點此清除標記">AI 匯入待確認 ✓</span>`:''}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1,'${_ty}')" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1,'${_ty}')" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','${_ty}',${i})">×</button></div>
+<div class="casetop" data-action="togglecase" data-card="cc-${cid}-${_ty}-${i}"><span class="cc-toggle-icon" id="tgi-${cid}-${_ty}-${i}">▶</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag ${_isEv?'sec-tag-team':'sec-tag-case'}">${_isEv?'必要提報':'個案討論'}</span>${_isEv&&d.eventStatus?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${d.eventStatus==='已結案'?'#8A9BA8':d.eventStatus==='已討論待改善'?'#8A5A1F':'#B3261E'};color:#fff;margin-left:4px;flex-shrink:0">${escA(d.eventStatus)}</span>`:''}${(function(){const fl=d.flags||[];const more=fl.length-2;return fl.slice(0,2).map(function(f){const c2=flagColor(f);return'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:'+c2+';color:#fff;margin-left:4px;flex-shrink:0">'+f+'</span>';}).join('')+(more>0?'<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--blt);color:var(--textmd);margin-left:4px;flex-shrink:0" title="'+escA(fl.slice(2).join('、'))+'">另 '+more+' 項</span>':'');})()}${d._aiImported?`<span class="ai-badge" data-action="confirmai" data-ty="${_ty}" data-cid="${cid}" data-idx="${i}" title="逐欄確認後點此清除標記">AI 匯入待確認 ✓</span>`:''}<button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},-1,'${_ty}')" title="上移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↑</button><button class="delbtn" onclick="event.stopPropagation();moveCase('${cid}',${i},1,'${_ty}')" title="下移" style="background:none;border:none;color:var(--fog);font-size:14px;padding:0 3px;cursor:pointer;line-height:1">↓</button><button class="delbtn" onclick="event.stopPropagation();delItem('${cid}','${_ty}',${i})">×</button></div>
+  <div class="casetop2" data-action="togglecase" data-card="cc-${cid}-${_ty}-${i}">${(function(){const dx=String(d.diagnosis||'').replace(/\s+/g,' ').trim();const q=String(d.discussion||'').replace(/\s+/g,' ').trim();if(!dx&&!q)return '';return (dx?'<span class="ct2-dx" title="'+escA(dx)+'">'+escA(dx.slice(0,40))+(dx.length>40?'…':'')+'</span>':'')+(q?'<span class="ct2-q" title="'+escA(q)+'">▸ '+escA(q.slice(0,36))+(q.length>36?'…':'')+'</span>':'');})()}</div>
 <div class="cg2">
 
   <div class="fg full" style="padding-bottom:2px">
@@ -4897,7 +4968,7 @@ function caseHTML(cid,i,d,type,opts){
   <div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>年齡 / 性別</label>
     <div style="display:flex;gap:6px;align-items:center">
       <input value="${escA(d.age||'')}" oninput="upd('${cid}','${_ty}',${i},'age',this.value)" placeholder="年齡" style="font-size:12px;padding:5px 8px;width:72px">
-      <select onchange="upd('${cid}','${_ty}',${i},'gender',this.value)" class="f-in-auto"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
+      <select onchange="upd('${cid}','${_ty}',${i},'gender',this.value)" class="f-in-auto"${d.gender?'':' style="border-color:var(--warn);background:var(--warn-bg)"'}><option value=""${d.gender?'':' selected'}>— 性別 —</option><option value="M" ${d.gender==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
     </div>
   </div>
   <!-- V4.7.0: ECOG + 衰弱量表(CFS) — 預設留空,選填 -->
@@ -5048,7 +5119,7 @@ function teamHTML(cid,i,d,type='team',collapsed=false){
 <div class="fg" style="display:flex;flex-direction:column;gap:4px"><label>年齡 / 性別</label>
 <div style="display:flex;gap:6px;align-items:center">
 <input value="${escA(d.age||'')}" oninput="upd('${cid}','${type}',${i},'age',this.value)" placeholder="年齡" style="font-size:12px;padding:5px 8px;width:72px">
-<select onchange="upd('${cid}','${type}',${i},'gender',this.value)" class="f-in-auto"><option value="M" ${(d.gender||'M')==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
+<select onchange="upd('${cid}','${type}',${i},'gender',this.value)" class="f-in-auto"><option value="" ${d.gender?'':'selected'}>— 性別 —</option><option value="M" ${d.gender==='M'?'selected':''}>M</option><option value="F" ${d.gender==='F'?'selected':''}>F</option></select>
 </div>
 </div>
 <div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
@@ -5438,7 +5509,7 @@ async function testNasBackup(){
 }
 
 /* V5.45.0 A-5:永不進備份的 key。`mdt_ai` 是 V5.37.0 以前的舊格式,同樣含金鑰。 */
-const _NEVER_BACKUP=/^mdt_(ai_key|cf_token|ai|zoom_pwd|upload_key)$/;/* V5.62.0 *//* V5.50.0 B-5 */
+const _NEVER_BACKUP=/^mdt_(ai_key|cf_token|ai|zoom_pwd|upload_key|pushed_.+|conflict_toast)$/;/* V5.62.0;V5.69.0 M-1/M-9:推送狀態與 toast 記憶都是單台的事 *//* V5.50.0 B-5 */
 async function backupToNAS(){
   if(!nasHandle)return;
   try{
@@ -5461,51 +5532,23 @@ async function backupToNAS(){
     var idx=getIdx();
     for(var mi=0;mi<idx.length;mi++){
       var m=loadLocal(idx[mi].id);if(!m)continue;
-      var mImgs={};
-      var cids=m.cids||Object.keys(m.sections||{});
-      for(var ci=0;ci<cids.length;ci++){
-        var sec=(m.sections||{})[cids[ci]];
-        if(!sec)continue;
-        /* V5.53.0 I-4:cases 與 events 都要備份影像,且補上 NGS(原本漏了) */
-        var _arrs=[['cases',sec.cases||[]],['events',sec.events||[]]];
-        for(var ai=0;ai<_arrs.length;ai++){
-        var _tyN=_arrs[ai][0],cases=_arrs[ai][1];
-        for(var ki=0;ki<cases.length;ki++){
-          var c=cases[ki];
-          var allImgs=[
-            ...(c.pathologyImages||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].pathologyImages['+j+']'};}),
-            ...(c.surgicalImages||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].surgicalImages['+j+']'};}),
-            ...(c.images||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].images['+j+']'};}),
-            ...(c.genomicsImages||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].genomicsImages['+j+']'};}),
-            ...((c.mammo&&c.mammo.images)||[]).map(function(x,j){return{img:x,key:_tyN+'['+ki+'].mammo.images['+j+']'};})
-          ];
-          for(var ii=0;ii<allImgs.length;ii++){
-            var entry=allImgs[ii];
-            var src=entry.img.dataUrl||'';
-            if(!src&&entry.img.fromFolder&&entry.img.name&&imgFolderHandle){
-              try{
-                /* V5.3.0: 有 subFolder 走子資料夾,沒有走平面(向後相容) */
-                var _scan=imgFolderHandle;
-                if(entry.img.subFolder){
-                  try{_scan=await imgFolderHandle.getDirectoryHandle(entry.img.subFolder,{create:false});}catch(_e){_scan=imgFolderHandle;}
-                }
-                var fh=await _scan.getFileHandle(entry.img.name);
-                var file=await fh.getFile();
-                src=await new Promise(function(res){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.readAsDataURL(file);});
-              }catch(e){src='';}
-            }
-            if(src)mImgs[entry.key]=src;
-          }
-        }
-        }/* V5.53.0:_arrs 迴圈閉合 */
-      }
-      if(Object.keys(mImgs).length)images[idx[mi].id]=mImgs;
+      /* ════ V5.65.0 B-1(主任定案「甲」):備份不含影像本體,只存清單 ════
+         原本宣稱「含圖片」但幾乎一張都沒備到:每日備份在登入後 5 秒跑,imgFolderHandle 是 null(只在開會議時設),
+         整段靜默跳過;就算有值也是某一場的子資料夾,拿去找別場的影像一樣找不到。
+         影像原檔本來就在資料夾裡,該由院內 NAS/IT 備份;這裡只存「哪場會議的哪個病人有哪些影像檔」,
+         還原後可用「檢查影像」比對缺漏。每日 JSON 也不再隨影像數膨脹。走 _forEachMeetingImg 列舉器(涵蓋特殊議程)。 */
+      var mList=[];
+      _forEachMeetingImg(m,m.cids||Object.keys(m.sections||{}),function(img,ctx){
+        if(!img||!img.name)return;
+        mList.push({ty:ctx.ty,idx:ctx.idx,chartNo:ctx.chartNo||'',kind:ctx.kind,name:img.name,subFolder:img.subFolder||'',fromFolder:!!img.fromFolder,embedded:!!(img.dataUrl&&!img.fromFolder)});
+      });
+      if(mList.length)images[idx[mi].id]=mList;
     }
 
     // 3. Build backup object
     var now=new Date();
     var ts=now.getFullYear()+''+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
-    var backup={version:VERSION,backupAt:now.toISOString(),data:data,images:images};
+    var backup={version:VERSION,backupAt:now.toISOString(),data:data,imageIndex:images/* V5.65.0 B-1:清單,不含影像本體 */};
     var json=JSON.stringify(backup);
     var fname='MDT_backup_'+((S.user&&S.user.id)||'unknown')+'_'+ts+'.json'/* V5.35.0 P0-5:原檔名不含使用者識別,三位個管師備份到同一個 NAS 資料夾時「最新 10 份」被三台瓜分 → 保留期從 10 天縮到約 3 天,而且三台是不同癌別,**互相不是彼此的備援** */;
 
@@ -5561,6 +5604,40 @@ function canEditMeeting(m){
   return m.createdBy===S.user.id;
 }
 
+/* ════ V5.67.0 UI 第二輪①:決議面板篩選 ════ */
+function _postFilterInit(){
+  const sel=document.getElementById('postmtg-cidsel');if(!sel)return;
+  const cur=getOutputCid()||S.cids[0];
+  const opts=(S.cids.length>1?[['all','全部癌別']]:[]).concat(S.cids.map(function(c){return[c,CFG[c]?.name||c];}));
+  sel.innerHTML=opts.map(function(o){const on=(S.cids.length>1?o[0]===cur:true);return '<button class="btn btn-sm '+(on?'btn-a':'btn-b')+'" data-pcid="'+escA(o[0])+'" onclick="_postFilterCid(this)" style="font-size:12px;padding:3px 9px">'+escA(o[1])+'</button>';}).join('');
+  const st=document.getElementById('postmtg-state');if(st)st.value='all';
+  _postFilterApply();
+}
+function _postFilterCid(btn){
+  document.querySelectorAll('#postmtg-cidsel button').forEach(function(b){b.className='btn btn-sm btn-b';});
+  btn.className='btn btn-sm btn-a';_postFilterApply();
+}
+function _postFilterApply(){
+  const act=document.querySelector('#postmtg-cidsel .btn-a');const cid=act?act.dataset.pcid:'all';
+  const st=(document.getElementById('postmtg-state')||{}).value||'all';
+  let shown=0,todo=0;
+  document.querySelectorAll('#postmtg-body > div').forEach(function(el){
+    if(!el.dataset||!el.dataset.kind){el.style.display='';return;}
+    const okCid=cid==='all'||el.dataset.cid===cid;
+    const okSt=st==='all'||(st==='todo'&&el.dataset.todo==='1')||(st==='fup'&&el.dataset.fup==='1');
+    el.style.display=(okCid&&okSt)?'':'none';
+    if(okCid&&okSt){shown++;if(el.dataset.todo==='1')todo++;}
+  });
+  const sc=document.getElementById('postmtg-scope');if(sc)sc.textContent=cid==='all'?'全部癌別':(CFG[cid]?.name||cid);
+  const cn=document.getElementById('postmtg-count');if(cn)cn.textContent='顯示 '+shown+' 案'+(todo?'，'+todo+' 案待填結論':'');
+}
+function _postNextTodo(){
+  const cards=[...document.querySelectorAll('#postmtg-body > div[data-kind]')].filter(function(el){return el.style.display!=='none'&&el.dataset.todo==='1';});
+  if(!cards.length){showSaveToast('目前範圍內沒有待填結論');return;}
+  const panel=document.getElementById('postmtg-panel');const ptop=panel.getBoundingClientRect().top;
+  const next=cards.find(function(el){return el.getBoundingClientRect().top>ptop+120;})||cards[0];
+  next.scrollIntoView({block:'start'});const ta=next.querySelector('textarea[data-action$="-decision"]');if(ta)ta.focus();
+}
 function openPostMtgPanel(){
   if(!S.meeting)return;
   if(readForm()===false)return;
@@ -5602,6 +5679,7 @@ function openPostMtgPanel(){
         +'<div style="margin-top:8px"><div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">改善方案</div>'
         +'<textarea data-action="postev-plan" data-cid="'+escA(cid)+'" data-ti="'+ti+'" rows="2" placeholder="具體措施、負責單位、預計完成時間" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.improvePlan||'')+'</textarea></div>'
       ):'');
+    card.dataset.cid=cid;card.dataset.kind=arrType;card.dataset.todo=(String(t.decision||'').trim()?'0':'1');/* V5.67.0 */
     return card;
   }
   S.cids.forEach(function(cid){
@@ -5647,6 +5725,7 @@ function openPostMtgPanel(){
           +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
           +'<textarea data-action="postfup-decision" data-cid="'+escA(cid)+'" data-fi="'+fi+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(f.decision||'')+'</textarea>'
           +'</div>';
+        card.dataset.cid=cid;card.dataset.kind='followups';card.dataset.todo=(String(f.decision||'').trim()?'0':'1');card.dataset.fup=(f.status?'0':'1');/* V5.67.0 */
         body.appendChild(card);
       });
     }
@@ -5676,8 +5755,12 @@ function openPostMtgPanel(){
           +'<textarea data-action="postcase-decision" data-cid="'+escA(cid)+'" data-ci="'+ci+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(c.decision||'')+'</textarea>'
           +'</div>'
           +'<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--textlt);cursor:pointer">'
-          +'<input type="checkbox" data-action="postcase-nofollow" data-cid="'+escA(cid)+'" data-ci="'+ci+'"'+(noFollow?' checked':'')+' style="width:14px;height:14px">'
-          +'不列入下次追蹤</label>';
+          /* V5.66.0 UI 優化③:正向問題「下次會議追蹤:繼續 / 不列入」,資料仍存 followNext(不動儲存對應) */
+          +'下次會議追蹤：'
+          +'<label style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;cursor:pointer"><input type="radio" name="pf-'+escA(cid)+'-'+ci+'" data-action="postcase-follow" data-val="keep" data-cid="'+escA(cid)+'" data-ci="'+ci+'"'+(noFollow?'':' checked')+' style="width:14px;height:14px">繼續追蹤</label>'
+          +'<label style="display:inline-flex;align-items:center;gap:3px;margin-left:8px;cursor:pointer"><input type="radio" name="pf-'+escA(cid)+'-'+ci+'" data-action="postcase-follow" data-val="skip" data-cid="'+escA(cid)+'" data-ci="'+ci+'"'+(noFollow?' checked':'')+' style="width:14px;height:14px">不列入下次</label>'
+          +'</label>';
+        card.dataset.cid=cid;card.dataset.kind='cases';card.dataset.todo=(String(c.decision||'').trim()?'0':'1');/* V5.67.0 */
         body.appendChild(card);
       });
     }
@@ -5699,6 +5782,7 @@ function openPostMtgPanel(){
     }
   });
   document.getElementById('postmtg-panel').style.display='flex';
+  _postFilterInit();/* V5.67.0 */
 }
 
 function closePostMtgPanel(force){
@@ -5710,7 +5794,8 @@ function closePostMtgPanel(force){
   if(!panel){return;}
   if(force){panel.style.display='none';return;}
   let changed=false;
-  panel.querySelectorAll('textarea[data-action],select[data-action]').forEach(function(el){
+  panel.querySelectorAll('textarea[data-action],select[data-action],input[type=radio][data-action]').forEach(function(el){
+    if(el.type==='radio'&&el.checked!==el.defaultChecked)changed=true;/* V5.69.0 M-7 */
     if(el.tagName==='TEXTAREA'&&el.value!==el.defaultValue)changed=true;
     if(el.tagName==='SELECT'){const d=Array.from(el.options).find(function(o){return o.defaultSelected;});if(d&&d.value!==el.value)changed=true;}
   });
@@ -5718,7 +5803,7 @@ function closePostMtgPanel(force){
   panel.style.display='none';
 }
 
-function savePostMtg(){
+async function savePostMtg(stay){/* V5.67.0:stay=true 存檔留在面板;V5.69.0 M-5:await */
   var panel=document.getElementById('postmtg-panel');
   panel.querySelectorAll('[data-action="postcase-summary"]').forEach(function(el){
     var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
@@ -5769,11 +5854,10 @@ function savePostMtg(){
   S.cids.forEach(function(cid){
     ((S.meeting.sections[cid]||{}).cases||[]).forEach(function(c){c.followNext=true;});
   });
-  panel.querySelectorAll('[data-action="postcase-nofollow"]').forEach(function(el){
-    if(!el.checked)return;
+  panel.querySelectorAll('[data-action="postcase-follow"]:checked').forEach(function(el){
     var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
     var c=(S.meeting.sections[cid]||{}).cases[ci];
-    if(c)c.followNext=false;
+    if(c)c.followNext=(el.dataset.val==='keep');/* V5.66.0:radio 兩選一,資料仍是 followNext */
   });
   markDirty();
   /* ════ V5.51.0 N-1(P1)════
@@ -5793,7 +5877,13 @@ function savePostMtg(){
       cont.innerHTML=(sec[ty]||[]).map(function(c,i){try{return fn(c,i);}catch(e){console.error('[postmtg rerender '+ty+']',e);return '';}}).join('');
     });
   });
-  saveMeeting();
+  const _ok=await saveMeeting();/* V5.69.0 M-5:等結果,衝突時不顯示已儲存 */
+  if(stay){
+    if(!_ok){showSaveToast(_ok===false&&S.conflict?'儲存未完成，請看衝突視窗':'儲存失敗，請看畫面提示');return;}/* V5.69.1 P-2:本機失敗也不顯示已儲存 */
+    document.querySelectorAll('#postmtg-body > div[data-kind]').forEach(function(el){const ta=el.querySelector('textarea[data-action$="-decision"]');if(ta)el.dataset.todo=ta.value.trim()?'0':'1';});
+    document.querySelectorAll('#postmtg-body textarea,#postmtg-body select,#postmtg-body input[type=radio]').forEach(function(el){if(el.tagName==='TEXTAREA')el.defaultValue=el.value;else if(el.type==='radio')el.defaultChecked=el.checked;else{[...el.options].forEach(function(o){o.defaultSelected=o.selected;});}});
+    _postFilterApply();showSaveToast('已儲存，留在面板');return;
+  }
   closePostMtgPanel(true);/* V5.51.0 Q1:存檔路徑不經過確認 */
 }
 
@@ -5851,6 +5941,17 @@ async function _getNasSyncDir(){
 /* V5.13.5 修審稿 P0:原本 catch 把錯誤吞掉、照常 return(等於謊報成功),
    呼叫端 results.pushed++ 不管真假 → 個管師看到「同步成功」但其實沒寫進去。
    改成回傳 {ok:boolean}:成功 ok:true,失敗 ok:false(附 error),讓呼叫端據實計數。 */
+/* ════ V5.65.0 S-1(P0):NAS 同步只比 version 整數 → 兩台各自 +1 後同號,後寫者整份覆蓋,之後永遠不再對齊 ════
+   三個事實疊在一起:syncWithNAS 只在登入跑一次;_loadMtg 不讀 NAS sync/;_doSave 無條件覆寫。
+   合併會議(林改 HN、楊改 LY)每個月都會觸發:兩人都從 v7 開始,各存成 v8,後存的把前一位的整份蓋掉;
+   隔天登入 NAS v8 = 本機 v8 → 不動 → 兩台內容不同、版號相同,永遠不會再對齊。
+   V5.46.1 R-2 曾記下這個現象,但只修了「放棄編輯讓版號倒退」,根因(版號不是內容識別)沒動。
+   修法:①每次存檔換一個 rev ②開會議先拉 NAS ③存檔前比對 rev,別台改過 → 依癌別區段合併 ④同號不同 rev 列衝突 */
+async function _readNasMtg(id){
+  const dir=await _getNasSyncDir();if(!dir)return null;
+  try{const fh=await dir.getFileHandle('mdt_m_'+id+'.json');return JSON.parse(await(await fh.getFile()).text());}
+  catch(e){return null;}
+}
 async function writeMtgToNAS(m){
   const dir=await _getNasSyncDir();if(!dir)return{ok:false,error:'NAS 資料夾未授權'};
   try{
@@ -5888,6 +5989,8 @@ async function writeTombstoneToNAS(id,origMtg){
   }catch(e){console.warn('writeTombstoneToNAS:',e);}
 }
 
+/* V5.68.0 N-7:衝突 toast 同一天只提示一次,不然每次切回分頁都跳 */
+function _conflictToastOnce(){try{const d=new Date(Date.now()+8*3600000).toISOString().slice(0,10);/* 台北日 */if(localStorage.getItem('mdt_conflict_toast')===d)return false;localStorage.setItem('mdt_conflict_toast',d);return true;}catch(e){return true;}}/* V5.69.0 M-9:單一 key、台北日期、不進備份 */
 async function syncWithNAS(){
   var dir=await _getNasSyncDir();if(!dir)return {added:0,updated:0,pushed:0,deleted:0,failed:0};
   var results={added:0,updated:0,pushed:0,deleted:0,failed:0};/* V5.13.5: failed 記錄寫入失敗數 */
@@ -5902,7 +6005,7 @@ async function syncWithNAS(){
       var file=await entry.getFile();
       var text=await file.text();
       var m=JSON.parse(text);
-      if(m&&m.id){nasMtgs[m.id]=m;nasFileNames[m.id]=entry.name;}
+      if(m&&m.id){if(m._pushedRev!==undefined)delete m._pushedRev;nasMtgs[m.id]=m;nasFileNames[m.id]=entry.name;}/* V5.69.0 M-1 */
     }catch(e){}
   }
   // NAS → Local: add or update
@@ -5912,7 +6015,7 @@ async function syncWithNAS(){
     if(nasMtg.deleted){
       var loc=loadLocal(nasMtg.id);
       if(loc&&(nasMtg.version||0)>=(loc.version||0)){
-        localStorage.removeItem('mdt_m_'+nasMtg.id);
+        localStorage.removeItem('mdt_m_'+nasMtg.id);localStorage.removeItem('mdt_pushed_'+nasMtg.id);
         localStorage.setItem('mdt_idx',JSON.stringify(getIdx().filter(function(x){return x.id!==nasMtg.id;})));
         results.deleted++;
       }
@@ -5921,8 +6024,15 @@ async function syncWithNAS(){
     var local=loadLocal(nasMtg.id);
     if(!local){
       saveLocal(nasMtg,{fromSync:true});results.added++;
+    }else if((nasMtg.version||0)>(local.version||0)&&local.rev&&localStorage.getItem('mdt_pushed_'+local.id)&&local.rev!==localStorage.getItem('mdt_pushed_'+local.id)){/* V5.69.0 M-1:改讀獨立 key */
+      /* V5.68.0 N-10:本機有「已存但推 NAS 失敗」的修改 → 不靜默覆蓋,列入衝突,開會議時處理 */
+      results.conflicts=(results.conflicts||0)+1;
     }else if((nasMtg.version||0)>(local.version||0)){
       saveLocal(nasMtg,{fromSync:true});results.updated++;
+    }else if((nasMtg.version||0)===(local.version||0)&&nasMtg.rev&&local.rev&&nasMtg.rev!==local.rev){
+      /* V5.65.0 S-1 ⑤:版號相同但 rev 不同 → 兩台內容不同,不再靜默略過 */
+      results.conflicts=(results.conflicts||0)+1;
+      (results.conflictIds=results.conflictIds||[]).push(nasMtg.id);
     }
   }
   // Local → NAS: push newer or missing
@@ -6172,7 +6282,7 @@ function createCase(cid,data,opts){
     chartNo:data.chartNo||'',
     name:data.name||'',
     age:data.age!=null?String(data.age):'',
-    gender:data.gender||dg,
+    gender:(data.gender==='M'||data.gender==='F')?data.gender:(dg==='F'?'F':''),/* V5.65.0 D-1:乳癌/婦癌仍預設 F,其他不再靜默預設 M */
     ecog:data.ecog!=null?String(data.ecog):'',
     cfs:data.cfs!=null?String(data.cfs):'',
     doctors:Array.isArray(data.doctors)?data.doctors
@@ -6479,8 +6589,8 @@ async function shareHTMLSlides(){
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
     modal.innerHTML='<div style="background:#fff;border-radius:10px;padding:24px;width:min(480px,92vw);box-shadow:0 8px 32px rgba(0,0,0,.3)">'
       +'<div style="font-weight:700;font-size:16px;margin-bottom:12px">✓ 上傳成功！</div>'
-      +'<div style="font-size:12px;color:#555;margin-bottom:10px">佈署需約 3 分鐘後才能開啟連結</div>'
-      +'<div style="background:#f5f7f9;border-radius:6px;padding:10px 12px;margin-bottom:14px;word-break:break-all;font-size:12px;color:#333;font-family:monospace" id="share-url-display">'+shareUrl+'</div>'
+      +'<div style="font-size:12px;color:#555;margin-bottom:10px">數秒後即可開啟；醫師開啟時需輸入檢視密碼</div>'
+      +'<div style="background:#f5f7f9;border-radius:6px;padding:10px 12px;margin-bottom:14px;word-break:break-all;font-size:12px;color:#333;font-family:monospace" id="share-url-display">'+escA(shareUrl)+'</div>'
       +'<div style="display:flex;gap:8px">'
       +'<button id="share-copy-btn" style="flex:1;background:var(--acc,#4A7C8E);color:#fff;border:none;border-radius:6px;padding:10px;cursor:pointer;font-size:14px;font-weight:600">複製連結</button>'
       +'<button id="share-close-btn" style="padding:10px 20px;background:#eee;border:none;border-radius:6px;cursor:pointer;font-size:14px">關閉</button>'
@@ -6489,7 +6599,7 @@ async function shareHTMLSlides(){
     document.getElementById('share-copy-btn').onclick=function(){
       navigator.clipboard.writeText(shareUrl).then(function(){
         document.getElementById('share-copy-btn').textContent='✓ 已複製！';
-        setTimeout(function(){document.getElementById('share-copy-btn').textContent='複製連結';},2000);
+        (function(_b){setTimeout(function(){if(_b&&_b.isConnected)_b.textContent='複製連結';},2000);})(document.getElementById('share-copy-btn'));
       }).catch(function(){
         const el=document.getElementById('share-url-display');
         el.contentEditable='true';el.focus();
@@ -6526,9 +6636,9 @@ async function _resolveSubFolder(rootHandle,subName){
     return{handle:h,name:key};
   }catch(e){}
   /* ② V5.29.0: 退而找「以病歷號開頭」的資料夾 —— 個管師的資料夾常是
-     「1453274 林○吉」「1453274_頭頸癌」這種形式,完全比對找不到。
+     「0000001 測○試」「0000001_頭頸癌」這種形式,完全比對找不到。
      **關鍵安全條件:病歷號本身必須完整**,所以病歷號之後必須是分隔字元或結束,
-     不能只用 startsWith —— 否則 1453274 會誤中 14532740(不同病人!)。 */
+     不能只用 startsWith —— 否則 0000001 會誤中 00000010(不同病人!)。 */
   try{
     for await(const ent of rootHandle.values()){
       if(ent.kind!=='directory')continue;
@@ -6608,7 +6718,7 @@ async function uploadSlidesToCloudflare(htmlContent, fname){
      現在:網頁只帶「上傳金鑰」(Worker 的 UPLOAD_KEY 機密),外流換掉就好;
      Worker 一樣寫入 title/uploaded metadata,Git Pusher 的清單照常顯示。 */
   const key=getUploadKey();
-  if(!key){alert('請先到「設定 → 系統 → 投影片分享」填入上傳金鑰（由林醫師提供）');return;}
+  if(!key)throw new Error('尚未設定上傳金鑰\n\n→ 設定 → 系統 → 投影片分享');/* V5.65.0 U-2:throw 讓 catch 統一處理,不再 return undefined 讓外層顯示「✓ 上傳成功 undefined」 */
   const url=CF_BASE_URL+'/api/upload?name='+encodeURIComponent(fname);
   let resp;
   try{
@@ -7208,9 +7318,25 @@ function autoImportPrevFollowups(cids){
 }
 
 
+/* ════ 設計不變量(2026-09-24 主任定案)════
+   合併會議(同日兩癌別)的所有文件產出 —— HTML 投影片、HTML 分享、Word 簡報、DOCX、會議小抄、Excel ——
+   **永遠只出目前分頁的那個癌別**,沒有「合併成一份」的流程。要出另一個癌別就切分頁再按一次。
+   唯一例外是 LINE 通知(它是通知不是文件)。不要再加「全部癌別」的產出選項。 */
 function getOutputCid(){
   if(S.cids&&S.cids.length>1&&S.activeCid&&S.cids.includes(S.activeCid))return S.activeCid;
   return S.cids?S.cids[0]:null;
+}
+/* V5.66.0 UI 優化②:個案區頂端的情境列 —— 「目前產出」在頁面下方,看長清單時看不到。
+   人數依各產出實際納入的區塊算(cases+events+followups),不只數 cases。 */
+function _updateCtxBar(){
+  const el=document.getElementById('ctx-bar');if(!el||!S.meeting)return;
+  const cid=getOutputCid()||S.cids[0];const ca=CFG[cid]||{};
+  const sec=(S.meeting.sections||{})[cid]||{};
+  const n=(sec.cases||[]).length+(sec.events||[]).length+(sec.followups||[]).length;
+  const d=String(S.meeting.date||'').replace(/^\d{4}-/,'').replace('-','/');
+  const mode=(S.viewMode?'閱覽中':'編輯中')+(S._pendingNasMerge?'　<span style="color:var(--warn)">另一台有不同版本，存檔時會合併</span>':'');/* V5.69.0 M-2 */
+  el.innerHTML='<span>'+escA(d)+' 多專科會議</span><span class="sep">｜</span><b style="color:'+escA(ca.color||'#637281')+'">'+escA(ca.name||cid)+'</b><span class="sep">｜</span><span>個案 '+n+' 位</span><span class="sep">｜</span><span class="'+(S.viewMode?'':'ed')+'">'+mode+'</span>';
+  const sub=document.getElementById('output-scope-sub');if(sub)sub.textContent='本次投影片與紀錄：'+(ca.name||cid)+'，共 '+n+' 位';
 }
 function updateOutputLabel(){
   const el=document.getElementById('output-cid-label');if(!el)return;
@@ -7232,6 +7358,7 @@ function updateOutputLabel(){
   } else {
     el.innerHTML='';el.style.display='none';
   }
+  try{_updateCtxBar();}catch(e){}/* V5.66.0 */
 }
 
 
@@ -7484,6 +7611,30 @@ function markDirty(){
   if(_ab2&&_ab2.textContent.indexOf('已儲存')>=0){
     _ab2.innerHTML='<span style="color:var(--warn)">● 有未儲存的修改</span>';
   }
+  const _sy=document.getElementById('actionbar-sync');if(_sy&&_sy.textContent.indexOf('已同步')>=0)_sy.textContent='';/* V5.67.0 */
+}
+/* ════ V5.67.0 UI 第二輪③:三種狀態 —— 「本機已儲存」不表示已同步;「儲存成功」不表示內容完整 ════ */
+function _setSync(state,err){
+  const el=document.getElementById('actionbar-sync');if(!el)return;
+  if(!nasHandle){el.textContent='';return;}
+  if(state==='syncing')el.innerHTML='<span style="color:var(--textlt)">NAS 同步中…</span>';
+  else if(state==='ok')el.innerHTML='<span style="color:var(--ok)">NAS 已同步</span>';
+  else el.innerHTML='<span style="color:var(--warn)" title="'+escA(err||'')+'">NAS 同步未完成 <a href="#" onclick="event.preventDefault();saveMeeting();" style="color:var(--warn)">重試</a></span>';
+}
+function _updateContentStatus(){
+  const el=document.getElementById('actionbar-content');if(!el||!S.meeting)return;
+  let todo=0,total=0;
+  /* V5.69.0 M-6:只算目前分頁癌別(設計不變量;面板預設也只顯示目前分頁,數字才對得上) */
+  const cid=getOutputCid()||S.cids[0];const sec=S.meeting.sections[cid]||{};const cname=CFG[cid]?.name||'';
+  ['cases','followups','team','events'].forEach(function(k){(sec[k]||[]).forEach(function(c){total++;if(!String(c.decision||'').trim())todo++;});});
+  if(!total){el.textContent='';return;}
+  el.innerHTML=todo?'<span style="color:var(--warn)">'+escA(cname)+'：結論尚有 '+todo+' 案未填</span>':'<span style="color:var(--ok)">'+escA(cname)+'：結論已齊</span>';
+}
+function _gotoTodo(){
+  if(!S.meeting)return;
+  if(S.viewMode){showSaveToast('請先按「編輯」再填結論');return;}
+  openPostMtgPanel();
+  setTimeout(function(){const st=document.getElementById('postmtg-state');if(st){st.value='todo';_postFilterApply();}},50);
 }
 let _savePromise=null;
 async function saveMeeting(opts){
@@ -7548,12 +7699,50 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
   /* V5.31.1 N-8: version 遞增移到衝突檢查**之後** —— 原本在檢查前遞增,
      每按一次「取消」version 就憑空 +1;而 version 是 NAS 同步的衝突仲裁依據,
      被灌水後同步時會無條件壓過其他機器上真正較新的版本。 */
+  /* ════ V5.65.0 S-1 ④:存檔前比對 NAS ════ */
+  if(nasHandle){
+    const nas=await _readNasMtg(S.meeting.id);
+    if(nas&&!nas.deleted&&nas.rev!==S._baseRev&&(nas.version||0)>=(S._baseVer||0)){
+      /* 別台在我開始編輯後存過。判斷依據是 **誰存的**(savedBy),不比文字 ——
+         存檔會補 ph:"Nil" 之類的正規化,沒人動過的區段文字也會變,實測用文字比對每次都誤判成衝突。 */
+      const mine=new Set((S.user&&S.user.cancers)||[]);
+      const base=S._snapshot?JSON.parse(S._snapshot):null;
+      const iChanged=function(cid){if(S._keepMine&&mine.has(cid))return true;/* V5.69.0 M-3 */return base?JSON.stringify(S.meeting.sections[cid])!==JSON.stringify((base.sections||{})[cid]):true;};
+      let ownTouched=false;
+      if(S.user&&(nas.savedById||((USERS.find(function(u){return u.name===nas.savedBy;})||{}).id))===S.user.id){/* V5.68.0 N-1:相容舊版電腦寫的姓名 */
+        /* 同一個人在另一台存過:我這台有改任何區段 → 衝突;沒改 → 整份取 NAS */
+        if((S.cids||[]).some(iChanged))ownTouched=true;
+        else{(S.cids||[]).forEach(function(cid){if(nas.sections&&nas.sections[cid])S.meeting.sections[cid]=nas.sections[cid];});}
+      }else{
+        /* 別人存的:不是我負責的癌別一律取 NAS;我負責的保留我這台的(別人依約定不會改我的區段) */
+        (S.cids||[]).forEach(function(cid){
+          if(!mine.has(cid)&&nas.sections&&nas.sections[cid])S.meeting.sections[cid]=nas.sections[cid];
+          else if(mine.has(cid)&&!iChanged(cid)&&nas.sections&&nas.sections[cid])S.meeting.sections[cid]=nas.sections[cid];/* 我負責但我沒改 → 也取 NAS(可能是別人幫忙補的) */
+        });
+      }
+      if(ownTouched){
+        /* 我負責的癌別 NAS 也被改過(同一人兩台機器)→ 不自動合併。
+           V5.68.0 N-2:走 NAS 專用的衝突處理(舊 resolveConflict 只寫共享資料夾不寫 NAS,選「本機」會無限循環);
+           自動存檔不彈阻斷式視窗(V5.31.1 N-3 原則),改常駐提示。 */
+        _saving=false;
+        if(opts&&opts.silent){showPersistentError('這場會議在另一台電腦也有修改，請按「儲存」處理衝突。');return false;}
+        showNasConflict(nas);return false;
+      }
+      S.meeting.version=Math.max(S.meeting.version||0,nas.version||0);
+      /* V5.68.0 N-8:合併只改了記憶體,別的癌別分頁畫面還是舊的 → 重繪被取代的區段 */
+      (S.cids||[]).forEach(function(cid){if(mine.has(cid)&&iChanged(cid))return;['cases','events','team','followups'].forEach(function(ty){const cont=document.getElementById('div-'+ty+'-'+cid);if(!cont)return;const arr=(S.meeting.sections[cid]||{})[ty]||[];const vm=S.viewMode;cont.innerHTML=arr.map(function(c2,i2){try{return ty==='team'?(vm?teamViewHTML(cid,i2,c2,'team'):teamHTML(cid,i2,c2,'team',true)):ty==='followups'?followupHTML(cid,i2,c2,'followups'):(vm?caseViewHTML(cid,i2,c2,ty):caseHTML(cid,i2,c2,ty));}catch(e){return '';}}).join('');});});
+      showSaveToast('已併入 '+(nas.savedBy||'另一台電腦')+' 的修改');
+      console.log('[S-1] 合併了 NAS 上別台的修改(其他癌別區段)');
+    }
+  }
   S.meeting.version=(S.meeting.version||0)+1;
+  S.meeting.rev=uid();/* V5.65.0 S-1 ②:每次存檔換 rev,用來辨識「同號不同內容」 */
+  S.meeting.savedById=(S.user&&S.user.id)||'';/* V5.68.0 N-1:savedBy 維持姓名(8 處畫面與歷史篩選都當姓名用),另存 id 供合併判斷 */
   _genAtSave=_editGen;/* V5.45.0 A-4:在序列化之前記下(宣告在 try 外,見下方) */
   const lok=saveLocal(S.meeting),sok=await saveShared(S.meeting);
   _lok=lok;/* V5.31.1 N-1: 帶出 try 外供收尾判斷 */
   // NAS sync: push this meeting (non-blocking)
-  if(nasHandle)writeMtgToNAS(S.meeting).catch(function(e){console.warn('NAS sync write:',e);});
+  if(nasHandle){_setSync('syncing');const _wid=S.meeting.id,_wrev=S.meeting.rev,_wver=S.meeting.version,_wlok=lok;/* V5.70.1 Q-1:呼叫前取本機結果 */writeMtgToNAS(S.meeting).then(function(r){if(r&&r.ok){/* V5.71.0 R-1:兩件事分開 —— ①記憶體 base = 這個畫面已包含 NAS 哪一版,記憶體內容就是剛寫上去的,NAS 成功就對齊(否則不關頁再存會跳「和自己衝突」);②磁碟推送紀錄 = 下次開啟時判斷用,本機也成功才記(Q-1) */if(S.meeting&&S.meeting.id===_wid){S._baseRev=_wrev;S._baseVer=_wver;S._pendingNasMerge=false;S._keepMine=false;try{_updateCtxBar();}catch(e){}}if(_wlok){try{localStorage.setItem('mdt_pushed_'+_wid,_wrev);}catch(e){}}/* V5.69.0 M-1:推送狀態是單台電腦的事,不能進會議物件(會跟著推上 NAS,別台誤判成自己有未推送) */_setSync('ok');}/* V5.68.0 N-9/N-10:閉包記下這次寫入的內容;推送成功記 _pushedRev */else{_setSync('fail',r&&r.error);}}).catch(function(e){console.warn('NAS sync write:',e);_setSync('fail',e&&e.message);});}/* V5.65.0 S-1;V5.67.0 ③ */
   /* ════ V5.31.0 P0-4(內部審核)════
      原本 _dirty=false 無條件執行 —— 儲存失敗時畫面只閃一行「儲存失敗」,但 _dirty 已歸零,
      beforeunload 不再攔截 → 使用者關掉分頁,整場會議的輸入全部消失。
@@ -7577,6 +7766,7 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
       _lastSaveAlert=Date.now();
       alert(_msg);
     }
+      return false;/* V5.69.1 P-2:本機失敗要回 false,呼叫端(決議面板)才不會誤顯示已儲存 */
   }else{
     /* ════ V5.46.1 R-2(P0)════
        快照代表「磁碟上現在的狀態」,必須在**寫入成功的當下**更新,與 1.2 秒的收尾動畫無關。
@@ -7644,10 +7834,12 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
       if(_ab){
         var _t=new Date();
         var _hh=('0'+_t.getHours()).slice(-2)+':'+('0'+_t.getMinutes()).slice(-2);
-        _ab.innerHTML='<span style="color:var(--ok)">\u2713 \u5df2\u5132\u5b58 '+_hh+'</span>';
+        _ab.innerHTML='<span style="color:var(--ok)">\u2713 本機已儲存 '+_hh+'</span>';/* V5.67.0:明說「本機」 */
       }/* V5.37.1 Z-4:存完 _dirty=false → 文字變「檢視」 */
+      try{_updateContentStatus();}catch(e){}/* V5.67.0 */
     },1200);
   }
+  return true;/* V5.69.1 P-2 */
 }
 
 /* ════ PPTX ════ */
@@ -8408,7 +8600,14 @@ function importAllJSON(input){
   const reader=new FileReader();
   reader.onload=ev=>{
     try{
-      const backup=JSON.parse(ev.target.result);
+      let backup=JSON.parse(ev.target.result);
+      /* V5.68.0 N-5:NAS 每日備份是 {version,backupAt,data,imageIndex},系統自己讀不回來 —— 轉成匯出格式 */
+      if(backup&&backup.data&&!backup.meetings){
+        const d=backup.data,meetings={};
+        Object.keys(d).forEach(function(k){if(k.startsWith('mdt_m_'))meetings[k]=d[k];});
+        const prefs={};Object.keys(d).forEach(function(k){if(_PREF_FIXED.includes(k))prefs[k]=d[k];});
+        backup={version:backup.version,exportedAt:backup.backupAt,cfg:d.mdt_cfg,locs:d.mdt_locs,drs:d.mdt_drs,exam_types:d.mdt_exam_types,idx:d.mdt_idx,meetings:meetings,prefs:prefs,_fromDailyBackup:true};
+      }
       if(!backup.meetings||!backup.idx){throw new Error('格式不正確，請使用本系統匯出的 JSON 檔案')}
       // Ask before overwrite
       const count=Object.keys(backup.meetings).filter(k=>k.startsWith('mdt_m_')).length;
@@ -8825,9 +9024,11 @@ async function genHTMLSlides(opts){
      背景:原本讀不到的圖片直接 `if(!src)return''` 靜默略過 —— 使用者不會知道少了一張,
      這跟坑 #29(無聲不產出)、坑 #33(謊報成功)是同一類「無聲失敗」。
      改法:全程累計「應該有幾張 / 實際載到幾張」,產出前把落差與其他風險一次攤開讓使用者決定。 */
-  const _qa={expectImgs:0,loadedImgs:0,missing:[],noDiscussion:[],bigPages:[],longText:[],tl:[]}/* V5.61.0 TL-15 */
+  const _qa={expectImgs:0,loadedImgs:0,missing:[],noDiscussion:[],bigPages:[],longText:[],tl:[],basic:[]}/* V5.61.0 TL-15;V5.68.0 basic */
   /* V5.61.0 TL-15:事件軸預檢 —— 個案與必要事件都要跑(必要事件多一條「晚於死亡日」) */
   const _qaTl=function(c){
+    /* V5.65.0 D-1:性別未填 —— 原本非乳癌/婦癌靜默預設 M,女性病人以 M 進投影片/DOCX/AI 提示詞 */
+    if(!c.gender)_qa.basic.push((c.chartNo||'')+' '+(c.name?maskName(c.name):'')+'：性別未填');/* V5.68.0 N-14:不放時序分類 */
         const tl=c.timeline||[];if(!tl.length)return;
         const who=(c.chartNo||'')+' '+(c.name?maskName(c.name):'');
         const valid=tl.filter(function(t){return t&&_normTlDate(t.date).date;}).length;
@@ -9134,7 +9335,7 @@ async function genHTMLSlides(opts){
       /* V5.54.0:依勾選顯示;勾了但沒資料寫「無」 */
       (_gnShow(c)&&!(c.genomics||[]).length)?mkRow('基因檢測','<div class="vc-r"><span class="vc-v">無</span></div>'):'',
       (_gnShow(c)&&(c.genomics||[]).length)?mkRow('基因檢測',(c.genomics||[]).map(function(gn){
-        return '<div class="vc-r"><span class="vc-k">基因檢測</span><span class="vc-v">'+(gn.name?'<b>'+escA(gn.name)+'：</b> ':'')+escA(gn.content||'')+'</span></div>';
+        return '<div class="vc-r"><span class="vc-v">'+(gn.name?'<b>'+escA(gn.name)+'：</b> ':'')+escA(gn.content||'')+'</span></div>';/* V5.72.0:外層 mkRow 已有「基因檢測」標籤,每筆再加一次 → 個管反映「到處重複字眼」 */
       }).join('')):'',
         mkRow('病理',paths),
       ].join('');
@@ -9615,7 +9816,7 @@ async function genHTMLSlides(opts){
     +'.mammo-report{flex:0 0 20%;overflow-y:auto;padding:2vh 2vw;font-size:clamp(13px,1.35vw,18px);color:rgba(255,255,255,.88);line-height:1.7;border-right:1px solid rgba(255,255,255,.1);}'
     +'.mammo-imgs{flex:0 0 80%;display:flex;gap:1vw;padding:2vh 1.5vw;align-items:stretch;justify-content:center;overflow:hidden;}'
     +'.mammo-img-wrap{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;overflow:hidden;}'
-    +'.mammo-img-wrap img{width:100%;height:100%;object-fit:contain;border-radius:4px;}' +
+    +'.mammo-img-wrap img{width:100%;height:100%;object-fit:contain;border-radius:4px;}' 
     +'.th{font-size:clamp(18px,2.2vw,32px);font-weight:700;color:var(--dk);margin-bottom:2.5vh;}'
     +'.tc{font-size:.7em;color:var(--lt);font-weight:400;margin-left:1vw;}'
     +'table{width:100%;border-collapse:collapse;}'
@@ -9745,6 +9946,7 @@ async function hlExport(){
   if(btn){btn.disabled=true;btn.textContent='匯出中...';}
   try{
     var resp=await fetch(location.href,{cache:'no-store'});
+    if(resp.status===401){alert('檢視密碼已逾時，請重新整理頁面輸入密碼後再匯出。');return;}/* V5.65.0 U-3 */
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     var src=await resp.text();
     var json=JSON.stringify(marks);
@@ -10131,6 +10333,7 @@ window.openImgWindow=function(caseId){
     if(_qa.longText.length)_tips.push(_qa.longText.length+' 案內容較長');
     if(_qa.bigPages.length)_tips.push('有影像頁超過 6 張');
     if(_qa.tl.length)_tips.push('事件軸 '+_qa.tl.length+' 項提醒：'+_qa.tl.slice(0,3).join('；')+(_qa.tl.length>3?'…':''));/* V5.61.0 TL-15 */
+    if(_qa.basic.length)_tips.push('基本資料：'+_qa.basic.slice(0,3).join('；')+(_qa.basic.length>3?'…':''));/* V5.68.0 N-14 */
     if(_w.length){
       const _msg='產出前檢查\n'
         +'──────────────────────\n'
@@ -10335,7 +10538,7 @@ async function genXLSX(){
           ca.name,
           c.chartNo||'',
           c.name||'',
-          c.gender||'M',
+          c.gender||'',/* V5.68.0 N-4 */
           c.age||'',
           c.ecog||'',
           c.cfs||'',
@@ -10491,7 +10694,7 @@ function tlAiPrompt(cid,i,type){
     const cfg=TL_TYPES.find(function(t){return t.id===e.type;})||TL_TYPES[TL_TYPES.length-1];
     return'  {"id":"'+(e.id||'')+'","date":"'+(e.date||'')+'","type":"'+(e.type||'')+'","label":"'+String(e.label||cfg.label).replace(/"/g,'\'')+'"}';
   }).join(',\n');
-  return`你是 MDT 病程分析助理。請根據以下臨床資料，判讀事件清單中每一筆的「病程意義」，輸出 JSON。
+  return _deidForAI(`你是 MDT 病程分析助理。請根據以下臨床資料，判讀事件清單中每一筆的「病程意義」，輸出 JSON。
 
 【輸出格式絕對規則】
 - 每筆輸出必須帶 "id"，**原樣照抄**事件清單裡的 id，不可自創、不可省略（系統靠 id 對應，同一天有多筆事件時只有 id 能分辨）\n- 只輸出 JSON 物件，第一個字必須是「{」，最後一個字必須是「}」
@@ -10534,7 +10737,7 @@ ${ctx}
 ═══ 事件清單 ═══
 [
 ${evList}
-]`;
+]`,S.meeting);/* V5.65.0 A-1 */
 }
 let _tlAiTy='cases';/* V5.42.4 C-1:AI 判讀對話框開在哪一種卡片上 */
 function openTlAi(cid,i,type){
@@ -10685,7 +10888,7 @@ decision:決策結論
 note:備註
 
 範例:
-[{"_target":"team","_cancer":"頭頸癌","chartNo":"1234567","name":"王大明","doctors":["李醫師",""],"prevDate":"2026-05-14","diagnosis":"Oral SCC, cT2N1M0","cc":"2026-03 確診後接受手術","discussion":"術後輔助治療選擇","summary":"傷口癒合良好,病理邊緣陰性","decision":"建議接受術後放療","note":""}]
+[{"_target":"team","_cancer":"頭頸癌","chartNo":"9000099","name":"王大明","doctors":["李醫師",""],"prevDate":"2026-05-14","diagnosis":"Oral SCC, cT2N1M0","cc":"2026-03 確診後接受手術","discussion":"術後輔助治療選擇","summary":"傷口癒合良好,病理邊緣陰性","decision":"建議接受術後放療","note":""}]
 
 請轉換以下資料:
 `;
@@ -10731,7 +10934,7 @@ improveNeeded:留空字串(這是會議上討論決定的)
 eventStatus:固定填 "待討論"
 
 範例:
-[{"_target":"events","_cancer":"肝膽胰癌","chartNo":"1453274","name":"林大明","age":"68","gender":"M","doctors":["張醫師","",""],"diagnosis":"HCC, BCLC C","cc":"2026-01 確診後接受 TACE,3 月因肝衰竭住院","ph":"HBV carrier","phChips":["HBV"],"treatments":[{"name":"TACE","date":"2026-01-15","content":"第一次"}],"timeline":[{"type":"dx","date":"2026-01-10","label":"確診 HCC"}],"deathDate":"2026-03-20","deathPlace":"本院住院","causeDirect":"肝衰竭","attribution":"","txRelated":"","improveNeeded":"","eventStatus":"待討論"}]
+[{"_target":"events","_cancer":"肝膽胰癌","chartNo":"0000001","name":"測試者","age":"68","gender":"M","doctors":["張醫師","",""],"diagnosis":"HCC, BCLC C","cc":"2026-01 確診後接受 TACE,3 月因肝衰竭住院","ph":"HBV carrier","phChips":["HBV"],"treatments":[{"name":"TACE","date":"2026-01-15","content":"第一次"}],"timeline":[{"type":"dx","date":"2026-01-10","label":"確診 HCC"}],"deathDate":"2026-03-20","deathPlace":"本院住院","causeDirect":"肝衰竭","attribution":"","txRelated":"","improveNeeded":"","eventStatus":"待討論"}]
 
 請轉換以下資料:
 `;}
@@ -10953,7 +11156,7 @@ function exportCaseJSON(){
         chartNo: c.chartNo||'',
         name: c.name||'',
         age: String(c.age||''),
-        gender: c.gender||'M',
+        gender: c.gender||'',/* V5.68.0 N-4 */
         ecog: String(c.ecog||''),
         cfs: String(c.cfs||''),
         /* V5.10.1: 補主治醫師(原本匯出漏帶,匯出再匯入會掉) */
@@ -11142,7 +11345,7 @@ function importCaseJSON(inputEl){
         chartNo:String(d.chartNo||'').trim(),
         name:String(d.name||'').trim(),
         age:String(d.age||''),
-        gender:d.gender||'M',
+        gender:(d.gender==='M'||d.gender==='F')?d.gender:'',/* V5.68.0 N-4 */
         ecog:String(d.ecog||''),
         cfs:String(d.cfs||''),
         doctors:Array.isArray(d.doctors)?d.doctors:['','',''],
@@ -11390,8 +11593,26 @@ function genLine(){
   return t;
 }
 
-function genAI(){if(readForm()===false)return;const m=S.meeting,cids=S.cids;let p=`你是癌症個案管理師的會議記錄助理。請根據以下各個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出MDT會議討論摘要草稿，語言專業精簡。\n\n會議日期：${rocDate(m.date)}\n\n`;cids.forEach(id=>{const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];if(!cases.length)return;p+=`【${ca.name}】\n`;cases.forEach((c,i)=>{p+=`\n個案${i+1}：\n`;p+=`個案代號：案${i+1}，${c.gender||'M'}/${c.age||'—'}\n`;/* V5.37.0 P0-8:病歷號與姓名不送 AI */if(c.ecog||c.cfs){p+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'衰弱量表 '+c.cfs:''}\n`;}p+=`診斷：${c.diagnosis||'—'}\n主治醫師：${getDoctorStr(c)}\n`;if(c.cc)p+=`現病史: ${c.cc}\n`;
-      const phAll=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph].filter(Boolean).join('  ');if(phAll)p+=`過去病史: ${phAll}\n`;if(c.exam)p+=`Exam:\n${c.exam}\n`;if(c.treatment)p+=`治療：\n${c.treatment}\n`;p+=`討論重點：${c.discussion||(c.topics||[]).join('、')||'—'}\n`});p+='\n'});p+='\n請對每個個案分別產出結構化討論摘要，供個管師填入MDT會議記錄。';return p}
+/* ════ V5.65.0 A-1:送 AI 前去識別化 ════
+   V5.37.0 P0-8 移除了病歷號與姓名「欄位」,但現病史、檢查內容、治療等自由文字若含病歷號或全名,照樣送到外部 API。
+   精確字串替換該場會議所有個案自己的 chartNo 與 name(不用寬鬆的數字 regex,避免誤改檢驗數值)。 */
+function _deidForAI(text,m){
+  let t=String(text||'');
+  const pairs=[];
+  Object.keys((m&&m.sections)||{}).forEach(function(cid){
+    ['cases','events','followups','team'].forEach(function(ty){
+      ((m.sections[cid]||{})[ty]||[]).forEach(function(c){
+        if(c&&c.chartNo&&String(c.chartNo).trim().length>=4)pairs.push([String(c.chartNo).trim(),'〔病歷號〕']);
+        if(c&&c.name&&String(c.name).trim().length>=2)pairs.push([String(c.name).trim(),'〔姓名〕']);
+      });
+    });
+  });
+  pairs.sort(function(a,b){return b[0].length-a[0].length;});/* 長的先換,避免短字串是長字串的一部分 */
+  pairs.forEach(function(pr){t=t.split(pr[0]).join(pr[1]);});
+  return t;
+}
+function genAI(){if(readForm()===false)return;const m=S.meeting,cids=S.cids;let p=`你是癌症個案管理師的會議記錄助理。請根據以下各個案完整臨床資料，依「影像討論」「分期討論」「治療策略討論」三段格式，產出MDT會議討論摘要草稿，語言專業精簡。\n\n會議日期：${rocDate(m.date)}\n\n`;cids.forEach(id=>{const ca=CFG[id],cases=(m.sections[id]||{}).cases||[];if(!cases.length)return;p+=`【${ca.name}】\n`;cases.forEach((c,i)=>{p+=`\n個案${i+1}：\n`;p+=`個案代號：案${i+1}，${c.gender||'—'}/${c.age||'—'}\n`;/* V5.37.0 P0-8:病歷號與姓名不送 AI */if(c.ecog||c.cfs){p+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'衰弱量表 '+c.cfs:''}\n`;}p+=`診斷：${c.diagnosis||'—'}\n主治醫師：${getDoctorStr(c)}\n`;if(c.cc)p+=`現病史: ${c.cc}\n`;
+      const phAll=[(c.phChips||[]).map(x=>x+'(+)').join(' '),c.ph].filter(Boolean).join('  ');if(phAll)p+=`過去病史: ${phAll}\n`;if(c.exam)p+=`Exam:\n${c.exam}\n`;if(c.treatment)p+=`治療：\n${c.treatment}\n`;p+=`討論重點：${c.discussion||(c.topics||[]).join('、')||'—'}\n`});p+='\n'});p+='\n請對每個個案分別產出結構化討論摘要，供個管師填入MDT會議記錄。';p=_deidForAI(p,m);/* V5.65.0 A-1 */return p}
 function doOutput(mode){
   if(!S.meeting||!S.meeting.version){
     const el=document.getElementById('out-area');
@@ -11507,7 +11728,7 @@ async function genAIInline(){
     hasCase=true;
     prompt+=`\n【${ca.name}】\n`;
     cases.forEach((c,i)=>{
-      prompt+=`\n個案${i+1}：${c.gender||'M'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;/* V5.37.0 P0-8:病歷號與姓名不送 AI */
+      prompt+=`\n個案${i+1}：${c.gender||'—'}/${c.age||''}　VS ${getDoctorStr(c)}\n`;/* V5.37.0 P0-8:病歷號與姓名不送 AI */
       if(c.ecog||c.cfs)prompt+=`Performance Status：${c.ecog?'ECOG '+c.ecog:''}${c.ecog&&c.cfs?'　':''}${c.cfs?'衰弱量表 '+c.cfs:''}\n`;
       if(c.cc)prompt+=`現病史: ${c.cc}\n`;
       if(c.ph)prompt+=`過去病史: ${c.ph}\n`;
@@ -11520,6 +11741,7 @@ async function genAIInline(){
   if(!hasCase){btn.disabled=false;btn.textContent='AI 生成摘要';alert('請先新增個案討論資料');return}
   prompt+='\n請對每個個案分別產出結構化討論摘要。';
   try{
+    prompt=_deidForAI(prompt,m);/* V5.65.0 A-1 */
     const result=await callAI(prompt,1000);
     document.getElementById('ai-result-text').value=result;
     document.getElementById('ai-model-badge').textContent=AI_CFG.model;
@@ -11593,7 +11815,7 @@ function confirmBatchDelete(){
     var local=loadLocal(entry.id);
     /* V4.3.44: 推 NAS tombstone(失敗不阻擋本地刪除) */
     if(nasHandle)writeTombstoneToNAS(entry.id,local).catch(function(e){console.warn('NAS tombstone:',e);});
-    localStorage.removeItem('mdt_m_'+entry.id);
+    localStorage.removeItem('mdt_m_'+entry.id);localStorage.removeItem('mdt_pushed_'+entry.id);
   });
   const newIdx=idx.filter(function(_,i){return!delIdxs[i];});
   localStorage.setItem('mdt_idx',JSON.stringify(newIdx));
@@ -11633,7 +11855,7 @@ function generateTestData(){
   if(!confirm('生成三位個管師各癌別共18場測試會議，是否繼續？'))return;
   const TC={
     head_neck:[
-      {chartNo:'5314073',name:'陳信宏',age:'50',gender:'M',
+      {chartNo:'9000001',name:'測試一',age:'50',gender:'M',
        doctors:['張建明醫師','劉育昌醫師',''],
        diagnosis:'左舌鱗狀細胞癌，cT2N0M0',
        cc:'口腔潰瘍2週，無法進食。內視鏡發現左舌緣3cm潰瘍性腫塊，切片確認SCC。',
@@ -11643,7 +11865,7 @@ function generateTestData(){
        treatments:[{name:'Wide Excision + Neck Dissection',date:'2026-01-25',content:'pT2N2b，LVI(+)，PNI(+)，ECE(-)。'}],
        markers:[],familyHistory:'',
        discussion:'術後分期確認，討論 adjuvant CCRT 適應症。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
-      {chartNo:'5188925',name:'林義助',age:'62',gender:'M',
+      {chartNo:'9000002',name:'測試二',age:'62',gender:'M',
        doctors:['張建明醫師',''],
        diagnosis:'右下咽鱗狀細胞癌，cT3N1M0',
        cc:'吞嚥困難3個月，體重下降5kg。內視鏡發現右下咽腫瘤，切片確認SCC。',
@@ -11654,7 +11876,7 @@ function generateTestData(){
        discussion:'治療策略討論，同步CCRT vs 手術。',topics:['影像討論','治療策略討論'],summary:'',decision:''},
     ],
     lymphoma:[
-      {chartNo:'5240001',name:'王美珠',age:'58',gender:'F',
+      {chartNo:'9000003',name:'測試三',age:'58',gender:'F',
        doctors:['劉大智醫師',''],
        diagnosis:'瀰漫性大B細胞淋巴瘤（DLBCL），Ann Arbor Stage IIA',
        cc:'頸部雙側腫塊2週，無B症狀。切片確認DLBCL。',
@@ -11666,7 +11888,7 @@ function generateTestData(){
        discussion:'治療反應評估，PET-CT追蹤。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
     ],
     thoracic:[
-      {chartNo:'5321456',name:'黃明德',age:'67',gender:'M',
+      {chartNo:'9000004',name:'測試四',age:'67',gender:'M',
        doctors:['黃榆涵醫師','張正雄醫師',''],
        diagnosis:'右上肺腺癌，EGFR exon21 L858R+，cT1bN0M0',
        cc:'健診發現右上肺結節1cm，無症狀。切片確認腺癌，EGFR L858R陽性。',
@@ -11675,7 +11897,7 @@ function generateTestData(){
        exams:[{name:'CT',date:'2026-01-08',content:'右上葉1.0cm GGO，cT1bN0M0。'},{name:'PET-CT',date:'2026-01-20',content:'無縱隔或遠端轉移。'}],
        treatments:[],markers:[],familyHistory:'',
        discussion:'手術切除 vs SBRT vs EGFR-TKI 策略討論。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
-      {chartNo:'5198234',name:'林淑芬',age:'54',gender:'F',
+      {chartNo:'9000005',name:'測試五',age:'54',gender:'F',
        doctors:['黃榆涵醫師','劉育昌醫師',''],
        diagnosis:'左肺鱗狀細胞癌，cT2aN2M0，Stage IIIA',
        cc:'咳嗽痰血2個月，CXR發現左肺門腫塊。支氣管鏡切片確認SCC。',
@@ -11687,7 +11909,7 @@ function generateTestData(){
        discussion:'同步CCRT治療反應評估。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
     ],
     breast:[
-      {chartNo:'5267891',name:'陳淑美',age:'45',gender:'F',
+      {chartNo:'9000006',name:'測試六',age:'45',gender:'F',
        doctors:['李岳聰醫師','張正雄醫師',''],
        diagnosis:'左乳浸潤性管狀癌，ER(+) PR(+) HER2(-)，cT1cN0M0',
        cc:'乳篩發現左乳1.8cm腫塊，無疼痛。切片確認IDC。',
@@ -11697,7 +11919,7 @@ function generateTestData(){
        treatments:[],markers:[],familyHistory:'無',
        mammo:{date:'2026-01-10',report:'Findings: 左乳外上象限見1.8cm高密度不規則腫塊，邊緣毛刺狀。\nImpression: BI-RADS Category 5: Highly suggestive of malignancy.',images:[]},
        discussion:'手術方式討論（乳房保留 vs 全切除）及術後輔助治療。',topics:['影像討論','病理討論','治療策略討論'],summary:'',decision:''},
-      {chartNo:'5301234',name:'黃淑惠',age:'52',gender:'F',
+      {chartNo:'9000007',name:'測試七',age:'52',gender:'F',
        doctors:['吳鴻昇醫師','張正雄醫師',''],
        diagnosis:'右乳浸潤性管狀癌，HER2(+)，cT2N1M0',
        cc:'自摸右乳腫塊3週，腋下可觸及腫大淋巴結。切片確認IDC HER2+。',
@@ -11710,7 +11932,7 @@ function generateTestData(){
        discussion:'術前化療反應評估，討論手術時機。',topics:['影像討論','病理討論','治療策略討論'],summary:'',decision:''},
     ],
     digestive:[
-      {chartNo:'0089801',name:'禤志亮',age:'71',gender:'M',
+      {chartNo:'9000008',name:'測試八',age:'71',gender:'M',
        doctors:['歐金俊醫師','劉育昌醫師',''],
        diagnosis:'乙狀結腸腺癌，cT3N1M0，Stage IIIB',
        cc:'血便3個月，體重下降4kg。大腸鏡發現乙狀結腸腫瘤，切片確認腺癌。',
@@ -11720,7 +11942,7 @@ function generateTestData(){
        treatments:[],
        markers:[{name:'CEA',date:'2026-01-18',content:'12.5 (2026-01-18)'}],familyHistory:'',
        discussion:'手術時機及術前CCRT適應症討論。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
-      {chartNo:'0318988',name:'蕭淑霞',age:'63',gender:'F',
+      {chartNo:'9000009',name:'測試九',age:'63',gender:'F',
        doctors:['歐金俊醫師','劉育昌醫師',''],
        diagnosis:'直腸腺癌，cT3N2M0，Stage IIIC',
        cc:'排便習慣改變6個月，血便，裡急後重。大腸鏡發現直腸腫塊，切片確認腺癌。',
@@ -11732,7 +11954,7 @@ function generateTestData(){
        discussion:'術前CCRT治療反應評估，討論手術方式。',topics:['影像討論','治療策略討論'],summary:'',decision:''},
     ],
     hepatobiliary:[
-      {chartNo:'5332341',name:'劉志利',age:'68',gender:'M',
+      {chartNo:'9000010',name:'測試十',age:'68',gender:'M',
        doctors:['李岳聰醫師','張正雄醫師',''],
        diagnosis:'肝細胞癌（HCC），BCLC Stage A，單顆3cm，肝硬化背景',
        cc:'腹部超音波追蹤發現肝臟3cm新生腫塊，確診HCC。',
@@ -11766,7 +11988,7 @@ function generateTestData(){
        discussion:'治療策略討論：手術 vs 放療 vs ADT。',topics:['分期討論','治療策略討論'],summary:'',decision:''},
     ],
     gynecology:[
-      {chartNo:'5298765',name:'張淑惠',age:'52',gender:'F',
+      {chartNo:'9000011',name:'測試十一',age:'52',gender:'F',
        doctors:['吳宏明醫師','林伯儒醫師',''],
        diagnosis:'子宮頸鱗狀細胞癌，FIGO Stage IIB',
        cc:'異常陰道出血3個月，性交後出血。子宮頸切片確認SCC。',
@@ -11776,7 +11998,7 @@ function generateTestData(){
        treatments:[{name:'Concurrent CCRT',date:'2026-01-28',content:'Cisplatin weekly + EBRT 45Gy + Brachytherapy，進行中。'}],
        markers:[{name:'SCC-Ag',date:'2026-01-14',content:'8.5 (2026-01-14) → 3.2 (2026-02-25)'}],familyHistory:'無',
        discussion:'CCRT治療反應評估。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
-      {chartNo:'5311098',name:'李美秀',age:'48',gender:'F',
+      {chartNo:'9000012',name:'測試十二',age:'48',gender:'F',
        doctors:['林坤沂醫師','劉大智醫師',''],
        diagnosis:'子宮內膜腺癌，Grade 2，手術後病理 Stage IA',
        cc:'停經後出血3個月。子宮內膜刮除術確認腺癌，接受子宮全切除術。',
@@ -12618,6 +12840,17 @@ document.addEventListener('change',function(e){
     return;
   }
 });
+/* V5.65.0 S-1:切回分頁且沒有未存修改時補跑一次同步 —— 原本只在登入跑,整天不登出就整天看不到別台的修改 */
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState!=='visible'||!nasHandle||_dirty||!S.user)return;
+  if(window.__lastVisSync&&Date.now()-window.__lastVisSync<60000)return;
+  window.__lastVisSync=Date.now();
+  const _curId=S.meeting&&S.meeting.id,_curVer=S.meeting&&S.meeting.version;
+  syncWithNAS().then(function(r){if(r&&(r.updated||r.added||r.conflicts)){renderSbRecent();if(r.conflicts&&_conflictToastOnce())showSaveToast('⚠ '+r.conflicts+' 場會議兩台內容不同，開啟該會議時會請您選擇');
+    /* V5.68.0 N-11:目前開著的這場被同步更新(無未存修改)→ 重開讓畫面跟上 */
+    if(_curId&&!_dirty&&S.meeting&&S.meeting.id===_curId){const nl=loadLocal(_curId);if(nl&&(nl.version||0)>(_curVer||0)){showSaveToast('這場會議已從 NAS 更新，畫面已刷新');openMtgById(_curId,!S.viewMode);/* V5.69.0 M-8:維持原模式 */}}
+  }}).catch(function(){});
+});
 document.addEventListener('input',function(e){
   const el=e.target.closest('[data-action="updstruct"]');
   if(!el)return;
@@ -12745,10 +12978,20 @@ function updateImgFolderSettingsStatus(){
 <!-- Post-meeting fill panel -->
 <div id="postmtg-panel" style="display:none;position:fixed;inset:0;z-index:2000;background:#fff;overflow-y:auto;flex-direction:column">
   <div style="position:sticky;top:0;background:#fff;border-bottom:1px solid var(--blt);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:1">
-    <span style="font-weight:700;font-size:15px;color:var(--fog-dk)">會後填寫</span>
-    <span style="font-size:12px;color:var(--textlt);flex:1">填完存檔後可產出 DOCX</span>
-    <button class="btn btn-a btn-sm" onclick="savePostMtg()">存檔關閉</button>
+    <span style="font-weight:700;font-size:15px;color:var(--fog-dk)">會議決議</span>
+    <span id="postmtg-scope" style="font-size:12px;color:var(--textlt)"></span>
+    <span style="flex:1"></span>
+    <button class="btn btn-b btn-sm" onclick="savePostMtg(true)" title="存檔但留在面板">儲存</button>
+    <button class="btn btn-a btn-sm" onclick="savePostMtg()">儲存並返回</button>
     <button class="btn btn-b btn-sm" onclick="closePostMtgPanel()">取消</button>
+  </div>
+  <!-- V5.67.0 UI 第二輪①:癌別與待填篩選 + 下一個待填。篩選只影響顯示,不清其他癌別未存的資料 -->
+  <div id="postmtg-filter" style="position:sticky;top:49px;background:var(--surface);border-bottom:1px solid var(--blt);padding:8px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;z-index:1;font-size:12px">
+    <span style="color:var(--textlt)">癌別</span><span id="postmtg-cidsel" style="display:inline-flex;gap:4px"></span>
+    <span style="color:var(--textlt);margin-left:8px">顯示</span>
+    <select id="postmtg-state" onchange="_postFilterApply()" style="font-size:12px;padding:3px 6px"><option value="all">全部</option><option value="todo">待填結論</option><option value="fup">待確認追蹤</option></select>
+    <span id="postmtg-count" style="color:var(--textlt)"></span>
+    <button class="btn btn-b btn-sm" style="margin-left:auto" onclick="_postNextTodo()">下一個待填 ▼</button>
   </div>
   <div id="postmtg-body" style="padding:16px;display:flex;flex-direction:column;gap:0"></div>
 </div>

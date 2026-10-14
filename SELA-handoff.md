@@ -1,5 +1,8 @@
 # SELA-handoff.md
 
+> ⚠️ **本文件凍結於 V5.10.5**(對齊 Kit V1.21.0 時的紀錄),之後未更新。文中的檔案大小、行數、檔案清單**不是現況**。
+> 現況看 `README.md`;下次對齊 Kit 時整份重寫。
+
 > **這份文件是給 SELA Starter Kit 的 Claude 看的,不是給 MDT 的 Claude 看的。**
 >
 > 目的:讓 SELA 升 Kit 時不用挖 MDT 整份 CLAUDE.md,看這份就能高效升 Kit。

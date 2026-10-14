@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════════
    MDT 投影片分享 Worker — share.selaginella.io
-   V5.64.1(2026-09-22,檢視密碼改 session)
+   V5.65.0(2026-09-24,審核 W-1~W-9)
 
    路由:
      GET  /?k=cbshow          清單頁(最近 10 場,只列檔名含 _MDT 的)
@@ -11,7 +11,9 @@
    綁定:
      KV   HTML         (Workers 和 Pages → share → 設定 → 綁定)
      機密 UPLOAD_KEY   (設定 → 變數和機密 → 類型選「機密」)
-     機密 VIEW_PWD     (V5.64.0:檢視密碼。沒設就不擋,設了清單頁與所有投影片都要輸入;V5.64.1 改瀏覽器關掉就忘)
+     機密 VIEW_PWD       (V5.64.0:檢視密碼。沒設就不擋;V5.64.1 改瀏覽器關掉就忘)
+     機密 SESSION_SECRET (V5.65.0:cookie 簽章用,32 字以上亂碼。沒設就無法登入)
+     變數 RETAIN_DAYS    (V5.65.0:投影片保存天數,預設 90;0 = 不過期)
 
    設計原則:
      - 網頁只帶上傳金鑰,CF API Token 不出現在任何前端(V5.62.0 B-4 根治)
@@ -30,9 +32,11 @@ const LIST_KEY = 'cbshow';
 const MAX_BYTES = 25 * 1024 * 1024;  /* KV 單筆上限 */
 
 function corsHeaders(origin) {
+  /* V5.65.0 W-7:不在白名單就不送 ACAO —— 原本送 'null',沙盒 iframe 與 file:// 的 Origin 正是字串 null,反而被放行 */
   const ok = ALLOWED_ORIGINS.has(origin);
+  if (!ok) return { 'Vary': 'Origin' };
   return {
-    'Access-Control-Allow-Origin': ok ? origin : 'null',
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Upload-Key, X-Uploader',
     'Access-Control-Max-Age': '86400',
@@ -68,6 +72,15 @@ async function hmac(secret, msg) {
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg));
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
+/* V5.65.0 W-2:簽章金鑰 = SESSION_SECRET + VIEW_PWD。原本只用 VIEW_PWD,拿到任一 cookie 就能離線暴力猜密碼。
+   換密碼仍讓舊 cookie 全失效;SESSION_SECRET 未設時拒絕簽發。 */
+function _sigKey(env) { return (env.SESSION_SECRET || '') + '\u0000' + (env.VIEW_PWD || ''); }
+async function listAll(ns) {
+  /* V5.65.0 W-3:分頁讀完 —— KV list 依字母序且每頁 1000,超過後最新的先被截掉(實測 995 舊 +10 新只出現 5 筆) */
+  const keys = []; let cursor;
+  do { const r = await ns.list({ limit: 1000, cursor }); keys.push(...(r.keys || [])); cursor = r.list_complete ? undefined : r.cursor; } while (cursor);
+  return keys;
+}
 async function makeCookie(secret) {
   /* V5.64.1:主任要「每次都要輸入,不要記 30 天」→ session cookie(不設 Max-Age),瀏覽器關掉就忘。
      簽章仍帶到期時間(伺服器端上限 12 小時),防止有人把 cookie 複製出去長期用。 */
@@ -81,7 +94,7 @@ async function cookieOk(request, secret) {
   if (+m[1] < Date.now()) return false;
   return safeEqual(m[2], await hmac(secret, m[1]));
 }
-function loginPage(next, wrong) {
+function loginPage(next, wrong, adminMsg) {
   return '<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<meta name="robots" content="noindex,nofollow"><title>MDT 投影片 — 請輸入密碼</title>' +
     '<style>body{font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;background:#F5F6F8;color:#2C3540;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center}' +
@@ -90,7 +103,7 @@ function loginPage(next, wrong) {
     'button{width:100%;font-size:15px;padding:10px;background:#4A7C8E;color:#fff;border:none;border-radius:4px;cursor:pointer}button:hover{background:#3D6878}' +
     '.e{color:#C0392B;font-size:13px;margin-bottom:10px}</style></head><body><div class="b">' +
     '<h1>MDT 投影片</h1><div class="s">關閉瀏覽器後需重新輸入</div>' +
-    (wrong ? '<div class="e">密碼錯誤</div>' : '') +
+    (wrong ? '<div class="e">密碼錯誤</div>' : '') + (adminMsg ? '<div class="e">' + esc(adminMsg) + '</div>' : '') +
     '<form method="POST" action="/auth"><input type="hidden" name="next" value="' + esc(next) + '">' +
     '<input type="password" name="pwd" placeholder="檢視密碼" autofocus autocomplete="current-password"><button>開啟</button></form>' +
     '</div></body></html>';
@@ -99,7 +112,8 @@ function loginPage(next, wrong) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = decodeURIComponent(url.pathname);
+    let path;
+    try { path = decodeURIComponent(url.pathname); } catch (e) { return new Response('Bad request', { status: 400 }); }/* V5.65.0 W-6 */
     const origin = request.headers.get('Origin') || '';
 
     /* ── CORS 預檢 ── */
@@ -119,6 +133,8 @@ export default {
       if (!name || !/^[A-Za-z0-9._-]+\.html$/.test(name) || name.includes('..')) {
         return json({ ok: false, error: 'invalid name' }, 400, ch);
       }
+      const cl = parseInt(request.headers.get('Content-Length') || '0', 10);
+      if (cl > MAX_BYTES) return json({ ok: false, error: 'too large (' + Math.round(cl / 1048576) + ' MB > 25 MB)' }, 413, ch);/* V5.65.0 W-9 */
       const html = await request.text();
       const size = new TextEncoder().encode(html).length;
       if (!html || size === 0) return json({ ok: false, error: 'empty body' }, 400, ch);
@@ -133,32 +149,36 @@ export default {
       try { uploader = decodeURIComponent(request.headers.get('X-Uploader') || '').trim().slice(0, 40); } catch (e) {}
       const metadata = { title, size, uploaded: new Date().toISOString().slice(0, 19), uploader };
 
-      await env.HTML.put(name, html, { metadata });
+      /* V5.65.0 W-5:自動過期,主任定 90 天(RETAIN_DAYS 可調);0 或負數 = 不過期 */
+      const days = parseInt(env.RETAIN_DAYS || '90', 10);
+      await env.HTML.put(name, html, days > 0 ? { metadata, expirationTtl: days * 86400 } : { metadata });
       return json({ ok: true, name, url: url.origin + '/' + encodeURIComponent(name), title, size }, 200, ch);
     }
 
     /* ── 登入 ── */
     if (path === '/auth' && request.method === 'POST') {
       if (!env.VIEW_PWD) return Response.redirect(url.origin + '/?k=' + LIST_KEY, 302);
-      const form = await request.formData();
+      const NS = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' };
+      if (!env.SESSION_SECRET) { console.error('[share] SESSION_SECRET 未設定，拒絕簽發 cookie'); return new Response(loginPage('/?k=' + LIST_KEY, false, '分享空間維護中，請聯絡管理員'), { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } }); }/* V5.68.0 N-6:對外只說維護中,原因進 console */
+      let form; try { form = await request.formData(); } catch (e) { return new Response(loginPage('/', true, env.SESSION_SECRET ? '' : '分享空間維護中，請聯絡管理員'), { status: 400, headers: NS }); }/* V5.65.0 W-6 */
       const pwd = String(form.get('pwd') || ''), next = String(form.get('next') || '/');
       const safeNext = /^\/[A-Za-z0-9._\-?=&%]*$/.test(next) ? next : '/?k=' + LIST_KEY;
       if (!safeEqual(pwd, env.VIEW_PWD)) {
-        return new Response(loginPage(safeNext, true), { status: 401, headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+        await new Promise(r => setTimeout(r, 800));/* V5.65.0 W-1:錯密碼減速;真正限流在 Dashboard WAF(DEPLOY.md) */
+        return new Response(loginPage(safeNext, true), { status: 401, headers: NS });/* V5.68.0 N-12 */
       }
-      return new Response(null, { status: 302, headers: { 'Location': url.origin + safeNext, 'Set-Cookie': await makeCookie(env.VIEW_PWD) } });
+      return new Response(null, { status: 302, headers: { 'Location': url.origin + safeNext, 'Set-Cookie': await makeCookie(_sigKey(env)), 'Cache-Control': 'no-store' } });
     }
 
     /* ── 檢視密碼:設了 VIEW_PWD 就擋清單與所有投影片 ── */
-    if (env.VIEW_PWD && request.method === 'GET' && !(await cookieOk(request, env.VIEW_PWD))) {
+    if (env.VIEW_PWD && request.method === 'GET' && !(await cookieOk(request, _sigKey(env)))) {
       const next = url.pathname + url.search;
-      return new Response(loginPage(next, false), { status: 401, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
+      return new Response(loginPage(next, false, env.SESSION_SECRET ? '' : '分享空間維護中，請聯絡管理員'), { status: 401, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
     }
 
     /* ── 清單頁 ── */
     if (path === '/' && url.searchParams.get('k') === LIST_KEY) {
-      const list = await env.HTML.list({ limit: 1000 });
-      const items = (list.keys || [])
+      const items = (await listAll(env.HTML))
         .filter(k => /_MDT\.html$/i.test(k.name))
         .map(k => ({ name: k.name, title: (k.metadata && k.metadata.title) || k.name.replace(/\.html$/, ''), uploaded: (k.metadata && k.metadata.uploaded) || '', uploader: (k.metadata && k.metadata.uploader) || '' }))
         /* V5.63.2:依上傳時間排,最新在上 —— 原本依檔名字串排,新舊格式混用時 20260618 會排在 2026-09-17 前面(0 > -),
@@ -181,7 +201,7 @@ export default {
         '<h1>MDT 投影片</h1><div class="s">最近上傳的 10 場(最新在上)· 點標題開啟 · 內容含病歷號,請勿轉貼</div>' +
         (rows ? '<ul>' + rows + '</ul>' : '<div class="e">目前沒有投影片</div>') +
         '</div></body></html>';
-      return new Response(page, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, max-age=60', 'X-Robots-Tag': 'noindex' } });
+      return new Response(page, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': env.VIEW_PWD ? 'no-store' : 'private, max-age=60', 'X-Robots-Tag': 'noindex' } });/* V5.65.0 W-4 */
     }
 
     /* ── 提供檔案 ── */
@@ -190,7 +210,7 @@ export default {
       if (!/^[A-Za-z0-9._-]+\.html$/.test(name) || name.includes('..')) return new Response('Not found', { status: 404 });
       const html = await env.HTML.get(name);
       if (html == null) return new Response('Not found', { status: 404 });
-      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, max-age=300', 'X-Robots-Tag': 'noindex' } });
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': env.VIEW_PWD ? 'no-store' : 'private, max-age=300', 'X-Robots-Tag': 'noindex' } });/* V5.65.0 W-4:設密碼一律 no-store,否則關瀏覽器 5 分鐘內從歷史點回可繞過密碼 */
     }
 
     return new Response('Not found', { status: 404 });

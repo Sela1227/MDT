@@ -1,4 +1,12 @@
-# share.selaginella.io Worker 部署(V5.64.1)
+# share.selaginella.io Worker 部署(V5.68.0)
+
+> **⚠️ 順序很重要(審核 N-6)**:先加機密 `SESSION_SECRET`,再貼新程式碼。
+> 反過來的話,貼完程式碼到設完機密之間,所有醫師都打不開投影片。
+> 另外:新程式一上線,簽章金鑰改變,**所有醫師現有的登入狀態立即失效**,要重新輸入密碼 —— 請事先告知。
+> 改 Worker 前先跑 `node cloudflare-share/test.mjs`(23 條)。
+
+## 第零步:先加機密(部署舊程式,無害)
+**share** → 設定 → 變數和機密 → 新增 → 類型**機密** → 名稱 `SESSION_SECRET` → 值:32 字以上亂碼 → 部署
 
 > V5.64.0 更新:**檢視密碼**。重貼 `index.js` 部署後,再加一個機密 `VIEW_PWD`。
 
@@ -18,11 +26,20 @@ Workers 和 Pages → **share** → 右上「編輯代碼」→ 全選刪掉 →
 **share** → 設定 → 變數和機密 → 新增
 - 類型:**機密**
 - 名稱:`VIEW_PWD`
-- 值:一組給醫師用的密碼(建議 8 字以上,例如 `cbmdt2026`)
+- 值:用密碼產生器產生 **12 字以上**(不要用可猜的字)
 → **部署**
 
 設了之後,清單頁與每一份投影片都要輸入密碼才能開;**瀏覽器關掉就要重新輸入**。
 **不設就不擋**(跟以前一樣)。換密碼 → 所有已開啟的瀏覽器立刻要重新輸入。
+
+## 第二步之三:確認 SESSION_SECRET 已在(第零步做過)
+沒設的話登入頁只顯示「分享空間維護中」,原因在 Worker 的 console.error。
+
+## 第二步之四:保存天數(選填)
+變數 `RETAIN_DAYS`(類型選**文字**,不是機密),預設 90;填 0 = 永不過期。
+
+## 第二步之五:Rate limiting(建議)
+Dashboard → Security → WAF → Rate limiting rules → 新增:`URI Path equals /auth` 且 `Method equals POST`,每 IP 每分鐘 5 次,超過封鎖 10 分鐘。
 
 ## 第三步:確認 KV 綁定還在
 **share** → 設定 → 綁定 → 應該有一個 KV 命名空間,變數名稱 **HTML**。
