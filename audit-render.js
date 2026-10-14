@@ -212,6 +212,35 @@ setTimeout(async ()=>{
     if(dup.length||!thOk)bad++;
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
 
+  // ── [V5.72.1 T-1] 醫療小組欄位名:編輯畫面、投影片、閱覽、Word、會後填寫要同一組;必要事件不受影響 ──
+  console.log('\n=== [V5.72.1 T-1] 醫療小組欄位名一致 ===');
+  try{
+    run("var s=S.meeting.sections['head_neck'];"
+      +"s.cases=[];s.followups=[];"
+      +"s.team=[createItem('head_neck','team',{chartNo:'9000003',name:'測試三',diagnosis:'dx',cc:'CCX',discussion:'DISX',summary:'SUMX',decision:'DECX'},{})];"
+      +"s.events=[createItem('head_neck','events',{chartNo:'9000004',name:'測試四',diagnosis:'dx',cc:'EVCC',summary:'EVSUM',decision:'EVDEC'},{})];"
+      +"S.meeting.version=3;saveLocal(S.meeting);_dirty=false;");
+    const L=JSON.parse(run("JSON.stringify(TEAM_LBL)"));
+    const lbls=[L.cc,L.discussion,L.summary,L.decision];
+    const html=String(await run("genHTMLSlides()")||'');
+    const d3=new JSDOM(html).window.document;
+    const lblOf=function(val){let r=null;d3.querySelectorAll('section.slide div').forEach(function(dv){if(dv.textContent.trim()===val&&dv.previousElementSibling)r=dv.previousElementSibling.textContent.trim();});return r;};
+    const slideOk=lblOf('CCX')===L.cc&&lblOf('DISX')===L.discussion&&lblOf('SUMX')===L.summary&&lblOf('DECX')===L.decision;
+    const evOk=lblOf('EVCC')==='病程經過'&&lblOf('EVSUM')==='摘要'&&lblOf('EVDEC')==='決策';
+    const edit=String(run("teamHTML('head_neck',0,S.meeting.sections['head_neck'].team[0],'team')"));
+    const view=String(run("teamViewHTML('head_neck',0,S.meeting.sections['head_neck'].team[0],'team')"));
+    const editOk=lbls.every(function(x){return edit.indexOf('<label>'+x+'</label>')>=0;});
+    const viewOk=lbls.every(function(x){return view.indexOf('>'+x+'<')>=0;});
+    /* Word 在 jsdom 產不出 blob,改看原始碼:醫療小組區段四欄都要出、且用同一張表 */
+    const src=fs.readFileSync(FILE,'utf8');
+    const ds=src.slice(src.indexOf('/* V5.7.0: 醫療小組 DOCX 區段 */'),src.indexOf('/* V5.7.0: 必要事件 DOCX 區段 */'));
+    const docxOk=['cc','discussion','summary','decision'].every(function(k){return ds.indexOf('mkBlock(TEAM_LBL.'+k+',t.'+k)>=0;});
+    const chk=[['投影片',slideOk],['必要事件不變',evOk],['編輯畫面',editOk],['閱覽模式',viewOk],['Word 四欄',docxOk]];
+    const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
+    console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
+    if(fail.length)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
+
   // ── [V5.56.0] tlLayout 純函式(審核第八節 #7/#8/#11/#12/#13/#14)──
   console.log('\n=== [Hybrid TL] tlLayout 純函式 ===');
   try{

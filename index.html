@@ -1725,7 +1725,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.72.0';
+const VERSION='V5.72.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5109,6 +5109,9 @@ function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='c
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
 </div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div>${d.prevDecision?`<div class="fg full"><label>上次決議</label><div class="ro-box">${escA(d.prevDecision).replace(/\n/g,'<br>')}</div></div>`:''}<div class="fg full"><label>本次追蹤重點</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'followFocus',this.value)" placeholder="這次要確認什麼（例：手術是否已安排？病理報告出來了嗎？）" class="f-ta">${escA(d.followFocus||'')}</textarea></div><div class="fg full"><label>目前結果</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤結果或本次結論" class="f-ta">${escA(d.note||'')}</textarea></div></div></div>`}
+/* V5.72.1 T-1:醫療小組欄位名的唯一來源。V5.22.0 只改了編輯畫面,投影片/閱覽/Word/會後填寫沿用舊名且 Word 漏兩欄。
+   底層欄位 cc/discussion/summary/decision 不動;必要事件與個案不用這組名稱。 */
+const TEAM_LBL={cc:'之前現病史',discussion:'多專科建議',summary:'最新情況',decision:'治療決策'};
 /* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論方向、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
 function teamHTML(cid,i,d,type='team',collapsed=false){
   const _cardId='cc-'+cid+'-'+type+'-'+i;
@@ -5128,11 +5131,11 @@ function teamHTML(cid,i,d,type='team',collapsed=false){
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
 </div></div>
 <div class="fg full"><label>診斷</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'diagnosis',this.value)" placeholder="癌別、分期、組織型態" class="f-ta">${escA(d.diagnosis||'')}</textarea></div>
-<div class="fg full"><label>之前現病史</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'cc',this.value)" placeholder="當時臨床狀況、已完成與待完成的檢查" class="f-ta">${escA(d.cc||'')}</textarea></div>
+<div class="fg full"><label>${TEAM_LBL.cc}</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'cc',this.value)" placeholder="當時臨床狀況、已完成與待完成的檢查" class="f-ta">${escA(d.cc||'')}</textarea></div>
 <div class="fg full"><label>家族史（選填）</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'familyHistory',this.value)" placeholder="家族癌症史或重要遺傳病史（沒填則不顯示）" class="f-ta">${escA(d.familyHistory||'')}</textarea></div>
-<div class="fg full"><label>多專科建議</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="各科建議及已執行之治療" class="f-ta">${escA(d.discussion||'')}</textarea></div>
-<div class="fg full"><label>最新情況</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'summary',this.value)" placeholder="目前檢查結果、治療反應" class="f-ta">${escA(d.summary||'')}</textarea></div>
-<div class="fg full"><label>治療決策</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'decision',this.value)" placeholder="維持原方向 / 調整（說明）" class="f-ta">${escA(d.decision||'')}</textarea></div>
+<div class="fg full"><label>${TEAM_LBL.discussion}</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'discussion',this.value)" placeholder="各科建議及已執行之治療" class="f-ta">${escA(d.discussion||'')}</textarea></div>
+<div class="fg full"><label>${TEAM_LBL.summary}</label><textarea rows="3" oninput="upd('${cid}','${type}',${i},'summary',this.value)" placeholder="目前檢查結果、治療反應" class="f-ta">${escA(d.summary||'')}</textarea></div>
+<div class="fg full"><label>${TEAM_LBL.decision}</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'decision',this.value)" placeholder="維持原方向 / 調整（說明）" class="f-ta">${escA(d.decision||'')}</textarea></div>
 </div></div>`;
 }
 /* V5.0.0: teamViewHTML — 閱覽模式,只顯示有填的欄位 */
@@ -5142,11 +5145,11 @@ function teamViewHTML(cid,i,d,type='team'){
   const dm=(d.age||d.gender)?caseDemo(d):'';
   const rows=[];
   if(d.diagnosis)rows.push(['診斷',d.diagnosis]);
-  if(d.cc)rows.push(['現病史',d.cc]);
+  if(d.cc)rows.push([TEAM_LBL.cc,d.cc]);
   if(d.familyHistory)rows.push(['家族史',d.familyHistory]);
-  if(d.discussion)rows.push(['討論方向',d.discussion]);
-  if(d.summary)rows.push(['摘要',d.summary]);
-  if(d.decision)rows.push(['決策',d.decision]);
+  if(d.discussion)rows.push([TEAM_LBL.discussion,d.discussion]);
+  if(d.summary)rows.push([TEAM_LBL.summary,d.summary]);
+  if(d.decision)rows.push([TEAM_LBL.decision,d.decision]);
   const body=rows.length
     ? rows.map(r=>`<div class="vc-row"><div class="vc-lbl">${r[0]}</div><div class="vc-val" style="white-space:pre-wrap">${escA(r[1])}</div></div>`).join('')
     : '<div class="vc-row" style="color:var(--textlt);font-style:italic">（尚未填寫討論內容）</div>';
@@ -5645,6 +5648,7 @@ function openPostMtgPanel(){
   body.innerHTML='';
   /* V5.7.0: 共用卡片產生器 — 用於團隊/事件區段(摘要+決策兩欄) */
   function _mkTeamCard(cid,arr,arrType,t,ti){
+    var _sL=arrType==='team'?TEAM_LBL.summary:'討論摘要',_dL=arrType==='team'?TEAM_LBL.decision:'決策結論';/* V5.72.1 T-1 */
     var card=document.createElement('div');
     card.style.cssText='background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:12px 14px;margin-bottom:10px';
     card.innerHTML=
@@ -5656,12 +5660,12 @@ function openPostMtgPanel(){
       +(t.diagnosis?'<span style="font-size:11px;color:var(--textlt);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(t.diagnosis)+'</span>':'')
       +'</div>'
       +'<div style="margin-bottom:8px">'
-      +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
-      +'<textarea data-action="postteam-summary" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="3" placeholder="填入討論摘要…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.summary||'')+'</textarea>'
+      +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">'+_sL+'</div>'
+      +'<textarea data-action="postteam-summary" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="3" placeholder="填入'+_sL+'…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.summary||'')+'</textarea>'
       +'</div>'
       +'<div>'
-      +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">決策結論</div>'
-      +'<textarea data-action="postteam-decision" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="2" placeholder="填入決策結論…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.decision||'')+'</textarea>'
+      +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">'+_dL+'</div>'
+      +'<textarea data-action="postteam-decision" data-cid="'+escA(cid)+'" data-arrtype="'+arrType+'" data-ti="'+ti+'" rows="2" placeholder="填入'+_dL+'…" style="width:100%;box-sizing:border-box;font-size:14px;padding:7px 9px;border:1px solid var(--blt);border-radius:3px;resize:vertical">'+escA(t.decision||'')+'</textarea>'
       +'</div>'
       /* V5.48.1 EV-8:必要事件的會後產出關鍵是「是否需改善、改善方案、結案狀態」,
          原本只能回到卡片上填。這三項正是死亡病例討論的結論。 */
@@ -8433,8 +8437,11 @@ async function genDOCX(mode){
           if(t.diagnosis){
             children.push(mkBlock('\u8a3a\u65b7',t.diagnosis,false));
           }
-          if(t.summary){children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',t.summary,false));}
-          if(t.decision){children.push(mkBlock('\u6c7a\u7b56\u7d50\u8ad6',t.decision,false,{emphasis:true}));}
+          /* V5.72.1 T-1:原本只出摘要/決策,個管填的之前現病史與多專科建議不見了 */
+          if(t.cc){children.push(mkBlock(TEAM_LBL.cc,t.cc,false));}
+          if(t.discussion){children.push(mkBlock(TEAM_LBL.discussion,t.discussion,false));}
+          if(t.summary){children.push(mkBlock(TEAM_LBL.summary,t.summary,false));}
+          if(t.decision){children.push(mkBlock(TEAM_LBL.decision,t.decision,false,{emphasis:true}));}
           children.push(new Paragraph({text:'',spacing:{after:pt(6)}}));
         });
       }
@@ -9414,6 +9421,7 @@ async function genHTMLSlides(opts){
     // ── Team / Events ── V5.0.0: 每筆一張投影片(類個案討論),含 5 個討論欄位
     // V5.0.1: 字級加 clamp 響應式,配合投影機現場觀看
     function _trackSlide(c,trackLabel,idx){
+      var _isTeam=trackLabel==='醫療小組';/* V5.72.1 T-1 */
       var drs=getDoctorStr(c)||'—';
       /* ════ V5.53.0 I-1:必要事件的影像進投影片 ════
          V5.52.0 開放編輯端的影像,但這裡沒接 —— 個管師選了圖,投影片上一張都沒有。
@@ -9438,7 +9446,7 @@ async function genHTMLSlides(opts){
         if(c.txRelated)_d.push('與治療關聯：'+c.txRelated);
         if(_d.length)sections.push({lbl:'死亡資訊',txt:_d.join('\n')});
       }
-      if(c.cc)sections.push({lbl:trackLabel==='必要事件'?'病程經過':'現病史',txt:c.cc});
+      if(c.cc)sections.push({lbl:trackLabel==='必要事件'?'病程經過':_isTeam?TEAM_LBL.cc:'現病史',txt:c.cc});
       /* ════ V5.44.1:必要提報的臨床資料原本完全沒有進投影片 ════
          個管師回報「有寫必要事件提報的欄位,但 HTML 沒有顯示」——
          `_trackSlide` 是 V5.0.0 為「醫療小組」寫的,只渲染 5 個文字欄位;
@@ -9475,9 +9483,9 @@ async function genHTMLSlides(opts){
         if(_tl)sections.push({lbl:'病程時序',txt:_tl});
       }
       if(c.familyHistory)sections.push({lbl:'家族史',txt:c.familyHistory});
-      if(c.discussion)sections.push({lbl:'討論方向',txt:c.discussion});
-      if(c.summary)sections.push({lbl:'摘要',txt:c.summary});
-      if(c.decision)sections.push({lbl:'決策',txt:c.decision});
+      if(c.discussion)sections.push({lbl:_isTeam?TEAM_LBL.discussion:'討論方向',txt:c.discussion});
+      if(c.summary)sections.push({lbl:_isTeam?TEAM_LBL.summary:'摘要',txt:c.summary});
+      if(c.decision)sections.push({lbl:_isTeam?TEAM_LBL.decision:'決策',txt:c.decision});
       if(trackLabel==='必要事件'&&c.improveNeeded){
         sections.push({lbl:'改善方案',
           txt:c.improveNeeded==='需改善'?(c.improvePlan||'（待填）'):c.improveNeeded});
