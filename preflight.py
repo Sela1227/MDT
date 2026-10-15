@@ -199,7 +199,7 @@ JSHINT_ALLOW = [
 if shutil.which('jshint'):
     cfg = {"esversion": 11, "undef": True, "unused": False, "browser": True, "devel": True, "asi": True,
            "laxbreak": True, "-W008": True,
-           "globals": {"indexedDB": True, "PptxGenJS": True, "docx": True, "XLSX": True, "JSZip": True}}
+           "globals": {"indexedDB": True, "PptxGenJS": True, "docx": True, "XLSX": True, "JSZip": True, "ClipboardItem": True}}
     main = max(blocks, key=len)
     ML = main.split('\n'); off = H[:H.index(main)].count('\n')
     with tempfile.TemporaryDirectory() as td:

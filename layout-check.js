@@ -88,7 +88,35 @@ const TM=require('./test-meeting.js');
       await p.close();
     }
     fs.unlinkSync(tmp);
-    console.log('2 種視窗 × 全部頁面'+(bad.length?'':' ✅'));
+    /* V5.78.0 LINE 通知圖片:真 Chromium 畫出來、高度隨個案數長、內容與文字版同一份;產出區「預覽」在「HTML 投影片」前面 */
+    {
+      const p=await browser.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));p.on('dialog',d=>d.dismiss());
+      await p.goto('file://'+path.join(__dirname,'index.html'));await p.waitForTimeout(1200);
+      const r=await p.evaluate(async function(DATA){
+        S.user=USERS[0];S.cids=['head_neck'];S.meeting=newMeetingObj(S.user.id,['head_neck']);S.meeting.date='2026-10-15';ensureSec('head_neck');
+        var s=S.meeting.sections.head_neck;
+        ['cases','team','events','followups','special'].forEach(function(t){s[t]=(DATA[t]||[]).map(function(d){var it=createItem('head_neck',t,d,{});if(d._extra)Object.assign(it,d._extra);return it;});});
+        var big=await renderLineImage(_lineData(),2);
+        var d=_lineData();
+        var ids=[].concat.apply([],d.groups[0].lists.map(function(L){return L.items.map(function(i){return i.chartNo;});}));
+        var want=['cases','team','events','followups'].reduce(function(a,t){return a+s[t].length;},0);
+        var px=big.getContext('2d').getImageData(200,40,1,1).data;
+        s.followups=s.followups.slice(0,2);
+        var small=await renderLineImage(_lineData(),2);
+        var pv=document.getElementById('btn-preview-slides'),hs=document.getElementById('btn-html-slides');
+        return {w:big.width,h:big.height,h2:small.height,ids:ids.length,want:want,dark:px[0]<80&&px[1]<80,
+          order:!!(pv&&hs&&(pv.compareDocumentPosition(hs)&4)),btn:!!document.getElementById('btn-line-img')};
+      },TM.DATA);
+      if(errs.length)bad.push('LINE 通知圖片有錯誤:'+errs[0]);
+      if(r.w!==2160)bad.push('LINE 通知圖片寬度 '+r.w+'(應 2160)');
+      if(!(r.h>r.h2&&r.h2>1000))bad.push('LINE 通知圖片高度沒有隨個案數變化('+r.h+' / '+r.h2+')');
+      if(r.ids!==r.want)bad.push('LINE 通知圖片個案數 '+r.ids+',會議裡有 '+r.want);
+      if(!r.dark)bad.push('LINE 通知圖片頁首沒畫出來');
+      if(!r.order)bad.push('「預覽與畫重點」不在「HTML 投影片」前面');
+      if(!r.btn)bad.push('會前通知沒有「LINE 通知圖片」按鈕');
+      await p.close();
+    }
+    console.log('2 種視窗 × 全部頁面 + LINE 通知圖片'+(bad.length?'':' ✅'));
     bad.slice(0,6).forEach(x=>console.log('  🔴 '+x));
     console.log('結果 '+bad.length);
   }catch(e){console.log('⚠ 例外:',e.message);console.log('結果 -1');}

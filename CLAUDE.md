@@ -169,6 +169,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 | 乳攝（特殊版面） | `buildMammoImgArea()` |
 | HTML 投影片 | `genHTMLSlides()` + `extraJs`（放大鏡/鍵盤）；配色模板 `HTML_THEMES` + `getHtmlTheme()`，產出區色票條 `renderThemeStrip()`（V4.6.1） |
 | DOCX | `genDOCX()` |
+| LINE 通知(文字 + 圖片) | `_lineData()` 唯一資料來源 → `genLine()` 文字、`renderLineImage()`/`genLineImage()` 圖片;子分類 `_lineSub()`(V5.78.0) |
 | 設定頁 | `openSettings()` → `renderLocsTab/DrsTab/CancerCfgList` |
 | 醫師/科別管理 | `addDr/editDr/delDr/moveDr`（單醫師）、`addDept/renameDept/delDept/moveDept`（科別整組）；手動遷移 `applyMasterMigrations` |
 | NAS 備份 | `backupToNAS()`, `pickNasFolder()`, `restoreNasHandle()` |
@@ -182,11 +183,11 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 一行 |
 |---|---|
+| V5.78.0 | LINE 通知圖片(`_lineData` 一份資料,文字與圖片共用;layout-check 真 Chromium 畫圖);「預覽與畫重點」移到「HTML 投影片」前;「標誌」統一為「標記」(主任要求) |
 | V5.77.0 | 標記改用「病人 + 畫的文字」對位(改資料不再整頁消失,舊格式相容);工具列清除分三顆(主任要求) |
 | V5.76.1 | R-1 合併時標記各自保留 + 存完核對才說已存;R-2 多份預覽;R-3 慢存檔不誤報;R-4 複製會議不帶標記(主任同意) |
 | V5.76.0 | **A 預覽與畫重點**(標記存進 `sections[cid].hlMarks`,postMessage + ack);Q-1 簡報筆;Q-2 純文字特殊議程提醒;Q-3;F 共用 `test-meeting.js`;Q-4 逐段裁切檢查;E 說明書對齊(主任同意) |
 | V5.75.2 | P-1 前期追蹤表可捲(V5.75.1 造成的 P1)+ `layout-check.js` 真 Chromium 版面檢查;P-2 續追只留原始決議+最近一次結果(主任同意) |
-| V5.75.1 | N-1 寫入舊版檔保留圖片;N-2 等價測試補涵蓋(自我檢查、影像張數);N-3 前期追蹤三段全印(`FUP_LBL`)、續追不帶上次結果(主任同意,基準已更新) |
 
 **完整歷程見 `CHANGELOG.md`**。
 
@@ -298,8 +299,9 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 日期 | 決定 | 狀態 | 影響範圍 |
 |---|---|---|---|
-| 2026-09-24 | **合併會議所有文件產出永遠只出目前分頁癌別**,無合併流程(LINE 通知例外) | 生效 | `getOutputCid()` 註解為設計不變量;preflight 檢查仍在 |
+| 2026-09-24 | **合併會議所有文件產出永遠只出目前分頁癌別**,無合併流程(LINE 通知與 LINE 通知圖片例外) | 生效 | `getOutputCid()` 註解為設計不變量;preflight 檢查仍在 |
 | 2026-09-24 | **HTML 產出不要亂動,先討論再改**;目錄定位、雙欄功能延後 | 生效 |
+| 2026-10-15 | 主任:①名稱統一用「標記」②LINE 通知額外產出圖片(會前通知多一顆,設計自訂,不照紙本)③先預覽才產出正式 HTML(按鈕順序) | 已完成(V5.78.0) | `_lineData`/`genLine`/`renderLineImage`;產出區按鈕;工具列與提示文字 |
 | 2026-10-15 | 主任:「畫線儲存後回去改內容,畫線會消失」→ 同意改成「病人 + 文字」對位;工具列改為「復原上一步(多步)/清除標誌/整頁標誌清除」三顆 | 已完成(V5.77.0) | extraJs `_hlPageKeys/_hlSysCollect/_hlFind/_hlApplySys`、`hlClear/hlClearPage` |
 | 2026-10-15 | V5.76.0 審核:R-1 選「標記各自保留」(合併時 NAS 換掉非負責癌別的區段,但保留這台改過的 `hlMarks`);R-2~R-4 一起修 | 已完成(V5.76.1) | `_doSave` NAS 合併、message 處理器、extraJs `_hlSendSys`、`confirmCopyMtg` |
 | 2026-10-14 | 流程優化:主任說明「標記都在各自電腦畫好存好,會議上報告,當場畫是少數」→ 做 A(預覽與畫重點)、Q-1 簡報筆、不動投影片的一批(E/F/Q-2 提醒/Q-3/Q-4);B-2 影像根目錄待實機確認;C、Q-2 文字頁未做 | 已完成(V5.76.0) | `previewSlides`、`hl-sys`、extraJs 存標記;`test-meeting.js`、`preview-check.js` |
