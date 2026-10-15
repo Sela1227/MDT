@@ -241,6 +241,219 @@ setTimeout(async ()=>{
     if(fail.length)bad++;
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,100));bad++;}
 
+  // ── [V5.73.0 F-1] 病人資料夾:匯入後自動建、選取時不再改列會議資料夾、產出前檢查按病人合併 ──
+  console.log('\n=== [V5.73.0 F-1] 病人資料夾 ===');
+  try{
+    /* 假的資料夾(File System Access API 在 jsdom 不存在):perm 控制「可修改」權限 */
+    run("window.__mkDir=function(name,perm){var ch=new Map();var d={kind:'directory',name:name,perm:perm||'granted',ch:ch,"
+      +"getDirectoryHandle:async function(n,o){var x=ch.get(n);if(x&&x.kind==='directory')return x;"
+      +"if(o&&o.create){if(d.perm!=='granted'){var e=new Error('denied');e.name='NotAllowedError';throw e;}var s=window.__mkDir(n);ch.set(n,s);return s;}"
+      +"var e2=new Error('nf');e2.name='NotFoundError';throw e2;},"
+      +"getFileHandle:async function(n){var x=ch.get(n);if(x&&x.kind==='file')return x;var e=new Error('nf');e.name='NotFoundError';throw e;},"
+      +"addFile:function(n,size){ch.set(n,{kind:'file',name:n,getFile:async function(){return {name:n,size:size||10};}});},"
+      +"values:async function*(){for(var v of ch.values())yield v;},"
+      +"queryPermission:async function(o){return o.mode==='read'?'granted':d.perm;},"
+      +"requestPermission:async function(o){return d.perm==='prompt'?'denied':d.perm;}};return d;};"
+      +"window.__alerts=[];window.alert=function(m){window.__alerts.push(String(m));};");
+    const r1=JSON.parse(await run("(async function(){var root=__mkDir('20261015 頭頸癌');root.ch.set('9000001 測○一',__mkDir('9000001 測○一'));"
+      +"imgFolderHandle=root;var r=await ensurePatientFolders(['9000001','9000002','9000002',' 9000003 ','A/B'],{ask:true});"
+      +"return JSON.stringify({created:r.created,existed:r.existed,bad:r.bad,need:r.need,dirs:[...root.ch.keys()].sort()});})()"));
+    const r2=JSON.parse(await run("(async function(){var root=__mkDir('x','prompt');imgFolderHandle=root;"
+      +"var r=await ensurePatientFolders(['9000004'],{ask:true});return JSON.stringify({need:r.need,n:root.ch.size,todo:r.todo});})()"));
+    const r3=JSON.parse(await run("(async function(){imgFolderHandle=null;var r=await ensurePatientFolders(['9000004'],{});return JSON.stringify({need:r.need});})()"));
+    /* 選取:沒有資料夾 → 建好、回 null、有說明;有資料夾 → 回傳它;放進影像後不用重選就能載入(用病歷號定位) */
+    const r4=JSON.parse(await run("(async function(){var root=__mkDir('y');imgFolderHandle=root;__alerts=[];"
+      +"var a=await _patientDirForPick('9000005');var made=root.ch.has('9000005');"
+      +"var b=await _patientDirForPick('9000005');root.ch.get('9000005').addFile('IMG_0001.jpg',10);"
+      +"var v=await verifyImgOwnership('IMG_0001.jpg','','9000005',{});"
+      +"root.addFile('IMG_0002.jpg',10);var v2=await verifyImgOwnership('IMG_0002.jpg','','9000006',{});"
+      +"return JSON.stringify({a:a,made:made,b:b&&b.name,msg:__alerts[0]||'',ok:!!v.file,rootBlocked:!v2.file&&v2.code==='PATIENT_DIR_GONE'});})()"));
+    /* 產出前檢查:同一位病人沒資料夾的多張圖合併成一行,並說明怎麼做 */
+    const qaMsg=await run("(async function(){var root=__mkDir('z');root.addFile('p1.jpg',10);root.addFile('p2.jpg',10);imgFolderHandle=root;"
+      +"var s=S.meeting.sections['head_neck'];s.team=[];s.events=[];s.followups=[];"
+      +"s.cases=[createItem('head_neck','cases',{chartNo:'9000007',name:'測試七',diagnosis:'dx',discussion:'d',"
+      +"pathologyImages:[{name:'p1.jpg',fromFolder:true,subFolder:''},{name:'p2.jpg',fromFolder:true,subFolder:''}]},{})];"
+      +"S.meeting.version=4;saveLocal(S.meeting);_dirty=false;var got='';var oc=window.confirm;window.confirm=function(m){got=String(m);return false;};"
+      +"try{await genHTMLSlides();}catch(e){}window.confirm=oc;return got;})()");
+    /* V5.75.0 F-1b:沒權限 / 病歷號不能當資料夾名 —— 訊息要對症,不能叫她去新增資料夾 */
+    const r5=JSON.parse(await run("(async function(){__alerts=[];imgFolderHandle=__mkDir('w','prompt');await _patientDirForPick('9000010');"
+      +"imgFolderHandle=__mkDir('w2');await _patientDirForPick('A/B');return JSON.stringify(__alerts);})()"));
+    const f1b=/沒有取得修改/.test(r5[0]||'')&&/不能當資料夾名稱/.test(r5[1]||'');
+    /* F-1a:換會議要收掉上一場的提示列 */
+    const src0=fs.readFileSync(FILE,'utf8');const lm=src0.slice(src0.indexOf('async function _loadMtg('),src0.indexOf('async function _loadMtg(')+600);
+    const f1a=lm.indexOf("pf-bar")>=0;
+    /* 原始碼:三個選取入口都改走 _patientDirForPick;三個匯入都會觸發建資料夾 */
+    const src=fs.readFileSync(FILE,'utf8');
+    const pick3=(src.match(/_patientDirForPick\((c|p)\.chartNo\)/g)||[]).length===4&&src.indexOf('_sub?_sub.handle:imgFolderHandle')<0;
+    const fnBody=function(name){const i=src.indexOf('function '+name+'(');return i<0?'':src.slice(i,src.indexOf('\nfunction ',i+10));};
+    const imp3=['doImportCase','importXLSX','importCaseJSON'].every(function(n){return fnBody(n).indexOf('_afterImportFolders')>=0;});
+    const chk=[
+      ['匯入建資料夾',JSON.stringify(r1.created)==='["9000002","9000003"]'&&r1.existed.length===1&&r1.bad[0]==='A/B'&&r1.need===null],
+      ['已有姓名資料夾不重建',r1.dirs.length===3],
+      ['沒授權不建、等按鈕',r2.need==='perm'&&r2.n===0&&r2.todo[0]==='9000004'],
+      ['沒指定資料夾',r3.need==='folder'],
+      ['選取:建好並說明',r4.a===null&&r4.made&&/已經幫您建好/.test(r4.msg)],
+      ['選取:有資料夾就用',r4.b==='9000005'],
+      ['放進去不用重選',r4.ok],
+      ['嚴格模式仍在',r4.rootBlocked],
+      ['檢查合併成一行',/1 位病人沒有自己的影像資料夾,共 2 張/.test(qaMsg)&&/病歷號 9000007\(2 張\)/.test(qaMsg)&&/不用重新選取/.test(qaMsg)],
+      ['四個選取入口',pick3],['三個匯入入口',imp3],['F-1b 訊息對症',f1b],['F-1a 換會議收提示列',f1a]];
+    const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
+    console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
+    if(fail.length){bad++;console.log('   ',JSON.stringify({r1,r2,r3,r4}).slice(0,400),'\n    QA:',String(qaMsg).slice(0,300));}
+    run("imgFolderHandle=null;");
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,140));bad++;}
+
+  // ── [V5.74.0/V5.75.0] 投影片標記 —— V5.75.0 依審核 T-1 改成「使用者走得到的操作」,並補重新產出的檔、縮放、換頁、SVG、圖片 ──
+  console.log('\n=== [V5.75.0] 投影片標記 ===');
+  try{
+    const PNG='data:image/png;base64,'+'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='.repeat(1);
+    const mkMeeting=function(list){
+      run("var s=S.meeting.sections['head_neck'];s.team=[];s.events=[];s.followups=[];"
+        +"s.special=[createItem('head_neck','special',{title:'影像討論',topicType:'影像討論',images:[{name:'a.png',caption:'影像一',dataUrl:'"+PNG+"'}]},{})];"
+        +"s.cases="+JSON.stringify(list)+".map(function(d){return createItem('head_neck','cases',d,{});});"
+        +"imgFolderHandle=null;S.meeting.version++;saveLocal(S.meeting);_dirty=false;");
+      return run("genHTMLSlides()");
+    };
+    const c8={chartNo:'9000008',name:'測試八',diagnosis:'第一位診斷文字',discussion:'第一位討論',cc:'cc'};
+    const c9={chartNo:'9000009',name:'測試九',diagnosis:'第二位診斷文字',discussion:'第二位討論',cc:'cc'};
+    const c7={chartNo:'9000007',name:'測試七',diagnosis:'新加的病人',discussion:'新討論',cc:'cc'};
+    const html=String(await mkMeeting([c8,c9])||'');
+    const htmlB=String(await mkMeeting([c7,c8,c9])||'');/* 同一場會議重新產出:前面多一位(審核 H-1) */
+    let confirms=0;
+    const mk=function(src){const d=new JSDOM(src,{runScripts:'dangerously',url:'https://share.example/x/20261015_HN.html'});
+      d.window.alert=function(){d.window.__alerts=(d.window.__alerts||0)+1;};d.window.confirm=function(){confirms++;return true;};return d;};
+    const v=mk(html),W=v.window,D=W.document,ev=c=>W.eval(c);
+    await new Promise(r=>setTimeout(r,50));
+    ev("function __sel(word){var s=document.querySelectorAll('.slide');for(var i=0;i<s.length;i++){var w=document.createTreeWalker(s[i],NodeFilter.SHOW_TEXT);var t;while((t=w.nextNode())){var k=t.data.indexOf(word);if(k>=0){var r=document.createRange();r.setStart(t,k);r.setEnd(t,k+word.length);_hlSel=r;document.getElementById('hl-toolbar').style.display='flex';return i;}}}return -1;}");
+    const st=()=>{const b=D.getElementById('nb-save');return {show:b.style.display!=='none',dirty:b.classList.contains('dirty'),txt:b.textContent,marks:D.querySelectorAll('.slide mark, .slide span.fc').length};};
+    const s0=st();
+    const i1=ev("__sel('第一位診斷')"),i2=ev("__sel('第二位診斷')");
+    ev("go("+i1+");__sel('第一位診斷');hlApply('#FFE066');__sel('第一位討論');fcApply('#D32F2F');");
+    const s1=st();
+    ev("hlUndo()");const s2=st();
+    ev("__sel('第一位討論');fcApply('#D32F2F');");
+    const fc=D.querySelector('.slide span.fc');fc.dispatchEvent(new W.MouseEvent('click',{bubbles:true}));
+    const rmShown=D.getElementById('hl-rm').style.display==='block';
+    ev("hlRemoveOne()");const s3=st();
+    D.dispatchEvent(new W.KeyboardEvent('keydown',{key:'z',ctrlKey:true,bubbles:true}));
+    const s4=st();
+    /* H-2:實際做法 —— 選一段「沒有標記」的字按清除 → 問要不要清整頁 → 只清這一頁 */
+    ev("go("+i2+");__sel('第二位診斷');hlApply('#7FE87F');go("+i1+");");
+    confirms=0;ev("__sel('cc');hlClear();");
+    const page2Left=D.querySelectorAll('.slide')[i2].querySelectorAll('mark').length;
+    const page1Left=D.querySelectorAll('.slide')[i1].querySelectorAll('mark, span.fc').length;
+    const clearAsked=confirms===1;
+    ev("hlUndo()");/* 把第一頁的標記拿回來,後面要用 */
+    /* H-7:工具列開著時換頁 → 收掉 */
+    ev("__sel('第一位討論');go("+i2+");");
+    const goHides=D.getElementById('hl-toolbar').style.display==='none'&&ev("_hlSel===null");
+    ev("go("+i1+");");
+    /* H-9:SVG 上不能畫 */
+    ev("(function(){var s=document.querySelectorAll('.slide')["+i1+"];var g=document.createElementNS('http://www.w3.org/2000/svg','svg');var t=document.createElementNS('http://www.w3.org/2000/svg','text');t.textContent='SVG字';g.appendChild(t);s.appendChild(g);})()");
+    const mBefore=st().marks;ev("__sel('SVG字');hlApply('#FFE066');");
+    const svgBlocked=st().marks===mBefore&&D.querySelector('svg mark')===null;
+    ev("(function(){var g=document.querySelectorAll('.slide')["+i1+"].querySelector('svg');g.remove();})()");
+    /* H-8:圖片頁畫標記,存的內容不含圖片本體 */
+    ev("__sel('影像一');hlApply('#FFE066');");
+    const collected=ev("JSON.stringify(_hlCollect())");
+    const noImgData=collected.indexOf('data:image')<0;
+    /* V5.75.1 N-1:寫進 V5.75.0 以前產出的檔(沒有補圖程式)→ 要存含圖片的完整內容 */
+    W.__oldSrc=html.split('function _hlSetHTML').join('function oldNoRefill');
+    const oldOut=ev("_hlInject(__oldSrc,_hlCollect()).src");
+    const oldHasImg=/hl-data"[^>]*>[^<]*data:image/.test(oldOut);
+
+    /* 線上存:下載 → 顯示「已下載」而不是「已存」(H-5);含 </script> 的標記不會弄壞檔案 */
+    /* 標記屬性裡含 </script>(序列化時不會被跳脫),不改頁面文字 —— 原本插入新文字,會被 H-1 的文字對位正確地擋掉 */
+    ev("(function(){var m=document.querySelectorAll('.slide')["+i2+"].querySelector('mark');m.setAttribute('title','x</'+'script>y');})()");
+    W.fetch=async()=>({ok:true,status:200,text:async()=>html});
+    ev("_hlDownload=function(src,f){window.__dl=src;}");
+    await ev("hlExport()");const dl=W.__dl;
+    const s5=st();
+    const unloadBlocked=()=>{const e=new W.Event('beforeunload',{cancelable:true});W.dispatchEvent(e);return e.defaultPrevented;};
+    const ub1=unloadBlocked();
+    /* H-3:放大圖片(留下 transition)不算「沒存」 */
+    D.querySelectorAll('.slide img').forEach(im=>{im.style.transition='transform .15s';im.style.transform='scale(2)';});
+    const zoomNotDirty=!unloadBlocked()&&!st().dirty;
+    /* 下載的檔重開:標記還在、圖片還在、語法沒壞 */
+    const v2=mk(dl||'');await new Promise(r=>setTimeout(r,50));const D2=v2.window.document;
+    const reMarks=D2.querySelectorAll('.slide mark').length;
+    const imgBack=Array.from(D2.querySelectorAll('.slide img')).every(im=>/^data:/.test(im.getAttribute('src')||''));
+    const reOk=reMarks===D.querySelectorAll('.slide mark').length&&reMarks>=3&&imgBack&&D2.querySelectorAll('.slide').length===D.querySelectorAll('.slide').length;
+    /* 本機:標題不同 → 不寫;H-1 重新產出的 B → 對位寫入,病人一位不少 */
+    let written=null;
+    W.showOpenFilePicker=async()=>[{getFile:async()=>({name:'x.html',text:async()=>W.__pickSrc}),createWritable:async()=>({write:async(x)=>{written=x;},close:async()=>{}})}];
+    ev("__sel('第一位討論');fcApply('#1976D2');");
+    W.__pickSrc=html.replace(/<title>[^<]*<\/title>/,'<title>別場會議</title>');
+    await ev("_hlPickLocal(_hlCollect(),1,_hlSig())");const wrongNotWritten=written===null;
+    W.__pickSrc=htmlB;await ev("_hlPickLocal(_hlCollect(),1,_hlSig())");
+    const v3=mk(written||'');await new Promise(r=>setTimeout(r,50));const D3=v3.window.document;
+    const cnos=d=>Array.from(d.querySelectorAll('.slide.case')).map(s=>(s.textContent.match(/900000\d/)||[''])[0]);
+    const bCnos=cnos(new JSDOM(htmlB).window.document),wCnos=cnos(D3);
+    const p8=Array.from(D3.querySelectorAll('.slide.case')).find(s=>s.textContent.indexOf('9000008')>=0);
+    const h1ok=JSON.stringify(wCnos)===JSON.stringify(bCnos)&&bCnos.length===3&&!!p8&&p8.querySelectorAll('mark, span.fc').length>0
+      &&D3.body.textContent.indexOf('新加的病人')>=0&&st().txt.indexOf('已存')>=0;
+    const tb=D.getElementById('hl-toolbar').textContent;
+    const chk=[
+      ['沒標記時不顯示',!s0.show],['畫了顯示存標記',s1.show&&s1.dirty&&/存標記 1 頁/.test(s1.txt)],
+      ['復原',s2.marks===1],['點標記出現移除',rmShown],['移除單一標記',s3.marks===1],['Ctrl+Z',s4.marks===2],
+      ['清除:選無標記的字會問、只清本頁',clearAsked&&page1Left===0&&page2Left===1],
+      ['換頁收工具列',goHides],['SVG 不能畫',svgBlocked],['存的內容不含圖片',noImgData],['N-1 寫進舊版檔保留圖片',oldHasImg],
+      ['下載顯示已下載',s5.show&&!s5.dirty&&/已下載/.test(s5.txt)],['存了不擋關頁',!ub1],['放大圖片不算沒存',zoomNotDirty],
+      ['重開標記與圖片都在',reOk],['選錯檔不寫',wrongNotWritten],['重新產出的檔對位寫入、病人不少',h1ok],
+      ['工具列分組標字',/螢光/.test(tb)&&/字色/.test(tb)&&/復原/.test(tb)&&!/匯出/.test(tb)]];
+    const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
+    console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
+    if(fail.length){bad++;console.log('   ',JSON.stringify({s0,s1,s2,s3,s4,s5,page1Left,page2Left,clearAsked,goHides,svgBlocked,noImgData,ub1,zoomNotDirty,reMarks,imgBack,bCnos,wCnos}).slice(0,600));}
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,160));bad++;}
+
+  // ── [V5.75.1 N-3] 前期追蹤:續追帶入不把上次結果當這次結果;四種產出都印三段 ──
+  console.log('\n=== [V5.75.1 N-3] 前期追蹤三段 ===');
+  try{
+    const r=JSON.parse(run("(function(){var keep=S.meeting;"
+      +"var p=newMeetingObj(S.user.id,['head_neck']);p.date='2001-01-02';if(!p.sections.head_neck)p.sections.head_neck={followups:[],cases:[],team:[],events:[],special:[]};"
+      +"var f=createFollowup({chartNo:'9000201',name:'測試壬',note:'上次的結果',prevDecision:'原因甲',followFocus:'重點乙'});f.status='ongoing';"
+      +"p.sections.head_neck.followups=[f];saveLocal(p);"
+      +"S.meeting=newMeetingObj(S.user.id,['head_neck']);S.meeting.date='2001-01-03';S.meeting.sections.head_neck={followups:[],cases:[],team:[],events:[],special:[]};"
+      +"autoImportPrevFollowups(['head_neck']);var g=S.meeting.sections.head_neck.followups.filter(function(x){return x.chartNo==='9000201';})[0];"
+      +"S.meeting=keep;return JSON.stringify(g||null);})()".replace('ensureSecOf(p);','if(!p.sections.head_neck)p.sections.head_neck={followups:[],cases:[],team:[],events:[],special:[]};')));
+    const src=fs.readFileSync(FILE,'utf8');
+    const fn=function(name){const i=src.indexOf('function '+name+'(');return i<0?'':src.slice(i,src.indexOf('\nfunction ',i+10)>0?src.indexOf('\nfunction ',i+10):i+20000);};
+    const outs=['genPPTX','genDOCX','genHTMLSlides'].every(function(n){return fn(n).indexOf('FUP_KEYS')>=0;})&&src.indexOf("'追蹤說明'")<0&&src.indexOf('<th>追蹤說明</th>')<0;
+    /* V5.75.2 P-2:連續三場續追 —— 只留原始決議 + 最近一次結果(標日期),不逐場累積 */
+    let r3=JSON.parse(run("(function(){var keep=S.meeting;var mk=function(d){var m=newMeetingObj(S.user.id,['head_neck']);m.date=d;m.sections.head_neck={followups:[],cases:[],team:[],events:[],special:[]};return m;};"
+      +"var m1=mk('2001-02-01');var f=createFollowup({chartNo:'9000202',name:'測試癸',note:'第一次結果',prevDecision:'原因丙'});f.status='ongoing';f._fromEvent=true;m1.sections.head_neck.followups=[f];saveLocal(m1);"
+      +"S.meeting=mk('2001-02-02');autoImportPrevFollowups(['head_neck']);var g=S.meeting.sections.head_neck.followups.filter(function(x){return x.chartNo==='9000202';})[0];g.note='第二次結果\\n第二行';g.status='ongoing';saveLocal(S.meeting);"
+      +"S.meeting=mk('2001-02-03');autoImportPrevFollowups(['head_neck']);var h=S.meeting.sections.head_neck.followups.filter(function(x){return x.chartNo==='9000202';})[0];"
+      +"h.note='';h.status='ongoing';saveLocal(S.meeting);S.meeting=mk('2001-02-04');autoImportPrevFollowups(['head_neck']);"
+      +"var q=S.meeting.sections.head_neck.followups.filter(function(x){return x.chartNo==='9000202';})[0];"
+      +"S.meeting=keep;return JSON.stringify({h:h,q:q});})()"));
+    /* V5.76.0 Q-3:第三場沒填結果 → 第四場沿用第二場的結果 */
+    const q3=r3&&r3.q&&r3.q.prevDecision==='原因丙\n上次結果(2001-02-02)：第二次結果 / 第二行';
+    r3=r3&&r3.h;
+    const p2=r3&&r3.prevDecision==='原因丙\n上次結果(2001-02-02)：第二次結果 / 第二行'&&r3._fromEvent===true;
+    const css=src.indexOf(".tbl{overflow-y:auto")>=0&&src.indexOf('.tbl thead th{position:sticky')>=0;
+    const chk=[['P-2 只留原始決議+最近一次(標日期)、帶 _fromEvent',p2],['Q-3 沒填結果沿用上一次',q3],['P-1 表格頁可捲、表頭固定',css],
+      ['有帶入',!!r],['目前結果留空',r&&r.note===''],['上次決議含原因與上次結果',r&&/原因甲/.test(r.prevDecision)&&/上次結果\(2001-01-02\)：上次的結果/.test(r.prevDecision)],
+      ['追蹤重點延續',r&&r.followFocus==='重點乙'],['走 createFollowup',r&&'prevDecision' in r&&'followFocus' in r&&r._autoImported===true],
+      ['產出不再寫「追蹤說明」、改用 FUP_KEYS',outs]];
+    const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
+    console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
+    if(fail.length){bad++;console.log('   ',JSON.stringify(r),JSON.stringify(r3));}
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,160));bad++;}
+
+  // ── [V5.76.0 Q-2] 沒有影像的特殊議程:產出前檢查要提醒 ──
+  console.log('\n=== [V5.76.0 Q-2] 純文字特殊議程提醒 ===');
+  try{
+    const msg=await run("(async function(){var s=S.meeting.sections['head_neck'];s.cases=[];s.team=[];s.events=[];s.followups=[];"
+      +"s.special=[createItem('head_neck','special',{title:'純文字議程甲',topicType:'其他',note:'說明'},{})];"
+      +"imgFolderHandle=null;S.meeting.version++;saveLocal(S.meeting);_dirty=false;var got='';var oc=window.confirm;window.confirm=function(m){got=String(m);return false;};"
+      +"try{await genHTMLSlides();}catch(e){}window.confirm=oc;return got;})()");
+    const ok=/沒有影像,不會出現在投影片上/.test(msg)&&/純文字議程甲/.test(msg);
+    console.log('  '+(ok?'1/1 ✅':'0/1 🔴 產出前檢查沒有提醒'));
+    if(!ok)bad++;
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,140));bad++;}
+
   // ── [V5.56.0] tlLayout 純函式(審核第八節 #7/#8/#11/#12/#13/#14)──
   console.log('\n=== [Hybrid TL] tlLayout 純函式 ===');
   try{

@@ -41,6 +41,7 @@
 
 ### 影像
 - **會議資料只存檔名與指紋**,影像本體留在選定的影像資料夾(依病歷號子資料夾)
+- 病歷號子資料夾:匯入個案後與選取影像時自動建立(需「可修改」權限,V5.73.0);選取時**不再**退回會議資料夾本身(產出端嚴格模式本來就不載入那些影像)
 - 產出投影片時讀取資料夾;可選「夾在投影片」或「另開視窗」
 
 ### 產出區
@@ -93,6 +94,14 @@ python3 preflight.py          # 全部(約 1 分鐘)
 python3 preflight.py --quick  # 只跑靜態
 ```
 全部 ✅ 才能打包;它會印出 zip 指令。需要 node、jsdom、jshint。
+
+**投影片內容等價測試**(V5.75.0):`content-equiv.js` 用固定的虛構會議產出 HTML 投影片,逐頁比對文字與 `content-baseline.json`。投影片上的字只要變了(多頁、少頁、標籤改名)preflight 就 🔴。**經主任同意改投影片內容後**才執行 `node content-equiv.js --update` 更新基準,並在 CHANGELOG 寫理由。
+
+**預覽與畫重點**(V5.76.0):產出區「預覽與畫重點」以 blob 分頁開投影片;投影片的「存標記」以 `postMessage` 傳回系統,存進 `sections[cid].hlMarks`(`{marks:{頁面文字指紋:[[起始,長度,tag,style,class]]},at,by}`),隨會議存檔與 NAS 同步;產出時以 `<script id="hl-sys">` 帶進投影片,依文字指紋套用。系統有未儲存修改時拒存。檔案路徑(`hl-data`)保留給會議室直接開檔;檔案存了自己的標記後 `hl-sys` 失效。`preview-check.js`(真 Chromium)端到端檢查。
+
+**共用測試會議**(V5.76.0):`test-meeting.js` 一份真實份量的虛構會議,`content-equiv.js`、`layout-check.js` 共用。
+
+**投影片版面檢查**(V5.75.2):`layout-check.js` 用前期追蹤 10 位的虛構會議產出投影片,在真的 Chromium 以 1920×1080 與 1366×768 逐頁檢查「內容沒超出,或該頁可以捲」,前期追蹤表捲到底最後一列要在導覽列上方。需要 playwright;沒有時 preflight 🔴,可加 `--no-layout` 明確略過。
 
 ---
 

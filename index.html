@@ -928,6 +928,7 @@ textarea{resize:vertical}
             <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--textlt);margin:10px 0 6px">開會資料</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-html-slides" onclick="genHTMLSlides().catch(function(e){console.error(e);alert('投影片產生失敗：'+(e&&e.message||e)+'\n\n請截圖回報。');})">HTML 投影片</button>
+              <button class="btn btn-a" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-preview-slides" onclick="previewSlides()" title="在新分頁打開投影片,畫重點後按「存標記」就存進這場會議">預覽與畫重點</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-share-slides" onclick="shareHTMLSlides()">HTML 分享</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-worddeck" onclick="genDOCX('deck')">Word 簡報</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-sheet" onclick="genPrintSheet()">會議小抄</button>
@@ -937,6 +938,7 @@ textarea{resize:vertical}
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-postmtg" onclick="openPostMtgPanel()"><span style="font-size:15px;margin-right:4px">&#9998;</span>填寫會議決議</button>
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-docx" onclick="genDOCX()">DOCX 記錄</button>
             </div>
+            <div id="hl-sys-status" style="font-size:12px;color:var(--textmd);margin:2px 0 6px"></div>
             <div id="slide-share-link"></div>
             <!-- ════ V5.36.1 U-3:一年用兩次的 Excel/JSON 匯入匯出,不該和每場會議都要按的三顆並排。
                  不刪任何功能,只是收進摺疊區 —— UI 減法最容易犯的錯是把「少用」當成「該刪」,
@@ -1725,7 +1727,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.72.1';
+const VERSION='V5.76.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3001,6 +3003,7 @@ async function startNewMtgForCancer(){
 }
 async function _loadMtg(id){
   S._pendingNasMerge=false;S._keepMine=false;S._baseRev=undefined;S._baseVer=undefined;/* V5.69.0/V5.69.1 P-1:每次開會議先清,含 base —— 任何分支漏設只會讓合併多做一次(安全方向),不會讓合併被跳過(覆蓋方向) */
+  {const _pf=document.getElementById('pf-bar');if(_pf)_pf.remove();}/* V5.75.0 F-1a:上一場匯入留下的「建立資料夾」提示列,人數是上一場的(放第二行:第一行清 base 是 preflight P-1 檢查的位置) */
   let local=loadLocal(id);if(!local){alert('找不到會議資料');return null}
   /* V5.65.0 S-1 ③:開會議先拉 NAS —— 原本只查舊版共享資料夾,不讀 NAS sync/ 的同名檔,整天不登出就整天看不到別台的修改 */
   if(nasHandle){
@@ -4476,9 +4479,8 @@ function _showImgAuditReport(rows,onFix){
     +'<div id="audit-banner"></div>'
     +(risk?'<div style="background:#FBE9E7;color:#B3261E;padding:10px 16px;font-size:12.5px;line-height:1.7;border-bottom:1px solid var(--blt)">'
       +'<b>🔴 有 '+risk+' 張影像的歸屬無法確認。</b><br>'
-      +'目前版本遇到這種情況會<b>退回根目錄尋找同名檔</b> —— 如果根目錄剛好有同名檔(IMG_0001.jpg、1.jpg 很常見),'
-      +'<b>會載入到別位病人的影像,而且產出前檢查看不出來</b>。<br>'
-      +'建議處理:把該病人的圖放進「病歷號」開頭的子資料夾,然後在個案卡片重新選取一次。</div>':'')
+      +'這些影像產出投影片時<b>不會載入</b>(系統不會到別的資料夾找同名檔,以免放錯病人)。<br>'
+      +'建議處理:在影像資料夾裡為該病人建一個以病歷號命名的資料夾,把影像移進去即可,不用重新選取。</div>':'')
     +'<div style="flex:1;overflow:auto">'
       +'<table style="width:100%;border-collapse:collapse;font-size:12.5px">'
       +'<thead><tr style="background:#F2F5F7;position:sticky;top:0">'
@@ -4648,7 +4650,7 @@ async function _imgPreview(img,label,chartNo){
   var _vr=await verifyImgOwnership(name,(img.subFolder||'').trim(),chartNo,{size:img.size});
   if(!_vr.file){
     alert('無法載入'+label+'\n\n'+_vr.note
-      +'\n\n建議:把這位病人的影像放進以病歷號開頭的子資料夾,再重新選取一次。');
+      +'\n\n建議:在影像資料夾裡為這位病人建一個以病歷號命名的資料夾,把影像移進去即可,不用重新選取。');
     return;
   }
   if(_vr.level==='warn')console.warn('影像歸屬提示:',_vr.note);
@@ -5108,10 +5110,14 @@ function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='c
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div>${d.prevDecision?`<div class="fg full"><label>上次決議</label><div class="ro-box">${escA(d.prevDecision).replace(/\n/g,'<br>')}</div></div>`:''}<div class="fg full"><label>本次追蹤重點</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'followFocus',this.value)" placeholder="這次要確認什麼（例：手術是否已安排？病理報告出來了嗎？）" class="f-ta">${escA(d.followFocus||'')}</textarea></div><div class="fg full"><label>目前結果</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤結果或本次結論" class="f-ta">${escA(d.note||'')}</textarea></div></div></div>`}
+</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div>${d.prevDecision?`<div class="fg full"><label>${FUP_LBL.prevDecision}</label><div class="ro-box">${escA(d.prevDecision).replace(/\n/g,'<br>')}</div></div>`:''}<div class="fg full"><label>${FUP_LBL.followFocus}</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'followFocus',this.value)" placeholder="這次要確認什麼（例：手術是否已安排？病理報告出來了嗎？）" class="f-ta">${escA(d.followFocus||'')}</textarea></div><div class="fg full"><label>${FUP_LBL.note}</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤結果或本次結論" class="f-ta">${escA(d.note||'')}</textarea></div></div></div>`}
 /* V5.72.1 T-1:醫療小組欄位名的唯一來源。V5.22.0 只改了編輯畫面,投影片/閱覽/Word/會後填寫沿用舊名且 Word 漏兩欄。
    底層欄位 cc/discussion/summary/decision 不動;必要事件與個案不用這組名稱。 */
 const TEAM_LBL={cc:'之前現病史',discussion:'多專科建議',summary:'最新情況',decision:'治療決策'};
+/* V5.75.1 N-3:前期追蹤欄位名的唯一來源。V5.22.0 編輯畫面改成三段,但投影片/PPTX/Word/Excel 只印 note 且叫「追蹤說明」,
+   上次決議與本次追蹤重點從沒出現在任何產出(必要提報續追「為什麼要追」開會時看不到)。 */
+const FUP_LBL={prevDecision:'上次決議',followFocus:'本次追蹤重點',note:'目前結果'};
+const FUP_KEYS=['prevDecision','followFocus','note'];
 /* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論方向、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
 function teamHTML(cid,i,d,type='team',collapsed=false){
   const _cardId='cc-'+cid+'-'+type+'-'+i;
@@ -5277,11 +5283,13 @@ function crUpdPatient(cid,si,pi,key,val){var d=getSectionItem(cid,'special',si);
 function crAddPatient(cid,si){var d=getSectionItem(cid,'special',si);if(!d)return;ensureArray(d,'patients');d.patients.push({chartNo:'',name:'',doctor:'',note:'',images:[]});markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;var pi=d.patients.length-1;var div=document.createElement('div');div.innerHTML=crPatientRow(cid,si,pi,d.patients[pi]);cont.appendChild(div.firstElementChild);}
 function crDelPatient(cid,si,pi){var d=getSectionItem(cid,'special',si);if(!d||!d.patients)return;if(!confirm('確定刪除此病人？'))return;d.patients.splice(pi,1);markDirty();var cont=document.getElementById('cr-patients-'+cid+'-'+si);if(!cont)return;cont.innerHTML=((d.patients||[]).map(function(p,i2){return crPatientRow(cid,si,i2,p);}).join(''));}
 function crPickImages(cid,si,pi){var d=getSectionItem(cid,'special',si);if(!d||!d.patients||!d.patients[pi])return;var p=d.patients[pi];if(!p.images)p.images=[];(async function(){try{if(!imgFolderHandle)imgFolderHandle=await window.showDirectoryPicker({mode:'read'});
-  /* V5.3.0: 失聯率病人佐證圖 — 先試 p.chartNo 子資料夾,再試 _特殊議程,最後退根目錄 */
+  /* V5.3.0: 失聯率病人佐證圖 — 先試 p.chartNo 子資料夾,再試 _特殊議程;V5.73.0 起不再退根目錄 */
   var _sub=await _resolveSubFolder(imgFolderHandle,p.chartNo);
   if(!_sub)_sub=await _resolveSubFolder(imgFolderHandle,'_特殊議程');
-  var _scanHandle=_sub?_sub.handle:imgFolderHandle;
-  var _subName=_sub?_sub.name:'';
+  /* V5.73.0 F-1:原本最後退回會議資料夾本身 —— 那些圖產出時一律不載入。改成建病人資料夾或說明 */
+  if(!_sub){_sub=await _patientDirForPick(p.chartNo);if(!_sub)return;}
+  var _scanHandle=_sub.handle;
+  var _subName=_sub.name;
   var entries=await _folderEntries(_scanHandle);var files=entries.filter(e=>e.kind==='file'&&/\.(jpe?g|png|gif|webp|bmp)$/i.test(e.name));files.sort((a,b)=>a.name.localeCompare(b.name));if(!files.length){alert(_subName?('子資料夾「'+_subName+'」內沒有圖檔'):'資料夾內沒有圖檔');return;}var existing=new Set(p.images.map(x=>x.name));var list=files.map(f=>'<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0"><input type="checkbox" value="'+escA(f.name)+'"'+(existing.has(f.name)?' checked':'')+'><span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escA(f.name.replace(/\.[^.]+$/,''))+'</span></label>').join('');var overlay=document.createElement('div');overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';overlay.innerHTML='<div style="background:#fff;border-radius:8px;padding:20px;width:min(480px,94vw);max-height:80vh;display:flex;flex-direction:column;gap:10px"><div style="font-weight:700;font-size:15px">選取佐証圖片</div><div style="font-size:11px;color:#888;background:#f5f7f9;border-radius:3px;padding:4px 8px">📂 '+escA(imgFolderHandle.name)+(_subName?' / <b style="color:#2a3540">'+escA(_subName)+'</b>':'<span style="color:#8A5A1F">　（未找到「'+escA(p.chartNo||'')+'」子資料夾，顯示根目錄檔案）</span>')+'</div><div style="overflow-y:auto;flex:1;border:1px solid #e0e0e0;border-radius:4px">'+list+'</div><div style="display:flex;gap:8px;justify-content:flex-end"><button id="cr-img-cancel" class="btn btn-b btn-sm">取消</button><button id="cr-img-ok" class="btn btn-a btn-sm">確認</button></div></div>';document.body.appendChild(overlay);overlay.querySelector('#cr-img-cancel').onclick=()=>document.body.removeChild(overlay);overlay.querySelector('#cr-img-ok').onclick=()=>{var checked=[...overlay.querySelectorAll('input:checked')].map(x=>x.value);p.images=checked.map(fn=>({name:fn,caption:fn.replace(/\.[^.]+$/,''),fromFolder:true,subFolder:_subName||''}));markDirty();document.body.removeChild(overlay);var el=document.getElementById('cr-img-list-'+cid+'-'+si+'-'+pi);if(el)el.textContent=p.images.length?p.images.length+'張已選':'未選圖片';};}catch(e){if(e.name!=='AbortError')await _handleFolderErr(e);}})();}
 function crPatientRow(cid,si,pi,p){
   var imgLabel=(p.images&&p.images.length)?p.images.length+'張已選':'未選圖片';
@@ -5913,6 +5921,8 @@ function confirmCopyMtg(){
   var src=S.meeting;
   var newId=src.cids.join('_')+'_'+uid();
   var copy=JSON.parse(JSON.stringify(src));
+  /* V5.76.1 審核 R-4:投影片標記是「那一場會議」的註記,不跟著範本走(個案沒改時文字指紋相同,上一場的重點會直接出現在新會議) */
+  Object.keys(copy.sections||{}).forEach(function(k){if(copy.sections[k])delete copy.sections[k].hlMarks;});
   copy.id=newId;
   copy.date=newDate;
   copy.version=0;
@@ -6658,6 +6668,146 @@ async function _resolveSubFolder(rootHandle,subName){
   }catch(e2){}
   return null;
 }
+/* ════════════════════════════════════════════════════════════════
+   V5.73.0 F-1 病人資料夾自動建立
+   ────────────────────────────────────────────────────────────────
+   個管反映:產出前檢查說 12 張影像「找不到病人資料夾」。原因是選取影像時
+   找不到病歷號資料夾,會**靜默改列會議資料夾本身的檔案**讓她選,記錄成「沒有病人資料夾」;
+   但產出端從 V5.32.0 起是嚴格模式(寧可少一張,不拿可能是別人的圖),一律不載入。
+   選得到、產不出 —— 兩端規則不一致(原則 A)。
+   修法:①匯入個案後自動建好以病歷號命名的資料夾;②選取時找不到就建,不再改列會議資料夾。
+   **不改嚴格模式**,只讓使用者不會走進那條死路。
+   建資料夾需要「可修改」權限(原本只要「讀取」),瀏覽器會問一次。 */
+function _patientFolderNameOk(cno){
+  const s=String(cno||'').trim();
+  return !!s&&s.length<=40&&!/[\\/:*?"<>|]/.test(s)&&s!=='.'&&s!=='..';
+}
+async function _canWriteFolder(h,ask){
+  if(!h||!h.queryPermission)return false;
+  try{
+    let p=await h.queryPermission({mode:'readwrite'});
+    if(p==='granted')return true;
+    if(ask&&p==='prompt'){p=await h.requestPermission({mode:'readwrite'});return p==='granted';}
+  }catch(e){}
+  return false;
+}
+/* 回傳 {folder,created[],existed[],todo[],bad[],failed[],need:null|'folder'|'perm'} —— 不跳任何視窗,由呼叫端決定怎麼說 */
+async function ensurePatientFolders(chartNos,opts){
+  opts=opts||{};
+  const seen={},list=[];
+  (chartNos||[]).forEach(function(x){const s=String(x||'').trim();if(s&&!seen[s]){seen[s]=1;list.push(s);}});
+  const r={folder:imgFolderHandle?imgFolderHandle.name:'',created:[],existed:[],todo:[],bad:[],failed:[],need:null};
+  if(!list.length)return r;
+  if(!imgFolderHandle){r.need='folder';r.todo=list.slice();return r;}
+  for(const cno of list){
+    if(!_patientFolderNameOk(cno)){r.bad.push(cno);continue;}
+    const ex=await _resolveSubFolder(imgFolderHandle,cno);
+    if(ex)r.existed.push(ex.name);else r.todo.push(cno);
+  }
+  if(!r.todo.length)return r;
+  if(!(await _canWriteFolder(imgFolderHandle,!!opts.ask))){r.need='perm';return r;}
+  const todo=r.todo;r.todo=[];
+  for(const cno of todo){
+    try{await imgFolderHandle.getDirectoryHandle(cno,{create:true});r.created.push(cno);}
+    catch(e){r.failed.push(cno);}
+  }
+  return r;
+}
+/* 這場會議**所有**個案與必要事件的病歷號(合併會議含另一個癌別;醫療小組沒有影像,不含)。V5.75.0 F-1a:原註解寫「有影像的病人」不符實 */
+function _meetingImgChartNos(){
+  const out=[];
+  if(!S.meeting)return out;
+  (S.cids||[]).forEach(function(cid){
+    const sec=(S.meeting.sections&&S.meeting.sections[cid])||{};
+    [...(sec.cases||[]),...(sec.events||[])].forEach(function(c){if(c&&c.chartNo)out.push(c.chartNo);});
+  });
+  return out;
+}
+function _folderResultMsg(r){
+  let m='';
+  if(r.created.length)m+='已在影像資料夾「'+r.folder+'」裡建立 '+r.created.length+' 個病人資料夾:\n  '+r.created.join('\n  ')+'\n\n';
+  if(r.failed.length)m+='⚠ 這些沒建成功,請手動建立:'+r.failed.join('、')+'\n\n';
+  if(r.bad.length)m+='⚠ 這些病歷號含有不能當資料夾名稱的字元,請先修正病歷號:'+r.bad.join('、')+'\n\n';
+  return m;
+}
+/* 匯入後呼叫:能直接建就建;需要授權或還沒指定資料夾,就在畫面下方放一個按鈕讓她按 */
+async function _afterImportFolders(){
+  const list=_meetingImgChartNos();
+  if(!list.length)return;
+  let r;
+  try{r=await ensurePatientFolders(list,{ask:true});}catch(e){return;}
+  if(!r.need){
+    if(r.created.length||r.failed.length||r.bad.length)
+      alert(_folderResultMsg(r)+'接下來:把每位病人的影像放進自己病歷號的資料夾,再到個案卡片選取影像。');
+    return;
+  }
+  _showFolderBar(r.need,r.todo.length);
+}
+function _showFolderBar(need,n){
+  const old=document.getElementById('pf-bar');if(old)old.remove();
+  const bar=document.createElement('div');
+  bar.id='pf-bar';
+  bar.style.cssText='position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:9000;background:#2C3E50;color:#fff;'
+    +'padding:12px 16px;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.25);display:flex;gap:12px;align-items:center;'
+    +'max-width:min(680px,94vw);font-size:13px;line-height:1.6';
+  const txt=document.createElement('div');
+  txt.style.flex='1';
+  txt.textContent=need==='folder'
+    ?'這場會議還沒指定影像資料夾。指定後,系統會幫 '+n+' 位病人各建一個以病歷號命名的資料夾,影像放進去就能用。'
+    :'要幫 '+n+' 位病人在影像資料夾裡各建一個以病歷號命名的資料夾嗎?按下後瀏覽器會詢問是否允許修改資料夾,請按「允許」。';
+  const ok=document.createElement('button');
+  ok.className='btn btn-a btn-sm';ok.textContent=need==='folder'?'指定資料夾':'建立資料夾';
+  const no=document.createElement('button');
+  no.className='btn btn-b btn-sm';no.textContent='稍後';
+  no.addEventListener('click',function(){bar.remove();});
+  ok.addEventListener('click',async function(){
+    try{
+      if(need==='folder'){
+        const h=await window.showDirectoryPicker({mode:'readwrite'});
+        await setImgFolder(h);
+      }
+      const r=await ensurePatientFolders(_meetingImgChartNos(),{ask:true});
+      bar.remove();
+      if(r.need==='perm'){alert('沒有取得修改資料夾的權限,資料夾沒有建立。\n\n您也可以手動在影像資料夾「'+r.folder+'」裡,為每位病人建一個資料夾,名稱用病歷號。');return;}
+      alert((_folderResultMsg(r)||'每位病人都已經有自己的資料夾了。\n\n')+'接下來:把每位病人的影像放進自己病歷號的資料夾,再到個案卡片選取影像。');
+    }catch(e){if(e&&e.name!=='AbortError')alert('建立資料夾失敗:'+((e&&e.message)||e));}
+  });
+  bar.appendChild(txt);bar.appendChild(no);bar.appendChild(ok);
+  document.body.appendChild(bar);
+}
+/* 選取影像時用:找得到病人資料夾就回傳;找不到就建好(或說明怎麼建),回傳 null —— **絕不改列會議資料夾本身的檔案** */
+async function _patientDirForPick(cno){
+  const s=String(cno||'').trim();
+  if(!s){alert('請先填寫這位病人的病歷號。\n\n影像要放在以病歷號命名的資料夾裡,系統才能確認影像屬於這位病人。');return null;}
+  const sub=await _resolveSubFolder(imgFolderHandle,s);
+  if(sub)return sub;
+  const folder=imgFolderHandle?imgFolderHandle.name:'';
+  let r=null;
+  try{r=await ensurePatientFolders([s],{ask:true});}catch(e){}
+  if(r&&r.created.length){
+    alert('影像資料夾「'+folder+'」裡原本沒有這位病人的資料夾,已經幫您建好「'+s+'」。\n\n'
+      +'請把這位病人的影像放進「'+s+'」資料夾,再按一次這個按鈕選取。');
+    return null;
+  }
+  /* V5.75.0 F-1b:病歷號不能當資料夾名稱 / 剛按了「不允許」—— 不能一律叫她「去新增資料夾」 */
+  if(r&&r.bad.length){
+    alert('病歷號「'+s+'」含有不能當資料夾名稱的字元(例如 / : * ? 等),系統沒辦法建資料夾。\n\n請先到個案卡片修正病歷號,再選取影像。');
+    return null;
+  }
+  if(r&&r.need==='perm'){
+    alert('沒有取得修改影像資料夾的權限,所以沒有幫您建資料夾。\n\n'
+      +'您可以:\n  ● 再按一次這個按鈕,瀏覽器詢問時選「允許」;或\n'
+      +'  ● 自己在「'+folder+'」裡新增一個資料夾,名稱用病歷號「'+s+'」,把影像放進去再選取。');
+    return null;
+  }
+  alert('影像資料夾「'+folder+'」裡找不到病歷號「'+s+'」的資料夾。\n\n'
+    +'請在「'+folder+'」裡新增一個資料夾,名稱用病歷號「'+s+'」\n'
+    +'(後面可以加空格和姓名,例如「'+s+' 王○明」),\n'
+    +'把這位病人的影像放進去,再按一次這個按鈕選取。\n\n'
+    +'為什麼要這樣:不同病人的影像常常同名(例如都叫 IMG_0001.jpg),\n'
+    +'放在各自的病歷號資料夾,系統才不會把別人的影像放到這位病人的投影片上。');
+  return null;
+}
 /* V5.41.0:已無呼叫端。mdt_gh_token 若還留在 localStorage 不影響運作,
    個管師可於「清除孤兒資料」時一併回收。 */
 /* V5.41.0:GitHub token 的設定 UI 已移除,這支保留為空實作 ——
@@ -7312,15 +7462,94 @@ function autoImportPrevFollowups(cids){
     (sec.followups||[]).filter(function(f){return f.status==='ongoing';}).forEach(function(f){
       if(!f.chartNo&&!f.name)return;
       if(f.chartNo&&existing.has(f.chartNo))return;
-      fups.push({id:uid(),chartNo:f.chartNo||'',name:f.name||'',
+      /* V5.75.1 N-3:原本自己寫物件(沒走 createFollowup,V5.22.0 新欄位沒跟到),而且把上一場的「目前結果」
+         原封不動放進這一場的「目前結果」—— 個管師沒改的話,投影片顯示的是上次的結果,看起來像最新狀況。
+         改成:上一場的決議 + 結果 → 這一場的「上次決議」;追蹤重點延續;這一場的目前結果留空。 */
+      /* V5.75.2 審核 P-2(主任選「原始決議 + 最近一次」):原本每場多累積一行「上次結果」、沒有日期。
+         改成:去掉舊的「上次結果」行,只保留原始決議;最近一次結果壓成一行並標日期(下次靠行首辨識整段)。 */
+      var _base=String(f.prevDecision||'').split('\n').filter(function(l){return l.indexOf('上次結果')!==0;}).join('\n').trim();
+      var _res=String(f.note||'').trim().replace(/\s*\n+\s*/g,' / ');
+      fups.push(createFollowup({chartNo:f.chartNo||'',name:f.name||'',
         doctors:Array.isArray(f.doctors)?f.doctors.slice(0,2):[(f.doctor||''),''],
-        doctor:f.doctor||'',prevDate:prev.date||'',note:f.note||'',_autoImported:true});
+        doctor:f.doctor||'',prevDate:prev.date||'',
+        /* V5.76.0 審核 Q-3:這一場沒填結果(例如還沒回診)→ 沿用上一次已知的結果,不要整行丟掉 */
+        prevDecision:[_base,_res?('上次結果('+(prev.date||'')+')：'+_res)
+          :(String(f.prevDecision||'').split('\n').filter(function(l){return l.indexOf('上次結果')===0;}).pop()||'')].filter(Boolean).join('\n'),
+        followFocus:f.followFocus||''}));
+      fups[fups.length-1]._autoImported=true;
+      if(f._fromEvent)fups[fups.length-1]._fromEvent=true;/* V5.42.0 E-1 的必要提報旗標一起帶 */
       if(f.chartNo)existing.add(f.chartNo);
     });
   });
   }catch(e){console.warn('autoImportPrevFollowups error:',e);}
 }
 
+
+/* ════════════════════════════════════════════════════════════════
+   V5.76.0 A:投影片在系統裡預覽,標記存進會議資料(審核流程建議 A;主任 2026-10-14 同意)
+   ────────────────────────────────────────────────────────────────
+   個管師是在自己電腦畫好、存好,會議上報告。原本標記存在「下載的投影片檔」裡,
+   要選檔、比對、要權限、分「已存/已下載」—— 每一層都在補「檔案不在系統掌控中」的洞。
+   改成:預覽分頁畫完按「存標記」→ postMessage 傳回這裡 → 存進 sections[cid].hlMarks(隨會議存檔、NAS 同步)
+   → 回覆 ack,預覽分頁收到才顯示「✓ 已存」。之後下載或分享投影片,標記自動帶上(hl-sys)。
+   格式:{頁面文字指紋: [[起始字元, 長度, 'mark'|'span', style, class], ...]} —— 不存頁面 HTML,小而且不怕重新產出。
+   會議室直接開檔畫的,仍走原本「存回檔案」(extraJs 的 hlExport)。
+   **只存標記**:系統畫面若有未儲存的修改就不存、請她先回系統儲存 —— 不能替她把改到一半的東西存進去。 */
+const _previewWins=new Map();/* V5.76.1 R-2:預覽分頁 → {mid,cid};原本只記最後一份,前一份就存不進來 */
+async function previewSlides(){
+  const html=await genHTMLSlides({download:false,preview:true});
+  if(!html)return;
+  const url=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));/* 分頁開著就要用,不 revoke */
+  const w=window.open(url,'_blank');
+  if(!w){alert('瀏覽器擋了新分頁。\n\n請在網址列右側允許這個網站「彈出式視窗」,再按一次「預覽與畫重點」。');return;}
+  _previewWins.set(w,{mid:S.meeting.id,cid:getOutputCid()||S.cids[0]});
+}
+window.addEventListener('message',function(e){
+  const d=e.data||{};
+  if(d.type!=='mdt-hl')return;
+  const reply=function(ok,why){try{e.source.postMessage({type:'mdt-hl-ack',req:d.req,ok:ok,why:why||''},'*');}catch(_){}};
+  const p=_previewWins.get(e.source);
+  if(!p){reply(false,'這份預覽不是從目前的系統畫面開的。請回到系統,重新按一次「預覽與畫重點」。');return;}
+  if(!S.meeting||S.meeting.id!==p.mid||p.mid!==d.mid){reply(false,'系統目前開的是另一場會議。請回到系統切回這場會議。');return;}
+  const cid=p.cid;/* 癌別以開預覽時記下的為準,不用頁面送來的 */
+  const sec=S.meeting.sections&&S.meeting.sections[cid];
+  if(!sec){reply(false,'系統裡找不到這個癌別。');return;}
+  if(_dirty){reply(false,'系統畫面還有未儲存的修改。請先回到系統按「儲存」,再回來按一次「存標記」。');return;}
+  const marks=(d.marks&&typeof d.marks==='object')?d.marks:{};
+  if(Object.keys(marks).length)sec.hlMarks={marks:marks,at:new Date().toISOString(),by:(S.user&&S.user.name)||''};
+  else delete sec.hlMarks;
+  markDirty();
+  saveMeeting({silent:true}).then(function(){
+    _renderHlStatus();
+    if(_dirty){reply(false,'儲存沒有完成,請回到系統查看訊息。');return;}
+    /* V5.76.1 審核 R-1①:「已存」要說的是**存了什麼**,不只是「存檔成功」—— 存檔可能經過 NAS 合併,核對標記真的在 */
+    const now=((S.meeting.sections[cid]||{}).hlMarks||{}).marks||{};
+    if(JSON.stringify(now)!==JSON.stringify(marks)){
+      reply(false,'存檔時和 NAS 上別台電腦的版本合併,標記沒有照您畫的存進去。請回到系統重新按「預覽與畫重點」確認後再畫一次。');return;
+    }
+    reply(true,'');
+  }).catch(function(err){reply(false,'儲存失敗:'+((err&&err.message)||err));});
+});
+/* 產出區顯示這個癌別存了幾頁標記;可清除 */
+function _renderHlStatus(){
+  const el=document.getElementById('hl-sys-status');if(!el)return;
+  el.innerHTML='';
+  if(!S.meeting)return;
+  const cid=getOutputCid()||S.cids[0];
+  const hm=(S.meeting.sections[cid]||{}).hlMarks;
+  const n=hm&&hm.marks?Object.keys(hm.marks).length:0;
+  if(!n)return;
+  const t=document.createElement('span');
+  let when='';try{const dt=new Date(hm.at);when=(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');}catch(_){}
+  t.textContent='投影片標記:'+n+' 頁('+[when,hm.by].filter(Boolean).join(' ')+')—— 預覽、下載、分享都會自動帶上 ';
+  const b=document.createElement('button');
+  b.className='btn btn-b btn-sm';b.style.cssText='font-size:11px;padding:1px 8px;margin-left:4px';b.textContent='清除標記';
+  b.addEventListener('click',async function(){
+    if(!confirm('要清除這場會議('+(CFG[cid]?.name||'')+')存的所有投影片標記嗎?'))return;
+    delete S.meeting.sections[cid].hlMarks;markDirty();await saveMeeting({silent:true});_renderHlStatus();
+  });
+  el.appendChild(t);el.appendChild(b);
+}
 
 /* ════ 設計不變量(2026-09-24 主任定案)════
    合併會議(同日兩癌別)的所有文件產出 —— HTML 投影片、HTML 分享、Word 簡報、DOCX、會議小抄、Excel ——
@@ -7626,6 +7855,7 @@ function _setSync(state,err){
   else el.innerHTML='<span style="color:var(--warn)" title="'+escA(err||'')+'">NAS 同步未完成 <a href="#" onclick="event.preventDefault();saveMeeting();" style="color:var(--warn)">重試</a></span>';
 }
 function _updateContentStatus(){
+  try{_renderHlStatus();}catch(_){}/* V5.76.0 A:換會議、換分頁時一起更新標記狀態 */
   const el=document.getElementById('actionbar-content');if(!el||!S.meeting)return;
   let todo=0,total=0;
   /* V5.69.0 M-6:只算目前分頁癌別(設計不變量;面板預設也只顯示目前分頁,數字才對得上) */
@@ -7720,7 +7950,15 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
       }else{
         /* 別人存的:不是我負責的癌別一律取 NAS;我負責的保留我這台的(別人依約定不會改我的區段) */
         (S.cids||[]).forEach(function(cid){
-          if(!mine.has(cid)&&nas.sections&&nas.sections[cid])S.meeting.sections[cid]=nas.sections[cid];
+          if(!mine.has(cid)&&nas.sections&&nas.sections[cid]){
+            /* V5.76.1 審核 R-1(主任選「標記各自保留」):個案內容以負責人為準,但這台電腦改過的投影片標記保留 ——
+               標記是註記不是個案內容;原本整段換成 NAS,代班/幫夥伴畫的重點被蓋掉,預覽卻顯示已存 */
+            const _hlOf=function(sc){return sc&&sc.hlMarks?JSON.stringify(sc.hlMarks):'';};
+            const _myHl=(S.meeting.sections[cid]||{}).hlMarks;
+            const _hlChanged=base?_hlOf(S.meeting.sections[cid])!==_hlOf((base.sections||{})[cid]):!!_myHl;
+            S.meeting.sections[cid]=nas.sections[cid];
+            if(_hlChanged){if(_myHl)S.meeting.sections[cid].hlMarks=_myHl;else delete S.meeting.sections[cid].hlMarks;}
+          }
           else if(mine.has(cid)&&!iChanged(cid)&&nas.sections&&nas.sections[cid])S.meeting.sections[cid]=nas.sections[cid];/* 我負責但我沒改 → 也取 NAS(可能是別人幫忙補的) */
         });
       }
@@ -7922,8 +8160,11 @@ async function genPPTX(){
       let y=.75;
       fups.forEach((f,fi)=>{
         const drs=getDoctors(f).join('、')||'—';
-        const noteLines=f.note?Math.max(1,Math.ceil(f.note.length/56)):0;
-        const blockH=.42+(f.prevDate?.32:0)+(f.note?Math.max(.32,noteLines*.24+.12):0)+.18;
+        /* V5.75.1 N-3:三段都印(原本只有 note,叫「追蹤說明」) */
+        const _fRows=FUP_KEYS.filter(function(k){return String(f[k]||'').trim();}).map(function(k){
+          const v=String(f[k]).trim(),ln=v.split('\n').reduce(function(a,l){return a+Math.max(1,Math.ceil(l.length/56));},0);
+          return {lbl:FUP_LBL[k],v:v,h:Math.max(.32,ln*.24+.12)};});
+        const blockH=.42+(f.prevDate?.32:0)+_fRows.reduce(function(a,r){return a+r.h;},0)+.18;
         if(y+blockH>5.3){s=pptx.addSlide();addBg(s,C.bg);rect(s,0,0,W,.55,C.primary);rect(s,0,0,.1,.55,C.acc);txt(s,ca.name+'  ·  前期追蹤個案(續)',.25,.12,W-.5,.32,{fontSize:14,bold:true,color:'FFFFFF',valign:'middle'});y=.75;}
         // 個案標題(白卡 + 左霧藍條)
         rect(s,.18,y,W-.36,.4,'FFFFFF');
@@ -7936,12 +8177,11 @@ async function genPPTX(){
           txt(s,rocDate(f.prevDate),1.7,y,5,.28,{fontSize:10.5,color:C.ink,valign:'middle'});
           y+=.32;
         }
-        if(f.note){
-          const nh=Math.max(.32,noteLines*.24+.12);
-          txt(s,'追蹤說明',.34,y,1.3,.28,{fontSize:10,bold:true,color:C.acc,valign:'top'});
-          txt(s,f.note,1.7,y,W-2,nh,{fontSize:10.5,color:C.ink,valign:'top',lineSpacingMultiple:1.1});
-          y+=nh;
-        }
+        _fRows.forEach(function(r){
+          txt(s,r.lbl,.34,y,1.3,.28,{fontSize:10,bold:true,color:C.acc,valign:'top'});
+          txt(s,r.v,1.7,y,W-2,r.h,{fontSize:10.5,color:C.ink,valign:'top',lineSpacingMultiple:1.1});
+          y+=r.h;
+        });
         y+=.22;
       });
     }
@@ -8311,11 +8551,16 @@ async function genDOCX(mode){
             ],
             spacing:{before:pt(6),after:pt(2)}
           }));
-          if(f.note)children.push(new Paragraph({
-            children:[mkRun(f.note,{size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
-            spacing:{after:pt(2)},
-            indent:{left:pt(16)}
-          }));
+          /* V5.75.1 N-3:三段都印、加欄名(原本只印 note,沒有欄名) */
+          FUP_KEYS.forEach(function(k){
+            const v=String(f[k]||'').trim();if(!v)return;
+            children.push(new Paragraph({
+              children:[mkRun(FUP_LBL[k]+'\uff1a',{bold:true,size:sz(11),color:C.dark,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'}),
+                mkRun(v,{size:sz(11),color:C.mid,font:'\u5fae\u8edf\u6b63\u9ed1\u9ad4'})],
+              spacing:{after:pt(2)},
+              indent:{left:pt(16)}
+            }));
+          });
           children.push(mkFupStatus(f.status||'closed'));
           /* V5.7.0: 前期追蹤的會後填寫摘要+決策 */
           if(f.summary)children.push(mkBlock('\u8a0e\u8ad6\u6458\u8981',f.summary,false));
@@ -8934,6 +9179,7 @@ function doImportCase(){
   const _totalClean=_report.reduce(function(a,r){return a+r.cleaned;},0);
   showSaveToast('已匯入 ' + cases.length + ' 筆個案資料'
     +(_totalClean?'（已自動清理 '+_totalClean+' 處重複日期/名稱）':''));
+  setTimeout(_afterImportFolders,_bad.length?600:0);/* V5.73.0 F-1:在缺漏報告之後 */
   // Directly update DOM without renderCasesInner (avoid loadMergedSections overwriting new cases)
   const cont=document.getElementById('div-cases-'+cid);
   if(cont){
@@ -9031,7 +9277,7 @@ async function genHTMLSlides(opts){
      背景:原本讀不到的圖片直接 `if(!src)return''` 靜默略過 —— 使用者不會知道少了一張,
      這跟坑 #29(無聲不產出)、坑 #33(謊報成功)是同一類「無聲失敗」。
      改法:全程累計「應該有幾張 / 實際載到幾張」,產出前把落差與其他風險一次攤開讓使用者決定。 */
-  const _qa={expectImgs:0,loadedImgs:0,missing:[],noDiscussion:[],bigPages:[],longText:[],tl:[],basic:[]}/* V5.61.0 TL-15;V5.68.0 basic */
+  const _qa={expectImgs:0,loadedImgs:0,missing:[],noDir:{},spNoSlide:[],noDiscussion:[],bigPages:[],longText:[],tl:[],basic:[]}/* V5.61.0 TL-15;V5.68.0 basic */
   /* V5.61.0 TL-15:事件軸預檢 —— 個案與必要事件都要跑(必要事件多一條「晚於死亡日」) */
   const _qaTl=function(c){
     /* V5.65.0 D-1:性別未填 —— 原本非乳癌/婦癌靜默預設 M,女性病人以 M 進投影片/DOCX/AI 提示詞 */
@@ -9048,7 +9294,7 @@ async function genHTMLSlides(opts){
         };;
   /* V5.19.0 #2 Case Navigator:產 slides 時順手記錄「這一頁是誰」,產出的 HTML 內建目錄可直接跳頁 */
   const _slideMeta=[];
-  const _qaCountImgs=function(imgs,who){
+  const _qaCountImgs=function(imgs,who,cno){
     (imgs||[]).forEach(function(img){
       _qa.expectImgs++;
       const src=img.dataUrl||_pathImgCache[_pathCacheKey(img)]||'';
@@ -9058,13 +9304,15 @@ async function genHTMLSlides(opts){
            比沒有更容易誤導(下一位接手的人會以為功能已完成)。
            verifyImgOwnership 算出的原因必須帶到 QA 對話框,個管師才知道要改資料夾名還是重選圖。 */
         const _n=_imgFailNotes[_pathCacheKey(img)];
+        /* V5.73.0 F-1:「沒有病人資料夾」按病人合併成一行 —— 原本同一位病人 12 張圖重複 12 次同一段長說明,看不到重點 */
+        if(_imgFailCodes[_pathCacheKey(img)]==='PATIENT_DIR_GONE'&&cno){_qa.noDir[cno]=(_qa.noDir[cno]||0)+1;return;}
         _qa.missing.push((who||'')+'：'+(img.caption||img.name||'未命名影像')+(_n?'\n      → '+_n:''));
       }
     });
   };
   /* 把一組圖累積進檢視器資料;src 空的(讀不到檔)自動略過 */
   const _pushImgWin=function(caseKey,type,typeLabel,catLabel,meta,imgs,report){
-    _qaCountImgs(imgs,(meta&&meta.chartNo?meta.chartNo+' ':'')+typeLabel);/* V5.19.0 #7 */
+    _qaCountImgs(imgs,(meta&&meta.chartNo?meta.chartNo+' ':'')+typeLabel,meta&&meta.chartNo);/* V5.19.0 #7 */
     /* V5.18.0: 帶出 pageBreak(分頁點)—— 檢視器據此把圖分組,一頁可放多張,
        且每頁張數可以不同(個管師要求「第一頁 2 張、第二頁 4 張」) */
     var list=(imgs||[]).map(function(img){
@@ -9197,6 +9445,7 @@ async function genHTMLSlides(opts){
   }
   // Pre-load folder-based pathology images to base64 (TEMP COPY ONLY - never write back to S.meeting)
   const _pathImgCache={};
+  const _imgFailCodes={};/* V5.73.0 F-1 */
   const _imgFailNotes={};/* V5.32.2 R-2:V5.32.0 用了它卻沒宣告 → ReferenceError 被 catch 吞掉,
      嚴格模式算出來的「為什麼這張圖不能用」完全傳不出去。歸屬驗證做對了一半。 */
   /* V5.3.0: cache key 改用 subFolder/name,避免不同子資料夾同名檔(HE.jpg)覆蓋 */
@@ -9224,7 +9473,7 @@ async function genHTMLSlides(opts){
             /* V5.32.0: 產出端帶入 chartNo 做歸屬驗證;失敗原因記進 QA */
             const _vr=await verifyImgOwnership(img.name,(img.subFolder||'').trim(),_chartNo,{size:img.size,allowRoot:!!img._root});/* V5.51.1 */
             const file=_vr.file;
-            if(!file){_imgFailNotes[_ck]=_vr.note;}
+            if(!file){_imgFailNotes[_ck]=_vr.note;_imgFailCodes[_ck]=_vr.code;}
             if(!file){console.warn('無法讀取影像(檔名可能含特殊字元或不存在):',_ck);continue;}
             _pathImgCache[_ck]=await _fileToDataUrl(file);
           }catch(e){console.warn('無法讀取影像:',_ck,e);}
@@ -9279,9 +9528,11 @@ async function genHTMLSlides(opts){
       slides.push('<section class="slide tbl">'
         +'<div class="th"><span style="border-left:4px solid '+caColor+';padding-left:10px">前期追蹤事項</span>'
         +' <span class="tc">'+escA(ca.name)+'</span></div>'
-        +'<table><thead><tr><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>前次日期</th><th>追蹤說明</th></tr></thead><tbody>'
+        +'<table><thead><tr><th>病歷號</th><th>姓名</th><th>主治醫師</th><th>前次日期</th>'
+        +FUP_KEYS.map(function(k){return '<th>'+FUP_LBL[k]+'</th>';}).join('')+'</tr></thead><tbody>'/* V5.75.1 N-3 */
         +fups.map(f=>'<tr><td>'+escA(f.chartNo||'')+'</td><td>'+escA(f.name?maskName(f.name):'—')
-          +'</td><td>'+escA(getDoctorStr(f))+'</td><td>'+escA(f.prevDate||'')+'</td><td>'+escA(f.note||'')+'</td></tr>').join('')
+          +'</td><td>'+escA(getDoctorStr(f))+'</td><td>'+escA(f.prevDate||'')+'</td>'
+          +FUP_KEYS.map(function(k){return '<td>'+escA(f[k]||'').replace(/\n/g,'<br>')+'</td>';}).join('')+'</tr>').join('')
         +'</tbody></table></section>');
     }
 
@@ -9748,6 +9999,10 @@ async function genHTMLSlides(opts){
               +'<span class="cat">特殊議程</span></div></div>'
               +'<div style="'+_sgSt+'">'+_sImgH.join('')+'</div></section>');
           }
+        }else if(sp.title||sp.note){
+          /* V5.76.0 審核 Q-2(最小修法,不改投影片):沒有影像的特殊議程不產生投影片頁,但 Word 與 LINE 會印 ——
+             開會時照投影片走就會漏掉。產出前檢查提醒她。 */
+          _qa.spNoSlide.push(sp.title||sp.topicType||'特殊議程');
         }
       }
     });
@@ -9798,6 +10053,11 @@ async function genHTMLSlides(opts){
     +'.ct{padding:1.4vh 2.5vw;display:flex;gap:1vw;flex-wrap:wrap;background:#f8f9fa;border-top:3px solid var(--ca,var(--acc));flex-shrink:0;}'
     +'.tp{border:2.5px solid var(--ca,var(--acc));color:var(--ca,var(--acc));padding:.55vh 1.5vw;border-radius:4px;font-size:clamp(14px,1.5vw,21px);font-weight:700;}'
     +'.tbl{padding:5vh 5vw;}'+'.img-slide{background:#111;}'
+    /* V5.75.2 審核 P-1:前期追蹤三欄後常超過一頁,而 body 是 overflow:hidden —— 超出的列看不到也捲不到。
+       表格頁改成可捲動、表頭固定、短欄不換行;底部留導覽列高度,最後一列不被壓住。只加樣式,投影片文字不變 */
+    +'.tbl{overflow-y:auto;padding-bottom:calc(5vh + clamp(48px,7vh,78px));}'
+    +'.tbl thead th{position:sticky;top:-5vh;z-index:1;}'/* 黏在頁面最上緣(抵掉 .tbl 的上內距),捲動時上面的列不會從表頭上方露出來 */
+    +'.tbl td:nth-child(-n+4),.tbl th:nth-child(-n+4){white-space:nowrap;}'
     +'@media(max-width:600px){'
     +'.cb-cols{flex-direction:column!important;}'
     +'.cb-l{border-right:none!important;border-bottom:2px solid #eef0f3;}'
@@ -9855,12 +10115,18 @@ async function genHTMLSlides(opts){
     +'.nb:disabled{opacity:.25;cursor:default;}'
     +'.ni{color:rgba(255,255,255,.85);font-size:clamp(13px,1.2vw,18px);padding:0 .8vw;min-width:4vw;text-align:center;font-variant-numeric:tabular-nums;}'
     +'#hl-toolbar{position:fixed;display:none;gap:5px;padding:6px 8px;background:rgba(20,30,40,.88);backdrop-filter:blur(10px);border-radius:20px;z-index:500;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.4);}'
-    +'.hl-btn{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.3);cursor:pointer;flex-shrink:0;transition:transform .1s;}'
+    +'.hl-btn{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.3);cursor:pointer;flex-shrink:0;transition:transform .1s;}'
     +'.hl-btn:hover{transform:scale(1.2);border-color:rgba(255,255,255,.8);}'
     +'.hl-sep{width:1px;height:18px;background:rgba(255,255,255,.25);margin:0 2px;flex-shrink:0;}'
-    +'.fc-btn{width:22px;height:22px;border-radius:5px;border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,.95);cursor:pointer;flex-shrink:0;transition:transform .1s;font-weight:800;font-size:13px;line-height:18px;text-align:center;padding:0;font-family:Georgia,serif;}'
+    +'.fc-btn{width:30px;height:30px;border-radius:6px;border:2px solid rgba(255,255,255,.3);background:rgba(255,255,255,.95);cursor:pointer;flex-shrink:0;transition:transform .1s;font-weight:800;font-size:13px;line-height:18px;text-align:center;padding:0;font-family:Georgia,serif;}'
     +'.fc-btn:hover{transform:scale(1.2);border-color:rgba(255,255,255,.8);}'
-    +'.hl-clr{background:none;border:2px solid rgba(255,255,255,.68);color:#fff;font-size:13px;padding:0 7px;height:22px;border-radius:11px;cursor:pointer;white-space:nowrap;}'
+    +'.hl-clr{background:none;border:2px solid rgba(255,255,255,.68);color:#fff;font-size:13px;padding:0 9px;height:30px;border-radius:15px;cursor:pointer;white-space:nowrap;}'
+    /* V5.74.0 防誤用:螢光/字色分兩組並標字,組間拉開 */
+    +'.hl-lab{color:rgba(255,255,255,.8);font-size:12px;margin:0 2px 0 4px;white-space:nowrap;user-select:none;}'
+    +'.hl-gap{width:14px;flex-shrink:0;}'
+    +'#hl-rm{position:fixed;display:none;z-index:510;background:rgba(20,30,40,.92);color:#fff;border:none;border-radius:14px;padding:5px 12px;font-size:13px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.35);}'
+    +'#nb-save{width:auto!important;border-radius:22px!important;padding:0 12px;font-size:clamp(12px,1vw,15px)!important;white-space:nowrap;}'
+    +'#nb-save.dirty{background:#F2B544;color:#1a2530;border-color:#F2B544;font-weight:700;}'
     +'.hl-clr:hover{background:rgba(255,255,255,.15);}'
     +'mark{border-radius:2px;padding:0 1px;}'
     +'.patho-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);color:#fff;font-size:clamp(11px,1vw,15px);padding:.4vh 1vw;border-radius:14px;cursor:pointer;margin-left:1vw;white-space:nowrap;transition:background .15s;}'
@@ -9910,8 +10176,17 @@ async function genHTMLSlides(opts){
     +'document.getElementById("nb-prev").style.opacity=c===0?".3":"1";'
     +'document.getElementById("nb-next").style.opacity=c===n-1?".3":"1";}'
     +'document.addEventListener("keydown",function(e){'
-    +'if(e.key==="ArrowRight"||e.key===" ")go(c+1);'
-    +'if(e.key==="ArrowLeft")go(c-1);'
+    /* V5.76.0 審核 Q-1:簡報筆送的是 PageDown/PageUp,原本完全不認(連換頁都不行);
+       前期追蹤表可以捲之後,只拿簡報筆或鍵盤也要看得到下面的病人 → ↓/PageDown 先捲表格,捲到底才換頁;↑/PageUp 反之。
+       → 與空白鍵維持「一定換頁」,主持人的習慣不變。PageDown/PageUp 在一般頁面就是換頁。 */
+    +'var _s=document.querySelectorAll(".slide")[c];'
+    +'var _cs=_s&&_s.scrollHeight>_s.clientHeight+2&&/auto|scroll/.test(getComputedStyle(_s).overflowY);'
+    /* ↓↑ 只在可捲的表格頁接管;個案頁的雙欄點過之後瀏覽器會用 ↓↑ 捲那一欄,不要搶走 */
+    +'var _dn=e.key==="PageDown"||(_cs&&e.key==="ArrowDown"),_up=e.key==="PageUp"||(_cs&&e.key==="ArrowUp");'
+    +'if(_cs&&_dn&&_s.scrollTop+_s.clientHeight<_s.scrollHeight-2){e.preventDefault();_s.scrollBy({top:_s.clientHeight*.8,behavior:"smooth"});return;}'
+    +'if(_cs&&_up&&_s.scrollTop>2){e.preventDefault();_s.scrollBy({top:-_s.clientHeight*.8,behavior:"smooth"});return;}'
+    +'if(e.key==="ArrowRight"||e.key===" "||_dn){if(_dn)e.preventDefault();go(c+1);}'
+    +'if(e.key==="ArrowLeft"||_up){if(_up)e.preventDefault();go(c-1);}'
     +'if(e.key==="Home")go(0);if(e.key==="End")go(n-1);'
     +'if(e.key==="f"){var el=document.documentElement;'
     +'!document.fullscreenElement?el.requestFullscreen&&el.requestFullscreen():document.exitFullscreen&&document.exitFullscreen();}});'
@@ -9924,105 +10199,424 @@ async function genHTMLSlides(opts){
    還原時直接換 innerHTML,不做座標運算(那很脆弱)。
    ⚠ 匯出需要抓回原始檔案,所以**必須從分享網址開啟**;
       本機 file:// 開啟時瀏覽器會擋(CORS),此時給明確訊息而不是默默失敗。 */
-function _hlCollect(){
+/* ════ V5.75.0 審核 H-1/H-3/H-6/H-8:頁面內容的存取統一走這幾支 ════
+   H-1 存的標記改用「頁面文字」對位:畫標記只包 mark/span.fc,不改文字 → 文字相同 = 同一頁。
+       原本只認頁序,選到「同一場會議、重新產出過」的檔,會把 A 病人的舊頁蓋到 B 病人的位置。
+       排除 .pg2(個案序號,插入病人會變)與 svg/.tl-host(時序圖載入後才畫)。
+   H-8 存頁面內容時拿掉 data: 圖片(一張圖就上百 KB,會複製進檔案與復原堆疊),換回時從目前頁面補回。
+   H-6 換頁面內容時保留捲動位置。 */
+function _hlTxt(root){
+  var doc=root.ownerDocument||root,out=[],w=doc.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),n;
+  while((n=w.nextNode())){var p=n.parentNode;if(p&&p.closest&&p.closest('svg,.tl-host,.pg2'))continue;out.push(n.data);}
+  /* V5.75.1 N-4:加上圖片張數 —— 同一位病人兩頁文字相同的影像頁(都沒有圖說)才分得開 */
+  return out.join('').replace(/\\s+/g,' ').trim()+'#'+root.querySelectorAll('img').length;
+}
+function _hlSlideHTML(s,keepImg){
+  var k=s.cloneNode(true);
+  k.querySelectorAll('img').forEach(function(im){
+    if(!keepImg&&/^data:/.test(im.getAttribute('src')||'')){im.removeAttribute('src');im.setAttribute('data-hlsrc','');}
+    im.style.transform='';im.style.transition='';im.style.cursor='';
+  });
+  k.querySelectorAll('.tl-host').forEach(function(t){t.innerHTML='';});
+  return k.innerHTML;
+}
+function _hlSetHTML(s,h){
+  var imgs=Array.prototype.map.call(s.querySelectorAll('img'),function(im){return im.getAttribute('src');});
+  var tls=Array.prototype.map.call(s.querySelectorAll('.tl-host'),function(t){return t.innerHTML;});
+  var pg=s.querySelector('.pg2'),pgKeep=pg?pg.innerHTML:null;
+  var q='*:not(mark):not(span.fc)',els=s.querySelectorAll(q),sc=[];
+  for(var i=0;i<els.length;i++)if(els[i].scrollTop)sc.push([i,els[i].scrollTop]);
+  s.innerHTML=h;
+  s.querySelectorAll('img').forEach(function(im,k){
+    if(im.hasAttribute('data-hlsrc')){if(imgs[k])im.setAttribute('src',imgs[k]);im.removeAttribute('data-hlsrc');}
+  });
+  s.querySelectorAll('.tl-host').forEach(function(t,k){if(!t.innerHTML&&tls[k])t.innerHTML=tls[k];});
+  var pg2=s.querySelector('.pg2');if(pg2&&pgKeep!==null)pg2.innerHTML=pgKeep;
+  var els2=s.querySelectorAll(q);sc.forEach(function(x){if(els2[x[0]])els2[x[0]].scrollTop=x[1];});
+}
+/* full=true:保留圖片本體 —— 寫進 V5.75.0 以前產出的檔用(那些檔讀標記時不會補圖,見 _hlInject 的 N-1) */
+function _hlCollect(full){
   var out={},slides=document.querySelectorAll('.slide');
   for(var i=0;i<slides.length;i++){
-    if(slides[i].querySelector('mark, span.fc'))out[i]=slides[i].innerHTML;
+    if(slides[i].querySelector('mark, span.fc'))out[i]=_hlSlideHTML(slides[i],!!full);
   }
   return out;
+}
+/* marks:{頁序:innerHTML};texts:目標每一頁的 _hlTxt。回傳 {ok:{新頁序:innerHTML}, miss:對不上的頁數} */
+function _hlMatch(marks,texts){
+  var ok={},miss=0,used={};
+  Object.keys(marks).forEach(function(k){
+    var i=parseInt(k,10),t=document.createElement('template');t.innerHTML=marks[k];/* template 內容不載圖、不執行 */
+    var want=_hlTxt(t.content),j=-1;
+    if(texts[i]===want&&!used[i])j=i;
+    else for(var q=0;q<texts.length;q++){if(texts[q]===want&&!used[q]){j=q;break;}}
+    if(j<0){miss++;return;}
+    used[j]=1;ok[j]=marks[k];
+  });
+  return {ok:ok,miss:miss};
 }
 function _hlRestore(){
   try{
     var el=document.getElementById('hl-data');
-    if(!el||!el.textContent.trim())return;
-    var data=JSON.parse(el.textContent);
-    var slides=document.querySelectorAll('.slide');
-    Object.keys(data).forEach(function(k){
-      var i=parseInt(k,10);
-      if(slides[i])slides[i].innerHTML=data[k];
-    });
+    if(!el||!el.textContent.trim())return [];
+    var data=JSON.parse(el.textContent),slides=document.querySelectorAll('.slide');
+    var m=_hlMatch(data,Array.prototype.map.call(slides,_hlTxt));
+    Object.keys(m.ok).forEach(function(k){_hlSetHTML(slides[k],m.ok[k]);});
+    return Object.keys(m.ok);/* V5.76.0:回傳已從檔案還原的頁,系統標記不再套到這些頁 */
+    if(m.miss)setTimeout(function(){alert('有 '+m.miss+' 頁的標記是在舊版投影片上畫的,這幾頁的內容已經更新,標記沒有套用。\\n\\n按一次「存標記」就不會再出現這個提示。');},300);
   }catch(e){console.warn('標記還原失敗:',e);}
+  return [];
 }
-async function hlExport(){
-  var marks=_hlCollect(),n=Object.keys(marks).length;
-  if(!n){alert('這份投影片還沒有任何標記。\\n\\n請先用螢光筆或字色畫過,再按匯出。');return;}
-  if(location.protocol==='file:'){
-    alert('無法匯出\\n\\n這份檔案是從電腦本機開啟的,瀏覽器的安全限制讓程式讀不到原始檔案。\\n\\n請改從分享網址開啟(share.selaginella.io/...),畫完線再按匯出。');
-    return;
-  }
-  var btn=event&&event.target;var old=btn?btn.textContent:'';
-  if(btn){btn.disabled=true;btn.textContent='匯出中...';}
+/* ════ V5.76.0 A:系統標記(hl-sys)—— 以「頁面文字指紋 → 字元範圍」存,套用時依文字位置包回 mark/span ════
+   字元位置只算 _hlTxt 也算的文字(排除 svg/.tl-host/.pg2),時序圖晚畫、序號改變都不影響。 */
+var _hlSys=null;
+function _hlTextNodes(root){
+  var out=[],w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),n;
+  while((n=w.nextNode())){var p=n.parentNode;if(p&&p.closest&&p.closest('svg,.tl-host,.pg2'))continue;out.push(n);}
+  return out;
+}
+function _hlRanges(s){
+  var nodes=_hlTextNodes(s),pos=0,at=new Map(),out=[];
+  nodes.forEach(function(n){at.set(n,pos);pos+=n.data.length;});
+  s.querySelectorAll('mark, span.fc').forEach(function(m){
+    var tn=_hlTextNodes(m);if(!tn.length||!at.has(tn[0]))return;
+    var len=tn.reduce(function(a,n){return a+n.data.length;},0);
+    out.push([at.get(tn[0]),len,m.tagName.toLowerCase()==='span'?'span':'mark',m.getAttribute('style')||'',m.className||'']);
+  });
+  return out;
+}
+function _hlApplyRanges(s,rs){
+  (rs||[]).forEach(function(r){
+    var nodes=_hlTextNodes(s),pos=0,sn=null,so=0,en=null,eo=0;
+    for(var i=0;i<nodes.length;i++){
+      var L=nodes[i].data.length;
+      if(sn===null&&r[0]<pos+L){sn=nodes[i];so=r[0]-pos;}
+      if(sn!==null&&r[0]+r[1]<=pos+L){en=nodes[i];eo=r[0]+r[1]-pos;break;}
+      pos+=L;
+    }
+    if(!sn||!en)return;
+    var rg=document.createRange();rg.setStart(sn,so);rg.setEnd(en,eo);
+    var el=document.createElement(r[2]==='span'?'span':'mark');
+    if(r[3])el.setAttribute('style',r[3]);if(r[4])el.className=r[4];
+    try{rg.surroundContents(el);}catch(ex){try{var fr=rg.extractContents();el.appendChild(fr);rg.insertNode(el);}catch(e2){}}
+  });
+}
+function _hlSysCollect(){
+  var o={};
+  document.querySelectorAll('.slide').forEach(function(s){var r=_hlRanges(s);if(r.length)o[_hlTxt(s)]=r;});
+  return o;
+}
+function _hlApplySys(skip){
   try{
-    var resp=await fetch(location.href,{cache:'no-store'});
-    if(resp.status===401){alert('檢視密碼已逾時，請重新整理頁面輸入密碼後再匯出。');return;}/* V5.65.0 U-3 */
+    var el=document.getElementById('hl-sys');
+    if(!el||!el.textContent.trim())return;
+    _hlSys=JSON.parse(el.textContent);
+    if(!_hlSys||!_hlSys.marks)return;
+    var used={},slides=document.querySelectorAll('.slide');
+    for(var i=0;i<slides.length;i++){
+      if(skip.indexOf(String(i))>=0)continue;
+      var fp=_hlTxt(slides[i]);
+      if(_hlSys.marks[fp]&&!used[fp]){used[fp]=1;_hlApplyRanges(slides[i],_hlSys.marks[fp]);}
+    }
+    var miss=Object.keys(_hlSys.marks).filter(function(k){return !used[k];}).length;
+    if(miss&&!skip.length)setTimeout(function(){alert('有 '+miss+' 頁的標記是在內容修改前畫的,這幾頁沒有套用。\\n\\n'+(_hlSys.preview?'按一次「存標記」就不會再出現這個提示。':'請在系統按「預覽與畫重點」重新畫這幾頁。'));},300);
+  }catch(e){console.warn('系統標記套用失敗:',e);}
+}
+/* ════ V5.74.0 存標記 ════
+   ① 下方導覽列常駐「存標記」 ② 畫了沒存就關頁 → 瀏覽器提醒 ③ 本機開啟也能存
+   V5.75.0 H-3:「是否已存」只看標記本身(第幾頁、從第幾個字、多長、哪種顏色),
+   原本比對整頁 HTML,放大圖片就被當成「沒存」。
+   H-5:寫回原檔 = 「✓ 已存」;只是下載一份 = 「✓ 已下載」(原檔其實沒變)。 */
+var _hlSavedSig='',_hlSaveKind='file';
+function _hlSig(){
+  var o=[];
+  document.querySelectorAll('.slide').forEach(function(s,i){
+    var ms=s.querySelectorAll('mark, span.fc');if(!ms.length)return;
+    var r=document.createRange();
+    ms.forEach(function(m){r.setStart(s,0);r.setEndBefore(m);o.push([i,r.toString().length,m.textContent.length,m.tagName,m.getAttribute('style')]);});
+  });
+  return JSON.stringify(o);
+}
+function _hlPages(){return Array.prototype.filter.call(document.querySelectorAll('.slide'),function(s){return s.querySelector('mark, span.fc');}).length;}
+function _hlChanged(){
+  var n=_hlPages(),dirty=_hlSig()!==_hlSavedSig;
+  var b=document.getElementById('nb-save');if(!b)return;
+  b.style.display=(n||dirty)?'':'none';
+  b.classList.toggle('dirty',dirty);
+  b.innerHTML=dirty?('&#128190; 存標記 '+n+' 頁'):(_hlSaveKind==='download'?'&#10003; 已下載':(_hlSaveKind==='system'?'&#10003; 已存(系統)':'&#10003; 已存'));
+  b.title=dirty?'畫的標記還沒存,關掉就會不見'
+    :(_hlSaveKind==='download'?'含標記的檔案在「下載」資料夾,請用它取代原本的檔案'
+      :(_hlSaveKind==='system'?'標記已存進這場會議,下次預覽、下載或分享都會自動帶上':'標記已存進檔案'));
+}
+function _hlMarkSaved(sig,kind){_hlSavedSig=sig;_hlSaveKind=kind||'file';_hlChanged();}
+window.addEventListener('beforeunload',function(e){
+  if(_hlSig()!==_hlSavedSig){e.preventDefault();e.returnValue='';}
+});
+/* src:目標檔原始碼。回傳 {src, miss}。H-1:先確認目標檔每一頁對得上,對不上的頁不寫並問她 */
+function _hlInject(src,marks){
+  /* V5.75.1 N-1:目標檔是 V5.75.0 以前產出的(沒有補圖的程式)→ 存含圖片的完整內容,否則圖片頁的影像會空白。
+     不用版號判斷:產出檔裡的版號只出現在各版註解,新舊檔都含舊版字樣 */
+  if(src.indexOf('function _hlSetHTML')<0)marks=_hlCollect(true);
+  var d=new DOMParser().parseFromString(src,'text/html');/* 解析不執行 script、不載圖 */
+  var m=_hlMatch(marks,Array.prototype.map.call(d.querySelectorAll('.slide'),_hlTxt));
+  if(m.miss&&!confirm('您選的檔案和目前畫面的內容不完全相同(可能是重新產出的版本)。\\n有 '+m.miss+' 頁的標記對不上,這幾頁不會存進去。\\n\\n仍要存其餘的標記嗎?'))
+    throw new Error('已取消,沒有存。');
+  var json=JSON.stringify(m.ok);
+  /* V5.49.0 B-8:標記內容(innerHTML)若含 script 結尾標籤會提前關閉 hl-data 標籤,整份檔案壞掉。
+     JSON 裡的 < 全部換成 \\\\u003c —— JSON.parse 讀回來仍是 <,但 HTML parser 看不到。
+     V5.74.0:原本這裡只有兩個反斜線,模板字串吃掉一個 → 產出變成把 < 換成 < ,保護從沒生效過(原則 C) */
+  json=json.replace(/</g,'\\\\u003c');
+  /* ⚠ V5.43.1:這裡**不能用 regex 搜尋那個 script 標籤的字面值** ——
+     那個字串會出現在這段程式**自己的原始碼**裡(它就在同一份 HTML 的 script 區塊中),
+     regex 從頭找會**先匹配到自己的程式碼**,把函式本體換成資料 → 整段 JS 語法壞掉。
+     兩道防護:① 搜尋字串用拼接組出來 ② 用 lastIndexOf 從**後面**找 —— 佔位標籤永遠在 extraJs 之後 */
+  var _o='<scr'+'ipt id="hl'+'-data"';
+  var _c='</scr'+'ipt>';
+  var a1=src.lastIndexOf(_o);
+  if(a1<0)throw new Error('這份投影片沒有標記存放區(可能是舊版產出的),請重新產生一次 HTML 投影片。');
+  var a2=src.indexOf('>',a1);
+  var a3=src.indexOf(_c,a2);
+  if(a2<0||a3<0)throw new Error('標記存放區格式異常');
+  var out=src.slice(0,a2+1)+json+src.slice(a3);
+  /* V5.76.0 A:檔案存了自己的標記後,系統帶進來的標記(hl-sys)不再套用 —— 否則她在檔案裡擦掉的系統標記,下次開檔又會回來 */
+  var _so='<scr'+'ipt id="hl'+'-sys"',b1=out.lastIndexOf(_so);
+  if(b1>=0){var b2=out.indexOf('>',b1),b3=out.indexOf(_c,b2);if(b2>=0&&b3>=0)out=out.slice(0,b2+1)+'null'+out.slice(b3);}
+  return {src:out,miss:m.miss};
+}
+function _hlDownload(src,fname){
+  var blob=new Blob([src],{type:'text/html;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=fname;
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function _hlFname(){return decodeURIComponent((location.pathname.split('/').pop()||'slides.html'));}
+function _hlNormT(t){return String(t||'').replace(/\\s+/g,' ').trim();}
+async function hlExport(){
+  var sig=_hlSig(),marks=_hlCollect(),n=Object.keys(marks).length;
+  if(!n&&sig===_hlSavedSig){alert('這份投影片還沒有任何標記。\\n\\n選取文字後會跳出工具列,可以畫螢光筆或改字色。');return;}
+  if(_hlSys&&_hlSys.preview&&!arguments[0]){_hlSendSys(sig);return;}/* V5.76.0 A:系統預覽 → 存回系統 */
+  if(location.protocol==='file:'){_hlDialog(marks,n,sig,false);return;}
+  var btn=document.getElementById('nb-save');if(btn)btn.disabled=true;
+  try{
+    var resp;
+    try{resp=await fetch(location.href,{cache:'no-store'});}
+    catch(netErr){_hlDialog(marks,n,sig,true);return;}/* H-10:線上連不到 —— 不要說成「從電腦打開的」 */
+    if(resp.status===401){alert('檢視密碼已逾時，請重新整理頁面輸入密碼後再存。\\n\\n(重新整理前畫的標記會不見;若不想重畫,請改用:把這份投影片下載到電腦,用電腦開啟後再存。)');return;}/* V5.65.0 U-3 */
     if(!resp.ok)throw new Error('HTTP '+resp.status);
-    var src=await resp.text();
-    var json=JSON.stringify(marks);
-    /* V5.49.0 B-8:標記內容(innerHTML)若含 script 結尾標籤會提前關閉 hl-data 標籤,整份檔案壞掉。
-       JSON 裡的 < 全部換成 \u003c —— JSON.parse 讀回來仍是 <,但 HTML parser 看不到。 */
-    json=json.replace(/</g,'\\u003c');
-    /* ⚠ V5.43.1:這裡**不能用 regex 搜尋那個 script 標籤的字面值** ——
-       那個字串會出現在 hlExport **自己的原始碼**裡(它就在同一份 HTML 的 script 區塊中),
-       regex 從頭找會**先匹配到自己的程式碼**,把函式本體換成資料 → 整段 JS 語法壞掉。
-       而且壞的是**匯出後的檔案**,按匯出的當下完全看不出來(V5.43.0 就是這樣)。
-       兩道防護:
-       ① 搜尋字串用拼接組出來,原始碼裡不存在可被搜到的字面值
-       ② 用 lastIndexOf 從**後面**找 —— 佔位標籤永遠在 extraJs 之後 */
-    var _o='<scr'+'ipt id="hl'+'-data"';
-    var _c='</scr'+'ipt>';
-    var a1=src.lastIndexOf(_o);
-    if(a1<0)throw new Error('這份投影片沒有標記存放區(可能是舊版產出的),請重新產生一次 HTML 投影片。');
-    var a2=src.indexOf('>',a1);
-    var a3=src.indexOf(_c,a2);
-    if(a2<0||a3<0)throw new Error('標記存放區格式異常');
-    src=src.slice(0,a2+1)+json+src.slice(a3);
-    var fname=decodeURIComponent((location.pathname.split('/').pop()||'slides.html'));
-    var blob=new Blob([src],{type:'text/html;charset=utf-8'});
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);a.download=fname;
-    document.body.appendChild(a);a.click();
-    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
-    alert('已匯出 '+n+' 頁的標記。\\n\\n檔名:'+fname+'(與原檔同名)\\n\\n請把這份檔案上傳覆蓋分享空間,別台電腦開啟就看得到您畫的線。');
+    var r=_hlInject(await resp.text(),marks);
+    _hlDownload(r.src,_hlFname());
+    _hlMarkSaved(sig,'download');
+    alert('已下載一份含標記的投影片(到「下載」資料夾找最新的那一份)。\\n\\n要讓別台電腦也看得到:請把這份檔案上傳覆蓋分享空間的原檔。');
   }catch(e){
     console.error(e);
-    alert('匯出失敗:'+(e&&e.message||e)+'\\n\\n若這份是從本機開啟的,請改從分享網址開啟後再試。');
+    alert('存標記失敗:'+(e&&e.message||e));
   }finally{
-    if(btn){btn.disabled=false;btn.textContent=old;}
+    if(btn)btn.disabled=false;
   }
 }
-document.addEventListener('DOMContentLoaded',_hlRestore);
-if(document.readyState!=='loading')_hlRestore();
+/* V5.76.0 A:把標記傳回開這份預覽的系統畫面;系統存好回覆 ack 才算「已存」 */
+function _hlSendSys(sig){
+  /* V5.76.1 審核 R-3:系統存檔前會讀 NAS,網路磁碟慢時超過 4 秒很常見。原本 4 秒就放棄等待、移除監聽,
+     晚到的「已存」被丟掉 —— 系統其實存好了,這裡卻說沒有回應、按鈕還是「存標記」。
+     改成:4 秒只換成「還在儲存」的訊息、繼續等;20 秒才判定沒有回應。 */
+  var btn=document.getElementById('nb-save');if(btn)btn.disabled=true;
+  var id='r'+Date.now(),done=false,t1=null,t2=null,slowShown=false;
+  function closeSlow(){if(slowShown){var d0=document.getElementById('hl-dlg');if(d0)d0.remove();slowShown=false;}}
+  function fin(){done=true;clearTimeout(t1);clearTimeout(t2);window.removeEventListener('message',on);if(btn)btn.disabled=false;}
+  function on(e){
+    var d=e.data||{};
+    if(e.source!==window.opener||d.type!=='mdt-hl-ack'||d.req!==id)return;
+    fin();closeSlow();
+    if(d.ok)_hlMarkSaved(sig,'system');
+    else alert('標記沒有存進系統:\\n\\n'+(d.why||'原因不明')+'\\n\\n標記還在這個畫面上,處理好之後再按一次「存標記」。');
+  }
+  function noReply(){
+    if(done)return;fin();closeSlow();
+    _hlModal('系統沒有回應','找不到開這份預覽的系統畫面(可能已經關掉或重新整理)。標記還在這個畫面上。\\n'
+      +'可以回到系統重新按「預覽與畫重點」再畫;或先「改用下載」把這份含標記的投影片存到「下載」資料夾。',
+      [['知道了',null,false],['改用下載',function(){hlExport(true);},true]]);
+  }
+  window.addEventListener('message',on);
+  if(!window.opener){noReply();return;}
+  try{window.opener.postMessage({type:'mdt-hl',req:id,mid:_hlSys.mid,cid:_hlSys.cid,marks:_hlSysCollect()},'*');}catch(e){}
+  t1=setTimeout(function(){
+    if(done)return;slowShown=true;
+    _hlModal('系統還在儲存…','系統還沒回覆(NAS 比較慢時會這樣),請稍等,存好會自動顯示「✓ 已存(系統)」。\\n'
+      +'如果系統分頁已經關掉,可以選「改用下載」。',
+      [['繼續等',function(){slowShown=false;},false],['改用下載',function(){slowShown=false;hlExport(true);},true]]);
+  },4000);
+  t2=setTimeout(noReply,20000);
+}
+/* 頁內對話框:選檔與要求權限都必須在「她按下按鈕」那一下觸發,所以不用 alert 接著開檔 */
+function _hlModal(title,text,buttons){
+  var old=document.getElementById('hl-dlg');if(old)old.remove();
+  var ov=document.createElement('div');
+  ov.id='hl-dlg';
+  ov.style.cssText='position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;';
+  var bx=document.createElement('div');
+  bx.style.cssText='background:#fff;color:#1a2530;border-radius:10px;padding:22px 24px;max-width:520px;width:92vw;font-size:15px;line-height:1.75;box-shadow:0 10px 40px rgba(0,0,0,.35);';
+  var t=document.createElement('div');t.style.cssText='font-weight:700;font-size:17px;margin-bottom:8px;';t.textContent=title;
+  var p=document.createElement('div');p.textContent=text;
+  var row=document.createElement('div');row.style.cssText='display:flex;gap:10px;justify-content:flex-end;margin-top:16px;';
+  buttons.forEach(function(bd){
+    var bt=document.createElement('button');bt.textContent=bd[0];
+    bt.style.cssText=bd[2]?'padding:8px 18px;border:none;background:#4A7C8E;color:#fff;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;'
+      :'padding:8px 16px;border:1px solid #bbb;background:#fff;border-radius:6px;cursor:pointer;font-size:14px;';
+    bt.onclick=function(){ov.remove();if(bd[1])bd[1]();};
+    row.appendChild(bt);
+  });
+  bx.appendChild(t);bx.appendChild(p);bx.appendChild(row);ov.appendChild(bx);
+  document.body.appendChild(ov);
+}
+function _hlDialog(marks,n,sig,online){
+  if(online){
+    _hlModal('暫時無法存標記','目前連不到分享空間,所以沒辦法存。請稍後再按一次「存標記」;'
+      +'如果一直失敗,可以先把這份投影片下載到電腦,用電腦打開後再畫、再存。',[['知道了',null,true]]);
+    return;
+  }
+  _hlModal('存標記('+n+' 頁)','這份投影片是從電腦直接打開的,要多一個步驟:按「選擇檔案」,選這份投影片檔案本身'
+    +'(檔名:'+_hlFname()+'),系統會把標記寫回這個檔案。下次打開就看得到。',
+    [['取消',null,false],['選擇檔案',function(){_hlPickLocal(marks,n,sig);},true]]);
+}
+async function _hlPickLocal(marks,n,sig){
+  var fh=null,file=null;
+  try{
+    if(window.showOpenFilePicker){
+      var hs=await window.showOpenFilePicker({types:[{description:'HTML 投影片',accept:{'text/html':['.html','.htm']}}]});
+      fh=hs&&hs[0];file=fh?await fh.getFile():null;
+    }else{
+      file=await new Promise(function(res){var inp=document.createElement('input');inp.type='file';inp.accept='.html,.htm';
+        inp.onchange=function(){res(inp.files&&inp.files[0]||null);};
+        inp.addEventListener('cancel',function(){res(null);});/* H-11:取消時原本 Promise 永遠不結束 */
+        inp.click();});
+    }
+  }catch(e){if(e&&e.name==='AbortError')return;alert('無法開啟檔案:'+(e&&e.message||e));return;}
+  if(!file)return;
+  try{
+    var src=await file.text();
+    /* 第一道:標題要一樣(選錯場會議);第二道在 _hlInject 逐頁比對文字(H-1) */
+    var mt=src.match(/<title>([\\s\\S]*?)<\\/title>/);
+    var ta=document.createElement('textarea');ta.innerHTML=mt?mt[1]:'';
+    if(_hlNormT(ta.value)!==_hlNormT(document.title)){
+      alert('您選的「'+file.name+'」不是這份投影片(會議標題不同),沒有存。\\n\\n請選:'+_hlFname());
+      return;
+    }
+    var r=_hlInject(src,marks),wrote=false;
+    if(fh&&fh.createWritable){try{var w=await fh.createWritable();await w.write(r.src);await w.close();wrote=true;}
+      catch(e2){console.warn('[存標記] 直接寫回失敗',e2);}}
+    if(!wrote&&fh&&fh.requestPermission){_hlAskWrite(fh,r.src,file.name,sig);return;}/* H-4:再給一次按鍵機會 */
+    _hlFinishLocal(wrote,r.src,file.name,sig);
+  }catch(e){
+    console.error(e);
+    alert('存標記失敗:'+(e&&e.message||e));
+  }
+}
+function _hlFinishLocal(wrote,out,name,sig){
+  if(!wrote)_hlDownload(out,name);
+  _hlMarkSaved(sig,wrote?'file':'download');
+  alert(wrote
+    ?('已把標記存回「'+name+'」。\\n\\n下次打開這個檔案就看得到。')
+    :('沒有直接改原檔,已另存一份到「下載」資料夾(找最新的那一份)。\\n\\n請用它取代原本的「'+name+'」。'));
+}
+/* H-4:瀏覽器要她「允許修改」這個檔案,而這個詢問必須在按鍵當下才會出現 */
+function _hlAskWrite(fh,out,name,sig){
+  _hlModal('允許修改檔案','要把標記存回「'+name+'」,瀏覽器需要您允許修改這個檔案。按「允許修改並存回」後,瀏覽器會再問一次,請按「允許」。',
+    [['改用下載',function(){_hlFinishLocal(false,out,name,sig);},false],
+     ['允許修改並存回',async function(){
+        var ok=false;
+        try{var p=await fh.requestPermission({mode:'readwrite'});
+          if(p==='granted'){var w=await fh.createWritable();await w.write(out);await w.close();ok=true;}}
+        catch(e){console.warn('[存標記] 允許後仍寫回失敗',e);}
+        _hlFinishLocal(ok,out,name,sig);
+      },true]]);
+}
+function _hlInit(){var done=_hlRestore();_hlApplySys(done);_hlSavedSig=_hlSig();_hlSaveKind=(_hlSys&&_hlSys.preview)?'system':'file';_hlChanged();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_hlInit);
+else _hlInit();
 
 var _hlSel=null;
-document.addEventListener('mouseup',function(e){if(e.target.closest('#hl-toolbar'))return;var sel=window.getSelection();if(!sel||sel.isCollapsed||!sel.toString().trim()){document.getElementById('hl-toolbar').style.display='none';return;}_hlSel=sel.getRangeAt(0);var r=_hlSel.getBoundingClientRect();var tb=document.getElementById('hl-toolbar');tb.style.display='flex';var top=r.top-48;if(top<4)top=r.bottom+8;var left=r.left+r.width/2-160;if(left<4)left=4;if(left+320>window.innerWidth)left=window.innerWidth-324;tb.style.top=top+'px';tb.style.left=left+'px';});
+document.addEventListener('mouseup',function(e){if(e.target.closest('#hl-toolbar,#hl-rm'))return;var sel=window.getSelection();if(!sel||sel.isCollapsed||!sel.toString().trim()){document.getElementById('hl-toolbar').style.display='none';return;}_hlSel=sel.getRangeAt(0);var r=_hlSel.getBoundingClientRect();var tb=document.getElementById('hl-toolbar');tb.style.display='flex';var top=r.top-48;if(top<4)top=r.bottom+8;var tw=tb.offsetWidth||460;var left=r.left+r.width/2-tw/2;if(left<4)left=4;if(left+tw>window.innerWidth-4)left=window.innerWidth-tw-4;tb.style.top=top+'px';tb.style.left=left+'px';});
 document.addEventListener('keydown',function(e){
-if(e.key==='Escape')document.getElementById('hl-toolbar').style.display='none';
+if(e.key==='Escape'){document.getElementById('hl-toolbar').style.display='none';_hlHideRm();}
+if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&(e.key==='z'||e.key==='Z')){e.preventDefault();hlUndo();}
 });
-function hlApply(color){if(!_hlSel)return;try{var span=document.createElement('mark');span.style.background=color;span.style.color='inherit';_hlSel.surroundContents(span);}catch(ex){try{var frag=_hlSel.extractContents();var sp=document.createElement('mark');sp.style.background=color;sp.style.color='inherit';sp.appendChild(frag);_hlSel.insertNode(sp);}catch(e2){}}window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;}
+/* H-9:只能畫在投影片頁面上;時序圖(SVG)不能畫 —— HTML 的 mark 塞進 SVG 文字會整段消失 */
+function _hlCanApply(){
+  if(!_hlSel)return false;
+  var a=_hlSel.commonAncestorContainer,ae=a.nodeType===1?a:a.parentNode;
+  if(!_hlSlideOf(a)){document.getElementById('hl-toolbar').style.display='none';_hlSel=null;return false;}
+  if(ae&&ae.closest&&ae.closest('svg')){alert('病程時序圖上不能畫標記。');return false;}
+  return true;
+}
+function _hlWrap(make){
+  _hlPush(_hlSlideOf(_hlSel.commonAncestorContainer));
+  try{_hlSel.surroundContents(make());}
+  catch(ex){try{var frag=_hlSel.extractContents();var sp=make();sp.appendChild(frag);_hlSel.insertNode(sp);}catch(e2){}}
+  window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;_hlChanged();
+}
+function hlApply(color){if(!_hlCanApply())return;_hlWrap(function(){var m=document.createElement('mark');m.style.background=color;m.style.color='inherit';return m;});}
 /* V5.1.4: 字色變更工具 — 跟螢光筆同層,用 <span class="fc"> 包,不動 background */
-function fcApply(color){if(!_hlSel)return;try{var span=document.createElement('span');span.className='fc';span.style.color=color;span.style.fontWeight='600';_hlSel.surroundContents(span);}catch(ex){try{var frag=_hlSel.extractContents();var sp=document.createElement('span');sp.className='fc';sp.style.color=color;sp.style.fontWeight='600';sp.appendChild(frag);_hlSel.insertNode(sp);}catch(e2){}}window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;}
+function fcApply(color){if(!_hlCanApply())return;_hlWrap(function(){var s=document.createElement('span');s.className='fc';s.style.color=color;s.style.fontWeight='600';return s;});}
+function _hlUnwrap(m){var p=m.parentNode;if(!p)return;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);}
+/* V5.75.0 H-2:「✕ 清除」只在選字時看得到,所以原本的「沒選取 → 清本頁」使用者永遠走不到。
+   改成:選到的文字裡有標記 → 只清那些;沒有 → 問要不要清這一頁全部。 */
 function hlClear(){
-  /* V5.1.3: 若有選取範圍,只清該範圍內的標記;否則確認後清全頁 */
-  /* V5.1.4: 同時清螢光筆(mark)跟字色(span.fc)兩種標記 */
-  var sel='mark, span.fc';
-  if(_hlSel){
-    var range=_hlSel;
-    var els=document.querySelectorAll(sel);
-    els.forEach(function(m){
-      var inRange=range.intersectsNode?range.intersectsNode(m):false;
-      if(inRange){
-        var p=m.parentNode;
-        while(m.firstChild)p.insertBefore(m.firstChild,m);
-        p.removeChild(m);
-      }
-    });
-    window.getSelection().removeAllRanges();
-    _hlSel=null;
-  }else{
-    if(!confirm('沒有選取任何文字,是否清除本頁所有標記(螢光筆 + 字色)?'))return;
-    document.querySelectorAll(sel).forEach(function(m){var p=m.parentNode;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);});
-  }
+  var sel='mark, span.fc',r=_hlSel;
+  var hits=r?Array.prototype.filter.call(document.querySelectorAll(sel),function(m){return r.intersectsNode(m);}):[];
   document.getElementById('hl-toolbar').style.display='none';
+  window.getSelection().removeAllRanges();_hlSel=null;
+  if(hits.length){
+    _hlPush(_hlSlideOf(r.commonAncestorContainer));
+    hits.forEach(_hlUnwrap);
+  }else{
+    var cur=document.querySelectorAll('.slide')[c];if(!cur)return;
+    var all=cur.querySelectorAll(sel);
+    if(!all.length){alert('這一頁沒有標記。');return;}
+    if(!confirm('選取的文字裡沒有標記。\\n要清除這一頁全部 '+all.length+' 個標記嗎?(清錯可以按「↶ 復原」)'))return;
+    _hlPush(cur);Array.prototype.forEach.call(all,_hlUnwrap);
+  }
+  _hlChanged();
+}
+/* ════ V5.74.0 防誤用:復原、點標記單獨移除 ════
+   復原記的是「那一頁動手前的樣子」(最多 50 步)。V5.75.0 起不含 data: 圖片(H-8)、復原後保留捲動位置(H-6)。 */
+var _hlUndoStack=[],_hlRmTarget=null;
+function _hlSlideOf(node){var n=node&&(node.nodeType===1?node:node.parentNode);return n&&n.closest?n.closest('.slide'):null;}
+function _hlPush(slide){
+  if(!slide)return;
+  var all=document.querySelectorAll('.slide'),i=Array.prototype.indexOf.call(all,slide);
+  if(i<0)return;
+  _hlUndoStack.push({i:i,h:_hlSlideHTML(slide)});
+  if(_hlUndoStack.length>50)_hlUndoStack.shift();
+}
+function hlUndo(){
+  var u=_hlUndoStack.pop();
+  _hlHideRm();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;
+  if(!u)return;
+  var s=document.querySelectorAll('.slide')[u.i];
+  if(s)_hlSetHTML(s,u.h);
+  if(u.i!==c&&typeof go==='function')go(u.i);
+  _hlChanged();
+}
+function _hlHideRm(){var b=document.getElementById('hl-rm');if(b)b.style.display='none';}
+document.addEventListener('click',function(e){
+  if(e.target&&e.target.id==='hl-rm')return;
+  _hlHideRm();
+  var s=window.getSelection();if(s&&!s.isCollapsed&&s.toString().trim())return;
+  var m=e.target&&e.target.closest?e.target.closest('mark, span.fc'):null;
+  if(!m||!m.closest('.slide'))return;
+  _hlRmTarget=m;
+  var r=m.getBoundingClientRect(),b=document.getElementById('hl-rm');
+  b.style.display='block';
+  b.style.top=Math.max(4,r.top-38)+'px';
+  b.style.left=Math.max(4,Math.min(r.left,window.innerWidth-160))+'px';
+});
+function hlRemoveOne(){
+  var m=_hlRmTarget;_hlRmTarget=null;_hlHideRm();
+  if(!m||!m.parentNode)return;
+  _hlPush(m.closest('.slide'));
+  _hlUnwrap(m);
+  _hlChanged();
 }
 var _magMode=false,_magCv=null;
 function _initMag(){if(_magCv)return;_magCv=document.createElement('canvas');_magCv.style.cssText='position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;';document.body.appendChild(_magCv);}
@@ -10038,7 +10632,10 @@ document.addEventListener('dblclick',function(e){var slide=document.querySelecto
 document.addEventListener('mousedown',function(e){if(!_zoomTarget||_zoom<=1)return;var slide=document.querySelectorAll('.slide')[c];if(!slide||!slide.classList.contains('img-slide'))return;_dragging=true;_dragSx=e.clientX;_dragSy=e.clientY;_dragPx=_panX;_dragPy=_panY;e.preventDefault();});
 document.addEventListener('mousemove',function(e){if(!_dragging)return;_panX=_dragPx+(e.clientX-_dragSx)/_zoom;_panY=_dragPy+(e.clientY-_dragSy)/_zoom;_zoomImg();});
 document.addEventListener('mouseup',function(e){if(_dragging){_dragging=false;_zoomImg();}});
-var _origGo=go;go=function(i){_resetZoom();if(_magCv)_magCv.style.display='none';_origGo(i);};
+var _origGo=go;go=function(i){_resetZoom();if(_magCv)_magCv.style.display='none';
+  /* V5.75.0 H-7:換頁時收掉工具列與選取 —— 原本工具列還開著就換頁,標記會畫在看不到的上一頁 */
+  _hlSel=null;var _tb=document.getElementById('hl-toolbar');if(_tb)_tb.style.display='none';_hlHideRm();
+  _origGo(i);};
 /* Swipe navigation */
 var _tx=0,_ty=0;
 document.addEventListener('touchstart',function(e){if(e.touches.length===1){_tx=e.touches[0].clientX;_ty=e.touches[0].clientY;}},{passive:true});
@@ -10265,18 +10862,21 @@ window.openImgWindow=function(caseId){
     +'<style>'+css+'</style></head><body>\n'
     +'<div style="position:relative;width:100%;height:100%;">'+slides.join('')+'</div>\n'
     +'<div id="hl-toolbar">'
+      +'<span class="hl-lab">螢光</span>'
       +'<div class="hl-btn" style="background:#FFE066" onclick="hlApply(\'#FFE066\')" title="黃色螢光筆"></div>'
       +'<div class="hl-btn" style="background:#7FE87F" onclick="hlApply(\'#7FE87F\')" title="綠色螢光筆"></div>'
       +'<div class="hl-btn" style="background:#FF9980" onclick="hlApply(\'#FF9980\')" title="紅色螢光筆"></div>'
       +'<div class="hl-btn" style="background:#80C8FF" onclick="hlApply(\'#80C8FF\')" title="藍色螢光筆"></div>'
       +'<div class="hl-btn" style="background:#D9A0FF" onclick="hlApply(\'#D9A0FF\')" title="紫色螢光筆"></div>'
-      +'<div class="hl-sep"></div>'
+      +'<div class="hl-gap"></div><div class="hl-sep"></div>'
+      +'<span class="hl-lab">字色</span>'
       +'<button class="fc-btn" style="color:#D32F2F" onclick="fcApply(\'#D32F2F\')" title="紅色文字">A</button>'
       +'<button class="fc-btn" style="color:#1976D2" onclick="fcApply(\'#1976D2\')" title="藍色文字">A</button>'
       +'<button class="fc-btn" style="color:#388E3C" onclick="fcApply(\'#388E3C\')" title="綠色文字">A</button>'
       +'<button class="fc-btn" style="color:#F57C00" onclick="fcApply(\'#F57C00\')" title="橘色文字">A</button>'
       +'<button class="fc-btn" style="color:#7B1FA2" onclick="fcApply(\'#7B1FA2\')" title="紫色文字">A</button>'
-      +'<div class="hl-sep"></div>'
+      +'<div class="hl-gap"></div><div class="hl-sep"></div>'
+      +'<button class="hl-clr" onclick="hlUndo()" title="復原上一個動作(Ctrl+Z)">↶ 復原</button>'
       +'<button class="hl-clr" onclick="hlClear()">✕ 清除</button>'
       /* V5.43.0:標記匯出 —— 原本螢光筆與字色只存在記憶體裡的 DOM,關掉就沒了,
          個管師只好用瀏覽器「另存完整網頁」保存,那會把**執行期的完整 DOM**
@@ -10284,15 +10884,16 @@ window.openImgWindow=function(caseId){
          結果開啟要 30-40 秒、而且一頁一頁才正常。
          改成:抓回原始檔案 → 只把「有標記的頁面」存成一小段 JSON 塞進去 → 下載同名檔。
          檔案大小幾乎不變,開啟速度與原檔相同。 */
-      +'<div class="hl-sep"></div>'
-      +'<button class="hl-clr" style="border-color:#4A7C8E;color:#4A7C8E" onclick="hlExport()" title="把畫的線存進檔案,上傳後別台電腦也看得到">💾 匯出</button>'
+      /* V5.74.0:匯出移到下方導覽列常駐(原本只有選字時才看得到) */
     /* V5.19.0 #2 Case Navigator:☰ 開目錄,直接跳到某個個案(頁數多時免得一直翻) */
     +'</div>\n'
+    +'<button id="hl-rm" onclick="hlRemoveOne()">✕ 移除這個標記</button>\n'
     +'<div class="navdrawer" id="navdrawer"><div class="navdrawer-in">'
     +'<div class="navdrawer-h">會議目錄<button class="navdrawer-x" onclick="toggleNav(0)">&times;</button></div>'
     +'<div class="navdrawer-b" id="navdrawer-b"></div>'
     +'</div></div>\n'
     +'<div class="nav-pill" id="navpill">'
+    +'<button class="nb" id="nb-save" onclick="hlExport()" style="display:none" title="把畫的標記存進檔案">&#128190; 存標記</button>'
     +'<button class="nb" id="nb-toc" onclick="toggleNav(1)" title="會議目錄">&#9776;</button>'
     +'<button class="nb" id="nb-prev" onclick="go(c-1)">&#9664;</button>'
     +'<span class="ni" id="ni">1&thinsp;/&thinsp;'+N+'</span>'
@@ -10305,6 +10906,9 @@ window.openImgWindow=function(caseId){
        ① 有固定目標,匯出時不必判斷「有沒有」
        ② 位置在 extraJs 之後 —— 這點是必要的,見 hlExport 的說明 */
     +'\n<script id="hl-data" type="application/json">{}</'+'script>'
+    /* V5.76.0 A:這場會議存在系統裡的標記(以頁面文字對位的字元範圍)。preview=true 時「存標記」改傳回系統 */
+    +'\n<script id="hl-sys" type="application/json">'+JSON.stringify({mid:m.id,cid:cids[0],preview:!!opts.preview,
+        marks:((m.sections[cids[0]]||{}).hlMarks||{}).marks||{}}).replace(/</g,'\\u003c')+'</'+'script>'
     +'\n</body></html>'
   /* V5.5.0: 依設定偏好決定檔名語言(中文 / 英文 cancer code) */
   const _fnLang=getHtmlFnameLang();
@@ -10323,8 +10927,23 @@ window.openImgWindow=function(caseId){
   if(!_silent){/* V5.20.0: 改用參數,不再靠全域旗標 */
     const _w=[];
     const _miss=_qa.expectImgs-_qa.loadedImgs;
-    if(_miss>0){
-      _w.push('✗ 有 '+_miss+' 張影像讀取失敗，不會出現在投影片中：\n    '
+    const _nd=Object.keys(_qa.noDir);
+    if(_nd.length){
+      const _ndN=_nd.reduce(function(a,k){return a+_qa.noDir[k];},0);
+      const _fn=imgFolderHandle?imgFolderHandle.name:'影像資料夾';
+      _w.push('✗ 有 '+_nd.length+' 位病人沒有自己的影像資料夾,共 '+_ndN+' 張影像不會出現在投影片中：\n    '
+        +_nd.map(function(k){return '病歷號 '+k+'('+_qa.noDir[k]+' 張)';}).join('\n    ')
+        +'\n\n  怎麼處理:在「'+_fn+'」裡為每位病人新增一個資料夾,名稱用病歷號'
+        +'\n  (例如「'+_nd[0]+'」),把這位病人的影像移進去,再產出一次。不用重新選取影像。'
+        +'\n  (影像要分病人放,系統才不會把別人同名的影像放到這位病人的投影片上)');
+    }
+    if(_qa.spNoSlide.length){
+      _w.push('✗ 有 '+_qa.spNoSlide.length+' 個特殊議程沒有影像,不會出現在投影片上:\n    '
+        +_qa.spNoSlide.map(function(t){return '「'+t+'」';}).join('、')
+        +'\n\n  Word 記錄與 LINE 通知裡有;開會時要記得口頭帶到,或在這個議程放一張影像。');
+    }
+    if(_qa.missing.length){
+      _w.push('✗ 有 '+_qa.missing.length+' 張影像讀取失敗，不會出現在投影片中：\n    '
         +_qa.missing.slice(0,6).join('\n    ')+(_qa.missing.length>6?'\n    …等共 '+_qa.missing.length+' 張':''));
     }
     /* ════ V5.32.5:產出前檢查只擋「真正的問題」════
@@ -10497,7 +11116,7 @@ async function importXLSX(inputEl){
     S.meeting.sections[cid].cases.push(c);
     imported++;
   });
-  if(imported){renderCasesInner();markDirty();showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));}
+  if(imported){renderCasesInner();markDirty();showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));_afterImportFolders();/* V5.73.0 F-1 */}
   else alert('沒有成功匯入任何個案，請確認 Excel 格式');
 }
 
@@ -10633,16 +11252,16 @@ async function genXLSX(){
     }
 
     // ── Sheet 6: 前期追蹤 ──
-    const fupRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','前次日期','追蹤說明']];
+    const fupRows=[['癌別','病歷號','姓名（遮蔽）','主治醫師','前次日期'].concat(FUP_KEYS.map(function(k){return FUP_LBL[k];}))];/* V5.75.1 N-3 */
     cids.forEach(cid=>{
       const ca=CFG[cid];
       (m.sections[cid]?.followups||[]).forEach(f=>{
-        fupRows.push([ca.name,f.chartNo||'',f.name||'',getDoctorStr(f),f.prevDate||'',f.note||'']);
+        fupRows.push([ca.name,f.chartNo||'',f.name||'',getDoctorStr(f),f.prevDate||''].concat(FUP_KEYS.map(function(k){return f[k]||'';})));
       });
     });
     if(fupRows.length>1){
       const ws4=XLSX.utils.aoa_to_sheet(fupRows);
-      ws4['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:12},{wch:30}];
+      ws4['!cols']=[{wch:10},{wch:10},{wch:8},{wch:14},{wch:12},{wch:30},{wch:24},{wch:30}];
       XLSX.utils.book_append_sheet(wb,ws4,'前期追蹤');
     }
 
@@ -11381,6 +12000,7 @@ function importCaseJSON(inputEl){
     if(imported){
       markDirty();
       showSaveToast('已匯入 '+imported+' 筆個案'+(skipped?' ('+skipped+' 筆癌別不符，略過)':''));
+      setTimeout(_afterImportFolders,800);/* V5.73.0 F-1:在匯入警告之後 */
       /* V5.48.0 EV-7:彙整 _importWarn 並顯示,顯示後刪掉 —— 它是暫時提示,不該存進資料
          (原本宣告了、寫了、沒人讀,坑 T-1 的形狀)。 */
       (function(){
@@ -12234,9 +12854,11 @@ document.addEventListener('click',function(e){
         if(!Array.isArray(c.pathologyImages))c.pathologyImages=[];
       if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
         /* V5.3.0: 嘗試以病歷號為子資料夾名 */
-        const _sub=await _resolveSubFolder(imgFolderHandle,c.chartNo);
-        const _scanHandle=_sub?_sub.handle:imgFolderHandle;
-        const _subName=_sub?_sub.name:'';
+        /* V5.73.0 F-1:找不到病人資料夾就建好或說明,不再改列會議資料夾的檔案(那些產出時一律不載入) */
+        const _sub=await _patientDirForPick(c.chartNo);
+        if(!_sub)return;
+        const _scanHandle=_sub.handle;
+        const _subName=_sub.name;
         // List image files in folder
         const files=[];
         const _entries3=await _folderEntries(_scanHandle);
@@ -12334,9 +12956,11 @@ document.addEventListener('click',function(e){
         ensureSec(cid);const c=S.meeting.sections[cid][(picksurgfolder.dataset.ty==='events')?'events':'cases'][idx];if(!c)return;/* V5.52.0 */
         if(!Array.isArray(c.surgicalImages))c.surgicalImages=[];
         /* V5.3.0: 嘗試以病歷號為子資料夾名 */
-        const _sub=await _resolveSubFolder(imgFolderHandle,c.chartNo);
-        const _scanHandle=_sub?_sub.handle:imgFolderHandle;
-        const _subName=_sub?_sub.name:'';
+        /* V5.73.0 F-1:找不到病人資料夾就建好或說明,不再改列會議資料夾的檔案(那些產出時一律不載入) */
+        const _sub=await _patientDirForPick(c.chartNo);
+        if(!_sub)return;
+        const _scanHandle=_sub.handle;
+        const _subName=_sub.name;
         const files=[];
         const _entries1=await _folderEntries(_scanHandle);
         for(const entry of _entries1){
@@ -12561,9 +13185,11 @@ document.addEventListener('click',function(e){
         ensureSec(cid);const c=S.meeting.sections[cid][(pickimgfolder.dataset.ty==='events')?'events':'cases'][idx];if(!c)return;/* V5.52.0 */
         const arr=type==='mammo'?(c.mammo=c.mammo||{date:'',report:'',images:[]},c.mammo.images=c.mammo.images||[],c.mammo.images):c.images=(c.images||[]);
         /* V5.3.0: 嘗試以病歷號為子資料夾名 */
-        const _sub=await _resolveSubFolder(imgFolderHandle,c.chartNo);
-        const _scanHandle=_sub?_sub.handle:imgFolderHandle;
-        const _subName=_sub?_sub.name:'';
+        /* V5.73.0 F-1:找不到病人資料夾就建好或說明,不再改列會議資料夾的檔案(那些產出時一律不載入) */
+        const _sub=await _patientDirForPick(c.chartNo);
+        if(!_sub)return;
+        const _scanHandle=_sub.handle;
+        const _subName=_sub.name;
         const files=[];
         const _entries2=await _folderEntries(_scanHandle);
         for(const entry of _entries2){

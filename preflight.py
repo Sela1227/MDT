@@ -5,6 +5,7 @@ MDT 上線前檢查 —— 唯一入口(V5.70.0 起)
 用法:  python3 preflight.py              # 全部跑
        python3 preflight.py --quick      # 只跑靜態(不跑 jsdom / Worker,約 5 秒)
        python3 preflight.py --no-jshint  # 明確略過 jshint(沒裝時不加這個會 🔴)
+       python3 preflight.py --no-layout  # 明確略過版面檢查(沒有 playwright/Chromium 時不加這個會 🔴)
 
 取代:CLAUDE.md 裡散落的 Python 片段、每次手動拼的檢查、分開跑的 audit-render.js 與 test.mjs。
 每一項後面標的是它守的「原則」(見 CLAUDE.md 第八章)與代表坑號(細節見 PITFALLS.md)。
@@ -167,7 +168,7 @@ PII_PAT = re.compile(
     r"""["']?chartNo["']?\s*:\s*["']\s*(\d{7,8})\s*["']"""
     r"""|(?<![\d.#vV:-])(\d{7,8})[\s_/「」]{0,3}[\u4e00-\u9fff]○+[\u4e00-\u9fff]""")
 PII_FILES = ['index.html', 'README.md', 'CLAUDE.md', 'PITFALLS.md', 'USER_GUIDE.md', 'CHANGELOG.md',
-             'audit-render.js', 'cloudflare-share/test.mjs', 'SELA-handoff.md']
+             'audit-render.js', 'content-equiv.js', 'content-baseline.json', 'layout-check.js', 'preview-check.js', 'test-meeting.js', 'cloudflare-share/test.mjs', 'SELA-handoff.md']
 def pii_scan(text):
     return [(m.group(1) or m.group(2)) for m in PII_PAT.finditer(text) if not (m.group(1) or m.group(2)).startswith(('0000', '9000'))]
 bad = []
@@ -244,6 +245,32 @@ if not QUICK:
     reds = [l.strip() for l in out.splitlines() if '🔴' in l][:4]
     nojsdom = "Cannot find module 'jsdom'" in r.stderr
     check(D, 'audit-render.js(渲染/往返/雙機 NAS)', tot == 0, '缺 jsdom → npm i jsdom' if nojsdom else (f'{tot} 錯誤 ' + ' | '.join(reds) if tot else '單機 + 雙機 + 斷線 + 跨會議 + 本機失敗'))
+    # V5.75.0 內容等價:投影片上的字跟基準一樣(決策紀錄「保護網」;改內容須主任同意後 node content-equiv.js --update)
+    r = subprocess.run(['node', os.path.join(ROOT, 'content-equiv.js')], capture_output=True, text=True, cwd=ROOT, timeout=120)
+    m = re.search(r'結果 (-?\d+)', r.stdout)
+    ce = int(m.group(1)) if m else -1
+    reds = [l.strip() for l in r.stdout.splitlines() if '🔴' in l or '⚠' in l][:3]
+    check(D, '投影片內容等價(content-baseline.json)', ce == 0, ' | '.join(reds) if ce else 'HTML 產出文字與基準一致')
+    # V5.75.2 版面:真的 Chromium 排版,內容超出畫面又不能捲就 🔴(審核 P-1;content-equiv 只比文字看不到)
+    if '--no-layout' in sys.argv:
+        check(D, '投影片版面(layout-check.js)', True, '⚠ 已用 --no-layout 明確略過')
+        check(D, '預覽與畫重點(preview-check.js)', True, '⚠ 已用 --no-layout 明確略過')
+    else:
+        r = subprocess.run(['node', os.path.join(ROOT, 'layout-check.js')], capture_output=True, text=True, cwd=ROOT, timeout=180)
+        m = re.search(r'結果 (-?\d+)', r.stdout)
+        lc = int(m.group(1)) if m else -1
+        reds = [l.strip() for l in r.stdout.splitlines() if '🔴' in l or '⚠' in l][:3]
+        note = ('沒有 playwright → npm i -g playwright;或加 --no-layout 明確略過' if lc == -2
+                else (' | '.join(reds) if lc else '投影 1920×1080 與筆電 1366×768,每頁看得到或捲得到'))
+        check(D, '投影片版面(layout-check.js)', lc == 0, note)
+        # V5.76.0 預覽與畫重點:系統分頁 + 預覽分頁 + postMessage,只有真的瀏覽器測得到
+        r = subprocess.run(['node', os.path.join(ROOT, 'preview-check.js')], capture_output=True, text=True, cwd=ROOT, timeout=240)
+        m = re.search(r'結果 (-?\d+)', r.stdout)
+        pc = int(m.group(1)) if m else -1
+        reds = [l.strip() for l in r.stdout.splitlines() if '🔴' in l or '⚠' in l][:3]
+        note = ('沒有 playwright → npm i -g playwright;或加 --no-layout 明確略過' if pc == -2
+                else (' | '.join(reds) if pc else '9 情境:存標記確認、再預覽、拒存、內容改過、多份預覽、慢存檔、代班合併、複製會議'))
+        check(D, '預覽與畫重點(preview-check.js)', pc == 0, note)
     tm = os.path.join(ROOT, 'cloudflare-share', 'test.mjs')
     if os.path.exists(tm):
         r = subprocess.run(['node', tm], capture_output=True, text=True, cwd=os.path.join(ROOT, 'cloudflare-share'), timeout=60)
@@ -252,7 +279,7 @@ if not QUICK:
 
 # ═══════════════ 打包清單 ═══════════════
 need = ['index.html', 'AudioSplitter.html', 'README.md', 'CLAUDE.md', 'CHANGELOG.md', 'USER_GUIDE.md', 'SELA-handoff.md',
-        'PITFALLS.md', 'preflight.py', 'audit-render.js', '.gitignore',
+        'PITFALLS.md', 'preflight.py', 'audit-render.js', 'content-equiv.js', 'content-baseline.json', 'layout-check.js', 'preview-check.js', 'test-meeting.js', '.gitignore',
         'cloudflare-share/index.js', 'cloudflare-share/DEPLOY.md', 'cloudflare-share/test.mjs']
 miss = [f for f in need if not os.path.exists(os.path.join(ROOT, f))]
 check('打包', '必帶檔案齊全', not miss, f'缺 {miss}' if miss else f'{len(need)} 檔 + favicon/')

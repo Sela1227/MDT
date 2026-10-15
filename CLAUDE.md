@@ -16,6 +16,10 @@
 | `README.md` | 開發者 | 系統現況說明(不含歷程) |
 | `USER_GUIDE.md` | 三位個管師 | 操作說明 |
 | `SELA-handoff.md` | Kit 的 Claude | **凍結於 V5.10.5**,數字不是現況 |
+| `content-equiv.js` + `content-baseline.json` | preflight | 投影片內容等價測試(V5.75.0)。**投影片上的字變了就 🔴**;主任同意改內容後才 `node content-equiv.js --update` |
+| `test-meeting.js` | content-equiv / layout-check | 共用的真實份量虛構會議(V5.76.0),含 `MUST` 自我檢查;改它會讓 content-baseline 變,要 `--update` 並在 CHANGELOG 寫明「只換測試資料」 |
+| `preview-check.js` | preflight | 預覽與畫重點端到端(V5.76.0):真 Chromium、系統分頁 + 預覽分頁 + postMessage |
+| `layout-check.js` | preflight | 投影片版面檢查(V5.75.2):真 Chromium、1920×1080 與 1366×768,每頁看得到或捲得到。需要 playwright,沒有就 🔴 或 `--no-layout` |
 
 **版號**:三段式 `V主.次.修`(新功能 +0.1、修正 +0.01)。**每版要更新**:`index.html` 的 `VERSION`、`CHANGELOG.md` 新增一節、本檔第七節(最近 5 版)、`USER_GUIDE.md` 第九節;改到資料架構/產出規則/同步機制時**同一版改 README 與本檔第五節**。
 
@@ -143,7 +147,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
       events:    [{... 必要事件 ...}],
       team:      [{... 醫療小組 ...}],
       followups: [{..., status:'closed'|'ongoing', _autoImported}],
-      special:   [...]
+      special:   [...],
+      hlMarks:   {marks:{頁面文字指紋:[[起始,長度,'mark'|'span',style,class]]},at,by}  // V5.76.0 投影片標記(會議內容的註記,要同步)
     }
   }
 }
@@ -177,11 +182,11 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 一行 |
 |---|---|
-| V5.72.1 | T-1 醫療小組欄位名產出一致(`TEAM_LBL` 單一來源)、Word 補兩欄(主任同意) |
-| V5.72.0 | 投影片基因檢測重複標籤、Q-3 前期追蹤標題(主任同意) |
-| V5.71.1 | 個資檢查補 JSON 寫法與自我測試;README 技術規格照實;emoji 規範定案 |
-| V5.71.0 | 真實病歷號清除、R-1 本機失敗不跳自我衝突、文件拆出 CHANGELOG |
-| V5.70.1 | Q-1 本機失敗不記推送紀錄;preflight 缺 jshint 即 🔴、擋易錯寫法 |
+| V5.76.1 | R-1 合併時標記各自保留 + 存完核對才說已存;R-2 多份預覽;R-3 慢存檔不誤報;R-4 複製會議不帶標記(主任同意) |
+| V5.76.0 | **A 預覽與畫重點**(標記存進 `sections[cid].hlMarks`,postMessage + ack);Q-1 簡報筆;Q-2 純文字特殊議程提醒;Q-3;F 共用 `test-meeting.js`;Q-4 逐段裁切檢查;E 說明書對齊(主任同意) |
+| V5.75.2 | P-1 前期追蹤表可捲(V5.75.1 造成的 P1)+ `layout-check.js` 真 Chromium 版面檢查;P-2 續追只留原始決議+最近一次結果(主任同意) |
+| V5.75.1 | N-1 寫入舊版檔保留圖片;N-2 等價測試補涵蓋(自我檢查、影像張數);N-3 前期追蹤三段全印(`FUP_LBL`)、續追不帶上次結果(主任同意,基準已更新) |
+| V5.75.0 | 內容等價測試(保護網);審核 H-1 標記改用頁面文字對位、H-2~H-11、F-1a/b(主任同意) |
 
 **完整歷程見 `CHANGELOG.md`**。
 
@@ -295,6 +300,13 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 |---|---|---|---|
 | 2026-09-24 | **合併會議所有文件產出永遠只出目前分頁癌別**,無合併流程(LINE 通知例外) | 生效 | `getOutputCid()` 註解為設計不變量;preflight 檢查仍在 |
 | 2026-09-24 | **HTML 產出不要亂動,先討論再改**;目錄定位、雙欄功能延後 | 生效 |
+| 2026-10-15 | V5.76.0 審核:R-1 選「標記各自保留」(合併時 NAS 換掉非負責癌別的區段,但保留這台改過的 `hlMarks`);R-2~R-4 一起修 | 已完成(V5.76.1) | `_doSave` NAS 合併、message 處理器、extraJs `_hlSendSys`、`confirmCopyMtg` |
+| 2026-10-14 | 流程優化:主任說明「標記都在各自電腦畫好存好,會議上報告,當場畫是少數」→ 做 A(預覽與畫重點)、Q-1 簡報筆、不動投影片的一批(E/F/Q-2 提醒/Q-3/Q-4);B-2 影像根目錄待實機確認;C、Q-2 文字頁未做 | 已完成(V5.76.0) | `previewSlides`、`hl-sys`、extraJs 存標記;`test-meeting.js`、`preview-check.js` |
+| 2026-10-14 | V5.75.1 審核:P-1 選「A 可捲動」(不分頁);P-2 選「原始決議 + 最近一次結果」 | 已完成(V5.75.2) | `.tbl` 樣式;`autoImportPrevFollowups`;preflight 加版面檢查 |
+| 2026-10-14 | V5.75.0 審核:N-1、N-2 一起修;N-3 前期追蹤「三欄全印」、續追「上次結果放上次決議、目前結果留空」 | 已完成(V5.75.1) | 投影片/PPTX/Word/Excel 前期追蹤;`autoImportPrevFollowups`;**content-baseline 依此更新** |
+| 2026-10-14 | V5.74.0 審核 H-1~H-11、F-1a/b、T-1:主任「全部一次修」,並**先做內容等價測試** | 已完成(V5.75.0) | 只改投影片互動程式;`content-equiv.js` 確認投影片文字不變 |
+| 2026-10-14 | 投影片標記:匯出選「全套」、防誤用選「分組+復原」(顏色維持 5+5) | 已完成(V5.74.0) | `extraJs` 標記段、工具列、導覽列 |
+| 2026-10-14 | F-1 影像資料夾:主任「自動建病人病歷號子資料夾(匯入時觸發),說明要清楚」 | 已完成(V5.73.0) | 匯入、四個選取入口、產出前檢查;**嚴格模式不變** |
 | 2026-10-14 | T-1 醫療小組欄位名:主任「一起把 bug 改一改」 | 已完成(V5.72.1) | 投影片、閱覽、Word、會後填寫 |
 | 2026-10-14 | 投影片基因檢測重複標籤 + Q-3 前期追蹤標題:主任同意修 | 已完成(V5.72.0) | 見下方「會議 HTML 待辦」;jshint 白名單 W007 即 Q-3 |
 | 2026-09-24 | 疑似真實病歷號全部換成虛構 | 已完成(V5.71.0) | 範例一律 0000/9000 開頭,preflight 擋 JSON/JS/號碼+遮蔽姓名三種寫法 |
@@ -315,7 +327,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 | 目錄 | `_slideMeta` 只有 `case` 型;小組/事件/特殊議程頁目錄仍亮最後一位個案 | 最小修:非個案頁不亮 | 延後 |
 | 雙欄 | 下方內容提示、欄寬切換 50:50/40:60/60:40、同頁放大、討論問題移上、空白鍵防護(外部複審 §四~§六) | 新功能 | 延後 |
 | T-1 | 醫療小組欄位名:編輯畫面 V5.22.0 起改為「之前現病史/多專科建議/最新情況/治療決策」(只改顯示,底層 `cc/discussion/summary/decision` 不動),但產出沒跟著改 —— 投影片 `_trackSlide` 仍是「現病史/討論方向/摘要/決策」、閱覽模式 `teamViewHTML` 同、DOCX 醫療小組只出「討論摘要/決策結論」且**漏了之前現病史與多專科建議**。`_trackSlide` 與 events 共用,改時要用 `trackLabel==='醫療小組'` 分流(同 L9441 必要事件「病程經過」的寫法)。個管 2026-10-14 回報,「沒有要現在修」 | 投影片 4 個標籤 + 閱覽模式 + DOCX | **已修(V5.72.1)**,主任 2026-10-14 同意;另發現會後填寫視窗也是舊名,一併改 |
-| 保護網 | **內容等價測試**:固定合成資料產出投影片存基準,任何 HTML 改動 preflight 🔴,須明確更新基準 | preflight 新項 | **建議做任何 HTML 改動前先做這個** |
+| 保護網 | **內容等價測試**:固定合成資料產出投影片存基準,任何 HTML 改動 preflight 🔴,須明確更新基準 | preflight 新項 | **已做(V5.75.0)**:`content-equiv.js` + `content-baseline.json`;改投影片內容須主任同意後 `--update` |
 
 ---
 
@@ -371,4 +383,4 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 ## 十二、系統現況(一段話)
 
-MDT 會議管理系統是單一 `index.html`(約 13,000 行,部署於 GitHub Pages),三位個管師在各自電腦用 localStorage 儲存,經院內 NAS `sync/` 資料夾以「版號 + rev 內容指紋 + 依癌別區段合併」同步;合併會議的所有文件產出只出目前分頁癌別;投影片可經 Cloudflare Worker(`share.selaginella.io`,上傳金鑰 + 檢視密碼)分享;病程時序採 Hybrid timeline(`tlLayout`/`tlRender` 主程式與投影片共用同一份原始碼)。上線前以 `preflight.py` 單一入口檢查(字串跳脫、同步狀態、設定一致、jshint、jsdom 單機/雙機/斷線/跨會議/本機失敗、Worker)。會議 HTML 的版面改善(目錄、雙欄、Q-3)依主任決定延後,改動前應先建立內容等價測試。
+MDT 會議管理系統是單一 `index.html`(約 13,000 行,部署於 GitHub Pages),三位個管師在各自電腦用 localStorage 儲存,經院內 NAS `sync/` 資料夾以「版號 + rev 內容指紋 + 依癌別區段合併」同步;合併會議的所有文件產出只出目前分頁癌別;投影片可經 Cloudflare Worker(`share.selaginella.io`,上傳金鑰 + 檢視密碼)分享;病程時序採 Hybrid timeline(`tlLayout`/`tlRender` 主程式與投影片共用同一份原始碼)。上線前以 `preflight.py` 單一入口檢查(字串跳脫、同步狀態、設定一致、jshint、jsdom 單機/雙機/斷線/跨會議/本機失敗、Worker)。會議 HTML 的版面改善(目錄、雙欄)依主任決定延後;投影片文字由內容等價測試(`content-equiv.js`)守住,改內容須主任同意後更新基準。
