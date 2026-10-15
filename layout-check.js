@@ -96,21 +96,35 @@ const TM=require('./test-meeting.js');
         S.user=USERS[0];S.cids=['head_neck'];S.meeting=newMeetingObj(S.user.id,['head_neck']);S.meeting.date='2026-10-15';ensureSec('head_neck');
         var s=S.meeting.sections.head_neck;
         ['cases','team','events','followups','special'].forEach(function(t){s[t]=(DATA[t]||[]).map(function(d){var it=createItem('head_neck',t,d,{});if(d._extra)Object.assign(it,d._extra);return it;});});
-        var big=await renderLineImage(_lineData(),2);
-        var d=_lineData();
-        var ids=[].concat.apply([],d.groups[0].lists.map(function(L){return L.items.map(function(i){return i.chartNo;});}));
+        /* 再加 6 位個案,讓「個案討論」跨兩張(測 11–N 位的接續) */
+        for(var q=0;q<6;q++)s.cases.push(createItem('head_neck','cases',{chartNo:'900011'+q,name:'測試加'+q,diagnosis:'Oral cancer'},{}));
+        var d=_lineData(),plan=_lineImgPlan(d),cv=await renderLineImages(d,2);
         var want=['cases','team','events','followups'].reduce(function(a,t){return a+s[t].length;},0);
-        var px=big.getContext('2d').getImageData(200,40,1,1).data;
-        s.followups=s.followups.slice(0,2);
-        var small=await renderLineImage(_lineData(),2);
+        var seen=[],over=0,spOk=true;
+        plan.forEach(function(pg,i){if(!i)return;var np=pg.units.filter(function(u){return u.kind==='p';});if(np.length>10)over++;/* 主任定的 10 位,寫死不跟程式常數走 */
+          np.forEach(function(u){seen.push(u.it.chartNo);});
+          if(pg.units.some(function(u){return u.kind==='sp';})&&i!==plan.length-1)spOk=false;});
+        var px=cv[0].getContext('2d').getImageData(200,40,1,1).data,tall=Math.max.apply(null,cv.map(function(c){return c.height;}));
+        /* V5.78.1 主任:每張頁首一樣大、長度一樣 —— 量深色頁首的高度(左緣往下找第一個不是深色的點) */
+        var band=cv.map(function(c){var col=c.getContext('2d').getImageData(4,0,1,c.height).data,y=40;while(y<c.height&&col[y*4]<80)y++;return y;});
+        var sameH=cv.every(function(c){return c.height===cv[0].height;}),sameBand=band.every(function(b){return b===band[0];});
+        s.team=[];s.events=[];s.cases=[];s.followups=s.followups.slice(0,2);
+        var plan2=_lineImgPlan(_lineData());
+        var emptyOk=plan2.length===2&&plan2[1].empty.map(function(e){return e.label;}).join()==='個案討論,醫療小組,必要事件';
         var pv=document.getElementById('btn-preview-slides'),hs=document.getElementById('btn-html-slides');
-        return {w:big.width,h:big.height,h2:small.height,ids:ids.length,want:want,dark:px[0]<80&&px[1]<80,
+        return {w:cv[0].width,n:cv.length,np:plan.length,cover:plan[0].kind==='cover',ids:seen.length,uniq:new Set(seen).size,want:want,over:over,spOk:spOk,tall:tall,emptyOk:emptyOk,sameH:sameH,sameBand:sameBand,band:band.join('/'),dark:px[0]<80&&px[1]<80,
           order:!!(pv&&hs&&(pv.compareDocumentPosition(hs)&4)),btn:!!document.getElementById('btn-line-img')};
       },TM.DATA);
       if(errs.length)bad.push('LINE 通知圖片有錯誤:'+errs[0]);
       if(r.w!==2160)bad.push('LINE 通知圖片寬度 '+r.w+'(應 2160)');
-      if(!(r.h>r.h2&&r.h2>1000))bad.push('LINE 通知圖片高度沒有隨個案數變化('+r.h+' / '+r.h2+')');
-      if(r.ids!==r.want)bad.push('LINE 通知圖片個案數 '+r.ids+',會議裡有 '+r.want);
+      if(r.n!==r.np||!r.cover)bad.push('LINE 通知圖片張數 '+r.n+'、分頁 '+r.np+',第 1 張應是會議資訊');
+      if(r.ids!==r.want||r.uniq!==r.want)bad.push('LINE 通知圖片個案 '+r.ids+'(不重複 '+r.uniq+'),會議裡有 '+r.want);
+      if(r.over)bad.push('LINE 通知圖片有 '+r.over+' 張超過 10 位');
+      if(!r.spOk)bad.push('特殊議程沒有放在最後一張');
+      if(r.tall>6000)bad.push('LINE 通知圖片最高一張 '+r.tall+'px,太長');
+      if(!r.sameH)bad.push('LINE 通知圖片每張高度不一樣');
+      if(!r.sameBand)bad.push('LINE 通知圖片頁首高度不一樣('+r.band+')');
+      if(!r.emptyOk)bad.push('「本次無」的項目沒有合併在同一張');
       if(!r.dark)bad.push('LINE 通知圖片頁首沒畫出來');
       if(!r.order)bad.push('「預覽與畫重點」不在「HTML 投影片」前面');
       if(!r.btn)bad.push('會前通知沒有「LINE 通知圖片」按鈕');

@@ -924,7 +924,7 @@ textarea{resize:vertical}
             <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--textlt);margin:10px 0 6px">會前通知</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
               <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" onclick="doOutput('line')">LINE 通知</button>
-              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-line-img" onclick="genLineImage()" title="把 LINE 通知做成一張圖片,不會被 LINE 摺疊">LINE 通知圖片</button>
+              <button class="btn btn-b" style="padding:10px 4px;font-size:13px;white-space:nowrap;text-align:center;justify-content:center" id="btn-line-img" onclick="genLineImage()" title="把 LINE 通知做成圖片(第 1 張會議資訊,之後每 10 位一張),不會被 LINE 摺疊">LINE 通知圖片</button>
             </div>
             <div style="font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--textlt);margin:10px 0 6px">開會資料</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:6px">
@@ -1009,14 +1009,11 @@ textarea{resize:vertical}
             <!-- V5.78.0 LINE 通知圖片 -->
             <div id="line-img-area" style="display:none;margin-top:12px">
               <div class="brow" style="margin-bottom:8px;flex-wrap:wrap">
-                <button class="btn btn-a" onclick="copyLineImage()">複製圖片</button>
-                <button class="btn btn-m" onclick="downloadLineImage()">下載圖片</button>
+                <button class="btn btn-a" onclick="downloadLineImages()">全部下載</button>
                 <button class="btn btn-b" onclick="document.getElementById('line-img-area').style.display='none'">收起</button>
                 <span id="line-img-status" class="tlt"></span>
               </div>
-              <div style="max-height:640px;overflow:auto;border:1px solid var(--blt);border-radius:6px;background:var(--surface);padding:10px;text-align:center">
-                <img id="line-img" alt="LINE 通知圖片預覽" style="width:100%;max-width:420px;height:auto;box-shadow:0 2px 10px rgba(0,0,0,.08)">
-              </div>
+              <div id="line-img-list" style="max-height:640px;overflow:auto;border:1px solid var(--blt);border-radius:6px;background:var(--surface);padding:6px;text-align:left"></div>
             </div>
           </div>
         </div>
@@ -1740,7 +1737,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.78.0';
+const VERSION='V5.78.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -12291,7 +12288,6 @@ function genLine(){
    內容來自 _lineData()(與文字版同一份);畫在 canvas 上,寬 1080、2 倍解析度,高度依內容自動長。
    不放任何影像;病歷號與遮罩姓名跟文字版一樣。 */
 const _LI_FONT='"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",sans-serif';
-let _lineImgBlob=null,_lineImgName='';
 function _liWrap(ctx,text,maxW){
   const out=[];
   String(text==null?'':text).split('\n').forEach(function(para){
@@ -12313,182 +12309,264 @@ function _liWrap(ctx,text,maxW){
 }
 function _liRound(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 function _liTint(hex,a){const h=String(hex||'#5A7A8B').replace('#','');const n=parseInt(h.length===3?h.replace(/./g,'$&$&'):h,16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';}
-/* 排版:第一次只量尺寸、把畫圖動作收進 ops;第二次在正確高度的畫布上依序畫出 */
-function _lineImgLayout(d){
+/* V5.78.0 主任:「可以分段產出嗎?固定第一張到出席人員,後面依個案量每 10 例一張,沒有的項目合併濃縮」
+   第 1 張:會議資訊 + 出席人員 + 本次議程人數 + 備註;第 2 張起:每張最多 10 位、依高度平均分配(特殊議程不算人數,接在最後一張);每張頁首相同、高度相同,
+   合開時每個癌別從新的一張開始;「本次無」的項目合併成一行放在該癌別最後一張。 */
+const _LI_PER=10;
+function _liBegin(){
   const W=1080,M=56,CW=W-M*2,P=36;
-  const C={ink:'#1E2D3D',slate:'#24323F',muted:'#6F7C87',faint:'#A3ADB5',line:'#E4E0D7',paper:'#F4F1EA',card:'#FFFFFF',fog:'#5A7A8B',hi:'#A8CAD5'};
-  const mc=document.createElement('canvas').getContext('2d');
-  const F=function(w,px){return w+' '+px+'px '+_LI_FONT;};
-  const ops=[];let y=0;
-  const accent=(d.groups[0]&&d.groups[0].color)||C.fog;
-  const text=function(str,x,yy,font,color,align){ops.push(function(c){c.font=font;c.fillStyle=color;c.textAlign=align||'left';c.textBaseline='alphabetic';c.fillText(str,x,yy);});};
-  const lines=function(str,x,maxW,font,color,lh){mc.font=font;const ls=_liWrap(mc,str,maxW);ls.forEach(function(l,i){text(l,x,y+lh*(i+1)-lh*0.28,font,color);});y+=ls.length*lh;return ls.length;};
-  const tw=function(str,font){mc.font=font;return mc.measureText(str).width;};
-
-  /* ── 頁首 ── */
-  const hTop=y;
-  ops.push(function(c){c.fillStyle=C.slate;c.fillRect(0,0,W,c._hdrH);});
-  /* 頂端色條:合開時依癌別分段 */
-  ops.push(function(c){const n=d.groups.length||1,w=W/n;d.groups.forEach(function(g,i){c.fillStyle=g.color||C.fog;c.fillRect(i*w,0,w+1,10);});});
-  y+=74;
-  ops.push(function(c){c.letterSpacing='4px';});
-  text('MULTIDISCIPLINARY TEAM MEETING',M,y,F(600,20),C.hi);
-  ops.push(function(c){c.letterSpacing='0px';});
-  y+=26;
-  /* 「開會通知」標籤 */
-  (function(){const lb='開會通知',f=F(700,26),w=tw(lb,f)+40,yy=y;
-    ops.push(function(c){c.fillStyle=accent;_liRound(c,M,yy,w,46,23);c.fill();});
-    text(lb,M+20,yy+33,f,'#FFFFFF');})();
-  y+=46+22;
-  lines(d.title||'多專科團隊會議',M,CW,F(700,54),'#FFFFFF',72);
-  y+=14;
-  lines(d.date,M,CW,F(500,36),'#FFFFFF',50);
-  lines(d.time,M,CW,F(700,44),C.hi,58);
-  y+=42;
-  const hdrH=y-hTop;ops.unshift(function(c){c._hdrH=hdrH;});
-
-  /* ── 卡片工具 ── */
-  const card=function(build){const top=y;ops.push(function(c){c.save();c.shadowColor='rgba(30,45,61,.10)';c.shadowBlur=24;c.shadowOffsetY=6;c.fillStyle=C.card;_liRound(c,M,top,CW,c['_ch'+top],22);c.fill();c.restore();});
-    y+=P;build();y+=P;const h=y-top;ops.unshift(function(c){c['_ch'+top]=h;});y+=28;};
-  const heading=function(lb,x,right){y+=4;text(lb,x,y+34,F(700,32),C.ink);if(right)text(right,M+CW-P,y+34,F(500,24),C.muted,'right');y+=50;};
-
-  /* ── 時間地點 ── */
-  y+=36;
-  card(function(){
-    const rows=[['地點',d.loc||'—'],['聯絡人',d.contact||'—'],['視訊',(d.zoom.id?'會議 ID  '+d.zoom.id:'')+(d.zoom.pwd?'　密碼  '+d.zoom.pwd:'')||'—']];
+  const C={ink:'#1E2D3D',slate:'#24323F',muted:'#6F7C87',faint:'#A3ADB5',line:'#E4E0D7',paper:'#F4F1EA',card:'#FFFFFF',fog:'#5A7A8B',hi:'#A8CAD5',body:'#4D5B66'};
+  const K={W:W,M:M,CW:CW,P:P,C:C,ops:[],y:0,mc:document.createElement('canvas').getContext('2d')};
+  K.F=function(w,px){return w+' '+px+'px '+_LI_FONT;};
+  K.text=function(str,x,yy,font,color,align){K.ops.push(function(c){c.font=font;c.fillStyle=color;c.textAlign=align||'left';c.textBaseline='alphabetic';c.fillText(str,x,yy);});};
+  K.tw=function(str,font){K.mc.font=font;return K.mc.measureText(str).width;};
+  K.lines=function(str,x,maxW,font,color,lh){K.mc.font=font;const ls=_liWrap(K.mc,str,maxW),y0=K.y;ls.forEach(function(l,i){K.text(l,x,y0+lh*(i+1)-lh*0.28,font,color);});K.y+=ls.length*lh;return ls.length;};
+  K.hold=function(){const i=K.ops.length;K.ops.push(null);return i;};/* 先佔位,量完高度再補畫背景 */
+  K.card=function(build,bg){const top=K.y,i=K.hold();K.y+=P;build();K.y+=P;const h=K.y-top;
+    K.ops[i]=function(c){c.save();if(!bg){c.shadowColor='rgba(30,45,61,.10)';c.shadowBlur=24;c.shadowOffsetY=6;}c.fillStyle=bg||C.card;_liRound(c,M,top,CW,h,22);c.fill();c.restore();};K.y+=28;};
+  K.badge=function(num,x,yy,r,col){K.ops.push(function(c){c.fillStyle=col;c.beginPath();c.arc(x+r,yy+r,r,0,Math.PI*2);c.fill();});K.text(num,x+r,yy+r+r*0.42,K.F(700,Math.round(r*1.1)),'#FFFFFF','center');};
+  K.pill=function(label,x,yy,col){const f=K.F(600,22),w=K.tw(label,f)+26;K.ops.push(function(c){c.fillStyle=_liTint(col,.13);_liRound(c,x,yy,w,38,19);c.fill();});K.text(label,x+13,yy+27,f,col);return w;};
+  K.rule=function(x,w){const ly=K.y+6;K.ops.push(function(c){c.fillStyle=C.line;c.fillRect(x,ly,w,2);});K.y+=18;};
+  K.strip=function(groups){K.ops.push(function(c){const n=groups.length||1,w=W/n;groups.forEach(function(g,i){c.fillStyle=g.color||C.fog;c.fillRect(i*w,0,w+1,10);});});};
+  K.footer=function(no,total,yy){K.text('彰濱秀傳癌症中心　多專科團隊會議',M,yy+20,K.F(500,20),C.faint);K.text(no+' / '+total,W-M,yy+20,K.F(600,20),C.faint,'right');};
+  K.end=function(){return {W:W,H:Math.ceil(K.y),ops:K.ops,paper:C.paper,K:K};};
+  /* V5.78.1 主任:「標頭區塊都一樣大」—— 每一張用同一個頁首,只有標籤文字不同(會議名稱同一場都一樣,高度自然一致) */
+  K.header=function(d,label,no,total,groups,accent){
+    const hi=K.hold();K.strip(groups);
+    K.y=74;
+    K.ops.push(function(c){c.letterSpacing='4px';});
+    K.text('MULTIDISCIPLINARY TEAM MEETING',M,K.y,K.F(600,20),C.hi);
+    K.ops.push(function(c){c.letterSpacing='0px';});
+    K.text(no+' / '+total,M+CW,K.y,K.F(600,22),C.hi,'right');
+    K.y+=26;
+    (function(){const f=K.F(700,26),w=K.tw(label,f)+40,yy=K.y;
+      K.ops.push(function(c){c.fillStyle=accent;_liRound(c,M,yy,w,46,23);c.fill();});K.text(label,M+20,yy+33,f,'#FFFFFF');})();
+    K.y+=68;
+    K.lines(d.title||'多專科團隊會議',M,CW,K.F(700,54),'#FFFFFF',72);
+    K.y+=14;
+    K.lines(d.date,M,CW,K.F(500,36),'#FFFFFF',50);
+    K.lines(d.time,M,CW,K.F(700,44),C.hi,58);
+    K.y+=42;
+    const hh=K.y;K.ops[hi]=function(c){c.fillStyle=C.slate;c.fillRect(0,0,W,hh);};
+    K.y+=36;
+  };
+  return K;
+}
+/* 分頁:第 1 張固定;之後每個癌別的人(依項目順序)與特殊議程,每 _LI_PER 個一張 */
+function _lineImgPlan(d){
+  const pages=[{kind:'cover'}];
+  d.groups.forEach(function(g){
+    const units=[],empty=[];
+    g.lists.forEach(function(L,li){
+      if(!L.items.length){empty.push({no:li+1,label:L.label});return;}
+      L.items.forEach(function(it,ii){units.push({kind:'p',no:li+1,label:L.label,total:L.items.length,idx:ii+1,it:it});});
+    });
+    /* 只有「人」算 10 位;特殊議程不是個案,接在該癌別最後一張 */
+    const sps=g.special.map(function(sp,si){return {kind:'sp',no:g.lists.length+si+1,sp:sp,total:g.special.length};});
+    /* V5.78.1 主任:「長度也儘量一樣大」—— 張數仍是每 10 位一張,但依高度平均分配(不會一張 10 位、下一張 2 位) */
+    const n=Math.max(1,Math.ceil(units.length/_LI_PER));
+    /* 依「大約佔的高度」切:有第二行的人較高、每項開頭多一個標題列、特殊議程算在最後一張 */
+    const wt=function(u,i){return 1+((u.it.prev||u.it.sub2)?0.75:0)+((i===0||units[i-1].no!==u.no)?1.3:0);};
+    const total=units.reduce(function(a,u,i){return a+wt(u,i);},0)+sps.reduce(function(a,x){return a+1.2+(x.sp.note?0.6:0);},sps.length?1.3:0);
+    let from=0,acc=0;
+    for(let k=0;k<n;k++){
+      let to=from;
+      if(k===n-1)to=units.length;
+      else{const goal=total*(k+1)/n;
+        while(to<units.length&&to-from<_LI_PER&&(to===from||units.length-to>_LI_PER*(n-k-1)||acc+wt(units[to],to)/2<=goal)){acc+=wt(units[to],to);to++;}
+        /* 不讓一項只剩 1 位落單在另一張:切點後只剩該項最後 1 位 → 帶過來;切點前只有該項第 1 位 → 推過去 */
+        const same=function(a,b){return a>=0&&b<units.length&&units[a].no===units[b].no;};
+        if(to<units.length&&same(to-1,to)&&!same(to,to+1)&&to-from<_LI_PER){acc+=wt(units[to],to);to++;}
+        else if(to-from>1&&to<units.length&&same(to-1,to)&&!same(to-2,to-1)&&units.length-(to-1)<=_LI_PER*(n-k-1)){to--;acc-=wt(units[to],to);}}
+      pages.push({kind:'body',g:g,units:units.slice(from,to).concat(k===n-1?sps:[]),empty:k===n-1?empty:[],part:k+1,parts:n});from=to;}
+  });
+  return pages;
+}
+function _lineImgCover(d,pages,total){
+  const K=_liBegin(),C=K.C,F=K.F,M=K.M,CW=K.CW,P=K.P,accent=(d.groups[0]&&d.groups[0].color)||C.fog;
+  K.header(d,'開會通知',1,total,d.groups,accent);
+  /* 時間地點 */
+  K.card(function(){
+    const rows=[['地點',d.loc||'—'],['聯絡人',d.contact||'—'],['視訊',((d.zoom.id?'會議 ID  '+d.zoom.id:'')+(d.zoom.pwd?'　密碼  '+d.zoom.pwd:''))||'—']];
     if(d.zoom.url)rows.push(['連結',d.zoom.url]);
     rows.forEach(function(r,i){
-      if(i){const yy=y+10;ops.push(function(c){c.fillStyle=C.line;c.fillRect(M+P,yy,CW-P*2,2);});y+=22;}
+      if(i){const yy=K.y+10;K.ops.push(function(c){c.fillStyle=C.line;c.fillRect(M+P,yy,CW-P*2,2);});K.y+=22;}
       const small=r[0]==='連結';
-      text(r[0],M+P,y+(small?24:31),F(500,24),C.muted);
-      lines(r[1],M+P+130,CW-P*2-130,F(small?400:500,small?22:30),small?C.muted:C.ink,small?32:44);
+      K.text(r[0],M+P,K.y+(small?24:31),F(500,24),C.muted);
+      K.lines(r[1],M+P+130,CW-P*2-130,F(small?400:500,small?22:30),small?C.muted:C.ink,small?32:44);
     });
   });
-
-  /* ── 出席人員 ── */
-  card(function(){
-    heading('出席人員',M+P);
+  /* 出席人員 */
+  K.card(function(){
+    const x0=M+P;
+    K.text('出席人員',x0,K.y+38,F(700,32),C.ink);K.y+=58;
     d.groups.forEach(function(g,gi){
-      if(gi)y+=18;
-      const f=F(700,28),x0=M+P;
-      if(d.multi){const w=tw(g.name,F(700,24))+28,yy=y;ops.push(function(c){c.fillStyle=_liTint(g.color,.14);_liRound(c,x0,yy,w,40,20);c.fill();});text(g.name,x0+14,yy+29,F(700,24),g.color||C.fog);y+=52;}
-      text('召集人',x0,y+32,F(500,24),C.muted);
-      lines(g.conv||'—',x0+130,CW-P*2-130,f,C.ink,44);
-      y+=10;text('核心成員',x0,y+30,F(500,24),C.muted);
-      /* 成員做成小標籤,自動換行 */
+      if(gi)K.y+=18;
+      if(d.multi){K.pill(g.name,x0,K.y,g.color||C.fog);K.y+=52;}
+      K.text('召集人',x0,K.y+32,F(500,24),C.muted);
+      K.lines(g.conv||'—',x0+130,CW-P*2-130,F(700,28),C.ink,44);
+      K.y+=10;K.text('核心成員',x0,K.y+30,F(500,24),C.muted);
       const ms=String(g.members||'').split(/[；;、]/).map(function(s){return s.trim();}).filter(Boolean);
-      let cx=x0+130,cy=y;const mf=F(500,25),maxX=M+CW-P;
-      if(!ms.length){text('—',cx,cy+30,mf,C.ink);cy+=44;}
-      ms.forEach(function(m,i){const w=tw(m,mf)+28;if(cx+w>maxX&&cx>x0+130){cx=x0+130;cy+=52;}
-        const xx=cx,yy=cy;ops.push(function(c){c.fillStyle='#F1F4F6';_liRound(c,xx,yy,w,42,10);c.fill();});text(m,xx+14,yy+30,mf,'#34495E');cx+=w+10;
+      let cx=x0+130,cy=K.y;const mf=F(500,25),maxX=M+CW-P;
+      if(!ms.length){K.text('—',cx,cy+30,mf,C.ink);cy+=44;}
+      ms.forEach(function(m,i){const w=K.tw(m,mf)+28;if(cx+w>maxX&&cx>x0+130){cx=x0+130;cy+=52;}
+        const xx=cx,yy=cy;K.ops.push(function(c){c.fillStyle='#F1F4F6';_liRound(c,xx,yy,w,42,10);c.fill();});K.text(m,xx+14,yy+30,mf,'#34495E');cx+=w+10;
         if(i===ms.length-1)cy+=52;});
-      y=cy;
+      K.y=cy;
     });
-    y+=6;text(d.mealNote,M+P,y+28,F(500,23),accent);y+=36;
+    K.y+=6;K.text(d.mealNote,x0,K.y+28,F(500,23),accent);K.y+=36;
   });
-
-  /* ── 會議說明:每位個案一列,不摺疊 ── */
-  d.groups.forEach(function(g){
-    const col=g.color||C.fog;
-    if(d.multi){y+=6;const yy=y;ops.push(function(c){c.fillStyle=col;_liRound(c,M,yy,8,40,4);c.fill();});text(g.name+' 會議說明',M+22,y+32,F(700,32),C.ink);y+=60;}
-    else{text('會議說明',M,y+32,F(700,32),C.ink);y+=60;}
-    let n=1;
-    const badge=function(num,x,yy,r){ops.push(function(c){c.fillStyle=col;c.beginPath();c.arc(x+r,yy+r,r,0,Math.PI*2);c.fill();});text(num,x+r,yy+r+r*0.42,F(700,Math.round(r*1.1)),'#FFFFFF','center');};
-    g.lists.forEach(function(L){
-      card(function(){
-        const x0=M+P,cnt=L.items.length;
-        badge(String(n++),x0,y,21);
-        text(L.label,x0+60,y+33,F(700,30),C.ink);
-        text(cnt?cnt+' 位':'本次無',M+CW-P,y+33,F(cnt?600:500,24),cnt?col:C.faint,'right');
-        y+=cnt?52:42;
-        L.items.forEach(function(it,i){
-          if(i){const ly=y+6;ops.push(function(c){c.fillStyle=C.line;c.fillRect(x0,ly,CW-P*2,2);});y+=18;}
-          const pf=F(600,22),pw=tw(it.sub,pf)+26,ry=y,xi=x0+pw+16,wi=M+CW-P-xi;
-          ops.push(function(c){c.fillStyle=_liTint(col,.13);_liRound(c,x0,ry,pw,38,19);c.fill();});
-          text(it.sub,x0+13,ry+27,pf,col);
-          let x=xi;
-          const nf=F(700,28),cf=F(600,27);
-          text(it.chartNo,x,ry+29,cf,C.ink);x+=tw(it.chartNo,cf)+18;
-          text(it.name,x,ry+29,nf,C.ink);x+=tw(it.name,nf)+18;
-          const vs='VS '+it.vs,vf=F(500,25),vw=tw(vs,vf);
-          if(x+vw<=M+CW-P){text(vs,M+CW-P,ry+29,vf,C.muted,'right');y+=42;}
-          else{y+=42;lines(vs,xi,wi,vf,C.muted,34);}
-          /* 第二行:前次日期 + 備註/討論重點 */
-          if(it.prev||it.sub2){
-            let x2=xi;const yy=y;
-            if(it.prev){const pt='前次 '+it.prev,ptf=F(400,22);text(pt,x2,yy+25,ptf,C.faint);x2+=tw(pt,ptf)+20;}
-            if(it.sub2){if(x2>xi&&wi-(x2-xi)<260){y+=34;x2=xi;}lines(it.sub2,x2,M+CW-P-x2,F(400,24),'#4D5B66',34);}
-            else y+=34;
-          }
+  /* 本次議程:各項人數,告訴大家後面還有幾張 */
+  K.card(function(){
+    const x0=M+P;
+    K.text('本次議程',x0,K.y+38,F(700,32),C.ink);
+    if(total>1)K.text('名單見第 2'+(total>2?'–'+total:'')+' 張',M+CW-P,K.y+38,F(500,24),C.muted,'right');
+    K.y+=62;
+    d.groups.forEach(function(g,gi){
+      const col=g.color||C.fog;
+      if(gi)K.y+=12;
+      if(d.multi){K.pill(g.name,x0,K.y,col);K.y+=50;}
+      const rows=g.lists.filter(function(L){return L.items.length;}).map(function(L){return [L.label,L.items.length+' 位',true];});
+      if(g.special.length)rows.push(['特殊議程',g.special.length+' 項',true]);
+      const none=g.lists.filter(function(L){return !L.items.length;}).map(function(L){return L.label;});
+      /* 兩欄排列 */
+      const half=(CW-P*2-24)/2;
+      rows.forEach(function(r,i){const col2=i%2,xx=x0+col2*(half+24),yy=K.y+Math.floor(i/2)*58;
+        K.ops.push(function(c){c.fillStyle=r[2]?_liTint(col,.08):'#F5F5F3';_liRound(c,xx,yy,half,48,12);c.fill();});
+        K.text(r[0],xx+18,yy+33,F(500,25),r[2]?C.ink:C.faint);
+        K.text(r[1],xx+half-18,yy+33,F(r[2]?700:500,25),r[2]?col:C.faint,'right');});
+      K.y+=Math.ceil(rows.length/2)*58-10;
+      /* 沒有人的項目濃縮成一行 */
+      if(none.length){if(rows.length)K.y+=18;K.text('本次無',x0,K.y+28,F(600,23),C.faint);K.lines(none.join('、'),x0+90,CW-P*2-90,F(400,23),C.faint,36);}
+    });
+  });
+  /* 備註 */
+  K.card(function(){
+    K.mc.font=F(400,24);
+    const ls=[].concat(_liWrap(K.mc,d.remark[0],CW-P*2-70),_liWrap(K.mc,d.remark[1],CW-P*2-70)),y0=K.y;
+    K.text('備註',M+P,y0+26,F(700,24),C.fog);
+    ls.forEach(function(l,i){K.text(l,M+P+70,y0+26+i*38,F(400,24),C.body);});
+    K.y+=ls.length*38-6;
+  },_liTint(C.fog,.10));
+  return K.end();
+}
+function _lineImgBody(d,pg,no,total){
+  const K=_liBegin(),C=K.C,F=K.F,M=K.M,CW=K.CW,P=K.P,g=pg.g,col=g.color||C.fog;
+  K.header(d,(d.multi?g.name+' · ':'')+'會議名單'+(pg.parts>1?' '+pg.part+'/'+pg.parts:''),no,total,[g],col);
+  /* 連續同一項目的人放同一張卡 */
+  const runs=[];pg.units.forEach(function(u){const key=u.kind==='sp'?'sp':'p'+u.no,last=runs[runs.length-1];if(last&&last.key===key)last.us.push(u);else runs.push({key:key,us:[u]});});
+  runs.forEach(function(run){
+    K.card(function(){
+      const x0=M+P,u0=run.us[0];
+      if(u0.kind==='sp'){
+        K.text('特殊議程',x0,K.y+33,F(700,30),C.ink);
+        K.text(u0.total+' 項',M+CW-P,K.y+33,F(600,24),col,'right');K.y+=54;
+        run.us.forEach(function(u,i){
+          if(i)K.rule(x0,CW-P*2);
+          const sp=u.sp;K.badge(String(u.no),x0,K.y+2,17,col);
+          let x=x0+50;
+          if(sp.type)x+=K.pill(sp.type,x,K.y,col)+14;
+          const t=sp.title&&sp.title!==sp.type?sp.title:'';
+          if(t)K.lines(t,x,M+CW-P-x,F(700,27),C.ink,40);else K.y+=40;
+          if(sp.note){K.y+=2;K.lines(sp.note,x0+50,CW-P*2-50,F(400,24),C.body,34);}
         });
-      });
-    });
-    if(g.special.length)card(function(){
-      const x0=M+P;
-      text('特殊議程',x0,y+33,F(700,30),C.ink);
-      text(g.special.length+' 項',M+CW-P,y+33,F(600,24),col,'right');
-      y+=54;
-      g.special.forEach(function(sp,i){
-        if(i){const ly=y+6;ops.push(function(c){c.fillStyle=C.line;c.fillRect(x0,ly,CW-P*2,2);});y+=18;}
-        badge(String(n++),x0,y+2,17);
-        let x=x0+50;const ry=y;
-        if(sp.type){const pf=F(600,22),pw=tw(sp.type,pf)+26,px=x;ops.push(function(c){c.fillStyle=_liTint(col,.13);_liRound(c,px,ry,pw,38,19);c.fill();});text(sp.type,x+13,ry+27,pf,col);x+=pw+14;}
-        const t=sp.title&&sp.title!==sp.type?sp.title:'';
-        if(t){lines(t,x,M+CW-P-x,F(700,27),C.ink,40);}else y+=40;
-        if(sp.note){y+=2;lines(sp.note,x0+50,CW-P*2-50,F(400,24),'#4D5B66',34);}
+        return;
+      }
+      K.badge(String(u0.no),x0,K.y,21,col);
+      K.text(u0.label,x0+60,K.y+33,F(700,30),C.ink);
+      const a=u0.idx,b=run.us[run.us.length-1].idx;
+      K.text(u0.total>run.us.length?'第 '+(a===b?a:a+'–'+b)+' 位 / 共 '+u0.total+' 位':u0.total+' 位',M+CW-P,K.y+33,F(600,24),col,'right');
+      K.y+=52;
+      run.us.forEach(function(u,i){
+        const it=u.it;
+        if(i)K.rule(x0,CW-P*2);else K.y+=4;
+        const ry=K.y;
+        K.text(String(u.idx),x0+14,ry+28,F(600,22),C.faint,'center');
+        const xp=x0+38,pw=K.pill(it.sub,xp,ry,col),xi=xp+pw+16,wi=M+CW-P-xi;
+        let x=xi;const nf=F(700,28),cf=F(600,27);
+        K.text(it.chartNo,x,ry+29,cf,C.ink);x+=K.tw(it.chartNo,cf)+18;
+        K.text(it.name,x,ry+29,nf,C.ink);x+=K.tw(it.name,nf)+18;
+        const vs='VS '+it.vs,vf=F(500,25),vw=K.tw(vs,vf);
+        if(x+vw<=M+CW-P){K.text(vs,M+CW-P,ry+29,vf,C.muted,'right');K.y+=42;}
+        else{K.y+=42;K.lines(vs,xi,wi,vf,C.muted,34);}
+        if(it.prev||it.sub2){
+          let x2=xi;
+          if(it.prev){const pt='前次 '+it.prev,ptf=F(400,22);K.text(pt,x2,K.y+25,ptf,C.faint);x2+=K.tw(pt,ptf)+20;}
+          if(it.sub2){if(x2>xi&&wi-(x2-xi)<260){K.y+=34;x2=xi;}K.lines(it.sub2,x2,M+CW-P-x2,F(400,24),C.body,34);}
+          else K.y+=34;
+        }
       });
     });
   });
-
-  /* ── 備註與頁尾 ── */
-  (function(){const top=y;mc.font=F(400,24);
-    const ls=[].concat(_liWrap(mc,d.remark[0],CW-P*2-60),_liWrap(mc,d.remark[1],CW-P*2-60));const h=P+ls.length*38+P-6;
-    ops.push(function(c){c.fillStyle=_liTint(C.fog,.10);_liRound(c,M,top,CW,h,22);c.fill();});
-    text('備註',M+P,top+P+26,F(700,24),C.fog);
-    ls.forEach(function(l,i){text(l,M+P+70,top+P+26+i*38,F(400,24),'#4D5B66');});
-    y=top+h+40;})();
-  text('彰濱秀傳癌症中心　多專科團隊會議',W/2,y+20,F(500,20),C.faint,'center');
-  y+=58;
-  return {W:W,H:Math.ceil(y),ops:ops,paper:C.paper};
+  /* 沒有人的項目合併成一行 */
+  if(pg.empty.length)K.card(function(){
+    const x0=M+P;
+    K.text('本次無',x0,K.y+30,F(700,24),C.muted);
+    K.lines(pg.empty.map(function(e){return e.no+'. '+e.label;}).join('　'),x0+100,CW-P*2-100,F(500,25),C.faint,40);
+  },'#ECE9E2');
+  if(!pg.units.length&&!pg.empty.length){K.lines('本次無個案',M,CW,F(500,26),C.faint,40);K.y+=20;}
+  return K.end();
 }
 async function _lineImgFonts(){
   try{if(!document.fonts||!document.fonts.load)return;
     await Promise.race([Promise.all(['400','500','600','700'].map(function(w){return document.fonts.load(w+' 30px "Noto Sans TC"','開會通知ABC123');})),new Promise(function(r){setTimeout(r,2000);})]);
   }catch(e){}
 }
-/* 回傳 canvas(測試也用這支) */
-async function renderLineImage(d,scale){
+/* 回傳每一張的 canvas(測試也用這支) */
+async function renderLineImages(d,scale){
   await _lineImgFonts();
-  const L=_lineImgLayout(d),k=scale||2;
-  const cv=document.createElement('canvas');cv.width=L.W*k;cv.height=L.H*k;
-  const c=cv.getContext('2d');c.scale(k,k);c.fillStyle=L.paper;c.fillRect(0,0,L.W,L.H);
-  L.ops.forEach(function(f){f(c);});
-  return cv;
+  const plan=_lineImgPlan(d),total=plan.length,k=scale||2;
+  const Ls=plan.map(function(pg,i){return pg.kind==='cover'?_lineImgCover(d,plan,total):_lineImgBody(d,pg,i+1,total);});
+  /* V5.78.1:每張一樣高(取最高的那張),頁尾固定在最下方 */
+  const H=Math.max.apply(null,Ls.map(function(L){return L.H;}))+12+58;
+  return Ls.map(function(L,i){
+    L.K.footer(i+1,total,H-58);
+    const cv=document.createElement('canvas');cv.width=L.W*k;cv.height=H*k;
+    const c=cv.getContext('2d');c.scale(k,k);c.fillStyle=L.paper;c.fillRect(0,0,L.W,H);
+    L.ops.forEach(function(f){f(c);});
+    return cv;
+  });
 }
+let _lineImgs=[];/* [{blob,name,url}] */
+function _lineImgMsg(t){document.getElementById('line-img-status').textContent=t;}
 async function genLineImage(){
-  const area=document.getElementById('line-img-area'),st=document.getElementById('line-img-status');
-  if(!S.meeting||!S.meeting.version){area.style.display='block';document.getElementById('line-img').removeAttribute('src');st.textContent='請先儲存會議資料，才能產生通知圖片。';return;}
-  st.textContent='';
+  const area=document.getElementById('line-img-area'),list=document.getElementById('line-img-list');
+  if(!S.meeting||!S.meeting.version){area.style.display='block';list.textContent='';_lineImgMsg('請先儲存會議資料，才能產生通知圖片。');return;}
+  _lineImgMsg('');
   if(readForm()===false){area.style.display='none';return;}
-  st.textContent='產生中…';area.style.display='block';
+  _lineImgMsg('產生中…');area.style.display='block';
   try{
-    const d=_lineData(),cv=await renderLineImage(d,2);
-    _lineImgBlob=await new Promise(function(r){cv.toBlob(r,'image/png');});
-    _lineImgName=('會議通知_'+(S.meeting.date||'')+'_'+d.groups.map(function(g){return g.name;}).join('、')+'.png').replace(/[\\/:*?"<>|]/g,'_');
-    const img=document.getElementById('line-img');if(img.src&&/^blob:/.test(img.src))URL.revokeObjectURL(img.src);
-    img.src=URL.createObjectURL(_lineImgBlob);
-    st.textContent='圖片已產生。按「複製圖片」後到 LINE 貼上,或下載後再傳。';
-  }catch(e){console.error(e);st.textContent='產生失敗：'+(e&&e.message||e);}
+    const d=_lineData(),cvs=await renderLineImages(d,2);
+    _lineImgs.forEach(function(x){URL.revokeObjectURL(x.url);});
+    const base=('會議通知_'+(S.meeting.date||'')+'_'+d.groups.map(function(g){return g.name;}).join('、')).replace(/[\\/:*?"<>|]/g,'_');
+    _lineImgs=[];
+    for(let i=0;i<cvs.length;i++){
+      const blob=await new Promise(function(r){cvs[i].toBlob(r,'image/png');});
+      _lineImgs.push({blob:blob,name:base+(cvs.length>1?'_'+(i+1)+'-'+cvs.length:'')+'.png',url:URL.createObjectURL(blob)});
+    }
+    list.textContent='';
+    _lineImgs.forEach(function(x,i){
+      const box=document.createElement('div');box.style.cssText='display:inline-block;vertical-align:top;width:220px;margin:6px;text-align:center';
+      const cap=document.createElement('div');cap.style.cssText='font-size:12px;color:var(--textmd);margin-bottom:4px';cap.textContent='第 '+(i+1)+' 張 / 共 '+_lineImgs.length+' 張';
+      const img=document.createElement('img');img.src=x.url;img.alt=cap.textContent;img.style.cssText='width:100%;height:auto;box-shadow:0 2px 10px rgba(0,0,0,.10);border-radius:4px;cursor:zoom-in';
+      img.addEventListener('click',function(){window.open(x.url,'_blank');});
+      const row=document.createElement('div');row.style.cssText='display:flex;gap:4px;justify-content:center;margin-top:6px';
+      const b1=document.createElement('button');b1.className='btn btn-a btn-sm';b1.textContent='複製';b1.addEventListener('click',function(){copyLineImage(i);});
+      const b2=document.createElement('button');b2.className='btn btn-m btn-sm';b2.textContent='下載';b2.addEventListener('click',function(){download(x.blob,x.name);});
+      row.appendChild(b1);row.appendChild(b2);box.appendChild(cap);box.appendChild(img);box.appendChild(row);list.appendChild(box);
+    });
+    _lineImgMsg(_lineImgs.length>1?'共 '+_lineImgs.length+' 張。按「全部下載」一次存下,或每張按「複製」後到 LINE 貼上(一次貼一張,依序貼)。':'圖片已產生。按「複製」後到 LINE 貼上,或下載後再傳。');
+  }catch(e){console.error(e);_lineImgMsg('產生失敗：'+(e&&e.message||e));}
 }
-async function copyLineImage(){
-  const st=document.getElementById('line-img-status');
-  if(!_lineImgBlob){st.textContent='請先產生圖片。';return;}
-  try{await navigator.clipboard.write([new ClipboardItem({'image/png':_lineImgBlob})]);st.textContent='已複製圖片 ✓ 到 LINE 對話框按 Ctrl+V 貼上。';}
-  catch(e){st.textContent='這台電腦的瀏覽器不允許直接複製圖片,請改按「下載圖片」再傳到 LINE。';}
+async function copyLineImage(i){
+  const x=_lineImgs[i||0];
+  if(!x){_lineImgMsg('請先產生圖片。');return;}
+  try{await navigator.clipboard.write([new ClipboardItem({'image/png':x.blob})]);_lineImgMsg('已複製第 '+((i||0)+1)+' 張 ✓ 到 LINE 對話框按 Ctrl+V 貼上。');}
+  catch(e){_lineImgMsg('這台電腦的瀏覽器不允許直接複製圖片,請改按「下載」再傳到 LINE。');}
 }
-function downloadLineImage(){
-  if(!_lineImgBlob){document.getElementById('line-img-status').textContent='請先產生圖片。';return;}
-  download(_lineImgBlob,_lineImgName||'會議通知.png');
+function downloadLineImages(){
+  if(!_lineImgs.length){_lineImgMsg('請先產生圖片。');return;}
+  _lineImgs.forEach(function(x,i){setTimeout(function(){download(x.blob,x.name);},i*400);});/* 間隔一下,瀏覽器才不會擋連續下載 */
 }
 
 /* ════ V5.65.0 A-1:送 AI 前去識別化 ════
