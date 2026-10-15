@@ -162,6 +162,21 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
     if(!/已存\(系統\)/.test(b8.txt)||!r1.hl)bad.push('R-1 代班畫的標記應保留並顯示已存:按鈕 '+b8.txt+' 標記 '+r1.hl);
     if(r1.disc!=='第二位討論(負責人更新)')bad.push('R-1 個案內容應以負責人(NAS)為準:'+r1.disc);
     await pop.close();
+
+    /* ⑧b V5.79.0 審核 S-1:反方向 —— 負責人改了個案內容再存,NAS 上是代班者較新、多了標記的版本 → 標記要留著,個案內容是負責人的 */
+    const s1=await p.evaluate(async function(){
+      var owner=USERS.find(function(u){return (u.cancers||[]).indexOf('head_neck')>=0;}),other=S.user;
+      var nas=JSON.parse(JSON.stringify(S.meeting));nas.rev='nas-helper-rev';nas.version=(S.meeting.version||1)+9;nas.savedById=other.id;nas.savedBy=other.name;
+      if(!nas.sections.head_neck.hlMarks)return {err:'前一步沒有標記'};
+      window.__nas=nas;
+      S.user=owner;delete S.meeting.sections.head_neck.hlMarks;S._snapshot=JSON.stringify(S.meeting);S._baseRev='owner-base';S._baseVer=1;
+      S.meeting.sections.head_neck.cases[0].diagnosis='負責人修改的診斷';markDirty();
+      await saveMeeting({silent:true});
+      var sc=S.meeting.sections.head_neck;
+      return {hl:!!(sc.hlMarks&&(sc.hlMarks.marks||[]).length),dx:sc.cases[0].diagnosis};
+    });
+    if(s1.err||!s1.hl)bad.push('S-1 負責人改個案後存檔,代班者畫的標記被蓋掉'+(s1.err?'('+s1.err+')':''));
+    if(s1.dx!=='負責人修改的診斷')bad.push('S-1 個案內容應是負責人修改的:'+s1.dx);
     await p.evaluate(function(){nasHandle=null;});
 
     /* ⑨ R-4:複製會議不帶標記(原始碼) */
@@ -169,7 +184,7 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
     const cp=src.slice(src.indexOf('function confirmCopyMtg('),src.indexOf('function confirmCopyMtg(')+1500);
     if(cp.indexOf('delete copy.sections[k].hlMarks')<0)bad.push('R-4 複製會議沒有清掉投影片標記');
 
-    console.log('預覽與畫重點 12 個情境'+(bad.length?'':' ✅'));
+    console.log('預覽與畫重點 13 個情境'+(bad.length?'':' ✅'));
     bad.slice(0,6).forEach(x=>console.log('  🔴 '+x));
     console.log('結果 '+bad.length);
   }catch(e){console.log('⚠ 例外:',e.message.slice(0,200));console.log('結果 -1');}

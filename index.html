@@ -547,6 +547,11 @@ textarea{resize:vertical}
 .casetop2{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:0 12px 8px 34px;font-size:12px;cursor:pointer;line-height:1.5}
 .casetop2:empty{display:none}.ct2-dx{color:var(--textmd)}.ct2-q{color:var(--acc);font-weight:500}
 .casecard:not(.cc-collapsed) .casetop2{display:none}
+/* V5.79.0 UI-4:前期追蹤收合列的「目前結果」填了沒 —— 用 :placeholder-shown 即時反映,不必重繪 */
+.fup-st{font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px}
+.fup-st-todo{display:none;color:var(--warn)}.fup-st-done{color:var(--ok)}
+.track-card:has(textarea.fup-note:placeholder-shown) .fup-st-done{display:none}
+.track-card:has(textarea.fup-note:placeholder-shown) .fup-st-todo{display:inline}
 /* V5.66.0 UI 優化②:情境列 */
 .ctx-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--textmd);padding:7px 12px;margin:0 0 10px;background:var(--surface);border:1px solid var(--blt);border-radius:4px}
 .ctx-bar .sep{color:var(--blt)}.ctx-bar .ed{color:var(--warn);font-weight:600}
@@ -1737,7 +1742,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.78.2';
+const VERSION='V5.79.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -4772,7 +4777,8 @@ function followupViewHTML(cid,i,d,type='followups'){
 </div>
 <div class="vc-body">
 ${d.prevDate?`<div class="vc-r"><span class="vc-l">前次</span><span class="vc-v">${rocDate(d.prevDate)}</span></div>`:''}
-${d.note?`<div class="vc-r"><span class="vc-l">說明</span><span class="vc-v">${escA(d.note)}</span></div>`:''}
+${/* V5.79.0 審核 UI-3:閱覽卡片也用 FUP_KEYS(V5.75.1 N-3 漏改的第五處),會後填的決策結論一併顯示 */
+  FUP_KEYS.concat(['decision']).map(function(k){return String(d[k]||'').trim()?`<div class="vc-r"><span class="vc-l">${FUP_LBL[k]}</span><span class="vc-v">${escA(d[k]).replace(/\n/g,'<br>')}</span></div>`:'';}).join('')}
 </div></div>`;
 }
 function editFollowup(cid,i,type){
@@ -4811,7 +4817,7 @@ function casesPane(cid){
   const fups=sec.followups||[],cases=sec.cases||[],sp=sec.special||[],team=sec.team||[];
   const vm=S.viewMode;
   const cFn=vm?caseViewHTML:caseHTML;
-  const fFn=vm?followupViewHTML:function(cid,i,d,type){return followupHTML(cid,i,d,type,!!d._autoImported);};
+  const fFn=vm?followupViewHTML:function(cid,i,d){return followupEditHTML(cid,i,d);};
   const sFn=vm?specialViewHTML:specialHTML;
   // Pre-build add buttons (cid is in scope, no complex concat)
   const bFup=vm?'':('<button class="btnadd" onclick="addItem(\'' + cid + '\',\'followups\')">+ 新增追蹤個案</button>'+'<button class="btnadd" style="background:none;border:1px solid var(--blt);color:var(--fog-dk)" onclick="openFollowupImport(\'' + cid + '\')">↩ 從上次帶入</button>');
@@ -5116,17 +5122,19 @@ function caseHTML(cid,i,d,type,opts){
 }
 
 
-function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag sec-tag-fu">前期追蹤</span>${d.prevDate?`<span class="sec-tag-date">上次 ${escA(d.prevDate)}</span>`:''}<button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
+/* V5.79.0 審核 UI-4:編輯畫面畫前期追蹤只走這一支 —— 自動帶入的預設收合(原本主畫面收合,帶入後重繪那條路又全部展開) */
+function followupEditHTML(cid,i,d){return followupHTML(cid,i,d,'followups',!!d._autoImported);}
+function followupHTML(cid,i,d,type='followups',collapsed=false){const _cardId='cc-'+cid+'-'+type+'-'+i;return`<div class="casecard track-card${collapsed?' cc-collapsed':''}" id="${_cardId}"><div class="casetop" data-action="togglecase" data-card="${_cardId}" style="cursor:pointer"><span class="cc-toggle-icon" id="tgi-${cid}-${type}-${i}">${collapsed?'▶':'▼'}</span><span class="cno">${d.chartNo||'病歷號'}</span><span class="cnm">${d.name?maskName(d.name):'姓名'}</span><span class="sec-tag sec-tag-fu">前期追蹤</span>${d.prevDate?`<span class="sec-tag-date">上次 ${escA(d.prevDate)}</span>`:''}<button class="delbtn" onclick="event.stopPropagation();if(confirm('確定刪除此前期追蹤個案？'))delItem('${cid}','${type}',${i})">×</button></div>${/* V5.79.0 審核 UI-4:收合時看得到上次決議第一行與目前結果填了沒(同個案的 casetop2) */''}<div class="casetop2" data-action="togglecase" data-card="${_cardId}">${(function(){const pd=String(d.prevDecision||'').split('\n')[0].trim();return (pd?'<span class="ct2-dx" title="'+escA(d.prevDecision)+'">'+FUP_LBL.prevDecision+':'+escA(pd.slice(0,34))+(pd.length>34?'…':'')+'</span>':'')+'<span class="fup-st"><span class="fup-st-done">✓ 已填'+FUP_LBL.note+'</span><span class="fup-st-todo">待填'+FUP_LBL.note+'</span></span>';})()}</div><div class="cg2"><div class="fg"><label>病歷號</label><input value="${escA(d.chartNo||'')}" oninput="upd('${cid}','${type}',${i},'chartNo',this.value.replace(/\s/g,''))" onblur="this.value=this.value.trim();upd('${cid}','${type}',${i},'chartNo',this.value)"></div><div class="fg"><label>姓名</label><input value="${escA(d.name||'')}" oninput="upd('${cid}','${type}',${i},'name',this.value)"></div><div class="fg full" style="grid-column:1/-1"><label>主治醫師</label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第一主治</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[0]||'':d.doctor||'',0)}</div>
 <div><div style="font-size:10px;color:var(--textlt);margin-bottom:3px">第二主治（選填）</div>${drSelDept(cid,type,i,Array.isArray(d.doctors)?d.doctors[1]||'':'',1)}</div>
-</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div>${d.prevDecision?`<div class="fg full"><label>${FUP_LBL.prevDecision}</label><div class="ro-box">${escA(d.prevDecision).replace(/\n/g,'<br>')}</div></div>`:''}<div class="fg full"><label>${FUP_LBL.followFocus}</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'followFocus',this.value)" placeholder="這次要確認什麼（例：手術是否已安排？病理報告出來了嗎？）" class="f-ta">${escA(d.followFocus||'')}</textarea></div><div class="fg full"><label>${FUP_LBL.note}</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤結果或本次結論" class="f-ta">${escA(d.note||'')}</textarea></div></div></div>`}
+</div></div><div class="fg"><label>上次多專科日期</label><input type="date" value="${d.prevDate||''}" oninput="upd('${cid}','${type}',${i},'prevDate',this.value)"></div>${d.prevDecision?`<div class="fg full"><label>${FUP_LBL.prevDecision}</label><div class="ro-box">${escA(d.prevDecision).replace(/\n/g,'<br>')}</div></div>`:''}<div class="fg full"><label>${FUP_LBL.followFocus}</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'followFocus',this.value)" placeholder="這次要確認什麼（例：手術是否已安排？病理報告出來了嗎？）" class="f-ta">${escA(d.followFocus||'')}</textarea></div><div class="fg full"><label>${FUP_LBL.note}</label><textarea rows="2" oninput="upd('${cid}','${type}',${i},'note',this.value)" placeholder="追蹤結果或本次結論" class="f-ta fup-note">${escA(d.note||'')}</textarea></div></div></div>`}
 /* V5.72.1 T-1:醫療小組欄位名的唯一來源。V5.22.0 只改了編輯畫面,投影片/閱覽/Word/會後填寫沿用舊名且 Word 漏兩欄。
    底層欄位 cc/discussion/summary/decision 不動;必要事件與個案不用這組名稱。 */
 const TEAM_LBL={cc:'之前現病史',discussion:'多專科建議',summary:'最新情況',decision:'治療決策'};
 /* V5.75.1 N-3:前期追蹤欄位名的唯一來源。V5.22.0 編輯畫面改成三段,但投影片/PPTX/Word/Excel 只印 note 且叫「追蹤說明」,
    上次決議與本次追蹤重點從沒出現在任何產出(必要提報續追「為什麼要追」開會時看不到)。 */
-const FUP_LBL={prevDecision:'上次決議',followFocus:'本次追蹤重點',note:'目前結果'};
+const FUP_LBL={prevDecision:'上次決議',followFocus:'本次追蹤重點',note:'目前結果',decision:'決策結論'};/* decision:會後填寫(V5.79.0 UI-1);投影片仍只印 FUP_KEYS 三欄 */
 const FUP_KEYS=['prevDecision','followFocus','note'];
 /* V5.0.0: teamHTML — 醫療小組 / 必要事件 共用,比 followup 多 5 個討論欄位(診斷、現病史、討論方向、摘要、決策),用對 type 不複製 followupHTML 的 'cases' 寫死 bug */
 function teamHTML(cid,i,d,type='team',collapsed=false){
@@ -5171,17 +5179,23 @@ function teamViewHTML(cid,i,d,type='team'){
     : '<div class="vc-row" style="color:var(--textlt);font-style:italic">（尚未填寫討論內容）</div>';
   return`<div class="casecard vc track-card" id="${_cardId}"><div class="vc-hdr">${d.chartNo||''} ${d.name?maskName(d.name):''}<span class="vc-hdr-sub">${dm?' '+escA(dm):''} VS ${escA(drs)}</span></div>${body}</div>`;
 }
+/* V5.79.0 審核 UI-7:特殊議程類型列只有一份(原本三種卡片各寫一次 8 顆)。
+   還沒選類型 → 8 顆全列;選了 → 收成一行「類別:完治率 ▾ 更改」,點了才展開重選(卡片少 1~2 列高) */
+const SP_TYPES=['核心指標','品質指標','修改指引','完治率','失聯率','留治率','訪視率','其他'];
+function _spTypeRow(cid,i,d,style){
+  const cur=d.topicType||'';
+  const chips=SP_TYPES.map(function(t){return '<span class="tchip '+(cur===t?'on':'')+'" data-action="specialtype" data-cid="'+escA(cid)+'" data-idx="'+i+'" data-type="'+t+'">'+t+'</span>';}).join('');
+  return '<div class="fg full sp-type"'+(style?' style="'+style+'"':'')+'>'
+    +(cur?'<details><summary style="cursor:pointer;font-size:12px;color:var(--textmd);list-style:none">類別:<b style="color:var(--fog-dk)">'+escA(cur)+'</b> <span style="color:var(--textlt)">▾ 更改</span></summary><div class="trow" style="margin:6px 0">'+chips+'</div></details>'
+         :'<label>類別</label><div class="trow" style="margin-bottom:6px">'+chips+'</div>')
+    +'</div>';
+}
 function specialHTML(cid,i,d){
   if(d.topicType==='完治率') return specialCRHTML(cid,i,d);
   if(['失聯率','留治率','訪視率'].includes(d.topicType)) return specialRateHTML(cid,i,d);
-  const STYPES=['核心指標','品質指標','修改指引','完治率','失聯率','留治率','訪視率','其他'];
-  const typeChips=STYPES.map(t=>{
-    const on=(d.topicType||'')===t;
-    return`<span class="tchip ${on?'on':''}" data-action="specialtype" data-cid="${cid}" data-idx="${i}" data-type="${t}">${t}</span>`;
-  }).join('');
   return`<div class="casecard" id="cc-${cid}-special-${i}">
 <div class="casetop"><span class="cnm">${escA(d.topicType||d.title||'特殊議程')}</span><button class="delbtn" onclick="delItem('${cid}','special',${i})">×</button></div>
-<div class="fg full"><label>類別</label><div class="trow" style="margin-bottom:6px">${typeChips}</div></div>
+${_spTypeRow(cid,i,d)}
 <div class="fg full"><label>標題</label><input value="${escA(d.title||'')}" oninput="upd('${cid}','special',${i},'title',this.value)" placeholder="例：114年1-12月品質指標審查" style="font-size:13px;padding:6px 8px;width:100%"></div>
 <div class="fg full"><label>說明（選填）</label><textarea rows="3" oninput="upd('${cid}','special',${i},'note',this.value)" placeholder="說明內容（可多行）" style="font-size:14px;padding:7px 9px;width:100%;resize:vertical;line-height:1.6;border:1px solid var(--border);border-radius:2px">${escA(d.note||'')}</textarea></div>
 <div class="fg full"><div class="field-hdr" style="flex-wrap:wrap;gap:4px"><label>投影片影像</label><span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--textlt);margin-left:8px">每頁 <select onchange="upd('${cid}','special',${i},'imgsPerSlide',parseInt(this.value))" style="font-size:11px;padding:1px 5px;border:1px solid var(--blt);border-radius:2px;background:var(--surface)"><option value="1"${(d.imgsPerSlide||4)===1?' selected':''}>1 張</option><option value="2"${(d.imgsPerSlide||4)===2?' selected':''}>2 張</option><option value="4"${(d.imgsPerSlide||4)===4?' selected':''}>4 張</option></select></span></div><div id="special-img-area-${cid}-${i}">${buildSpecialImgArea(cid,i,d)}</div></div>
@@ -5256,7 +5270,7 @@ function specialRateHTML(cid,i,d){
   var patId='cr-patients-'+cid+'-'+i;
   return '<div class="casecard" id="cc-'+cid+'-special-'+i+'">'
     +'<div class="casetop"><span class="cnm">'+escA(d.topicType)+'</span><button class="delbtn" onclick="delItem(\''+cid+'\',\'special\','+i+')">×</button></div>'
-    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+(d.topicType==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+(d.topicType==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+(d.topicType==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+(d.topicType==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+(d.topicType==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+(d.topicType==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+(d.topicType==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'<span class="tchip '+(d.topicType==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'</div></div>'
+    +_spTypeRow(cid,i,d,'padding:4px 10px 8px')
     +'<div class="cg2">'
     +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
     +'<div class="fg full"><div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px">'
@@ -5340,7 +5354,7 @@ function specialCRHTML(cid,i,d){
     +'<span class="cnm">\u5b8c\u6cbb\u7387</span>'
     +'<button class="delbtn" data-action="delspecialitem" data-cid="'+cid+'" data-type="special" data-idx="'+i+'">\u00d7</button>'
     +'</div>'
-    +'<div class="fg full" style="padding:4px 10px 8px"><div class="trow">'+'<span class="tchip '+('完治率'==='核心指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="核心指標">核心指標</span>'+'<span class="tchip '+('完治率'==='品質指標'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="品質指標">品質指標</span>'+'<span class="tchip '+('完治率'==='修改指引'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="修改指引">修改指引</span>'+'<span class="tchip '+('完治率'==='完治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="完治率">完治率</span>'+'<span class="tchip '+('完治率'==='失聯率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="失聯率">失聯率</span>'+'<span class="tchip '+('完治率'==='留治率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="留治率">留治率</span>'+'<span class="tchip '+('完治率'==='訪視率'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="訪視率">訪視率</span>'+'<span class="tchip '+('完治率'==='其他'?'on':'') + '" data-action="specialtype" data-cid="'+cid+'" data-idx="'+i+'" data-type="其他">其他</span>'+'</div></div>'
+    +_spTypeRow(cid,i,d,'padding:4px 10px 8px')
     +'<div class="cg2">'
     +'<div class="fsec">\u7d71\u8a08\u6578\u5b57</div>'
     +'<div class="fg full"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
@@ -5724,8 +5738,9 @@ function openPostMtgPanel(){
       fhdr.textContent='前期追蹤';
       body.appendChild(fhdr);
       fups.forEach(function(f,fi){
-        var isOngoing=f.status==='ongoing';
-        var card=document.createElement('div');
+        /* V5.79.0 審核 UI-2:三種狀態 —— 沒選時兩顆都不亮(原本沒選會顯示成「結案」亮著,其實 status 是空的,下一場也不會帶入) */
+        var st=f.status==='ongoing'||f.status==='closed'?f.status:'';
+        var card=document.createElement('div');card.className='pf-card';
         card.style.cssText='background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:12px 14px;margin-bottom:8px';
         card.innerHTML=
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
@@ -5734,10 +5749,13 @@ function openPostMtgPanel(){
           +'</span>'
           +(getDoctorStr(f)&&getDoctorStr(f)!=='—'?'<span style="font-size:11px;color:var(--textlt)">VS '+escA(getDoctorStr(f))+'</span>':'')
           +'</div>'
-          +'<div style="display:flex;gap:6px;margin-bottom:10px">'
-          +'<button class="btn btn-sm '+(isOngoing?'btn-a':'btn-b')+'" data-action="postfup-ongoing" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(isOngoing?'':'opacity:.5')+'">繼續追蹤</button>'
-          +'<button class="btn btn-sm '+(!isOngoing?'btn-a':'btn-b')+'" data-action="postfup-closed" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(!isOngoing?'':'opacity:.5')+'">結案</button>'
+          /* V5.79.0 審核 UI-1:決策前先看到上次決議(唯讀) */
+          +(String(f.prevDecision||'').trim()?'<div style="font-size:12px;color:var(--textmd);background:var(--bg);border-radius:3px;padding:6px 9px;margin-bottom:8px;white-space:pre-wrap"><b style="color:var(--fog)">'+FUP_LBL.prevDecision+'</b>　'+escA(f.prevDecision)+'</div>':'')
+          +'<div style="display:flex;gap:6px;margin-bottom:'+(st?'10':'4')+'px">'
+          +'<button class="btn btn-sm '+(st==='ongoing'?'btn-a':'btn-b')+'" data-action="postfup-ongoing" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(st&&st!=='ongoing'?'opacity:.5':'')+'">繼續追蹤</button>'
+          +'<button class="btn btn-sm '+(st==='closed'?'btn-a':'btn-b')+'" data-action="postfup-closed" data-cid="'+escA(cid)+'" data-fi="'+fi+'" style="flex:1;'+(st&&st!=='closed'?'opacity:.5':'')+'">結案</button>'
           +'</div>'
+          +(st?'':'<div class="pf-unset" style="font-size:12px;color:var(--warn,#B7791F);margin-bottom:10px">⚠ 尚未選擇 —— 沒選的話下一場不會帶入</div>')
           /* V5.7.0: 前期追蹤加摘要+決策 */
           +'<div style="margin-bottom:8px">'
           +'<div style="font-size:11px;font-weight:600;color:var(--fog);margin-bottom:4px">討論摘要</div>'
@@ -5825,8 +5843,18 @@ function closePostMtgPanel(force){
   panel.style.display='none';
 }
 
+/* V5.79.0 UI-2:這場會議(所有勾選癌別)前期追蹤還沒選繼續追蹤/結案的人 */
+function _postFupUnset(){
+  var out=[];
+  (S.cids||[]).forEach(function(cid){((S.meeting.sections[cid]||{}).followups||[]).forEach(function(f){
+    if(f.status!=='ongoing'&&f.status!=='closed'&&(f.chartNo||f.name))out.push((f.chartNo||'')+(f.name?' '+maskName(f.name):''));});});
+  return out;
+}
 async function savePostMtg(stay){/* V5.67.0:stay=true 存檔留在面板;V5.69.0 M-5:await */
   var panel=document.getElementById('postmtg-panel');
+  /* V5.79.0 審核 UI-2(主任選「畫面改正 + 存檔時提醒」):前期追蹤沒選「繼續追蹤/結案」的,下一場不會帶入 —— 存檔前提醒一次 */
+  var _unset=_postFupUnset();
+  if(!stay&&_unset.length&&!confirm('還有 '+_unset.length+' 位前期追蹤沒有選「繼續追蹤」或「結案」:\n'+_unset.slice(0,8).join('、')+(_unset.length>8?' …':'')+'\n\n沒選的話,下一場會議不會自動帶入。\n\n按「確定」照樣儲存,按「取消」回去選。'))return;
   panel.querySelectorAll('[data-action="postcase-summary"]').forEach(function(el){
     var cid=el.dataset.cid,ci=parseInt(el.dataset.ci);
     ensureSec(cid);var c=S.meeting.sections[cid].cases[ci];
@@ -5892,7 +5920,7 @@ async function savePostMtg(stay){/* V5.67.0:stay=true 存檔留在面板;V5.69.0
     [['cases',function(c,i){return vm?caseViewHTML(cid,i,c,'cases'):caseHTML(cid,i,c,'cases');}],
      ['events',function(c,i){return vm?caseViewHTML(cid,i,c,'events'):caseHTML(cid,i,c,'events');}],
      ['team',function(c,i){return vm?teamViewHTML(cid,i,c,'team'):teamHTML(cid,i,c,'team',true);}],
-     ['followups',function(c,i){return followupHTML(cid,i,c,'followups');}]
+     ['followups',function(c,i){return vm?followupViewHTML(cid,i,c,'followups'):followupEditHTML(cid,i,c);}]
     ].forEach(function(pair){
       const ty=pair[0],fn=pair[1];
       const cont=document.getElementById('div-'+ty+'-'+cid);if(!cont)return;
@@ -6365,7 +6393,9 @@ function createFollowup(data){data=data||{};
     prevDate:data.prevDate||'',
     prevDecision:data.prevDecision||'',/* V5.22.0: 上次決議(自動帶入,唯讀顯示) */
     followFocus:data.followFocus||'',  /* V5.22.0: 本次追蹤重點 */
-    note:data.note||''};               /* 目前結果(沿用舊欄位,舊資料不搬動) */
+    note:data.note||'',                /* 目前結果(沿用舊欄位,舊資料不搬動) */
+    /* V5.79.0 審核 UI-1:會後面板一直有寫這兩欄(V5.7.0),但 schema 沒有 —— 補上讓「實際寫入的欄位」與定義一致 */
+    summary:data.summary||'',decision:data.decision||''};
 }
 /* ════════════════════════════════════════════════════════════════
    V5.42.0 必要提報事件(死亡病例討論)改用個案討論的資料結構
@@ -7194,7 +7224,7 @@ function doFollowupImport(){
   if(cont){
     const vm=S.viewMode;
     cont.innerHTML=fups.map(function(f,i){
-      try{return vm?followupViewHTML(cid,i,f,'followups'):followupHTML(cid,i,f,'followups');}
+      try{return vm?followupViewHTML(cid,i,f,'followups'):followupEditHTML(cid,i,f);}
       catch(e){
         /* V5.35.0 P1-6:渲染失敗要留可見殘骸,不能靜默消失(坑 #29/#33 同類) */
         console.error('[render followup]',cid,i,e,f);
@@ -7478,6 +7508,13 @@ function autoImportPrevFollowups(cids){
       /* V5.75.2 審核 P-2(主任選「原始決議 + 最近一次」):原本每場多累積一行「上次結果」、沒有日期。
          改成:去掉舊的「上次結果」行,只保留原始決議;最近一次結果壓成一行並標日期(下次靠行首辨識整段)。 */
       var _base=String(f.prevDecision||'').split('\n').filter(function(l){return l.indexOf('上次結果')!==0;}).join('\n').trim();
+      /* V5.79.0 審核 UI-1(主任選「最新決議取代原始決議」):會後面板替追蹤中病人填的「決策結論」原本只印在 Word,
+         下一場的「上次決議」還是最早那次。改成:這一場有決策結論就取代原始決議;必要提報保留【必要提報】那一行(說明為什麼要追) */
+      var _dec=String(f.decision||'').trim();
+      if(_dec){
+        var _evLine=f._fromEvent?_base.split('\n').filter(function(l){return l.indexOf('【必要提報】')===0;})[0]:'';
+        _base=[_evLine,_dec].filter(Boolean).join('\n');
+      }
       var _res=String(f.note||'').trim().replace(/\s*\n+\s*/g,' / ');
       fups.push(createFollowup({chartNo:f.chartNo||'',name:f.name||'',
         doctors:Array.isArray(f.doctors)?f.doctors.slice(0,2):[(f.doctor||''),''],
@@ -7893,6 +7930,17 @@ async function saveMeeting(opts){
   _savePromise=_doSave(opts).finally(function(){_saving=false;_savePromise=null;});
   return _savePromise;
 }
+/* V5.79.0 審核 S-1:投影片標記與個案內容分開合併(原則 A:所有合併路徑共用這一支)。
+   標記是「畫的人」的註記,個案內容是「負責人」的資料 —— 一個區段裡混了兩種歸屬,整段替換就會傷到另一邊。
+   localHl = 這台存檔前的標記;baseHl = 這台開始編輯時的標記;nasSec = NAS 上的這個區段。
+   這台改過標記 → 用這台的;沒改 → 用 NAS 的。NAS 沒有這個區段時不動。 */
+function _mergeHlMarks(sec,localHl,baseHl,hasBase,nasSec){
+  if(!sec||!nasSec)return;
+  const j=function(x){return x?JSON.stringify(x):'';};
+  const iChangedHl=hasBase?j(localHl)!==j(baseHl):!!localHl;
+  const pick=iChangedHl?localHl:nasSec.hlMarks;
+  if(pick)sec.hlMarks=pick;else delete sec.hlMarks;
+}
 async function _doSave(opts){
   /* ════ V5.31.1 N-1(複審最嚴重)════
      V5.31.0 為了 P0-4 在失敗時設 _dirty=true,但**1.2 秒後的收尾 setTimeout 又設回 false**,
@@ -7951,7 +7999,10 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
          存檔會補 ph:"Nil" 之類的正規化,沒人動過的區段文字也會變,實測用文字比對每次都誤判成衝突。 */
       const mine=new Set((S.user&&S.user.cancers)||[]);
       const base=S._snapshot?JSON.parse(S._snapshot):null;
-      const iChanged=function(cid){if(S._keepMine&&mine.has(cid))return true;/* V5.69.0 M-3 */return base?JSON.stringify(S.meeting.sections[cid])!==JSON.stringify((base.sections||{})[cid]):true;};
+      /* V5.79.0 審核 S-1:「有沒有改」只看個案內容,不含投影片標記 —— 標記另外由 _mergeHlMarks 決定(誰改過用誰的) */
+      const _noHl=function(sc){if(!sc)return sc;const o=Object.assign({},sc);delete o.hlMarks;return o;};
+      const iChanged=function(cid){if(S._keepMine&&mine.has(cid))return true;/* V5.69.0 M-3 */return base?JSON.stringify(_noHl(S.meeting.sections[cid]))!==JSON.stringify(_noHl((base.sections||{})[cid])):true;};
+      const _localHl={};(S.cids||[]).forEach(function(cid){_localHl[cid]=(S.meeting.sections[cid]||{}).hlMarks;});
       let ownTouched=false;
       if(S.user&&(nas.savedById||((USERS.find(function(u){return u.name===nas.savedBy;})||{}).id))===S.user.id){/* V5.68.0 N-1:相容舊版電腦寫的姓名 */
         /* 同一個人在另一台存過:我這台有改任何區段 → 衝突;沒改 → 整份取 NAS */
@@ -7960,15 +8011,7 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
       }else{
         /* 別人存的:不是我負責的癌別一律取 NAS;我負責的保留我這台的(別人依約定不會改我的區段) */
         (S.cids||[]).forEach(function(cid){
-          if(!mine.has(cid)&&nas.sections&&nas.sections[cid]){
-            /* V5.76.1 審核 R-1(主任選「標記各自保留」):個案內容以負責人為準,但這台電腦改過的投影片標記保留 ——
-               標記是註記不是個案內容;原本整段換成 NAS,代班/幫夥伴畫的重點被蓋掉,預覽卻顯示已存 */
-            const _hlOf=function(sc){return sc&&sc.hlMarks?JSON.stringify(sc.hlMarks):'';};
-            const _myHl=(S.meeting.sections[cid]||{}).hlMarks;
-            const _hlChanged=base?_hlOf(S.meeting.sections[cid])!==_hlOf((base.sections||{})[cid]):!!_myHl;
-            S.meeting.sections[cid]=nas.sections[cid];
-            if(_hlChanged){if(_myHl)S.meeting.sections[cid].hlMarks=_myHl;else delete S.meeting.sections[cid].hlMarks;}
-          }
+          if(!mine.has(cid)&&nas.sections&&nas.sections[cid])S.meeting.sections[cid]=nas.sections[cid];/* 標記在下面 _mergeHlMarks 另外合併(V5.76.1 R-1 → V5.79.0 S-1) */
           else if(mine.has(cid)&&!iChanged(cid)&&nas.sections&&nas.sections[cid])S.meeting.sections[cid]=nas.sections[cid];/* 我負責但我沒改 → 也取 NAS(可能是別人幫忙補的) */
         });
       }
@@ -7980,9 +8023,13 @@ S.meeting.savedBy=S.user.name;S.meeting.savedAt=time;
         if(opts&&opts.silent){showPersistentError('這場會議在另一台電腦也有修改，請按「儲存」處理衝突。');return false;}
         showNasConflict(nas);return false;
       }
+      /* V5.79.0 審核 S-1(主任 V5.76.1 選「標記各自保留」):不論個案內容走哪一條路(取 NAS / 保留我的),
+         投影片標記一律另外合併 —— 這台改過標記用這台的,沒改用 NAS 的(可能是別人幫忙畫的)。
+         原本只有「不是我負責」那條路有處理,負責人改了個案再存檔會把代班者畫的標記整段丟掉。 */
+      (S.cids||[]).forEach(function(cid){_mergeHlMarks(S.meeting.sections[cid],_localHl[cid],base?((base.sections||{})[cid]||{}).hlMarks:undefined,!!base,nas.sections&&nas.sections[cid]);});
       S.meeting.version=Math.max(S.meeting.version||0,nas.version||0);
       /* V5.68.0 N-8:合併只改了記憶體,別的癌別分頁畫面還是舊的 → 重繪被取代的區段 */
-      (S.cids||[]).forEach(function(cid){if(mine.has(cid)&&iChanged(cid))return;['cases','events','team','followups'].forEach(function(ty){const cont=document.getElementById('div-'+ty+'-'+cid);if(!cont)return;const arr=(S.meeting.sections[cid]||{})[ty]||[];const vm=S.viewMode;cont.innerHTML=arr.map(function(c2,i2){try{return ty==='team'?(vm?teamViewHTML(cid,i2,c2,'team'):teamHTML(cid,i2,c2,'team',true)):ty==='followups'?followupHTML(cid,i2,c2,'followups'):(vm?caseViewHTML(cid,i2,c2,ty):caseHTML(cid,i2,c2,ty));}catch(e){return '';}}).join('');});});
+      (S.cids||[]).forEach(function(cid){if(mine.has(cid)&&iChanged(cid))return;['cases','events','team','followups'].forEach(function(ty){const cont=document.getElementById('div-'+ty+'-'+cid);if(!cont)return;const arr=(S.meeting.sections[cid]||{})[ty]||[];const vm=S.viewMode;cont.innerHTML=arr.map(function(c2,i2){try{return ty==='team'?(vm?teamViewHTML(cid,i2,c2,'team'):teamHTML(cid,i2,c2,'team',true)):ty==='followups'?(vm?followupViewHTML(cid,i2,c2,'followups'):followupEditHTML(cid,i2,c2)):(vm?caseViewHTML(cid,i2,c2,ty):caseHTML(cid,i2,c2,ty));}catch(e){return '';}}).join('');});});
       showSaveToast('已併入 '+(nas.savedBy||'另一台電腦')+' 的修改');
       console.log('[S-1] 合併了 NAS 上別台的修改(其他癌別區段)');
     }
@@ -13698,7 +13745,9 @@ document.addEventListener('click',function(e){
     ensureSec(_cid);var _f=(S.meeting.sections[_cid]||{}).followups[_fi];
     if(!_f)return;
     _f.status=postfupToggle.dataset.action==='postfup-ongoing'?'ongoing':'closed';
-    var _card=postfupToggle.closest('div[style*="border:1px solid"]');
+    /* V5.79.0:原本用 div[style*="border:1px solid"] 找卡片 —— 瀏覽器把 cssText 存成「border: 1px solid」(有空格),
+       永遠找不到,按了按鈕畫面不變(資料其實有改)。改用 class。 */
+    var _card=postfupToggle.closest('.pf-card');
     if(_card){
       /* V5.7.1: 修 prefix match selector 太寬 — V5.7.0 加 postfup-summary/decision textarea 後,原本 [data-action^="postfup-"] 會誤匹配 textarea 並當成按鈕處理(加 btn class + opacity:.5),導致按鈕看似失效。改精確匹配只兩個 toggle 按鈕。 */
       _card.querySelectorAll('[data-action="postfup-ongoing"],[data-action="postfup-closed"]').forEach(function(b){
@@ -13706,6 +13755,9 @@ document.addEventListener('click',function(e){
         b.className='btn btn-sm '+(isActive?'btn-a':'btn-b');
         b.style.opacity=isActive?'1':'0.5';
       });
+      /* V5.79.0 UI-2:選了就拿掉「尚未選擇」提示,並更新「待確認追蹤」篩選 */
+      var _w=_card.querySelector('.pf-unset');if(_w){_w.remove();if(postfupToggle.parentElement)postfupToggle.parentElement.style.marginBottom='10px';}
+      _card.dataset.fup='0';
     }
     return;
   }
@@ -13751,15 +13803,9 @@ document.addEventListener('click',function(e){
     if(!item)return;
     item.topicType=item.topicType===st.dataset.type?'':st.dataset.type;
     markDirty();
-    var _RATE_TYPES=['完治率','失聯率','留治率','訪視率'];
-    if(_RATE_TYPES.includes(item.topicType)||_RATE_TYPES.includes(st.dataset.type)){
-      var card=st.closest('.casecard');
-      if(card){var cid2=st.dataset.cid,idx2=parseInt(st.dataset.idx);var tmp2=document.createElement('div');tmp2.innerHTML=specialHTML(cid2,idx2,item);card.replaceWith(tmp2.firstElementChild);}
-      return;
-    }
-    st.closest('.fg').querySelectorAll('.tchip').forEach(el=>el.classList.toggle('on',el.dataset.type===item.topicType));
-    var cnm=st.closest('.casecard')?.querySelector('.cnm');
-    if(cnm)cnm.textContent=item.topicType||item.title||'特殊議程';
+    /* V5.79.0 審核 UI-7:選了類型要收成一行 → 一律重畫卡片(原本只有率類型重畫,其他只換 chip 的 on) */
+    var card=st.closest('.casecard');
+    if(card){var cid2=st.dataset.cid,idx2=parseInt(st.dataset.idx);var tmp2=document.createElement('div');tmp2.innerHTML=specialHTML(cid2,idx2,item);card.replaceWith(tmp2.firstElementChild);}
     return;
   }
   const tp=e.target.closest('[data-action="topic"]');

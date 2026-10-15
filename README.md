@@ -97,6 +97,8 @@ python3 preflight.py --quick  # 只跑靜態
 
 **投影片內容等價測試**(V5.75.0):`content-equiv.js` 用固定的虛構會議產出 HTML 投影片,逐頁比對文字與 `content-baseline.json`。投影片上的字只要變了(多頁、少頁、標籤改名)preflight 就 🔴。**經主任同意改投影片內容後**才執行 `node content-equiv.js --update` 更新基準,並在 CHANGELOG 寫理由。
 
+**前期追蹤續追**(V5.79.0):會後填的 `decision` 帶入下一場時取代原始 `prevDecision`(必要提報保留【必要提報】行);`status` 未選不帶入,會後面板三態顯示並在「儲存並返回」提醒。**標記合併**:`_doSave` 的 NAS 合併判斷「有沒有改」不含 `hlMarks`,標記另由 `_mergeHlMarks` 決定(這台改過用這台的,否則用 NAS 的)。
+
 **LINE 通知圖片**(V5.78.0):`_lineData()` 把會議整理成結構化資料,`genLine()` 組文字、`renderLineImages()` 依 `_lineImgPlan()` 分張畫 canvas(寬 1080、2 倍解析度;第 1 張 `_lineImgCover`,名單 `_lineImgBody` 每張最多 `_LI_PER=10` 位且依估計高度平均切分,每張共用 `K.header` 頁首、高度取最高一張,特殊議程接最後一張,空項目合併「本次無」)—— 兩者同一份資料,改通知內容只改 `_lineData`。
 
 **預覽與畫重點**(V5.76.0):產出區「預覽與畫重點」以 blob 分頁開投影片;投影片的「存標記」以 `postMessage` 傳回系統,存進 `sections[cid].hlMarks`(V5.77.0 起 `{v:2,marks:[{k:頁型|病歷號#序,q:文字,pre,suf:前後20字,o:原位置,t,s,c}],at,by}`,依病人+文字對位;V5.76 的 `{頁面文字指紋:[[起始,長度,…]]}` 仍可讀),隨會議存檔與 NAS 同步;產出時以 `<script id="hl-sys">` 帶進投影片,依文字指紋套用。系統有未儲存修改時拒存。檔案路徑(`hl-data`)保留給會議室直接開檔;檔案存了自己的標記後 `hl-sys` 失效。`preview-check.js`(真 Chromium)端到端檢查。

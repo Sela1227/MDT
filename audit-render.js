@@ -444,6 +444,45 @@ setTimeout(async ()=>{
     if(fail.length){bad++;console.log('   ',JSON.stringify(r),JSON.stringify(r3));}
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,160));bad++;}
 
+  // ── [V5.79.0 審核 UI-1~UI-4、UI-7] 前期追蹤會後填寫與編輯畫面 ──
+  console.log('\n=== [V5.79.0 UI] 前期追蹤決議帶入、未選提醒、閱覽、收合、特殊議程類型 ===');
+  try{
+    const r=JSON.parse(await run("(async function(){var keep=S.meeting,out={};var mk=function(d){var m=newMeetingObj(S.user.id,['head_neck']);m.date=d;m.sections.head_neck={followups:[],cases:[],team:[],events:[],special:[]};return m;};"
+      /* UI-1:會後填的決策結論 → 下一場的上次決議(取代原始決議;必要提報保留【必要提報】那一行) */
+      +"var m1=mk('2001-03-01');var a=createFollowup({chartNo:'9000301',name:'測試甲',prevDecision:'原始決議甲',note:'結果甲'});a.status='ongoing';a.decision='最新決議甲';"
+      +"var b=createFollowup({chartNo:'9000302',name:'測試乙',prevDecision:'【必要提報】已討論待改善　需改善\\n改善方案：流程乙'});b.status='ongoing';b._fromEvent=true;b.decision='最新決議乙';"
+      +"var c=createFollowup({chartNo:'9000303',name:'測試丙',prevDecision:'原始決議丙'});c.status='ongoing';"
+      +"m1.sections.head_neck.followups=[a,b,c];saveLocal(m1);S.meeting=mk('2001-03-02');autoImportPrevFollowups(['head_neck']);"
+      +"var g=function(n){return S.meeting.sections.head_neck.followups.filter(function(x){return x.chartNo===n;})[0]||{};};"
+      +"out.a=g('9000301').prevDecision;out.b=g('9000302').prevDecision;out.c=g('9000303').prevDecision;out.schema=('decision' in createFollowup({}))&&('summary' in createFollowup({}));"
+      /* UI-3:閱覽卡片 */
+      +"var v=followupViewHTML('head_neck',0,{chartNo:'9000301',prevDecision:'上次甲',followFocus:'重點甲',note:'結果甲',decision:'決策甲'},'followups');"
+      +"out.view=['上次決議','本次追蹤重點','目前結果','決策結論','上次甲','重點甲','決策甲'].every(function(x){return v.indexOf(x)>=0;})&&v.indexOf('>說明<')<0;"
+      /* UI-4:自動帶入的預設收合,收合列有上次決議 */
+      +"var e=followupEditHTML('head_neck',0,S.meeting.sections.head_neck.followups[0]);out.col=/cc-collapsed/.test(e)&&/casetop2/.test(e)&&e.indexOf('最新決議甲')>=0&&/fup-note/.test(e);"
+      +"out.colManual=!/cc-collapsed/.test(followupEditHTML('head_neck',0,createFollowup({chartNo:'9000304'})));"
+      /* UI-2:會後面板 —— 沒選時兩顆都不亮、有提示;「儲存並返回」提醒,中途「儲存」不提醒 */
+      +"S.meeting.version=1;S.meeting.sections.head_neck.followups.forEach(function(f){delete f.status;});saveLocal(S.meeting);_dirty=false;S.cids=['head_neck'];"
+      +"openPostMtgPanel();var pn=document.getElementById('postmtg-panel');var on=pn.querySelector('[data-action=\"postfup-ongoing\"]'),cl=pn.querySelector('[data-action=\"postfup-closed\"]');"
+      +"out.tri=!!on&&!/btn-a/.test(on.className)&&!/btn-a/.test(cl.className)&&!!pn.querySelector('.pf-unset');"
+      +"var asked='',oc=window.confirm;window.confirm=function(m){asked=String(m);return false;};await savePostMtg();out.ask=/沒有選/.test(asked)&&/9000301/.test(asked);"
+      +"asked='';await savePostMtg(true);out.noAskStay=asked==='';window.confirm=oc;"
+      +"pn=document.getElementById('postmtg-panel');on=pn.querySelector('[data-action=\"postfup-ongoing\"]');on.click();var _cd=on.closest('.pf-card');out.clicked=S.meeting.sections.head_neck.followups[0].status==='ongoing'&&/btn-a/.test(on.className)&&_cd&&!_cd.querySelector('.pf-unset');"
+      +"var cp=document.getElementById('postmtg-panel');if(cp&&cp.parentNode)cp.style.display='none';"
+      /* UI-7:選了類型收成一行,沒選列 8 顆 */
+      +"var sp0=specialHTML('head_neck',0,{topicType:'',title:'x'}),sp1=specialHTML('head_neck',0,{topicType:'其他',title:'x'});"
+      +"var sp2=specialHTML('head_neck',0,createItem('head_neck','special',{topicType:'失聯率'},{}));"
+      +"out.sp=(sp0.match(/data-action=\"specialtype\"/g)||[]).length===8&&sp0.indexOf('<details')<0&&sp1.indexOf('<details')>=0&&/更改/.test(sp1)&&sp2.indexOf('<details')>=0;"
+      +"S.meeting=keep;return JSON.stringify(out);})()"));
+    const chk=[['UI-1 決策結論取代原始決議',r.a==='最新決議甲\n上次結果(2001-03-01)：結果甲'],['UI-1 必要提報保留【必要提報】行',r.b==='【必要提報】已討論待改善　需改善\n最新決議乙'],
+      ['UI-1 沒填決策照舊',r.c==='原始決議丙'],['UI-1 createFollowup 有 summary/decision',r.schema],['UI-3 閱覽用 FUP_LBL 且含決策結論',r.view],
+      ['UI-4 自動帶入預設收合、收合列有上次決議',r.col],['UI-4 手動新增不收合',r.colManual],['UI-2 沒選時兩顆都不亮且有提示',r.tri],
+      ['UI-2 儲存並返回會提醒',r.ask],['UI-2 中途儲存不提醒',r.noAskStay],['UI-2 點選後亮起並拿掉提示',r.clicked],['UI-7 類型收合',r.sp]];
+    const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
+    console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
+    if(fail.length){bad++;console.log('   ',JSON.stringify(r).slice(0,500));}
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,200));bad++;}
+
   // ── [V5.76.0 Q-2] 沒有影像的特殊議程:產出前檢查要提醒 ──
   console.log('\n=== [V5.76.0 Q-2] 純文字特殊議程提醒 ===');
   try{
