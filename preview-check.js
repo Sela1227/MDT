@@ -91,14 +91,38 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
     await p.evaluate(function(){_dirty=false;});
     await pop.close();
 
-    /* ⑤ 改了第一位的內容 → 那頁不套用,第二位照常 */
-    await p.evaluate(function(){S.meeting.sections.head_neck.cases[0].discussion='第一位討論(已修改)';S.meeting.version++;saveLocal(S.meeting);_dirty=false;});
-    const nd5=dialogs.length;
-    pop=await openPreview();
-    const m5=await marks(pop);
-    await pop.waitForTimeout(500);
-    if(m5!==1)bad.push('內容修改後應只剩第二位的 1 個標記,實際 '+m5);
-    if(!dialogs.slice(nd5).some(x=>/內容修改前畫的/.test(x)))bad.push('內容修改後沒有提示哪幾頁沒套用');
+    /* ⑤ V5.77.0 病人+文字對位:
+       a 改了第一位「沒畫線的」內容 → 兩個標記都保留,不提示
+       b 改了第一位「被畫線的那段文字」→ 只有那一條不套用,提示列出那段文字
+       c 前面插入一位新病人、而且他也有同樣的字 → 標記仍在原來那位病人的頁 */
+    await p.evaluate(function(){S.meeting.sections.head_neck.cases[0].discussion='第一位討論(已修改)';S.meeting.sections.head_neck.cases[0].cc='第一位病史,補充一句';S.meeting.version++;saveLocal(S.meeting);_dirty=false;});
+    let nd5=dialogs.length;
+    pop=await openPreview();await pop.waitForTimeout(500);
+    const m5a=await marks(pop);
+    if(m5a!==2)bad.push('⑤a 改了同一頁其他內容,標記應全部保留(2 個),實際 '+m5a);
+    if(dialogs.slice(nd5).some(x=>/已經改掉/.test(x)))bad.push('⑤a 不該出現「已經改掉」提示');
+    await pop.close();
+    await p.evaluate(function(){S.meeting.sections.head_neck.cases[0].diagnosis='首位診斷文字';S.meeting.version++;saveLocal(S.meeting);_dirty=false;});
+    nd5=dialogs.length;
+    pop=await openPreview();await pop.waitForTimeout(500);
+    const m5b=await marks(pop);
+    if(m5b!==1)bad.push('⑤b 被畫線的文字改掉後應只剩 1 個標記,實際 '+m5b);
+    if(!dialogs.slice(nd5).some(x=>/已經改掉/.test(x)&&/第一位診斷/.test(x)))bad.push('⑤b 沒有提示是哪一段文字改掉:'+dialogs.slice(nd5).join('|').slice(0,60));
+    await pop.close();
+    await p.evaluate(function(){var s=S.meeting.sections.head_neck;s.cases.unshift(createItem('head_neck','cases',{chartNo:'9000500',name:'測試零',diagnosis:'插入的病人',discussion:'第二位討論',cc:'x',ph:'無'},{}));S.meeting.version++;saveLocal(S.meeting);_dirty=false;});
+    pop=await openPreview();await pop.waitForTimeout(500);
+    const where=await pop.evaluate(function(){return [].map.call(document.querySelectorAll('.slide mark, .slide span.fc'),function(m){var h=m.closest('.slide').querySelector('.ch');return (h&&h.textContent.match(/\d{7}/)||[''])[0];});});
+    if(JSON.stringify(where)!=='["9000502"]')bad.push('⑤c 插入同樣文字的新病人後,標記應仍在 9000502 的頁:'+JSON.stringify(where));
+    await pop.close();
+    await p.evaluate(async function(){S.meeting.sections.head_neck.cases.shift();S.meeting.version++;saveLocal(S.meeting);_dirty=false;});
+
+    /* ⑤d V5.76 舊格式(整頁指紋)存的標記照舊讀取 */
+    pop=await openPreview();await pop.waitForTimeout(300);
+    const v1=await pop.evaluate(function(){var o={};document.querySelectorAll('.slide').forEach(function(s){var r=_hlRanges(s);if(r.length)o[_hlTxt(s)]=r;});return o;});
+    await pop.close();
+    await p.evaluate(function(v1){S.meeting.sections.head_neck.hlMarks={marks:v1,at:'',by:''};S.meeting.version++;saveLocal(S.meeting);_dirty=false;},v1);
+    pop=await openPreview();await pop.waitForTimeout(400);
+    if(await marks(pop)!==1)bad.push('⑤d V5.76 舊格式標記應照舊讀取(1 個),實際 '+(await marks(pop)));
     await pop.close();
 
     /* ⑥ R-2:同時開兩份預覽,從第一份存也要成功 */
@@ -145,7 +169,7 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
     const cp=src.slice(src.indexOf('function confirmCopyMtg('),src.indexOf('function confirmCopyMtg(')+1500);
     if(cp.indexOf('delete copy.sections[k].hlMarks')<0)bad.push('R-4 複製會議沒有清掉投影片標記');
 
-    console.log('預覽與畫重點 9 個情境'+(bad.length?'':' ✅'));
+    console.log('預覽與畫重點 12 個情境'+(bad.length?'':' ✅'));
     bad.slice(0,6).forEach(x=>console.log('  🔴 '+x));
     console.log('結果 '+bad.length);
   }catch(e){console.log('⚠ 例外:',e.message.slice(0,200));console.log('結果 -1');}

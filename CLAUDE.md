@@ -148,7 +148,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
       team:      [{... 醫療小組 ...}],
       followups: [{..., status:'closed'|'ongoing', _autoImported}],
       special:   [...],
-      hlMarks:   {marks:{頁面文字指紋:[[起始,長度,'mark'|'span',style,class]]},at,by}  // V5.76.0 投影片標記(會議內容的註記,要同步)
+      hlMarks:   {v:2,marks:[{k:'頁型|病歷號#序',q:畫到的文字,pre,suf,o,t,s,c}],at,by}  // V5.77.0 投影片標記:依病人+文字對位(會議內容的註記,要同步);V5.76 舊格式 {頁面文字指紋:[[起始,長度,…]]} 仍可讀
     }
   }
 }
@@ -182,11 +182,11 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 一行 |
 |---|---|
+| V5.77.0 | 標記改用「病人 + 畫的文字」對位(改資料不再整頁消失,舊格式相容);工具列清除分三顆(主任要求) |
 | V5.76.1 | R-1 合併時標記各自保留 + 存完核對才說已存;R-2 多份預覽;R-3 慢存檔不誤報;R-4 複製會議不帶標記(主任同意) |
 | V5.76.0 | **A 預覽與畫重點**(標記存進 `sections[cid].hlMarks`,postMessage + ack);Q-1 簡報筆;Q-2 純文字特殊議程提醒;Q-3;F 共用 `test-meeting.js`;Q-4 逐段裁切檢查;E 說明書對齊(主任同意) |
 | V5.75.2 | P-1 前期追蹤表可捲(V5.75.1 造成的 P1)+ `layout-check.js` 真 Chromium 版面檢查;P-2 續追只留原始決議+最近一次結果(主任同意) |
 | V5.75.1 | N-1 寫入舊版檔保留圖片;N-2 等價測試補涵蓋(自我檢查、影像張數);N-3 前期追蹤三段全印(`FUP_LBL`)、續追不帶上次結果(主任同意,基準已更新) |
-| V5.75.0 | 內容等價測試(保護網);審核 H-1 標記改用頁面文字對位、H-2~H-11、F-1a/b(主任同意) |
 
 **完整歷程見 `CHANGELOG.md`**。
 
@@ -300,6 +300,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 |---|---|---|---|
 | 2026-09-24 | **合併會議所有文件產出永遠只出目前分頁癌別**,無合併流程(LINE 通知例外) | 生效 | `getOutputCid()` 註解為設計不變量;preflight 檢查仍在 |
 | 2026-09-24 | **HTML 產出不要亂動,先討論再改**;目錄定位、雙欄功能延後 | 生效 |
+| 2026-10-15 | 主任:「畫線儲存後回去改內容,畫線會消失」→ 同意改成「病人 + 文字」對位;工具列改為「復原上一步(多步)/清除標誌/整頁標誌清除」三顆 | 已完成(V5.77.0) | extraJs `_hlPageKeys/_hlSysCollect/_hlFind/_hlApplySys`、`hlClear/hlClearPage` |
 | 2026-10-15 | V5.76.0 審核:R-1 選「標記各自保留」(合併時 NAS 換掉非負責癌別的區段,但保留這台改過的 `hlMarks`);R-2~R-4 一起修 | 已完成(V5.76.1) | `_doSave` NAS 合併、message 處理器、extraJs `_hlSendSys`、`confirmCopyMtg` |
 | 2026-10-14 | 流程優化:主任說明「標記都在各自電腦畫好存好,會議上報告,當場畫是少數」→ 做 A(預覽與畫重點)、Q-1 簡報筆、不動投影片的一批(E/F/Q-2 提醒/Q-3/Q-4);B-2 影像根目錄待實機確認;C、Q-2 文字頁未做 | 已完成(V5.76.0) | `previewSlides`、`hl-sys`、extraJs 存標記;`test-meeting.js`、`preview-check.js` |
 | 2026-10-14 | V5.75.1 審核:P-1 選「A 可捲動」(不分頁);P-2 選「原始決議 + 最近一次結果」 | 已完成(V5.75.2) | `.tbl` 樣式;`autoImportPrevFollowups`;preflight 加版面檢查 |

@@ -1727,7 +1727,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.76.1';
+const VERSION='V5.77.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -7516,14 +7516,14 @@ window.addEventListener('message',function(e){
   if(!sec){reply(false,'系統裡找不到這個癌別。');return;}
   if(_dirty){reply(false,'系統畫面還有未儲存的修改。請先回到系統按「儲存」,再回來按一次「存標記」。');return;}
   const marks=(d.marks&&typeof d.marks==='object')?d.marks:{};
-  if(Object.keys(marks).length)sec.hlMarks={marks:marks,at:new Date().toISOString(),by:(S.user&&S.user.name)||''};
+  if(Object.keys(marks).length)sec.hlMarks={v:Array.isArray(marks)?2:1,marks:marks,at:new Date().toISOString(),by:(S.user&&S.user.name)||''};/* V5.77.0 v2:逐條記病人+文字 */
   else delete sec.hlMarks;
   markDirty();
   saveMeeting({silent:true}).then(function(){
     _renderHlStatus();
     if(_dirty){reply(false,'儲存沒有完成,請回到系統查看訊息。');return;}
     /* V5.76.1 審核 R-1①:「已存」要說的是**存了什麼**,不只是「存檔成功」—— 存檔可能經過 NAS 合併,核對標記真的在 */
-    const now=((S.meeting.sections[cid]||{}).hlMarks||{}).marks||{};
+    const now=((S.meeting.sections[cid]||{}).hlMarks||{}).marks||(Array.isArray(marks)?[]:{});
     if(JSON.stringify(now)!==JSON.stringify(marks)){
       reply(false,'存檔時和 NAS 上別台電腦的版本合併,標記沒有照您畫的存進去。請回到系統重新按「預覽與畫重點」確認後再畫一次。');return;
     }
@@ -7537,7 +7537,7 @@ function _renderHlStatus(){
   if(!S.meeting)return;
   const cid=getOutputCid()||S.cids[0];
   const hm=(S.meeting.sections[cid]||{}).hlMarks;
-  const n=hm&&hm.marks?Object.keys(hm.marks).length:0;
+  const n=!hm||!hm.marks?0:(Array.isArray(hm.marks)?Object.keys(hm.marks.reduce(function(o,e){o[e.k]=1;return o;},{})).length:Object.keys(hm.marks).length);
   if(!n)return;
   const t=document.createElement('span');
   let when='';try{const dt=new Date(hm.at);when=(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');}catch(_){}
@@ -10301,10 +10301,51 @@ function _hlApplyRanges(s,rs){
     try{rg.surroundContents(el);}catch(ex){try{var fr=rg.extractContents();el.appendChild(fr);rg.insertNode(el);}catch(e2){}}
   });
 }
+/* ════ V5.77.0 標記改用「哪位病人 + 畫的那段文字」對位(主任 2026-10-15 同意)════
+   V5.76 用「整頁文字」當指紋:那一頁改了任何一個字,整頁的畫線都認不出來而消失(實測:只改病史,診斷上的畫線也不見)。
+   改成每一條標記各自記:頁面鑰匙(頁型 + 病歷號 + 第幾個)、畫到的文字、前後各 20 字、原本位置。
+   套用時先找到同一位病人的頁,再在頁內找那段文字(前後文最像、位置最近的那一處)。
+   只有「被畫線的那段文字本身改掉」才不套用,並告訴她是哪一段。V5.76 存的舊格式照舊讀取。 */
+function _hlPageText(s){return _hlTextNodes(s).map(function(n){return n.data;}).join('');}
+function _hlPageKeys(){
+  var seen={};
+  return Array.prototype.map.call(document.querySelectorAll('.slide'),function(s){
+    var cls=Array.prototype.filter.call(s.classList,function(x){return x!=='slide'&&x!=='on';}).sort().join('.');
+    var hd=s.querySelector('.ch,.th'),ht=(hd?hd.textContent:_hlPageText(s)).replace(/\\s+/g,' ').trim();
+    var no=(ht.match(/\\d{7,8}/)||[''])[0];
+    var tag=/醫療小組/.test(ht)?'T':(/必要事件/.test(ht)?'E':'');
+    var base=cls+'|'+(no?no+tag:ht.slice(0,12));
+    seen[base]=(seen[base]||0)+1;
+    return base+'#'+seen[base];
+  });
+}
 function _hlSysCollect(){
-  var o={};
-  document.querySelectorAll('.slide').forEach(function(s){var r=_hlRanges(s);if(r.length)o[_hlTxt(s)]=r;});
-  return o;
+  var out=[],keys=_hlPageKeys();
+  document.querySelectorAll('.slide').forEach(function(s,i){
+    var rs=_hlRanges(s);if(!rs.length)return;
+    var txt=_hlPageText(s);
+    rs.forEach(function(r){
+      out.push({k:keys[i],q:txt.substr(r[0],r[1]),pre:txt.slice(Math.max(0,r[0]-20),r[0]),suf:txt.substr(r[0]+r[1],20),
+        o:r[0],t:r[2],s:r[3],c:r[4]});
+    });
+  });
+  return out;
+}
+/* 在頁面文字裡找這條標記:前文+文字+後文完全相同且唯一 → 用它;否則在所有出現處挑前後文最像、離原位置最近的 */
+function _hlFind(txt,e){
+  if(!e.q)return -1;
+  var full=(e.pre||'')+e.q+(e.suf||''),i=txt.indexOf(full);
+  if(i>=0&&txt.indexOf(full,i+1)<0)return i+(e.pre||'').length;
+  var best=-1,bs=-Infinity,p=txt.indexOf(e.q),pre=e.pre||'',suf=e.suf||'';
+  while(p>=0){
+    var sc=0,j;
+    for(j=1;j<=pre.length&&p-j>=0&&txt.charAt(p-j)===pre.charAt(pre.length-j);j++)sc++;
+    for(j=0;j<suf.length&&txt.charAt(p+e.q.length+j)===suf.charAt(j);j++)sc++;
+    sc=sc*100000-Math.abs(p-(e.o||0));
+    if(sc>bs){bs=sc;best=p;}
+    p=txt.indexOf(e.q,p+1);
+  }
+  return best;
 }
 function _hlApplySys(skip){
   try{
@@ -10312,14 +10353,33 @@ function _hlApplySys(skip){
     if(!el||!el.textContent.trim())return;
     _hlSys=JSON.parse(el.textContent);
     if(!_hlSys||!_hlSys.marks)return;
-    var used={},slides=document.querySelectorAll('.slide');
-    for(var i=0;i<slides.length;i++){
-      if(skip.indexOf(String(i))>=0)continue;
-      var fp=_hlTxt(slides[i]);
-      if(_hlSys.marks[fp]&&!used[fp]){used[fp]=1;_hlApplyRanges(slides[i],_hlSys.marks[fp]);}
+    var slides=document.querySelectorAll('.slide'),miss=[];
+    if(Array.isArray(_hlSys.marks)){
+      var keys=_hlPageKeys(),byKey={};
+      _hlSys.marks.forEach(function(e){(byKey[e.k]=byKey[e.k]||[]).push(e);});
+      Object.keys(byKey).forEach(function(k){
+        var i=keys.indexOf(k);
+        if(i<0||skip.indexOf(String(i))>=0){if(i<0)byKey[k].forEach(function(e){miss.push(e.q);});return;}
+        var txt=_hlPageText(slides[i]),rs=[];
+        byKey[k].forEach(function(e){var pos=_hlFind(txt,e);if(pos<0)miss.push(e.q);else rs.push([pos,e.q.length,e.t,e.s,e.c]);});
+        rs.sort(function(a,b){return a[0]-b[0]||b[1]-a[1];});/* 外層先包,巢狀才對 */
+        _hlApplyRanges(slides[i],rs);
+      });
+    }else{
+      /* V5.76 舊格式:{整頁文字指紋: 字元範圍} */
+      var used={};
+      for(var i2=0;i2<slides.length;i2++){
+        if(skip.indexOf(String(i2))>=0)continue;
+        var fp=_hlTxt(slides[i2]);
+        if(_hlSys.marks[fp]&&!used[fp]){used[fp]=1;_hlApplyRanges(slides[i2],_hlSys.marks[fp]);}
+      }
+      Object.keys(_hlSys.marks).forEach(function(k){if(!used[k])miss.push('(舊版標記一頁)');});
     }
-    var miss=Object.keys(_hlSys.marks).filter(function(k){return !used[k];}).length;
-    if(miss&&!skip.length)setTimeout(function(){alert('有 '+miss+' 頁的標記是在內容修改前畫的,這幾頁沒有套用。\\n\\n'+(_hlSys.preview?'按一次「存標記」就不會再出現這個提示。':'請在系統按「預覽與畫重點」重新畫這幾頁。'));},300);
+    if(miss.length&&!skip.length)setTimeout(function(){
+      alert('有 '+miss.length+' 個標誌畫的文字已經改掉,沒有套用:\\n\\n'
+        +miss.slice(0,5).map(function(q){return '  「'+String(q).slice(0,24)+'」';}).join('\\n')+(miss.length>5?'\\n  …':'')
+        +'\\n\\n'+(_hlSys.preview?'需要的話重畫,按一次「存標記」就不會再出現這個提示。':'請在系統按「預覽與畫重點」重畫。'));
+    },300);
   }catch(e){console.warn('系統標記套用失敗:',e);}
 }
 /* ════ V5.74.0 存標記 ════
@@ -10561,21 +10621,25 @@ function fcApply(color){if(!_hlCanApply())return;_hlWrap(function(){var s=docume
 function _hlUnwrap(m){var p=m.parentNode;if(!p)return;while(m.firstChild)p.insertBefore(m.firstChild,m);p.removeChild(m);}
 /* V5.75.0 H-2:「✕ 清除」只在選字時看得到,所以原本的「沒選取 → 清本頁」使用者永遠走不到。
    改成:選到的文字裡有標記 → 只清那些;沒有 → 問要不要清這一頁全部。 */
+/* V5.77.0 主任:「清除標誌」只清選到的;「整頁標誌清除」另一顆 —— 原本一顆按鈕兩種行為,不清楚 */
 function hlClear(){
   var sel='mark, span.fc',r=_hlSel;
   var hits=r?Array.prototype.filter.call(document.querySelectorAll(sel),function(m){return r.intersectsNode(m);}):[];
   document.getElementById('hl-toolbar').style.display='none';
   window.getSelection().removeAllRanges();_hlSel=null;
-  if(hits.length){
-    _hlPush(_hlSlideOf(r.commonAncestorContainer));
-    hits.forEach(_hlUnwrap);
-  }else{
-    var cur=document.querySelectorAll('.slide')[c];if(!cur)return;
-    var all=cur.querySelectorAll(sel);
-    if(!all.length){alert('這一頁沒有標記。');return;}
-    if(!confirm('選取的文字裡沒有標記。\\n要清除這一頁全部 '+all.length+' 個標記嗎?(清錯可以按「↶ 復原」)'))return;
-    _hlPush(cur);Array.prototype.forEach.call(all,_hlUnwrap);
-  }
+  if(!hits.length){alert('選到的文字上沒有標誌。\\n\\n要清掉這一頁全部的標誌,請按「整頁標誌清除」。');return;}
+  _hlPush(_hlSlideOf(r.commonAncestorContainer));
+  hits.forEach(_hlUnwrap);
+  _hlChanged();
+}
+function hlClearPage(){
+  document.getElementById('hl-toolbar').style.display='none';
+  window.getSelection().removeAllRanges();_hlSel=null;
+  var cur=document.querySelectorAll('.slide')[c];if(!cur)return;
+  var all=cur.querySelectorAll('mark, span.fc');
+  if(!all.length){alert('這一頁沒有標誌。');return;}
+  if(!confirm('要清掉這一頁全部 '+all.length+' 個標誌嗎?\\n\\n(清錯可以按「↶ 復原上一步」)'))return;
+  _hlPush(cur);Array.prototype.forEach.call(all,_hlUnwrap);
   _hlChanged();
 }
 /* ════ V5.74.0 防誤用:復原、點標記單獨移除 ════
@@ -10876,8 +10940,10 @@ window.openImgWindow=function(caseId){
       +'<button class="fc-btn" style="color:#F57C00" onclick="fcApply(\'#F57C00\')" title="橘色文字">A</button>'
       +'<button class="fc-btn" style="color:#7B1FA2" onclick="fcApply(\'#7B1FA2\')" title="紫色文字">A</button>'
       +'<div class="hl-gap"></div><div class="hl-sep"></div>'
-      +'<button class="hl-clr" onclick="hlUndo()" title="復原上一個動作(Ctrl+Z)">↶ 復原</button>'
-      +'<button class="hl-clr" onclick="hlClear()">✕ 清除</button>'
+      /* V5.77.0 主任:三顆分開、名稱寫清楚 —— 原本「清除」一顆兼兩種意思(有選到標誌就清選到的,沒有就問要不要清整頁) */
+      +'<button class="hl-clr" onclick="hlUndo()" title="一步一步退回去(Ctrl+Z,最多 50 步)">↶ 復原上一步</button>'
+      +'<button class="hl-clr" onclick="hlClear()" title="清掉選到的文字上的標誌">✕ 清除標誌</button>'
+      +'<button class="hl-clr" onclick="hlClearPage()" title="清掉這一頁全部的標誌">整頁標誌清除</button>'
       /* V5.43.0:標記匯出 —— 原本螢光筆與字色只存在記憶體裡的 DOM,關掉就沒了,
          個管師只好用瀏覽器「另存完整網頁」保存,那會把**執行期的完整 DOM**
          重新序列化(含上百個 mark 節點與所有計算過的 inline style),

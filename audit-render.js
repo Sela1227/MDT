@@ -340,7 +340,9 @@ setTimeout(async ()=>{
     const s4=st();
     /* H-2:實際做法 —— 選一段「沒有標記」的字按清除 → 問要不要清整頁 → 只清這一頁 */
     ev("go("+i2+");__sel('第二位診斷');hlApply('#7FE87F');go("+i1+");");
-    confirms=0;ev("__sel('cc');hlClear();");
+    /* V5.77.0:「清除標誌」只清選到的(選到沒標誌的字 → 什麼都不清);「整頁標誌清除」才清整頁 */
+    const before0=st().marks;ev("__sel('cc');hlClear();");const clearNoop=st().marks===before0;
+    confirms=0;ev("hlClearPage();");
     const page2Left=D.querySelectorAll('.slide')[i2].querySelectorAll('mark').length;
     const page1Left=D.querySelectorAll('.slide')[i1].querySelectorAll('mark, span.fc').length;
     const clearAsked=confirms===1;
@@ -397,11 +399,11 @@ setTimeout(async ()=>{
     const chk=[
       ['沒標記時不顯示',!s0.show],['畫了顯示存標記',s1.show&&s1.dirty&&/存標記 1 頁/.test(s1.txt)],
       ['復原',s2.marks===1],['點標記出現移除',rmShown],['移除單一標記',s3.marks===1],['Ctrl+Z',s4.marks===2],
-      ['清除:選無標記的字會問、只清本頁',clearAsked&&page1Left===0&&page2Left===1],
+      ['清除標誌不動沒選到的、整頁清除只清本頁',clearNoop&&clearAsked&&page1Left===0&&page2Left===1],
       ['換頁收工具列',goHides],['SVG 不能畫',svgBlocked],['存的內容不含圖片',noImgData],['N-1 寫進舊版檔保留圖片',oldHasImg],
       ['下載顯示已下載',s5.show&&!s5.dirty&&/已下載/.test(s5.txt)],['存了不擋關頁',!ub1],['放大圖片不算沒存',zoomNotDirty],
       ['重開標記與圖片都在',reOk],['選錯檔不寫',wrongNotWritten],['重新產出的檔對位寫入、病人不少',h1ok],
-      ['工具列分組標字',/螢光/.test(tb)&&/字色/.test(tb)&&/復原/.test(tb)&&!/匯出/.test(tb)]];
+      ['工具列分組標字',/螢光/.test(tb)&&/字色/.test(tb)&&/復原上一步/.test(tb)&&/清除標誌/.test(tb)&&/整頁標誌清除/.test(tb)&&!/匯出/.test(tb)]];
     const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
     console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
     if(fail.length){bad++;console.log('   ',JSON.stringify({s0,s1,s2,s3,s4,s5,page1Left,page2Left,clearAsked,goHides,svgBlocked,noImgData,ub1,zoomNotDirty,reMarks,imgBack,bCnos,wCnos}).slice(0,600));}
