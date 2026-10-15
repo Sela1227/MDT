@@ -183,9 +183,9 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 一行 |
 |---|---|
+| V5.79.1 | V5.79.0 審核:V-1(P1)`_hlFind` 找最像處要前後文對上三成(最少 4 字),否則判為改掉並提示 —— 原本 ER 陽性的標記會跳到 PR 陽性;V-2 `_postFupUnset` 只列自己負責的癌別;V-3 測試會議前期追蹤 8 位標自動帶入;preview-check ⑤e |
 | V5.79.0 | V5.76.1 兩份審核:S-1 `_mergeHlMarks` 標記獨立合併(三條路共用);UI-1 決策結論取代原始決議帶入下一場(主任選);UI-2 三態按鈕 + 儲存並返回提醒(主任選),並修會後面板按鈕點了不變色(`[style*=]` 選擇器);UI-3 閱覽用 FUP_KEYS;UI-4 `followupEditHTML` 自動帶入預設收合;UI-7 `_spTypeRow` 類型收合 |
 | V5.78.2 | LINE 通知圖片:每張共用同一頁首(`K.header`)、高度一致(取最高張、頁尾置底)、名單依估計高度平均切分且不讓單人落單(主任);layout-check 驗頁首與高度 |
-| V5.78.1 | LINE 通知圖片分張(主任):第 1 張會議資訊 + 出席人員 + 議程人數,之後每 10 位一張(`_lineImgPlan`,特殊議程不計人數接最後一張),空項目合併「本次無」;layout-check 驗分頁 |
 | V5.78.0 | LINE 通知圖片(`_lineData` 一份資料,文字與圖片共用;layout-check 真 Chromium 畫圖);「預覽與畫重點」移到「HTML 投影片」前;「標誌」統一為「標記」(主任要求) |
 | V5.76.0 | **A 預覽與畫重點**(標記存進 `sections[cid].hlMarks`,postMessage + ack);Q-1 簡報筆;Q-2 純文字特殊議程提醒;Q-3;F 共用 `test-meeting.js`;Q-4 逐段裁切檢查;E 說明書對齊(主任同意) |
 
@@ -301,6 +301,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 |---|---|---|---|
 | 2026-09-24 | **合併會議所有文件產出永遠只出目前分頁癌別**,無合併流程(LINE 通知與 LINE 通知圖片例外) | 生效 | `getOutputCid()` 註解為設計不變量;preflight 檢查仍在 |
 | 2026-09-24 | **HTML 產出不要亂動,先討論再改**;目錄定位、雙欄功能延後 | 生效 |
+| 2026-10-15 | V5.79.0 審核 V-1~V-3:依建議修(V-1 上線前必修) | 已完成(V5.79.1) | `_hlFind` 門檻、`_postFupUnset`、`test-meeting.js` |
 | 2026-10-15 | V5.76.1 兩份審核:S-1、UI-3 直接修;UI-1 選「最新決議取代原始決議」;UI-2 選「畫面改正 + 存檔時提醒」;本版另做 UI-4(預設收合)、UI-7。**UI-5、UI-6、UI-8(其餘)、UI-9 未做**;UI-1 第 2 點「拿掉討論摘要」未做 | 已完成(V5.79.0) | `_doSave` 合併、`autoImportPrevFollowups`、會後面板、`followupViewHTML/followupEditHTML`、`_spTypeRow` |
 | 2026-10-15 | 主任:「讓標頭區塊都一樣大,長度也儘量一樣大」 | 已完成(V5.78.2) | `K.header`、`renderLineImages` 統一高度、`_lineImgPlan` 依高度切分 |
 | 2026-10-15 | 主任:LINE 通知圖片太長 →「固定第一張到出席人員,後面依個案量每 10 例一張,沒有的項目合併濃縮」 | 已完成(V5.78.1) | `_lineImgPlan/_lineImgCover/_lineImgBody`;預覽區改多張 |

@@ -125,6 +125,26 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
     if(await marks(pop)!==1)bad.push('⑤d V5.76 舊格式標記應照舊讀取(1 個),實際 '+(await marks(pop)));
     await pop.close();
 
+    /* ⑤e V5.79.1 審核 V-1:同一頁有兩個「陽性」,畫第一個(ER)——
+       後面補字仍在 ER;把 ER 改成陰性後,標記不可以跳到 PR 的「陽性」,要提示「陽性」改掉了 */
+    await p.evaluate(async function(){delete S.meeting.sections.head_neck.hlMarks;S.meeting.sections.head_neck.cases[0].diagnosis='Breast IDC, ER 陽性, PR 陽性, HER2 陰性';markDirty();await saveMeeting({silent:true});});
+    pop=await openPreview();
+    await sel(pop,'陽性',['fcApply','#D32F2F']);
+    await pop.click('#nb-save');await pop.waitForTimeout(1500);
+    await pop.close();
+    const where5e=async function(){const pp=await openPreview();await pp.waitForTimeout(300);
+      const w=await pp.evaluate(function(){return [].map.call(document.querySelectorAll('.slide span.fc'),function(m){var t=m.previousSibling;return (t&&t.textContent||'').slice(-3)+'['+m.textContent+']';});});
+      await pp.close();return w;};
+    await p.evaluate(async function(){S.meeting.sections.head_neck.cases[0].diagnosis='Breast IDC (left), ER 陽性, PR 陽性(10%), HER2 陰性';S.meeting.version++;saveLocal(S.meeting);_dirty=false;});
+    const w5e1=await where5e();
+    if(JSON.stringify(w5e1)!=='["ER ['+'陽性]"]')bad.push('⑤e 前後補字後標記應仍在 ER 陽性:'+JSON.stringify(w5e1));
+    await p.evaluate(async function(){S.meeting.sections.head_neck.cases[0].diagnosis='Breast IDC (left), ER 陰性, PR 陽性(10%), HER2 陰性';S.meeting.version++;saveLocal(S.meeting);_dirty=false;});
+    const nd5e=dialogs.length;
+    const w5e2=await where5e();
+    if(w5e2.length)bad.push('⑤e ER 改成陰性後標記不應跳到別處:'+JSON.stringify(w5e2));
+    if(!dialogs.slice(nd5e).some(x=>/已經改掉/.test(x)&&/陽性/.test(x)))bad.push('⑤e 沒有提示「陽性」改掉了');
+    await p.evaluate(function(){S.meeting.sections.head_neck.cases[0].diagnosis='第一位診斷文字';S.meeting.version++;saveLocal(S.meeting);_dirty=false;});
+
     /* ⑥ R-2:同時開兩份預覽,從第一份存也要成功 */
     await p.evaluate(async function(){delete S.meeting.sections.head_neck.hlMarks;markDirty();await saveMeeting({silent:true});});
     const pa=await openPreview(),pb=await openPreview();
@@ -184,7 +204,7 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
     const cp=src.slice(src.indexOf('function confirmCopyMtg('),src.indexOf('function confirmCopyMtg(')+1500);
     if(cp.indexOf('delete copy.sections[k].hlMarks')<0)bad.push('R-4 複製會議沒有清掉投影片標記');
 
-    console.log('預覽與畫重點 13 個情境'+(bad.length?'':' ✅'));
+    console.log('預覽與畫重點 14 個情境'+(bad.length?'':' ✅'));
     bad.slice(0,6).forEach(x=>console.log('  🔴 '+x));
     console.log('結果 '+bad.length);
   }catch(e){console.log('⚠ 例外:',e.message.slice(0,200));console.log('結果 -1');}

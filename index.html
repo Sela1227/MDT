@@ -1742,7 +1742,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.79.0';
+const VERSION='V5.79.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -5845,8 +5845,9 @@ function closePostMtgPanel(force){
 
 /* V5.79.0 UI-2:這場會議(所有勾選癌別)前期追蹤還沒選繼續追蹤/結案的人 */
 function _postFupUnset(){
-  var out=[];
-  (S.cids||[]).forEach(function(cid){((S.meeting.sections[cid]||{}).followups||[]).forEach(function(f){
+  /* V5.79.1 審核 V-2:合開時只提醒自己負責的癌別 —— 夥伴的前期追蹤不該由我選,每次存檔都被同一批人提醒 */
+  var mine=(S.user&&S.user.cancers)||[],out=[];
+  (S.cids||[]).filter(function(cid){return mine.indexOf(cid)>=0;}).forEach(function(cid){((S.meeting.sections[cid]||{}).followups||[]).forEach(function(f){
     if(f.status!=='ongoing'&&f.status!=='closed'&&(f.chartNo||f.name))out.push((f.chartNo||'')+(f.name?' '+maskName(f.name):''));});});
   return out;
 }
@@ -10393,16 +10394,20 @@ function _hlFind(txt,e){
   if(!e.q)return -1;
   var full=(e.pre||'')+e.q+(e.suf||''),i=txt.indexOf(full);
   if(i>=0&&txt.indexOf(full,i+1)<0)return i+(e.pre||'').length;
-  var best=-1,bs=-Infinity,p=txt.indexOf(e.q),pre=e.pre||'',suf=e.suf||'';
+  var best=-1,bs=-Infinity,bc=0,p=txt.indexOf(e.q),pre=e.pre||'',suf=e.suf||'';
   while(p>=0){
     var sc=0,j;
     for(j=1;j<=pre.length&&p-j>=0&&txt.charAt(p-j)===pre.charAt(pre.length-j);j++)sc++;
     for(j=0;j<suf.length&&txt.charAt(p+e.q.length+j)===suf.charAt(j);j++)sc++;
-    sc=sc*100000-Math.abs(p-(e.o||0));
-    if(sc>bs){bs=sc;best=p;}
+    var sc2=sc*100000-Math.abs(p-(e.o||0));
+    if(sc2>bs){bs=sc2;best=p;bc=sc;}
     p=txt.indexOf(e.q,p+1);
   }
-  return best;
+  /* V5.79.1 審核 V-1(P1 臨床語意):找最像的那一處時要有門檻 —— 前後文至少對上三成(最少 4 字;前後文本身不足 4 字時以實際長度為準)。
+     原本沒有門檻:在「ER 陽性」畫紅色,把 ER 改成陰性後,紅色會默默跳到同一頁的「PR 陽性」。
+     短詞(陽性、陰性、PD、化療、右側)在同一頁常出現好幾次,原處的字不見了就該判為「改掉了」並提示,不能就近找一個畫上去 */
+  var ctx=pre.length+suf.length,need=Math.min(ctx,Math.max(4,Math.ceil(ctx*0.3)));
+  return best>=0&&bc>=need?best:-1;
 }
 function _hlApplySys(skip){
   try{

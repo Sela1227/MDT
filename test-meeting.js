@@ -22,6 +22,8 @@ for(let i=0;i<10;i++){
       :'建議同步化放療,放療科評估後安排\n上次結果(2026-09-17)：已安排放療科門診',
     followFocus:'確認治療進度與副作用',note:i%2?'RT Fx 8,無明顯副作用':''});
 }
+/* V5.79.1 審核 V-3:真實流程的前期追蹤幾乎都是上一場自動帶入的 —— 前 8 位標 _autoImported,後 2 位當手動新增 */
+FUPS.forEach(function(f,i){if(i<8)f._extra={_autoImported:true};});
 FUPS[0].note='目前追蹤中';FUPS[0].followFocus='確認回診結果';FUPS[0].prevDecision='三個月後回診';
 
 const DATA={
