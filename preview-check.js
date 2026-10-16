@@ -204,7 +204,36 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
     const cp=src.slice(src.indexOf('function confirmCopyMtg('),src.indexOf('function confirmCopyMtg(')+1500);
     if(cp.indexOf('delete copy.sections[k].hlMarks')<0)bad.push('R-4 複製會議沒有清掉投影片標記');
 
-    console.log('預覽與畫重點 14 個情境'+(bad.length?'':' ✅'));
+    /* ⑩ V5.80.0 註記:預覽裡加註記 → 存進會議(n)→ 再預覽還在 → 小抄印出 → 下載/分享的投影片沒有註記 */
+    await p.evaluate(async function(){S.user=USERS.find(function(u){return (u.cancers||[]).indexOf('head_neck')>=0;});delete S.meeting.sections.head_neck.hlMarks;markDirty();await saveMeeting({silent:true});});
+    pop=await openPreview();
+    const pv=await pop.evaluate(function(){return document.body.classList.contains('hl-pv')&&getComputedStyle(document.querySelector('#hl-toolbar .hl-note')).display!=='none';});
+    if(!pv)bad.push('⑩ 預覽裡看不到「✎ 註記」按鈕');
+    await pop.evaluate(function(){window.prompt=function(){return 'TNM stages 待確認';};});
+    await sel(pop,'第二位病史',['hlNote']);
+    await pop.evaluate(function(){window.prompt=function(){return '問放射腫瘤科';};});
+    await sel(pop,'第一位討論',['fcApply','#D32F2F']);
+    const n10=await pop.evaluate(function(){var m=[].filter.call(document.querySelectorAll('.slide span.fc'),function(x){return /第一位討論/.test(x.textContent);})[0];_hlRmTarget=m;hlNoteOne();
+      return [].map.call(document.querySelectorAll('.slide [data-n]'),function(x){return x.textContent+'='+x.getAttribute('data-n');});});
+    if(n10.join('|')!=='第一位討論=問放射腫瘤科|第二位病史=TNM stages 待確認'&&n10.join('|')!=='第二位病史=TNM stages 待確認|第一位討論=問放射腫瘤科')bad.push('⑩ 註記沒有加上:'+JSON.stringify(n10));
+    await pop.click('#nb-save');await pop.waitForTimeout(1500);
+    if(!/已存\(系統\)/.test((await btn(pop)).txt))bad.push('⑩ 加註記後存標記失敗:'+(await btn(pop)).txt);
+    await pop.close();
+    const sys10=await p.evaluate(function(){return (S.meeting.sections.head_neck.hlMarks.marks||[]).filter(function(e){return e.n;}).map(function(e){return e.n;}).sort().join('|');});
+    if(sys10!==['問放射腫瘤科','TNM stages 待確認'].sort().join('|'))bad.push('⑩ 系統裡的註記不對:'+sys10);
+    pop=await openPreview();
+    const back=await pop.evaluate(function(){return document.querySelectorAll('.slide [data-n]').length;});
+    if(back!==2)bad.push('⑩ 再預覽註記沒有回來:'+back);
+    await pop.close();
+    const out10=await p.evaluate(async function(){
+      var dl=await genHTMLSlides({download:false,silent:true});
+      var got='',ow=window.open;window.open=function(){return {document:{open:function(){},write:function(h){got+=h;},close:function(){}}};};
+      try{genPrintSheet();}finally{window.open=ow;}
+      return {dlHasNote:/TNM stages 待確認|問放射腫瘤科/.test(dl),dlHasMark:/第二位病史/.test(dl),sheet:got};});
+    if(out10.dlHasNote)bad.push('⑩ 下載/分享的投影片不應帶註記');
+    if(!/第二位病史[\s\S]{0,120}TNM stages 待確認/.test(out10.sheet)||!/第一位討論[\s\S]{0,120}問放射腫瘤科/.test(out10.sheet))bad.push('⑩ 會議小抄沒有印出重點與註記');
+
+    console.log('預覽與畫重點 15 個情境'+(bad.length?'':' ✅'));
     bad.slice(0,6).forEach(x=>console.log('  🔴 '+x));
     console.log('結果 '+bad.length);
   }catch(e){console.log('⚠ 例外:',e.message.slice(0,200));console.log('結果 -1');}

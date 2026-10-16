@@ -1742,7 +1742,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.79.1';
+const VERSION='V5.80.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -7578,6 +7578,11 @@ window.addEventListener('message',function(e){
     reply(true,'');
   }).catch(function(err){reply(false,'儲存失敗:'+((err&&err.message)||err));});
 });
+/* V5.80.0:註記只給個管自己(預覽)與會議小抄 —— 下載、分享的投影片產出時拿掉,不讓註記藏在檔案裡被轉傳 */
+function _hlMarksForSlides(marks,preview){
+  if(preview||!Array.isArray(marks))return marks;
+  return marks.map(function(e){if(!e||!e.n)return e;const o=Object.assign({},e);delete o.n;return o;});
+}
 /* 產出區顯示這個癌別存了幾頁標記;可清除 */
 function _renderHlStatus(){
   const el=document.getElementById('hl-sys-status');if(!el)return;
@@ -7589,7 +7594,8 @@ function _renderHlStatus(){
   if(!n)return;
   const t=document.createElement('span');
   let when='';try{const dt=new Date(hm.at);when=(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');}catch(_){}
-  t.textContent='投影片標記:'+n+' 頁('+[when,hm.by].filter(Boolean).join(' ')+')—— 預覽、下載、分享都會自動帶上 ';
+  const nn=Array.isArray(hm.marks)?hm.marks.filter(function(e){return e&&e.n;}).length:0;/* V5.80.0 */
+  t.textContent='投影片標記:'+n+' 頁'+(nn?'、註記 '+nn+' 則(印在會議小抄)':'')+'('+[when,hm.by].filter(Boolean).join(' ')+')—— 預覽、下載、分享都會自動帶上 ';
   const b=document.createElement('button');
   b.className='btn btn-b btn-sm';b.style.cssText='font-size:11px;padding:1px 8px;margin-left:4px';b.textContent='清除標記';
   b.addEventListener('click',async function(){
@@ -10182,7 +10188,12 @@ async function genHTMLSlides(opts){
     /* V5.74.0 防誤用:螢光/字色分兩組並標字,組間拉開 */
     +'.hl-lab{color:rgba(255,255,255,.8);font-size:12px;margin:0 2px 0 4px;white-space:nowrap;user-select:none;}'
     +'.hl-gap{width:14px;flex-shrink:0;}'
-    +'#hl-rm{position:fixed;display:none;z-index:510;background:rgba(20,30,40,.92);color:#fff;border:none;border-radius:14px;padding:5px 12px;font-size:13px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.35);}'
+    +'#hl-rm{position:fixed;display:none;gap:4px;z-index:510;background:rgba(20,30,40,.92);border-radius:16px;padding:3px;box-shadow:0 2px 10px rgba(0,0,0,.35);}'
+    +'#hl-rm button{background:none;color:#fff;border:none;border-radius:13px;padding:4px 11px;font-size:13px;cursor:pointer;white-space:nowrap;}'
+    +'#hl-rm button:hover{background:rgba(255,255,255,.15);}'
+    /* V5.80.0 註記:只在預覽(body.hl-pv)出現按鈕與 ✎ 記號;會議上播的投影片看不到 */
+    +'.hl-note{display:none!important;}body.hl-pv .hl-note{display:inline-block!important;}'
+    +'body.hl-pv [data-n]::after{content:"\\270E";font-size:.62em;vertical-align:super;color:#E67E22;font-weight:700;margin-left:1px;}'
     +'#nb-save{width:auto!important;border-radius:22px!important;padding:0 12px;font-size:clamp(12px,1vw,15px)!important;white-space:nowrap;}'
     +'#nb-save.dirty{background:#F2B544;color:#1a2530;border-color:#F2B544;font-weight:700;}'
     +'.hl-clr:hover{background:rgba(255,255,255,.15);}'
@@ -10339,7 +10350,7 @@ function _hlRanges(s){
   s.querySelectorAll('mark, span.fc').forEach(function(m){
     var tn=_hlTextNodes(m);if(!tn.length||!at.has(tn[0]))return;
     var len=tn.reduce(function(a,n){return a+n.data.length;},0);
-    out.push([at.get(tn[0]),len,m.tagName.toLowerCase()==='span'?'span':'mark',m.getAttribute('style')||'',m.className||'']);
+    out.push([at.get(tn[0]),len,m.tagName.toLowerCase()==='span'?'span':'mark',m.getAttribute('style')||'',m.className||'',m.getAttribute('data-n')||'']);/* V5.80.0:第 6 欄 = 註記 */
   });
   return out;
 }
@@ -10355,7 +10366,7 @@ function _hlApplyRanges(s,rs){
     if(!sn||!en)return;
     var rg=document.createRange();rg.setStart(sn,so);rg.setEnd(en,eo);
     var el=document.createElement(r[2]==='span'?'span':'mark');
-    if(r[3])el.setAttribute('style',r[3]);if(r[4])el.className=r[4];
+    if(r[3])el.setAttribute('style',r[3]);if(r[4])el.className=r[4];if(r[5])el.setAttribute('data-n',r[5]);
     try{rg.surroundContents(el);}catch(ex){try{var fr=rg.extractContents();el.appendChild(fr);rg.insertNode(el);}catch(e2){}}
   });
 }
@@ -10383,8 +10394,10 @@ function _hlSysCollect(){
     var rs=_hlRanges(s);if(!rs.length)return;
     var txt=_hlPageText(s);
     rs.forEach(function(r){
-      out.push({k:keys[i],q:txt.substr(r[0],r[1]),pre:txt.slice(Math.max(0,r[0]-20),r[0]),suf:txt.substr(r[0]+r[1],20),
-        o:r[0],t:r[2],s:r[3],c:r[4]});
+      var e={k:keys[i],q:txt.substr(r[0],r[1]),pre:txt.slice(Math.max(0,r[0]-20),r[0]),suf:txt.substr(r[0]+r[1],20),
+        o:r[0],t:r[2],s:r[3],c:r[4]};
+      if(r[5])e.n=r[5];/* V5.80.0 註記(只上會議小抄) */
+      out.push(e);
     });
   });
   return out;
@@ -10423,7 +10436,7 @@ function _hlApplySys(skip){
         var i=keys.indexOf(k);
         if(i<0||skip.indexOf(String(i))>=0){if(i<0)byKey[k].forEach(function(e){miss.push(e.q);});return;}
         var txt=_hlPageText(slides[i]),rs=[];
-        byKey[k].forEach(function(e){var pos=_hlFind(txt,e);if(pos<0)miss.push(e.q);else rs.push([pos,e.q.length,e.t,e.s,e.c]);});
+        byKey[k].forEach(function(e){var pos=_hlFind(txt,e);if(pos<0)miss.push(e.q);else rs.push([pos,e.q.length,e.t,e.s,e.c,e.n||'']);});
         rs.sort(function(a,b){return a[0]-b[0]||b[1]-a[1];});/* 外層先包,巢狀才對 */
         _hlApplyRanges(slides[i],rs);
       });
@@ -10455,7 +10468,7 @@ function _hlSig(){
   document.querySelectorAll('.slide').forEach(function(s,i){
     var ms=s.querySelectorAll('mark, span.fc');if(!ms.length)return;
     var r=document.createRange();
-    ms.forEach(function(m){r.setStart(s,0);r.setEndBefore(m);o.push([i,r.toString().length,m.textContent.length,m.tagName,m.getAttribute('style')]);});
+    ms.forEach(function(m){r.setStart(s,0);r.setEndBefore(m);o.push([i,r.toString().length,m.textContent.length,m.tagName,m.getAttribute('style'),m.getAttribute('data-n')||'']);});
   });
   return JSON.stringify(o);
 }
@@ -10653,7 +10666,7 @@ function _hlAskWrite(fh,out,name,sig){
         _hlFinishLocal(ok,out,name,sig);
       },true]]);
 }
-function _hlInit(){var done=_hlRestore();_hlApplySys(done);_hlSavedSig=_hlSig();_hlSaveKind=(_hlSys&&_hlSys.preview)?'system':'file';_hlChanged();}
+function _hlInit(){var done=_hlRestore();_hlApplySys(done);if(_hlSys&&_hlSys.preview)document.body.classList.add('hl-pv');/* V5.80.0:只有預覽看得到註記按鈕與 ✎ */_hlSavedSig=_hlSig();_hlSaveKind=(_hlSys&&_hlSys.preview)?'system':'file';_hlChanged();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_hlInit);
 else _hlInit();
 
@@ -10673,9 +10686,11 @@ function _hlCanApply(){
 }
 function _hlWrap(make){
   _hlPush(_hlSlideOf(_hlSel.commonAncestorContainer));
-  try{_hlSel.surroundContents(make());}
-  catch(ex){try{var frag=_hlSel.extractContents();var sp=make();sp.appendChild(frag);_hlSel.insertNode(sp);}catch(e2){}}
+  var el=null;
+  try{el=make();_hlSel.surroundContents(el);}
+  catch(ex){try{var frag=_hlSel.extractContents();el=make();el.appendChild(frag);_hlSel.insertNode(el);}catch(e2){el=null;}}
   window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;_hlChanged();
+  return el;/* V5.80.0:註記要拿到剛畫好的那一條 */
 }
 function hlApply(color){if(!_hlCanApply())return;_hlWrap(function(){var m=document.createElement('mark');m.style.background=color;m.style.color='inherit';return m;});}
 /* V5.1.4: 字色變更工具 — 跟螢光筆同層,用 <span class="fc"> 包,不動 background */
@@ -10726,14 +10741,14 @@ function hlUndo(){
 }
 function _hlHideRm(){var b=document.getElementById('hl-rm');if(b)b.style.display='none';}
 document.addEventListener('click',function(e){
-  if(e.target&&e.target.id==='hl-rm')return;
+  if(e.target&&e.target.closest&&e.target.closest('#hl-rm'))return;
   _hlHideRm();
   var s=window.getSelection();if(s&&!s.isCollapsed&&s.toString().trim())return;
   var m=e.target&&e.target.closest?e.target.closest('mark, span.fc'):null;
   if(!m||!m.closest('.slide'))return;
   _hlRmTarget=m;
   var r=m.getBoundingClientRect(),b=document.getElementById('hl-rm');
-  b.style.display='block';
+  b.style.display='flex';
   b.style.top=Math.max(4,r.top-38)+'px';
   b.style.left=Math.max(4,Math.min(r.left,window.innerWidth-160))+'px';
 });
@@ -10743,6 +10758,34 @@ function hlRemoveOne(){
   _hlPush(m.closest('.slide'));
   _hlUnwrap(m);
   _hlChanged();
+}
+/* ════ V5.80.0 標記加註記(個管師需求;主任選「只出現在會議小抄」)════
+   註記存在標記元素的 data-n,跟著標記存進會議(hlMarks 的 n)。投影片上看不到 —— 只有「預覽與畫重點」
+   會在畫線右上角顯示 ✎,方便自己知道哪條有寫;下載與分享的投影片產出時就拿掉註記(見 genHTMLSlides)。 */
+function _hlAskNote(old){
+  var t=window.prompt('註記(只會印在會議小抄上,投影片看不到;清空 = 刪除註記):',old||'');
+  return t===null?null:String(t).replace(/\\s+/g,' ').trim().slice(0,200);/* extraJs 是模板字串,反斜線要寫兩個(原則 C) */
+}
+function _hlSetNote(m,t){if(t)m.setAttribute('data-n',t);else m.removeAttribute('data-n');m.title=t?('註記:'+t):'';}
+/* 選字後按「✎ 註記」:選到的是一條既有標記 → 改它的註記;否則先畫黃色螢光再加註記 */
+function hlNote(){
+  if(!_hlCanApply())return;
+  var r=_hlSel,hits=Array.prototype.filter.call(document.querySelectorAll('.slide mark, .slide span.fc'),function(m){return r.intersectsNode(m);});
+  if(hits.length===1&&hits[0].contains(r.startContainer)&&hits[0].contains(r.endContainer)){
+    var m0=hits[0];window.getSelection().removeAllRanges();document.getElementById('hl-toolbar').style.display='none';_hlSel=null;
+    var t0=_hlAskNote(m0.getAttribute('data-n'));if(t0===null)return;
+    _hlPush(m0.closest('.slide'));_hlSetNote(m0,t0);_hlChanged();return;
+  }
+  var t=_hlAskNote('');if(t===null||!t)return;
+  var el=_hlWrap(function(){var m=document.createElement('mark');m.style.background='#FFE066';m.style.color='inherit';return m;});
+  if(el){_hlSetNote(el,t);_hlChanged();}
+}
+/* 點一下已畫的標記 → 「✎ 註記」改這一條 */
+function hlNoteOne(){
+  var m=_hlRmTarget;_hlRmTarget=null;_hlHideRm();
+  if(!m||!m.parentNode)return;
+  var t=_hlAskNote(m.getAttribute('data-n'));if(t===null)return;
+  _hlPush(m.closest('.slide'));_hlSetNote(m,t);_hlChanged();
 }
 var _magMode=false,_magCv=null;
 function _initMag(){if(_magCv)return;_magCv=document.createElement('canvas');_magCv.style.cssText='position:fixed;border-radius:50%;border:3px solid rgba(255,255,255,.75);box-shadow:0 3px 16px rgba(0,0,0,.55);pointer-events:none;display:none;z-index:999;';document.body.appendChild(_magCv);}
@@ -11003,6 +11046,7 @@ window.openImgWindow=function(caseId){
       +'<button class="fc-btn" style="color:#7B1FA2" onclick="fcApply(\'#7B1FA2\')" title="紫色文字">A</button>'
       +'<div class="hl-gap"></div><div class="hl-sep"></div>'
       /* V5.77.0 主任:三顆分開、名稱寫清楚 —— 原本「清除」一顆兼兩種意思(有選到標記就清選到的,沒有就問要不要清整頁) */
+      +'<button class="hl-clr hl-note" onclick="hlNote()" title="選到的文字加一句註記(沒畫過的會先畫黃色螢光);只會印在會議小抄,投影片看不到">✎ 註記</button>'
       +'<button class="hl-clr" onclick="hlUndo()" title="一步一步退回去(Ctrl+Z,最多 50 步)">↶ 復原上一步</button>'
       +'<button class="hl-clr" onclick="hlClear()" title="清掉選到的文字上的標記">✕ 清除標記</button>'
       +'<button class="hl-clr" onclick="hlClearPage()" title="清掉這一頁全部的標記">整頁標記清除</button>'
@@ -11015,7 +11059,7 @@ window.openImgWindow=function(caseId){
       /* V5.74.0:匯出移到下方導覽列常駐(原本只有選字時才看得到) */
     /* V5.19.0 #2 Case Navigator:☰ 開目錄,直接跳到某個個案(頁數多時免得一直翻) */
     +'</div>\n'
-    +'<button id="hl-rm" onclick="hlRemoveOne()">✕ 移除這個標記</button>\n'
+    +'<div id="hl-rm"><button onclick="hlRemoveOne()">✕ 移除這個標記</button><button class="hl-note" onclick="hlNoteOne()">✎ 註記</button></div>\n'
     +'<div class="navdrawer" id="navdrawer"><div class="navdrawer-in">'
     +'<div class="navdrawer-h">會議目錄<button class="navdrawer-x" onclick="toggleNav(0)">&times;</button></div>'
     +'<div class="navdrawer-b" id="navdrawer-b"></div>'
@@ -11036,7 +11080,7 @@ window.openImgWindow=function(caseId){
     +'\n<script id="hl-data" type="application/json">{}</'+'script>'
     /* V5.76.0 A:這場會議存在系統裡的標記(以頁面文字對位的字元範圍)。preview=true 時「存標記」改傳回系統 */
     +'\n<script id="hl-sys" type="application/json">'+JSON.stringify({mid:m.id,cid:cids[0],preview:!!opts.preview,
-        marks:((m.sections[cids[0]]||{}).hlMarks||{}).marks||{}}).replace(/</g,'\\u003c')+'</'+'script>'
+        marks:_hlMarksForSlides(((m.sections[cids[0]]||{}).hlMarks||{}).marks||{},!!opts.preview)}).replace(/</g,'\\u003c')+'</'+'script>'
     +'\n</body></html>'
   /* V5.5.0: 依設定偏好決定檔名語言(中文 / 英文 cancer code) */
   const _fnLang=getHtmlFnameLang();
@@ -11818,23 +11862,45 @@ function closeAudioSplitter(){
   if(md)md.style.display='none';
   document.body.style.overflow='';
 }
+/* V5.80.0:會議小抄用 —— 這位病人「個案頁」上畫的重點(依頁面鑰匙的病歷號,不含醫療小組 T / 必要事件 E 頁)。
+   回傳 [{q:畫的字, n:註記, s:畫線樣式}],順序同投影片;舊格式(V5.76 整頁指紋)對不到病人,不列 */
+function _sheetMarks(marks,chartNo,tag){/* tag:''=個案頁、'T'=醫療小組頁、'E'=必要事件頁(V5.80.1) */
+  if(!Array.isArray(marks)||!chartNo)return [];
+  const key='|'+String(chartNo).trim()+(tag||'')+'#';
+  return marks.filter(function(e){return e&&e.q&&String(e.k||'').indexOf(key)>=0;}).map(function(e){
+    const q=String(e.q).replace(/\s+/g,' ').trim();
+    /* 樣式只取顏色相關,其他(字重等)不帶進小抄 */
+    const st=String(e.s||'').split(';').filter(function(x){return /^\s*(background|color)\s*:/.test(x)&&!/inherit/.test(x);}).join(';');
+    return {q:q.length>40?q.slice(0,40)+'…':q,n:String(e.n||'').trim(),s:st};
+  });
+}
 function genPrintSheet(){
   if(readForm()===false)return;
   const m=S.meeting;
   if(!m){alert('請先開啟會議');return;}
   const cid=getOutputCid()||S.cids[0];
   const ca=CFG[cid]||{};
-  const cases=((m.sections[cid]||{}).cases)||[];
-  if(!cases.length){alert('本區沒有個案討論,無法產生小抄');return;}
+  const sec=m.sections[cid]||{};
+  /* V5.80.1 主任:醫療小組、必要事件也放上小抄(各自一段,接在個案討論後面;欄位名與填寫畫面一致) */
+  const groups=[{lbl:'個案討論',arr:sec.cases||[],tag:'',bl:'討論摘要',br:'決策結論'},
+    {lbl:'醫療小組',arr:sec.team||[],tag:'T',bl:TEAM_LBL.summary,br:TEAM_LBL.decision},
+    {lbl:'必要事件',arr:sec.events||[],tag:'E',bl:'討論摘要',br:'決策結論'}].filter(function(g){return g.arr.length;});
+  if(!groups.length){alert('本區沒有個案討論、醫療小組或必要事件,無法產生小抄');return;}
   const esc=function(v){return escA(v||'');};
   const shortDemo=function(c){
     const g=c.gender==='F'?'女':(c.gender==='M'?'男':'');
     const a=c.age?c.age+' 歲':'';
     return (g&&a)?(g+' / '+a):(g||a||'');
   };
+  /* V5.80.0 個管需求:「預覽與畫重點」畫的重點與註記印在每位病人下方(主任選:每位病人下方列重點,手寫欄保留) */
+  const hm=((m.sections[cid]||{}).hlMarks||{}).marks;
   let rows='';
-  cases.forEach(function(c,i){
+  const showSec=groups.length>1||groups[0].tag!=='';
+  groups.forEach(function(g){
+  if(showSec)rows+='<div class="sec">'+esc(g.lbl)+'<span>'+g.arr.length+' 位</span></div>';
+  g.arr.forEach(function(c,i){
     const drs=getDoctors(c).join('、')||'—';
+    const kps=_sheetMarks(hm,c.chartNo,g.tag);
     const fg=(c.flags||[]).map(function(fl){
       return '<span class="fg" style="background:'+flagColor(fl)+'">'+esc(fl)+'</span>';
     }).join('');
@@ -11847,11 +11913,14 @@ function genPrintSheet(){
       +fg
       +'<span class="dr">VS '+esc(drs)+'</span>'
       +'</div>'
+      +(kps.length?'<div class="kp">'+kps.map(function(k){
+          return '<div class="kl"><span class="kq" style="'+esc(k.s)+'">'+esc(k.q)+'</span>'+(k.n?'<span class="kn">'+esc(k.n)+'</span>':'')+'</div>';}).join('')+'</div>':'')
       +'<div class="bx">'
-      +'<div class="bl"><div class="lb">討論摘要</div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div></div>'
-      +'<div class="br"><div class="lb">決策結論</div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div></div>'
+      +'<div class="bl"><div class="lb">'+esc(g.bl)+'</div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div></div>'
+      +'<div class="br"><div class="lb">'+esc(g.br)+'</div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div></div>'
       +'</div>'
       +'</div>';
+  });
   });
   const title=(ca.name||'')+' 多專科團隊會議';
   const css='@page{size:A4 portrait;margin:10mm}'
@@ -11861,7 +11930,14 @@ function genPrintSheet(){
     +'.top h1{font-size:12pt;margin:0;font-weight:700}'
     +'.top .dt{font-size:9pt;color:#637281}'
     +'.top .ct{font-size:8pt;color:#9BAAB6;margin-left:auto}'
-    +'.row{height:52mm;page-break-inside:avoid;break-inside:avoid;padding-bottom:3mm}'
+    +'.sec{font-size:10pt;font-weight:700;color:#4A7C8E;letter-spacing:.08em;margin:2mm 0 1.5mm;padding-left:2mm;border-left:1mm solid #4A7C8E;break-after:avoid;page-break-after:avoid}'
+    +'.sec span{font-size:8pt;font-weight:400;color:#9BAAB6;margin-left:2mm;letter-spacing:0}'
+    +'.row{min-height:52mm;page-break-inside:avoid;break-inside:avoid;padding-bottom:3mm}'
+    +'.kp{margin:1.2mm 0 0;padding:1mm 2mm;background:#F7F9FA;border-radius:1mm}'
+    +'.kl{font-size:8.5pt;line-height:1.55;display:flex;gap:2mm;align-items:baseline}'
+    +'.kl:before{content:"\\25B8";color:#9BAAB6;font-size:7pt}'
+    +'.kq{padding:0 .8mm;border-radius:.6mm;flex-shrink:0;max-width:62%}'
+    +'.kn{color:#2C3540;font-weight:600}.kn:before{content:"\\2192  ";color:#9BAAB6;font-weight:400}'
     +'.hd{height:7mm;display:flex;align-items:center;gap:2.5mm;border-bottom:.3mm solid #CDD5DC}'
     +'.no{font-size:9pt;font-weight:700;color:#4A7C8E;min-width:5mm}'
     +'.ch{font-size:11pt;font-weight:700;letter-spacing:.02em}'
@@ -11878,7 +11954,7 @@ function genPrintSheet(){
     +'<title>'+esc(title)+' 小抄 '+esc(m.date||'')+'</title>'
     +'<style>'+css+'</style></head><body><div class="sheet">'
     +'<div class="top"><h1>'+esc(title)+'</h1><span class="dt">'+esc(m.date||'')+'</span>'
-    +'<span class="ct">會議小抄 · 共 '+cases.length+' 案</span></div>'
+    +'<span class="ct">會議小抄 · '+groups.map(function(g){return g.lbl+' '+g.arr.length;}).join(' · ')+'</span></div>'
     +rows
     +'</div><scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},350);};</scr'+'ipt>'
     +'</body></html>';

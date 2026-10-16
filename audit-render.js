@@ -334,7 +334,7 @@ setTimeout(async ()=>{
     ev("hlUndo()");const s2=st();
     ev("__sel('第一位討論');fcApply('#D32F2F');");
     const fc=D.querySelector('.slide span.fc');fc.dispatchEvent(new W.MouseEvent('click',{bubbles:true}));
-    const rmShown=D.getElementById('hl-rm').style.display==='block';
+    const rmShown=D.getElementById('hl-rm').style.display==='flex';/* V5.80.0:hl-rm 由單顆按鈕改成「移除 + 註記」兩顆的列,顯示時用 flex */
     ev("hlRemoveOne()");const s3=st();
     D.dispatchEvent(new W.KeyboardEvent('keydown',{key:'z',ctrlKey:true,bubbles:true}));
     const s4=st();
@@ -484,6 +484,33 @@ setTimeout(async ()=>{
     const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
     console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
     if(fail.length){bad++;console.log('   ',JSON.stringify(r).slice(0,500));}
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,200));bad++;}
+
+  // ── [V5.80.1] 會議小抄:個案、醫療小組、必要事件各一段,重點依頁面種類對到人 ──
+  console.log('\n=== [V5.80.1] 會議小抄含醫療小組與必要事件 ===');
+  try{
+    const r=JSON.parse(run("(function(){var keep=S.meeting,kc=S.cids;S.cids=['head_neck'];S.meeting=newMeetingObj(S.user.id,['head_neck']);S.meeting.date='2001-04-01';"
+      +"S.meeting.sections.head_neck={cases:[createItem('head_neck','cases',{chartNo:'9000601',name:'測試甲'},{})],team:[createItem('head_neck','team',{chartNo:'9000602',name:'測試乙'},{})],"
+      +"events:[createItem('head_neck','events',{chartNo:'9000603',name:'測試丙'},{})],followups:[],special:[],"
+      +"hlMarks:{v:2,marks:[{k:'slide|9000601#1',q:'個案重點',s:'background: rgb(255, 224, 102); color: inherit;',n:'個案註記'},"
+      +"{k:'slide|9000602T#1',q:'小組重點',s:'color: rgb(211, 47, 47); font-weight: 600;',n:'小組註記'},{k:'slide|9000603E#1',q:'事件重點',s:''}]}};"
+      +"var got='',ow=window.open,oa=window.alert;window.open=function(){return {document:{open:function(){},write:function(h){got+=h;},close:function(){}}};};"
+      +"try{genPrintSheet();}finally{window.open=ow;}"
+      +"var only=createItem('head_neck','team',{chartNo:'9000604',name:'測試丁'},{});S.meeting.sections.head_neck={cases:[],team:[only],events:[],followups:[],special:[]};var got2='',al='';window.alert=function(m){al=m;};"
+      +"window.open=function(){return {document:{open:function(){},write:function(h){got2+=h;},close:function(){}}};};try{genPrintSheet();}finally{window.open=ow;window.alert=oa;}"
+      +"S.meeting=keep;S.cids=kc;return JSON.stringify({got:got,got2:got2,al:al});})()"));
+    const g=r.got,pos=function(x){return g.indexOf(x);};
+    const chk=[['三段都有標題',/class="sec">個案討論/.test(g)&&/class="sec">醫療小組/.test(g)&&/class="sec">必要事件/.test(g)],
+      ['順序:個案→小組→事件',pos('9000601')<pos('9000602')&&pos('9000602')<pos('9000603')],
+      ['小組重點與註記在小組那位病人下',pos('小組重點')>pos('9000602')&&pos('小組重點')<pos('9000603')&&/小組註記/.test(g)],
+      ['個案重點不跑到小組',pos('個案重點')>pos('9000601')&&pos('個案重點')<pos('9000602')],
+      ['事件重點在事件病人下',pos('事件重點')>pos('9000603')],
+      ['醫療小組手寫欄用填寫畫面名稱',g.indexOf('最新情況')>0&&g.indexOf('治療決策')>0],
+      ['頁首列出三類人數',/個案討論 1 · 醫療小組 1 · 必要事件 1/.test(g)],
+      ['只有醫療小組也能產出',/9000604/.test(r.got2)&&!r.al]];
+    const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
+    console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
+    if(fail.length){bad++;console.log('   ',r.al,g.slice(g.indexOf('<div class="sec"'),g.indexOf('<div class="sec"')+300));}
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,200));bad++;}
 
   // ── [V5.76.0 Q-2] 沒有影像的特殊議程:產出前檢查要提醒 ──

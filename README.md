@@ -97,6 +97,8 @@ python3 preflight.py --quick  # 只跑靜態
 
 **投影片內容等價測試**(V5.75.0):`content-equiv.js` 用固定的虛構會議產出 HTML 投影片,逐頁比對文字與 `content-baseline.json`。投影片上的字只要變了(多頁、少頁、標籤改名)preflight 就 🔴。**經主任同意改投影片內容後**才執行 `node content-equiv.js --update` 更新基準,並在 CHANGELOG 寫理由。
 
+**標記註記**(V5.80.0):標記元素 `data-n` ↔ `hlMarks.marks[].n`(`_hlRanges` 第 6 欄);只有預覽(`body.hl-pv`)顯示「✎ 註記」按鈕與 ✎ 記號;`genHTMLSlides` 非預覽時以 `_hlMarksForSlides` 拿掉 `n`(下載、分享不帶註記);會議小抄以 `_sheetMarks(marks, 病歷號)` 列出該病人個案頁的重點與註記。
+
 **前期追蹤續追**(V5.79.0):會後填的 `decision` 帶入下一場時取代原始 `prevDecision`(必要提報保留【必要提報】行);`status` 未選不帶入,會後面板三態顯示並在「儲存並返回」提醒。**標記合併**:`_doSave` 的 NAS 合併判斷「有沒有改」不含 `hlMarks`,標記另由 `_mergeHlMarks` 決定(這台改過用這台的,否則用 NAS 的)。
 
 **LINE 通知圖片**(V5.78.0):`_lineData()` 把會議整理成結構化資料,`genLine()` 組文字、`renderLineImages()` 依 `_lineImgPlan()` 分張畫 canvas(寬 1080、2 倍解析度;第 1 張 `_lineImgCover`,名單 `_lineImgBody` 每張最多 `_LI_PER=10` 位且依估計高度平均切分,每張共用 `K.header` 頁首、高度取最高一張,特殊議程接最後一張,空項目合併「本次無」)—— 兩者同一份資料,改通知內容只改 `_lineData`。

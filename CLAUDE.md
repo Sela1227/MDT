@@ -148,7 +148,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
       team:      [{... 醫療小組 ...}],
       followups: [{..., prevDecision, followFocus, note, summary, decision, status:'closed'|'ongoing'|未選, _autoImported}],  // V5.79.0:decision(會後填)帶入下一場取代 prevDecision;未選 status 不帶入
       special:   [...],
-      hlMarks:   {v:2,marks:[{k:'頁型|病歷號#序',q:畫到的文字,pre,suf,o,t,s,c}],at,by}  // V5.77.0 投影片標記:依病人+文字對位(會議內容的註記,要同步);V5.76 舊格式 {頁面文字指紋:[[起始,長度,…]]} 仍可讀
+      hlMarks:   {v:2,marks:[{k:'頁型|病歷號#序',q:畫到的文字,pre,suf,o,t,s,c,n:註記(V5.80.0,選填)}],at,by}  // V5.77.0 投影片標記:依病人+文字對位(會議內容的註記,要同步);V5.76 舊格式 {頁面文字指紋:[[起始,長度,…]]} 仍可讀
     }
   }
 }
@@ -183,10 +183,10 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 一行 |
 |---|---|
+| V5.80.1 | 主任:會議小抄加醫療小組、必要事件(`genPrintSheet` 分三段,`_sheetMarks(marks,病歷號,tag)` 以 T/E 對到小組/事件頁);只有小組或事件也能產出;audit-render 8 項 |
+| V5.80.0 | 個管需求:標記加註記(`data-n` → `hlMarks.marks[].n`,`hlNote/hlNoteOne`,只在預覽 `body.hl-pv` 顯示);會議小抄每位病人列重點與註記(`_sheetMarks`);下載/分享產出時拿掉註記(`_hlMarksForSlides`);preview-check ⑩ |
 | V5.79.1 | V5.79.0 審核:V-1(P1)`_hlFind` 找最像處要前後文對上三成(最少 4 字),否則判為改掉並提示 —— 原本 ER 陽性的標記會跳到 PR 陽性;V-2 `_postFupUnset` 只列自己負責的癌別;V-3 測試會議前期追蹤 8 位標自動帶入;preview-check ⑤e |
 | V5.79.0 | V5.76.1 兩份審核:S-1 `_mergeHlMarks` 標記獨立合併(三條路共用);UI-1 決策結論取代原始決議帶入下一場(主任選);UI-2 三態按鈕 + 儲存並返回提醒(主任選),並修會後面板按鈕點了不變色(`[style*=]` 選擇器);UI-3 閱覽用 FUP_KEYS;UI-4 `followupEditHTML` 自動帶入預設收合;UI-7 `_spTypeRow` 類型收合 |
-| V5.78.2 | LINE 通知圖片:每張共用同一頁首(`K.header`)、高度一致(取最高張、頁尾置底)、名單依估計高度平均切分且不讓單人落單(主任);layout-check 驗頁首與高度 |
-| V5.78.0 | LINE 通知圖片(`_lineData` 一份資料,文字與圖片共用;layout-check 真 Chromium 畫圖);「預覽與畫重點」移到「HTML 投影片」前;「標誌」統一為「標記」(主任要求) |
 | V5.76.0 | **A 預覽與畫重點**(標記存進 `sections[cid].hlMarks`,postMessage + ack);Q-1 簡報筆;Q-2 純文字特殊議程提醒;Q-3;F 共用 `test-meeting.js`;Q-4 逐段裁切檢查;E 說明書對齊(主任同意) |
 
 **完整歷程見 `CHANGELOG.md`**。
@@ -301,6 +301,8 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 |---|---|---|---|
 | 2026-09-24 | **合併會議所有文件產出永遠只出目前分頁癌別**,無合併流程(LINE 通知與 LINE 通知圖片例外) | 生效 | `getOutputCid()` 註解為設計不變量;preflight 檢查仍在 |
 | 2026-09-24 | **HTML 產出不要亂動,先討論再改**;目錄定位、雙欄功能延後 | 生效 |
+| 2026-10-16 | 主任:「把醫療小組、必要事件也放在小抄上」 | 已完成(V5.80.1) | `genPrintSheet`、`_sheetMarks` |
+| 2026-10-16 | 個管需求「畫線加註記,匯出小抄時顯示」:主任選①在「預覽與畫重點」上加註記 ②註記**只出現在小抄**(投影片不顯示)③小抄每位病人下方列重點,手寫欄保留 | 已完成(V5.80.0) | extraJs 標記段、`genHTMLSlides` 的 hl-sys、`genPrintSheet` |
 | 2026-10-15 | V5.79.0 審核 V-1~V-3:依建議修(V-1 上線前必修) | 已完成(V5.79.1) | `_hlFind` 門檻、`_postFupUnset`、`test-meeting.js` |
 | 2026-10-15 | V5.76.1 兩份審核:S-1、UI-3 直接修;UI-1 選「最新決議取代原始決議」;UI-2 選「畫面改正 + 存檔時提醒」;本版另做 UI-4(預設收合)、UI-7。**UI-5、UI-6、UI-8(其餘)、UI-9 未做**;UI-1 第 2 點「拿掉討論摘要」未做 | 已完成(V5.79.0) | `_doSave` 合併、`autoImportPrevFollowups`、會後面板、`followupViewHTML/followupEditHTML`、`_spTypeRow` |
 | 2026-10-15 | 主任:「讓標頭區塊都一樣大,長度也儘量一樣大」 | 已完成(V5.78.2) | `K.header`、`renderLineImages` 統一高度、`_lineImgPlan` 依高度切分 |
