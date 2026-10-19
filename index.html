@@ -785,6 +785,7 @@ textarea{resize:vertical}
       </div>
       <div class="wrap">
         <div class="section">
+          <div id="move-banner"></div>
           <div id="backup-reminder"></div>
           <div id="month-stats"></div>
           <!-- Legend -->
@@ -1159,6 +1160,15 @@ textarea{resize:vertical}
       </label>
     </div>
   </div>
+    <!-- V5.81.0 搬家(換網址):本機資料綁網址,換網址要用檔案搬 -->
+    <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px;margin-top:4px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--fog-dk)">搬家(換網址)</div>
+      <div style="font-size:12px;color:var(--textlt);margin-bottom:10px;line-height:1.7">系統換到新網址時用。每台電腦的資料只存在「這個網址」,換網址後新網址是空的。<br>① 在<b>舊網址</b>按「匯出搬家檔」② 在<b>新網址</b>按「匯入搬家檔」。會議、設定、醫師名單都會帶過去,舊網址的資料不會被刪。</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-a" onclick="exportMoveFile()">匯出搬家檔</button>
+        <label class="btn btn-b" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">匯入搬家檔<input type="file" accept=".json" onchange="importAllJSON(this)" style="display:none"></label>
+      </div>
+    </div>
     <div style="background:var(--surface);border:1px solid var(--blt);border-radius:4px;padding:16px;margin-top:4px">
       <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--fog-dk)">儲存空間使用量</div>
       <div id="ls-usage-display" style="font-size:12px;color:var(--textlt);margin-bottom:14px">計算中…</div>
@@ -1742,7 +1752,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.80.1';
+const VERSION='V5.82.0';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -1994,33 +2004,81 @@ function caseDemoHTML(c){
   if(c.cfs)parts.push('衰弱量表 '+c.cfs);
   return parts.join('\u2003\u2003'); /* U+2003 em space ×2,段間明顯拉開 */
 }
-/* V5.0.3: AI 匯入 JSON 容錯解析 — 剝除 markdown 圍籬、容錯 BOM/前後綴文字、清理智慧引號 */
-function _parseAIJSON(raw){
-  if(!raw||typeof raw!=='string')throw new Error('輸入為空');
-  var s=raw;
-  // 1. 去除 UTF-8 BOM
+/* ════ V5.82.0 AI 回傳的 JSON:解析 + 自動修復 + 說明(全系統唯一一支,三個匯入入口共用)════
+   主任回報:ChatGPT 的 JSON「滑鼠選取複製可用、按複製鈕就壞」。原因有四種,這裡逐一處理,而且**只做不改內容的修正**:
+   ① 前後說明文字 / ```json 圍欄 → 只取 JSON 本體
+   ② 訊息複製鈕帶出 Markdown 跳脫(\# \| \> \* \_ \- \( \) …)→ JSON 只允許 \" \\ \/ \b \f \n \r \t \uXXXX,
+      其他的「反斜線 + 字」是 Markdown 加的:去掉反斜線、保留那個字(合法跳脫完全不碰;原文真的有反斜線時 JSON 是 \\,不受影響)
+      JSON 結構(字串外)本來就不會有反斜線(例如 \[ ),一律去掉
+   ③ 物件/陣列最後多一個逗號 → 去掉
+   ④ 最後手段:AI 用彎引號 “ ” 當 JSON 引號 → 換成直引號(V5.0.3 原本一開始就全換,會把內容裡的彎引號也換掉而弄壞 JSON,改成前面都失敗才做)
+   每一步都是「解析失敗才做」;做了什麼記在 fixes。解析成功後再檢查「反斜線被加倍」(JSON 合法但換行變成字面 \n)→ warns。 */
+function _aiJsonExtract(s){
   if(s.charCodeAt(0)===0xFEFF)s=s.slice(1);
-  s=s.trim();
-  // 2. 剝除 markdown 圍籬:```json ... ``` 或 ``` ... ```
-  //    匹配開頭的 ``` 後接選擇性的語言標籤(json/JSON/javascript 等),到結尾的 ```
-  var fenceMatch=s.match(/^```(?:json|JSON|javascript|js)?\s*\n?([\s\S]*?)\n?```\s*$/);
-  if(fenceMatch){s=fenceMatch[1].trim();}
-  else{
-    // 寬鬆處理:只有開頭 ``` 沒有結尾、或只有結尾沒開頭
-    s=s.replace(/^```(?:json|JSON|javascript|js)?\s*\n?/,'').replace(/\n?```\s*$/,'').trim();
+  s=s.replace(/\r\n/g,'\n').trim();
+  var f=s.match(/```[ \t]*(?:json|JSON|javascript|js)?[ \t]*\n([\s\S]*?)\n?[ \t]*```/);
+  if(f)return {s:f[1].trim(),fence:true,cut:!!(s.slice(0,f.index).trim()||s.slice(f.index+f[0].length).trim())};
+  var a=[s.indexOf('['),s.indexOf('{')].filter(function(x){return x>=0;});
+  if(!a.length)return {s:s,fence:false};
+  var st=Math.min.apply(null,a),en=Math.max(s.lastIndexOf(']'),s.lastIndexOf('}'));
+  return {s:en>st?s.slice(st,en+1):s,fence:false,cut:(en>st&&(st>0||en<s.length-1))};
+}
+/* 掃一遍:哪些反斜線不合法(位置)、哪些逗號是多餘的(位置);只看字串外/字串內的語法位置,不看內容 */
+function _aiJsonScan(s){
+  var bad=[],kinds={},commas=[],inS=false,i=0,n=s.length,ch,nx,j;
+  while(i<n){
+    ch=s[i];
+    if(!inS){
+      if(ch==='\\'){bad.push(i);kinds[s[i+1]||'']=(kinds[s[i+1]||'']||0)+1;i++;continue;}
+      if(ch===','){j=i+1;while(j<n&&/\s/.test(s[j]))j++;if(s[j]===']'||s[j]==='}')commas.push(i);}
+      if(ch==='"')inS=true;
+      i++;continue;
+    }
+    if(ch==='\\'){nx=s[i+1]||'';if(!nx||'"\\/bfnrtu'.indexOf(nx)<0){bad.push(i);kinds[nx]=(kinds[nx]||0)+1;}i+=2;continue;}
+    if(ch==='"')inS=false;
+    i++;
   }
-  // 3. 智慧引號(curly quotes)→ 直引號(避免 AI 偶爾混用)
-  s=s.replace(/[\u201C\u201D]/g,'"').replace(/[\u2018\u2019]/g,"'");
-  // 4. 容錯:AI 偶爾在 JSON 前後加說明文字。抓 [...] 或 {...} 第一個合法區塊
-  //    只有當直接 parse 失敗時才走這條,避免破壞合法 JSON 內含的 [ ] 字面
-  try{return JSON.parse(s);}catch(e1){
-    var firstBracket=Math.min.apply(null,[s.indexOf('['),s.indexOf('{')].filter(function(x){return x>=0;}).concat([Infinity]));
-    if(firstBracket===Infinity)throw e1;
-    var lastBracket=Math.max(s.lastIndexOf(']'),s.lastIndexOf('}'));
-    if(lastBracket<firstBracket)throw e1;
-    var trimmed=s.slice(firstBracket,lastBracket+1);
-    try{return JSON.parse(trimmed);}catch(e2){throw e1;}/* 仍失敗回報原始錯,線索較清楚 */
+  return {bad:bad,kinds:kinds,commas:commas};
+}
+function _aiJsonDrop(s,pos){var d={};pos.forEach(function(p){d[p]=1;});var o='';for(var i=0;i<s.length;i++)if(!d[i])o+=s[i];return o;}
+function _aiJsonStrings(o,out){out=out||[];if(typeof o==='string')out.push(o);else if(Array.isArray(o))o.forEach(function(v){_aiJsonStrings(v,out);});else if(o&&typeof o==='object')Object.keys(o).forEach(function(k){_aiJsonStrings(o[k],out);});return out;}
+/* 錯誤訊息:第幾行第幾欄 + 附近的字,讓個管師看得出卡在哪 */
+function _aiJsonWhere(s,err){
+  var m=String(err&&err.message||'').match(/position (\d+)/);if(!m)return '';
+  var p=+m[1],line=s.slice(0,p).split('\n').length,col=p-s.lastIndexOf('\n',p-1);
+  return '(第 '+line+' 行第 '+col+' 個字附近:「'+s.slice(Math.max(0,p-15),p).replace(/\n/g,'⏎')+' ▶'+s.slice(p,p+15).replace(/\n/g,'⏎')+'」)';
+}
+function _parseAIJSONx(raw){
+  if(!raw||typeof raw!=='string'||!raw.trim())throw new Error('輸入為空');
+  var fixes=[],warns=[],ex=_aiJsonExtract(raw),s=ex.s,data,err=null,tried=function(t){try{data=JSON.parse(t);return true;}catch(e){err=err||e;return false;}};
+  var ok=tried(s);
+  if(ex.fence)fixes.push('去掉 ```json 圍欄');
+  if(ex.cut)fixes.push('去掉 JSON 前後的說明文字');
+  if(!ok){
+    var sc=_aiJsonScan(s);
+    if(sc.bad.length){
+      s=_aiJsonDrop(s,sc.bad);
+      fixes.push('去掉 Markdown 加的反斜線 '+sc.bad.length+' 處('+Object.keys(sc.kinds).map(function(k){return '\\'+(k||'(結尾)')+'×'+sc.kinds[k];}).join('、')+')—— 通常是按了整則訊息的「複製」鈕');
+      ok=tried(s);
+    }
+    if(!ok){var sc2=_aiJsonScan(s);if(sc2.commas.length){s=_aiJsonDrop(s,sc2.commas);fixes.push('去掉多餘的逗號 '+sc2.commas.length+' 處');ok=tried(s);}}
+    if(!ok&&/[“”]/.test(s)){var s2=s.replace(/[“”]/g,'"');if(tried(s2)){s=s2;ok=true;fixes.push('把彎引號 “ ” 換成 JSON 的直引號');}}
   }
+  if(!ok){
+    var src0=ex.s,hint=_aiJsonScan(src0).bad.length?'\n\n看起來是按了 AI 整則訊息下方的「複製」鈕。請改按 AI 回覆中程式碼區塊右上角的「複製」再貼一次。':'';
+    throw new Error((err&&err.message||'格式錯誤')+_aiJsonWhere(src0,err)+hint);
+  }
+  /* 解析成功不代表內容對:反斜線被加倍時 JSON 照樣合法,但換行、引號會變成字面的 \n、\" */
+  var lit=_aiJsonStrings(data).reduce(function(a,t){return a+(t.split('\\n').length-1)+(t.split('\\"').length-1);},0);
+  if(lit)warns.push('內容裡有 '+lit+' 處字面的「\\n」或「\\"」,看起來反斜線被多加了一次(換行變成了普通文字)。建議回 AI 那邊,改按程式碼區塊右上角的「複製」重新貼上。');
+  return {data:data,fixes:fixes,warns:warns};
+}
+function _parseAIJSON(raw){return _parseAIJSONx(raw).data;}
+/* 三個匯入入口共用:有自動修正 → 小提示;有內容疑慮 → 問要不要照樣匯入(回傳 false = 不匯入) */
+function _aiJsonNotice(r){
+  if(r.warns.length&&!confirm(r.warns.join('\n\n')+'\n\n仍要照樣匯入嗎?'))return false;
+  if(r.fixes.length)showSaveToast('已自動修正 JSON:'+r.fixes.join(';'));
+  return true;
 }
 function rocDate(ds){if(!ds)return'';const[y,m,d]=ds.split('-').map(Number);const dow=['日','一','二','三','四','五','六'][new Date(ds).getDay()];return`${y}年${m}月${d}日(星期${dow})`}
 function timePfx(t){if(!t)return'';const h=parseInt(t);return h<12?'上午':h===12?'中午':'下午'}
@@ -2288,6 +2346,7 @@ async function showHome(){
   if(!(await _confirmLeave()))return;/* V5.47.0 R-4 */
   document.getElementById('home-t').textContent=greet()+'，'+S.user.name;
   setTimeout(checkBackupReminder,400);
+  renderMoveBanner();
   renderMonthStats();
   setSbActive(null);
   document.querySelectorAll('.sb-navi').forEach(el=>el.classList.remove('on'));
@@ -7241,6 +7300,32 @@ function doFollowupImport(){
 
 
 
+/* V5.81.0 搬家提示:①這個網址還沒有任何會議 → 提示可匯入搬家檔 ②舊網址(設了 MOVE_TO_URL)→ 提示搬家。
+   不存任何狀態:「不用」只是這次先收起來 */
+function renderMoveBanner(){
+  const el=document.getElementById('move-banner');if(!el)return;
+  el.innerHTML='';
+  let msg='',main=null;
+  const here=location.origin+location.pathname;
+  if(MOVE_TO_URL&&here.indexOf(MOVE_TO_URL.replace(/\/$/,''))!==0){
+    msg='系統已搬到新網址:'+MOVE_TO_URL+'。請先按「匯出搬家檔」,再到新網址匯入。';
+    main=['匯出搬家檔',function(){exportMoveFile();}];
+  }else if(!getIdx().length){
+    msg='這個網址還沒有任何會議。如果您之前在舊網址用過,可以把資料搬過來。';
+    main=['匯入搬家檔',null];
+  }else return;
+  const box=document.createElement('div');
+  box.style.cssText='background:#E8F1F4;border:1px solid #9CC1CD;border-radius:4px;padding:9px 14px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;color:#2C4A55';
+  const t=document.createElement('span');t.style.fontWeight='600';t.textContent=msg;box.appendChild(t);
+  let b;
+  if(main[1]){b=document.createElement('button');b.className='btn btn-a btn-sm';b.textContent=main[0];b.addEventListener('click',main[1]);}
+  else{b=document.createElement('label');b.className='btn btn-a btn-sm';b.style.cursor='pointer';b.textContent=main[0];
+    const inp=document.createElement('input');inp.type='file';inp.accept='.json';inp.style.display='none';inp.addEventListener('change',function(){importAllJSON(inp);});b.appendChild(inp);}
+  b.style.marginLeft='auto';box.appendChild(b);
+  if(MOVE_TO_URL&&main[1]){const go=document.createElement('a');go.className='btn btn-b btn-sm';go.href=MOVE_TO_URL;go.target='_blank';go.textContent='前往新網址';box.appendChild(go);}
+  const x=document.createElement('button');x.className='btn btn-b btn-sm';x.textContent='這次先不用';x.addEventListener('click',function(){el.innerHTML='';});box.appendChild(x);
+  el.appendChild(box);
+}
 function checkBackupReminder(){
   const last=parseInt(localStorage.getItem('mdt_last_backup')||'0');
   const now=Date.now();
@@ -7248,7 +7333,7 @@ function checkBackupReminder(){
   const el=document.getElementById('backup-reminder');if(!el)return;
   const daysAgo=last?Math.floor((now-last)/86400000)+'天前':'從未';
   el.innerHTML='<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-    +'<span style="font-weight:600;color:#856404">备份提醒：上次備份 '+daysAgo+'，建議定期匯出備份</span>'
+    +'<span style="font-weight:600;color:#856404">備份提醒：上次備份 '+daysAgo+'，建議定期匯出備份</span>'
     +'<button onclick="exportAllJSON();localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="margin-left:auto;background:#B87D3A;color:#fff;border:none;border-radius:3px;padding:3px 10px;cursor:pointer;font-size:12px">立即備份</button>'
     +'<button onclick="localStorage.setItem(\'mdt_last_backup\',Date.now());this.closest(\'div\').parentElement.innerHTML=\'\'" style="background:none;border:1px solid #ffc107;color:#856404;border-radius:3px;padding:3px 8px;cursor:pointer;font-size:12px">略過</button>'
     +'</div>';
@@ -8877,12 +8962,8 @@ function _checkBackupIntegrity(){
   const orphans=idx.filter(m=>!localStorage.getItem('mdt_m_'+m.id)).map(m=>m.id);
   return{orphans};
 }
-function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
-  /* V5.13.4: 匯出前先檢查孤兒(idx 有列但本體不見),提醒個管師這幾場救不回 */
-  const _chk=_checkBackupIntegrity();
-  if(_chk.orphans.length){
-    if(!confirm('注意：偵測到 '+_chk.orphans.length+' 場會議在索引中有記錄，但實際資料已遺失（無法備份）：\n'+_chk.orphans.join('、')+'\n\n這幾場無法救回。是否仍要繼續備份其餘正常的會議？'))return;
-  }
+/* V5.81.0:完整備份的內容只組一次(原則 A)—— 匯出備份、還原前備份、搬家檔共用 */
+function _buildBackup(){
   const backup={
     version:VERSION,
     exportedAt:new Date().toISOString(),
@@ -8894,15 +8975,76 @@ function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
     idx:localStorage.getItem('mdt_idx'),
     meetings:{}
   };
-  // Export all meetings
-  const idx=getIdx();
-  idx.forEach(m=>{
+  getIdx().forEach(m=>{
     const data=localStorage.getItem('mdt_m_'+m.id);
     if(data)backup.meetings['mdt_m_'+m.id]=data;
     /* V5.50.0 R-11:mdt_sec_ 已停用(V5.46.0),匯出不再帶它 */
   });
+  return backup;
+}
+/* ════ V5.81.0 搬家(換網址)════
+   主任要把系統從 GitHub Pages 搬到自己的網域。瀏覽器的本機資料綁「網域」,換網址 = 新網址一片空白
+   (舊網址的資料還在,只是看不到)。NAS 尚未啟用,所以用一個檔案搬:完整備份 + 搬家資訊
+   (上次登入者、可選的金鑰)。新網址用原本的「匯入還原」讀它,讀完逐筆核對、列出還要做的事。
+   資料夾授權(影像、NAS)也綁網域,檔案帶不過去,只能提醒重選。 */
+const MOVE_SECRET_KEYS=['mdt_ai_key','mdt_upload_key','mdt_zoom_pwd'];
+/* V5.81.1 主任:「搬家打包要所有當前設定都要打包」—— 不再逐項列舉(以後新增的設定會漏),
+   改成這台所有 mdt_ 開頭的資料都帶,只排除下面這幾種(各有理由):
+   mdt_m_ 會議本體(另放在 meetings)、mdt_pushed_ 這台推上 NAS 的紀錄(新網址沒有連 NAS,帶過去會誤判已推送)、
+   mdt_conflict_toast 今天是否提示過、mdt_test 容量探測、mdt_sec_ V5.46.0 停用的舊分區資料。
+   資料夾的使用權限(影像、NAS)存在瀏覽器另一處且綁網址,帶不過去 → 提示重選。 */
+function _moveSkip(k){return /^mdt_(m_|pushed_|sec_)/.test(k)||k==='mdt_conflict_toast'||k==='mdt_test';}
+function _moveCollectAll(){
+  const all={};
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('mdt_')===0&&!_moveSkip(k))all[k]=localStorage.getItem(k);}
+  return all;
+}
+/* 要搬家時把新網址填在這裡並部署到「舊網址」:舊網址首頁會出現搬家提示。空字串 = 不顯示 */
+const MOVE_TO_URL='';
+function exportMoveFile(){
+  const _chk=_checkBackupIntegrity();
+  if(_chk.orphans.length&&!confirm('注意:有 '+_chk.orphans.length+' 場會議只剩索引、資料已遺失,無法帶走。\n\n其餘會議照常匯出,要繼續嗎?'))return;
+  const b=_buildBackup(),n=Object.keys(b.meetings).length;
+  /* V5.81.1:所有設定都帶(含金鑰 —— 主任:個管電腦專用、不共用),不再詢問 */
+  const all=_moveCollectAll();
+  const withSec=MOVE_SECRET_KEYS.some(function(k){return all[k];});
+  b.move={kind:'mdt-move',v:2,from:location.origin+location.pathname,at:new Date().toISOString(),by:(S.user&&S.user.name)||'',
+    lastUser:localStorage.getItem('mdt_last_user')||'',all:all,meetings:n};
+  localStorage.setItem('mdt_last_backup',Date.now());
+  download(new Blob([JSON.stringify(b,null,2)],{type:'application/json'}),'MDT搬家檔_'+todayTaipei()+'_'+n+'場.json');
+  alert('搬家檔已下載(共 '+n+' 場會議、設定 '+Object.keys(all).length+' 項'+(withSec?',含金鑰':'')+')。'+(withSec?'\n這個檔案含金鑰,匯入完請刪掉。':'')+'\n\n接下來:\n① 打開新網址'+(MOVE_TO_URL?'('+MOVE_TO_URL+')':'')+',選自己的名字登入\n② 首頁按「匯入搬家檔」,選剛剛下載的檔案\n③ 照畫面的提示重新選影像資料夾\n\n舊網址的資料不會被刪,搬完確認無誤前請先不要清除。');
+}
+/* 匯入完成後:寫入搬家資訊,並逐筆核對真的寫進去了(「說已搬完」要是真的) */
+function _applyMove(backup){
+  const mv=backup.move||{},rep=[];
+  /* V5.81.1:搬家檔裡的所有設定(mv.all)全部寫入;V5.81.0 的檔案只有 secrets */
+  const all=Object.assign({},mv.secrets||{},mv.all||{});
+  const allKeys=Object.keys(all).filter(function(k){return k.indexOf('mdt_')===0&&!_moveSkip(k)&&k!=='mdt_idx';});
+  /* 匯入流程已處理的設定(cfg/locs/drs/exam_types)會再經 loadAll 正規化,這裡不覆蓋回去 */
+  const handled={mdt_cfg:1,mdt_locs:1,mdt_drs:1,mdt_exam_types:1};
+  allKeys.forEach(function(k){if(!handled[k])localStorage.setItem(k,all[k]);});
+  if(mv.lastUser&&!localStorage.getItem('mdt_last_user'))localStorage.setItem('mdt_last_user',mv.lastUser);
+  const ks=Object.keys(backup.meetings||{}),ok=ks.filter(function(k){return localStorage.getItem(k)===backup.meetings[k];}).length;
+  const inIdx=ks.filter(function(k){const id=k.replace('mdt_m_','');return getIdx().some(function(m){return m.id===id;});}).length;
+  rep.push((ok===ks.length&&inIdx===ks.length?'✓':'⚠')+' 會議:'+ok+' / '+ks.length+' 場'+(inIdx<ks.length?'(索引 '+inIdx+' 場)':''));
+  /* 設定匯入後會跑一次和開機相同的格式整理(loadAll 的 migrate*),內容可能被正規化,所以只核對「有寫進來」 */
+  [['cfg','mdt_cfg','癌別設定'],['locs','mdt_locs','會議地點'],['drs','mdt_drs','醫師名單'],['exam_types','mdt_exam_types','檢查類型']].forEach(function(x){
+    if(backup[x[0]])rep.push((localStorage.getItem(x[1])?'✓ ':'⚠ ')+x[2]);});
+  const others=allKeys.filter(function(k){return !handled[k];}),okOthers=others.filter(function(k){return localStorage.getItem(k)===all[k];}).length;
+  if(others.length)rep.push((okOthers===others.length?'✓':'⚠')+' 其他設定(偏好、配色、報告範本、上次登入者等):'+okOthers+' / '+others.length+' 項');
+  const ns=MOVE_SECRET_KEYS.filter(function(k){return all[k];}).length;
+  rep.push(ns?'✓ 金鑰 '+ns+' 項已帶入(搬家檔裡有金鑰,請刪掉那個檔案)':'— 舊網址沒有存金鑰:需要的話到「設定」填 AI 金鑰、上傳金鑰、Zoom 密碼');
+  return {ok:ok===ks.length&&inIdx===ks.length&&okOthers===others.length,text:rep.join('\n')};
+}
+function exportAllJSON(){localStorage.setItem('mdt_last_backup',Date.now());
+  /* V5.13.4: 匯出前先檢查孤兒(idx 有列但本體不見),提醒個管師這幾場救不回 */
+  const _chk=_checkBackupIntegrity();
+  if(_chk.orphans.length){
+    if(!confirm('注意：偵測到 '+_chk.orphans.length+' 場會議在索引中有記錄，但實際資料已遺失（無法備份）：\n'+_chk.orphans.join('、')+'\n\n這幾場無法救回。是否仍要繼續備份其餘正常的會議？'))return;
+  }
+  const backup=_buildBackup();
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
-  const count=idx.length;
+  const count=getIdx().length;
   download(blob,'MDT備份_'+todayTaipei()+'_'+count+'場.json');
   showSaveToast('已匯出 '+count+' 場會議記錄');
   const el=document.getElementById('backup-msg');
@@ -8944,7 +9086,7 @@ function importAllJSON(input){
       const _PRE_LIMIT=5*1024*1024,_pf=b=>(b/1024/1024).toFixed(1);
       const _preWillFail=_preAfter>_PRE_LIMIT;
       const _curCount0=getIdx().length;
-      let _m1='還原備份\n──────────────────────\n'
+      let _m1=(backup.move?'匯入搬家檔(來自 '+(backup.move.from||'舊網址')+(backup.move.by?','+backup.move.by+' 匯出':'')+')':'還原備份')+'\n──────────────────────\n'
         +'• 即將匯入：'+count+' 場會議記錄\n'
         +'• 本機現有：'+_curCount0+' 場（同一場會議會被覆蓋，其餘保留）\n'
         +'• 儲存空間：目前 '+_pf(_preUsed)+' MB → 還原後約 '+_pf(_preAfter)+' MB（上限約 '+_pf(_PRE_LIMIT)+' MB）'
@@ -8958,14 +9100,7 @@ function importAllJSON(input){
       if(_curCount>0){
         if(confirm('這台目前已有 '+_curCount+' 場會議。\n還原前要先把「現在的狀態」備份下來嗎？\n\n（強烈建議：萬一還原結果不如預期，可用它倒回來）\n\n確定 = 先下載現狀備份再還原\n取消 = 直接還原不備份')){
           try{
-            const _cur={version:VERSION,exportedAt:new Date().toISOString(),
-              cfg:localStorage.getItem('mdt_cfg'),locs:localStorage.getItem('mdt_locs'),
-              drs:localStorage.getItem('mdt_drs'),exam_types:localStorage.getItem('mdt_exam_types'),
-              prefs:_collectPrefs(),idx:localStorage.getItem('mdt_idx'),meetings:{}};
-            getIdx().forEach(m=>{
-              const d=localStorage.getItem('mdt_m_'+m.id);if(d)_cur.meetings['mdt_m_'+m.id]=d;
-              (m.cids||[]).forEach(cid=>{const sk='mdt_sec_'+cid+'_'+m.date;const sd=localStorage.getItem(sk);if(sd)_cur.meetings[sk]=sd;});
-            });
+            const _cur=_buildBackup();/* V5.81.0:與匯出備份同一份(mdt_sec_ 自 V5.46.0 停用,不再帶) */
             download(new Blob([JSON.stringify(_cur,null,2)],{type:'application/json'}),
               'MDT還原前備份_'+todayTaipei()+'_'+_curCount+'場.json');
           }catch(_e){if(!confirm('還原前備份失敗（'+_e.message+'）。仍要繼續還原嗎？'))return;}
@@ -9058,6 +9193,13 @@ function importAllJSON(input){
       try{const _r=_migrateSecForIds(null);if(_r.migrated)console.log('[R-7] 還原後遷移 '+_r.migrated+' 場');}catch(e){}
       if(el)el.textContent='匯入成功！已還原 '+count+' 場會議記錄。';
       showSaveToast('匯入完成！共 '+count+' 場');
+      /* V5.81.0 搬家檔:帶入金鑰/登入者,逐筆核對後列出結果與還要做的事 */
+      if(backup.move&&backup.move.kind==='mdt-move'){
+        const r=_applyMove(backup);
+        const mb=document.getElementById('move-banner');if(mb)mb.innerHTML='';
+        alert((r.ok?'搬家完成':'搬家完成,但有項目要確認')+'\n──────────────────────\n'+r.text
+          +'\n──────────────────────\n還要做的事:\n• 設定 → 影像資料夾 →「選擇根目錄」:重新選一次同一個資料夾(資料夾的使用權限跟著網址,帶不過來)\n• 開一場會議按「預覽與畫重點」看看影像與畫線是否正常\n• 確認無誤前,舊網址的資料先不要清除');
+      }
       openHistory();
     }catch(e){
       if(el)el.textContent='匯入失敗：'+e.message;
@@ -9186,7 +9328,7 @@ function doImportCase(){
   const errEl = document.getElementById('import-case-err');
   if(!raw){errEl.textContent = '請貼入 JSON 內容';return;}
   let data;
-  try{data = _parseAIJSON(raw);}
+  try{const _r=_parseAIJSONx(raw);if(!_aiJsonNotice(_r))return;data=_r.data;}/* V5.82.0 */
   catch(e){errEl.textContent = 'JSON 格式錯誤：' + e.message;return;}
   // Support array (import multiple) or single object
   const cases = Array.isArray(data) ? data : [data];
@@ -11495,10 +11637,8 @@ function tlAiPrompt(cid,i,type){
   }).join(',\n');
   return _deidForAI(`你是 MDT 病程分析助理。請根據以下臨床資料，判讀事件清單中每一筆的「病程意義」，輸出 JSON。
 
-【輸出格式絕對規則】
-- 每筆輸出必須帶 "id"，**原樣照抄**事件清單裡的 id，不可自創、不可省略（系統靠 id 對應，同一天有多筆事件時只有 id 能分辨）\n- 只輸出 JSON 物件，第一個字必須是「{」，最後一個字必須是「}」
-- 不要加 markdown 圍籬（不要寫 \`\`\`json）
-- 不要加任何說明文字、前言、結語
+${_aiJsonRules('object')}
+- 每筆輸出必須帶 "id"，**原樣照抄**事件清單裡的 id，不可自創、不可省略（系統靠 id 對應，同一天有多筆事件時只有 id 能分辨）
 
 【判讀原則（重要）】
 - 只根據下方提供的資料判讀，**不要引入外部知識或臆測**
@@ -11564,7 +11704,7 @@ function doImportTlAi(){
   const raw=(document.getElementById('tlai-json')||{}).value||'';
   if(!raw.trim()){if(er)er.textContent='請先貼上 AI 回傳的 JSON';return;}
   let data;
-  try{data=_parseAIJSON(raw);}catch(e){if(er)er.textContent='JSON 解析失敗：'+e.message;return;}
+  try{const _r=_parseAIJSONx(raw);if(!_aiJsonNotice(_r))return;data=_r.data;}catch(e){if(er)er.textContent='JSON 解析失敗：'+e.message;return;}/* V5.82.0 */
   const arr=Array.isArray(data)?data:(data&&Array.isArray(data.events)?data.events:null);
   if(!arr){if(er)er.textContent='格式不正確：需要 {"events":[...]} 或事件陣列';return;}
   /* V5.42.4 C-1:寫回時用開啟時記下的 type,否則匯入的時序會落到個案討論 */
@@ -11652,6 +11792,19 @@ function doImportTlAi(){
    三種提示詞都要求 AI 輸出 `_target`,匯入時據此路由。 */
 /* V5.44.0:三種提示詞共用的顯示邏輯。`#out-area` 在 V5.37.1(Z-1)已移出摺疊區,
    所以這裡不必擔心「設了 display 卻看不到」。 */
+/* V5.82.0 四段匯入提示詞的「輸出格式」只有這一份(原則 A)。
+   原本要求「不要加 markdown 圍籬」—— 但在 ChatGPT 這類介面,沒有圍籬的 JSON 會被當成 Markdown 排版:
+   *重點* 變斜體、# 變標題、整則訊息的「複製」鈕還會加上 \# \| 等反斜線,兩種複製方式都可能弄壞內容。
+   放進 ```json 程式碼區塊,裡面的字不會被排版,區塊右上角的「複製」拿到的就是原文。系統會自動去掉圍欄。 */
+function _aiJsonRules(shape){
+  const arr=shape==='array';
+  return '【輸出格式絕對規則】\n'
+    +'- 整份 JSON 放在「一個」```json 程式碼區塊裡;程式碼區塊外面不要寫任何文字(不要前言、結語、說明)\n'
+    +'- 程式碼區塊裡只有一個 JSON '+(arr?'陣列(即使只有一筆也用陣列),第一個字是「[」、最後一個字是「]」':'物件,第一個字是「{」、最後一個字是「}」')+'\n'
+    +'- 字串內容照原文抄寫,符號(# | > * _ - -> 半形與全形括號)原樣保留、一字不改;不要為了 Markdown 在符號前加反斜線(不要寫 \\# \\| \\> \\*)\n'
+    +'- JSON 字串裡只有雙引號、反斜線、換行需要跳脫(寫成 \\" \\\\ \\n);引號一律用半形直引號 "\n'
+    +'- 最後一個欄位、最後一個元素後面不要加逗號';
+}
 function _showPromptBox(txt,label){
   const ta=document.getElementById('out-text');
   const area=document.getElementById('out-area');
@@ -11665,10 +11818,7 @@ function _showPromptBox(txt,label){
 
 const _TEAM_PROMPT=`你是 MDT 會議系統的資料轉換助理。請將以下**醫療小組討論**的資料轉換成 JSON。
 
-【輸出格式絕對規則】
-- 只輸出 JSON 陣列(即使只有一筆也用陣列)
-- 第一個字必須是「[」,最後一個字必須是「]」
-- 絕對不要加 markdown 圍籬,不要加任何說明文字
+${_aiJsonRules('array')}
 
 【重要限制】只能使用貼上的資料,絕對不可自行推斷、補充、或引用任何外部醫學知識。資料中沒有的欄位一律留空字串。
 
@@ -11700,10 +11850,7 @@ note:備註
 function _tlTypeList(){return TL_TYPES.map(function(t){return t.id+'('+t.label+')';}).join('、');}
 function _EVENT_PROMPT_FN(){return `你是 MDT 會議系統的資料轉換助理。請將以下**必要提報事件(死亡病例討論)**的資料轉換成 JSON。
 
-【輸出格式絕對規則】
-- 只輸出 JSON 陣列(即使只有一筆也用陣列)
-- 第一個字必須是「[」,最後一個字必須是「]」
-- 絕對不要加 markdown 圍籬,不要加任何說明文字
+${_aiJsonRules('array')}
 
 【重要限制】只能使用貼上的資料,絕對不可自行推斷、補充、或引用任何外部醫學知識。
 **死因歸因與「與治療之關聯」尤其不可推測** —— 資料沒明講就留空字串,那是 MDT 會議上要討論決定的,不是 AI 判斷的。
@@ -11743,13 +11890,7 @@ function genImportPrompt(kind){
   if(kind==='events'){_showPromptBox(_EVENT_PROMPT_FN(),'必要提報事件');return;}
   const prompt=`你是 MDT 會議系統的資料轉換助理。請將以下病人臨床資料轉換成 JSON 格式，嚴格按照欄位定義輸出。
 
-【輸出格式絕對規則】
-- 只輸出 JSON 陣列（即使只有一筆也用陣列）
-- 第一個字必須是「[」，最後一個字必須是「]」
-- 絕對不要加 markdown 圍籬：不要在前面寫 \`\`\`json，不要在後面寫 \`\`\`
-- 絕對不要加任何說明文字、前言、結語、註解
-- 錯誤示範：\`\`\`json [{...}] \`\`\`  ← 加了圍籬，會讓系統解析失敗
-- 正確示範：[{...}]  ← 直接 JSON 陣列，無任何包裝
+${_aiJsonRules('array')}
 
 【重要限制】只能使用貼上的資料，絕對不可自行推斷、補充、或引用任何外部醫學知識與記憶。資料中沒有的欄位一律留空字串或空陣列。
 欄位定義：
@@ -12143,7 +12284,7 @@ function importCaseJSON(inputEl){
   const reader=new FileReader();
   reader.onload=function(ev){
     let data;
-    try{data=_parseAIJSON(ev.target.result);}
+    try{const _r=_parseAIJSONx(ev.target.result);if(!_aiJsonNotice(_r))return;data=_r.data;}/* V5.82.0 */
     catch(e){alert('JSON 格式錯誤：'+e.message);return;}
     const cases=Array.isArray(data)?data:[data];
     if(!cases.length){alert('JSON 沒有個案資料');return;}
@@ -13070,7 +13211,7 @@ function generateTestData(){
        discussion:'TACE後反應評估，討論根治性手術或消融治療可行性。',topics:['影像討論','分期討論','治療策略討論'],summary:'',decision:''},
     ],
     urology:[
-      {chartNo:'172606',name:'施志華',age:'58',gender:'M',
+      {chartNo:'9000013',name:'測試十三',age:'58',gender:'M',
        doctors:['楊哲學醫師',''],
        diagnosis:'膀胱乳頭狀尿路上皮癌，低惡性度，非肌層侵犯',
        cc:'無痛性肉眼血尿數週。膀胱超音波發現1.5cm乳頭狀腫瘤，TURBT後確診。',
@@ -13080,7 +13221,7 @@ function generateTestData(){
        treatments:[{name:'TURBT',date:'2026-01-30',content:'Complete TURBT，病灶完全切除，術後無併發症。'}],
        markers:[],familyHistory:'',
        discussion:'術後追蹤計畫，膀胱灌注化療適應症。',topics:['病理討論','治療策略討論'],summary:'',decision:''},
-      {chartNo:'291402',name:'洪志宏',age:'66',gender:'M',
+      {chartNo:'9000014',name:'測試十四',age:'66',gender:'M',
        doctors:['吳其翔醫師','劉育昌醫師',''],
        diagnosis:'攝護腺腺癌，Gleason score 4+3=7，cT2bN0M0，iPSA 49.2',
        cc:'排尿困難，夜尿頻繁。DRE發現攝護腺右葉硬結。切片確認腺癌。',
@@ -14016,11 +14157,11 @@ function updateImgFolderSettingsStatus(){
 <div id="import-case-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center">
   <div style="background:var(--white);border-radius:4px;padding:24px;width:min(600px,92vw);max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)">
     <div style="font-size:15px;font-weight:600;color:var(--fog-dk);margin-bottom:8px">匯入個案資料（JSON）</div>
-    <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">將 AI 產出的 JSON 貼入下方，系統自動填入個案欄位。</div>
+    <div style="font-size:12px;color:var(--textlt);margin-bottom:12px">將 AI 產出的 JSON 貼入下方，系統自動填入個案欄位。<br>從 AI 複製時,請按回覆中<b>程式碼區塊右上角的「複製」</b>(不要按整則訊息下方的複製鈕)。不小心按錯也沒關係,系統會自動修正並告訴您改了什麼。</div>
     <textarea id="import-case-json" rows="12" placeholder='貼入 JSON，例如：
 {
-  "chartNo": "816106",
-  "name": "周安泉",
+  "chartNo": "9000001",
+  "name": "測試甲",
   "age": "71",
   "gender": "M",
   "diagnosis": "Metastatic prostate adenocarcinoma...",
@@ -14144,7 +14285,7 @@ function updateImgFolderSettingsStatus(){
         <textarea id="tlai-prompt" readonly style="width:100%;height:150px;font-size:11px;font-family:ui-monospace,monospace;padding:8px;border:1px solid var(--blt);border-radius:4px;background:#FAFBFC;resize:vertical"></textarea>
       </div>
       <div>
-        <label style="font-size:12px;display:block;margin-bottom:5px">② 貼上 AI 回傳的 JSON</label>
+        <label style="font-size:12px;display:block;margin-bottom:5px">② 貼上 AI 回傳的 JSON <span style="color:var(--textlt);font-weight:400">— 請按 AI 回覆中<b>程式碼區塊右上角的「複製」</b></span></label>
         <textarea id="tlai-json" placeholder='{"events":[{"date":"2026-03-05","pivot":false,"response":"stable","basis":"AFP 下降"}]}' style="width:100%;height:130px;font-size:12px;font-family:ui-monospace,monospace;padding:8px;border:1px solid var(--blt);border-radius:4px;resize:vertical"></textarea>
         <div id="tlai-err" style="color:var(--err);font-size:12px;margin-top:6px;min-height:16px"></div>
       </div>

@@ -233,7 +233,62 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
     if(out10.dlHasNote)bad.push('⑩ 下載/分享的投影片不應帶註記');
     if(!/第二位病史[\s\S]{0,120}TNM stages 待確認/.test(out10.sheet)||!/第一位討論[\s\S]{0,120}問放射腫瘤科/.test(out10.sheet))bad.push('⑩ 會議小抄沒有印出重點與註記');
 
-    console.log('預覽與畫重點 15 個情境'+(bad.length?'':' ✅'));
+    /* ⑪ V5.81.0 搬家:兩個不同網址(127.0.0.1 與 localhost = 瀏覽器眼中兩個網站)——
+       舊網址匯出搬家檔 → 新網址一開始是空的、首頁有提示 → 匯入 → 會議、設定、金鑰都到、核對結果說「搬家完成」 */
+    {
+      const http=require('http'),fs=require('fs');
+      const srv=http.createServer(function(q,r){var f=path.join(__dirname,decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/,'')||'index.html');
+        fs.readFile(f,function(e,d){if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{'Content-Type':/\.html$/.test(f)?'text/html; charset=utf-8':'application/octet-stream'});r.end(d);});});
+      await new Promise(function(r){srv.listen(0,r);});
+      const port=srv.address().port;
+      const c2=await browser.newContext({acceptDownloads:true});
+      await c2.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/,r=>r.abort());
+      const dA=[],dB=[];
+      const pA=await c2.newPage();pA.on('dialog',d=>{dA.push(d.message());d.accept();});
+      await pA.goto('http://127.0.0.1:'+port+'/index.html');await pA.waitForTimeout(800);
+      await pA.evaluate(async function(){await pickUser(USERS[0].id);
+        ['2026-09-17','2026-10-15'].forEach(function(dt,i){var m=newMeetingObj(S.user.id,['head_neck']);m.date=dt;m.sections.head_neck={cases:[createItem('head_neck','cases',{chartNo:'900070'+i,name:'測試搬'+i,diagnosis:'搬家測試診斷'+i},{})],team:[],events:[],followups:[],special:[]};m.version=1;saveLocal(m);});
+        var c=JSON.parse(localStorage.getItem('mdt_cfg')||'null');if(c&&c.head_neck){c.head_neck.slot='12:41-13:29';localStorage.setItem('mdt_cfg',JSON.stringify(c));}
+        localStorage.setItem('mdt_upload_key','TESTKEY9000');
+        /* V5.81.1 主任:「所有當前設定都要打包」—— 各種設定都放一點,外加一個「以後才會新增」的設定,證明不是逐項列舉 */
+        localStorage.setItem('mdt_ai_key','sk-test-9000');localStorage.setItem('mdt_ai_pref',JSON.stringify({provider:'anthropic',model:'test'}));
+        localStorage.setItem('mdt_zoom_pwd',JSON.stringify({q1:'000001',q2:'000002',q3:'000003'}));
+        localStorage.setItem('mdt_cr_template','測試報告範本');localStorage.setItem('mdt_html_theme_'+S.user.id,'mist');localStorage.setItem('mdt_html_fname_lang_'+S.user.id,'en');
+        localStorage.setItem('mdt_future_setting','以後新增的設定');localStorage.setItem('mdt_pushed_x','不該帶');});
+      const before=await pA.evaluate(function(){var o={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k.indexOf('mdt_')===0)o[k]=localStorage.getItem(k);}
+        return {n:getIdx().length,cfg:localStorage.getItem('mdt_cfg'),all:o};});
+      const [dl]=await Promise.all([pA.waitForEvent('download',{timeout:15000}),pA.evaluate(function(){exportMoveFile();})]);
+      const fpath=await dl.path();
+      const pB=await c2.newPage();pB.on('dialog',d=>{dB.push(d.message());d.accept();});
+      await pB.goto('http://localhost:'+port+'/index.html');await pB.waitForTimeout(800);
+      await pB.evaluate(async function(){await pickUser(USERS[0].id);});await pB.waitForTimeout(500);
+      const empty=await pB.evaluate(function(){return {n:getIdx().length,banner:(document.getElementById('move-banner')||{}).textContent||''};});
+      if(empty.n!==0||!/還沒有任何會議/.test(empty.banner))bad.push('⑪ 新網址一開始應是空的並提示搬家:'+empty.n+' '+empty.banner.slice(0,30));
+      await pB.setInputFiles('#move-banner input[type=file]',fpath);await pB.waitForTimeout(1500);
+      const after=await pB.evaluate(function(){var o={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k.indexOf('mdt_')===0)o[k]=localStorage.getItem(k);}
+        return {all:o,n:getIdx().length,cfg:localStorage.getItem('mdt_cfg'),key:localStorage.getItem('mdt_upload_key'),
+        dx:(JSON.parse(localStorage.getItem('mdt_m_'+getIdx()[0].id)||'{}').sections||{}).head_neck,banner:(document.getElementById('move-banner')||{}).textContent||''};});
+      if(after.n!==before.n||before.n<2)bad.push('⑪ 搬家後會議數 '+after.n+',舊網址 '+before.n);
+      if(!/12:41-13:29/.test(after.cfg||''))bad.push('⑪ 設定沒有搬過來');
+      if(after.key!=='TESTKEY9000')bad.push('⑪ 上傳金鑰沒有搬過來');
+      /* 舊網址的每一個 mdt_ 設定都要在新網址出現且一字不差(會議本體另外比;cfg/locs/drs/exam_types 會被開機整理正規化,只比有沒有) */
+      const miss11=Object.keys(before.all).filter(function(k){
+        if(/^mdt_(m_|pushed_|sec_)/.test(k)||k==='mdt_conflict_toast'||k==='mdt_test'||k==='mdt_idx')return false;
+        if(/^mdt_(cfg|locs|drs|exam_types)$/.test(k))return !(k in after.all);
+        return after.all[k]!==before.all[k];});
+      if(miss11.length)bad.push('⑪ 這些設定沒有完整搬過來:'+miss11.join('、'));
+      if('mdt_pushed_x' in after.all)bad.push('⑪ NAS 推送紀錄不該搬過去');
+      if(!(after.dx&&/搬家測試診斷/.test(JSON.stringify(after.dx))))bad.push('⑪ 會議內容沒有搬過來');
+      const fin=dB.filter(x=>/搬家完成/.test(x)).pop()||'';
+      if(!/✓ 會議:2 \/ 2 場/.test(fin)||/⚠/.test(fin)||!/✓ 其他設定/.test(fin))bad.push('⑪ 搬家完成的核對訊息不對:'+fin.slice(0,80));
+      if(!/影像資料夾/.test(fin))bad.push('⑪ 沒有提醒重新選影像資料夾');
+      if(after.banner)bad.push('⑪ 匯入後首頁提示應消失');
+      const stillA=await pA.evaluate(function(){return getIdx().length;});
+      if(stillA!==before.n)bad.push('⑪ 舊網址的資料不應改變');
+      await c2.close();srv.close();
+    }
+
+    console.log('預覽與畫重點 16 個情境'+(bad.length?'':' ✅'));
     bad.slice(0,6).forEach(x=>console.log('  🔴 '+x));
     console.log('結果 '+bad.length);
   }catch(e){console.log('⚠ 例外:',e.message.slice(0,200));console.log('結果 -1');}

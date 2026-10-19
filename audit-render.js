@@ -486,6 +486,43 @@ setTimeout(async ()=>{
     if(fail.length){bad++;console.log('   ',JSON.stringify(r).slice(0,500));}
   }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,200));bad++;}
 
+  // ── [V5.82.0] AI 回傳的 JSON:複製鈕帶出的 Markdown 跳脫、圍欄、說明文字 → 自動修好且內容一字不差 ──
+  console.log('\n=== [V5.82.0] AI JSON 解析修復 ===');
+  try{
+    /* 原始內容故意塞滿 Markdown 符號、原文本身的反斜線、彎引號(全部虛構) */
+    const orig=[{chartNo:'9000801',name:'測試甲',diagnosis:'# 標題? a|b > c *重點* _x_ -> stage IB (半形) (全形)',
+      cc:'第一行\n第二行 C:\\temp\\rt 與 \\# 字面反斜線',ph:'他說 “Not mentioned.”',topics:['影像討論']}];
+    const good=JSON.stringify(orig,null,2);
+    /* 模擬 ChatGPT 訊息「複製」鈕:符號前加反斜線(含字串外的 [ ]),外加說明文字與圍欄 */
+    const mdesc=t=>{let o='';for(let i=0;i<t.length;i++){const c=t[i];if(c==='\\'){o+=t.slice(i,i+2);i++;continue;}o+=('#|>*_-()[]`'.indexOf(c)>=0?'\\':'')+c;}return o;};
+    const cases={
+      clean:good,
+      copyBtn:'以下是 JSON:\n\n```json\n'+mdesc(good)+'\n```\n\n需要調整再告訴我。',
+      comma:good.replace(/"topics": \[\n\s*"影像討論"\n\s*\]/,'"topics": ["影像討論",]'),
+      curlyDelim:'[{“chartNo”:“9000802”}]',
+      doubled:JSON.stringify([{cc:'第一行\n第二行'}]).replace(/\\/g,'\\\\'),
+      broken:'```json\n[{"chartNo":"9000803" "name":"\\#測試"}]\n```'
+    };
+    const r=JSON.parse(run("(function(C){var o={};Object.keys(C).forEach(function(k){try{var x=_parseAIJSONx(C[k]);o[k]={data:x.data,fixes:x.fixes,warns:x.warns};}catch(e){o[k]={err:e.message};}});"
+      +"var pc=document.getElementById('out-text');genImportPrompt();o.pCase=pc.textContent;genImportPrompt('team');o.pTeam=pc.textContent;genImportPrompt('events');o.pEv=pc.textContent;"
+      +"var sc=S.meeting.sections.head_neck;sc.cases[0].timeline=[{id:'t1',type:'dx',date:'2026-01-01',label:'診斷'}];o.pTl=tlAiPrompt('head_neck',0,'cases');"
+      +"o.legacy=JSON.stringify(_parseAIJSON(C.copyBtn));return JSON.stringify(o);})("+JSON.stringify(cases)+")"));
+    const eq=x=>JSON.stringify(x)===JSON.stringify(orig);
+    const rules=t=>/```json 程式碼區塊/.test(t||'')&&!/不要加 markdown 圍籬/.test(t||'')&&/不要為了 Markdown 在符號前加反斜線/.test(t||'');
+    const chk=[['原本就合法:不修、內容相同',eq(r.clean.data)&&!r.clean.fixes.length],
+      ['複製鈕(跳脫+圍欄+說明文字)修好且一字不差',eq(r.copyBtn.data)&&r.copyBtn.fixes.length===3&&/\\#×/.test(r.copyBtn.fixes.join())],
+      ['原文的反斜線、換行、彎引號保留',eq(r.copyBtn.data)&&r.copyBtn.data[0].cc.indexOf('C:\\temp\\rt 與 \\# 字面')>=0&&/“Not mentioned.”/.test(r.copyBtn.data[0].ph)],
+      ['多餘逗號',eq(r.comma.data)&&/逗號/.test(r.comma.fixes.join())],
+      ['彎引號當 JSON 引號(最後手段)',r.curlyDelim.data&&r.curlyDelim.data[0].chartNo==='9000802'],
+      ['反斜線被加倍:可解析但要警告',r.doubled.warns&&r.doubled.warns.length===1],
+      ['真的壞掉:說第幾行並提示改按程式碼區塊的複製',/第 \d+ 行/.test(r.broken.err||'')&&/程式碼區塊右上角/.test(r.broken.err||'')],
+      ['舊入口 _parseAIJSON 走同一支',r.legacy===JSON.stringify(orig)],
+      ['四段提示詞改要求 ```json 程式碼區塊',rules(r.pCase)&&rules(r.pTeam)&&rules(r.pEv)&&rules(r.pTl)&&/原樣照抄/.test(r.pTl)]];
+    const fail=chk.filter(c=>!c[1]).map(c=>c[0]);
+    console.log('  '+(chk.length-fail.length)+'/'+chk.length,fail.length?'🔴 '+fail.join(','):'✅');
+    if(fail.length){bad++;console.log('   ',JSON.stringify({copyBtn:r.copyBtn,comma:r.comma,doubled:r.doubled,broken:r.broken}).slice(0,700));}
+  }catch(e){console.log('  ⚠ 例外:',e.message.slice(0,200));bad++;}
+
   // ── [V5.80.1] 會議小抄:個案、醫療小組、必要事件各一段,重點依頁面種類對到人 ──
   console.log('\n=== [V5.80.1] 會議小抄含醫療小組與必要事件 ===');
   try{

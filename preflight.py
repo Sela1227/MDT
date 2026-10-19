@@ -165,7 +165,7 @@ check(Fd, 'USER_GUIDE 無程式用詞', not hit, f'出現 {hit}' if hit else '')
 # 範例病歷號必須明顯虛構(0000/9000 開頭)。**不列黑名單** —— 列了等於把真實號碼再寫進 repo
 # V5.71.1 S-1:JS 物件與 JSON 兩種寫法;號碼與遮蔽姓名間 0~3 個分隔;○+ 涵蓋四字姓名;7~8 碼;掃描含會打包的測試檔
 PII_PAT = re.compile(
-    r"""["']?chartNo["']?\s*:\s*["']\s*(\d{7,8})\s*["']"""
+    r"""["']?chartNo["']?\s*:\s*["']\s*(\d{6,8})\s*["']"""  # V5.82.0:6 碼也要擋(個案匯入範例裡曾有 6 碼號碼漏網)
     r"""|(?<![\d.#vV:-])(\d{7,8})[\s_/「」]{0,3}[\u4e00-\u9fff]○+[\u4e00-\u9fff]""")
 PII_FILES = ['index.html', 'README.md', 'CLAUDE.md', 'PITFALLS.md', 'USER_GUIDE.md', 'CHANGELOG.md',
              'audit-render.js', 'content-equiv.js', 'content-baseline.json', 'layout-check.js', 'preview-check.js', 'test-meeting.js', 'cloudflare-share/test.mjs', 'SELA-handoff.md']
@@ -269,7 +269,7 @@ if not QUICK:
         pc = int(m.group(1)) if m else -1
         reds = [l.strip() for l in r.stdout.splitlines() if '🔴' in l or '⚠' in l][:3]
         note = ('沒有 playwright → npm i -g playwright;或加 --no-layout 明確略過' if pc == -2
-                else (' | '.join(reds) if pc else '15 情境:存標記確認、再預覽、拒存、改資料保留畫線、改到畫線文字、同頁重複字不亂跳、同文字別病人、舊格式、多份預覽、慢存檔、代班合併、負責人改個案保留代班標記、複製會議、註記與小抄'))
+                else (' | '.join(reds) if pc else '16 情境:存標記確認、再預覽、拒存、改資料保留畫線、改到畫線文字、同頁重複字不亂跳、同文字別病人、舊格式、多份預覽、慢存檔、代班合併、負責人改個案保留代班標記、複製會議、註記與小抄、兩個網址搬家'))
         check(D, '預覽與畫重點(preview-check.js)', pc == 0, note)
     tm = os.path.join(ROOT, 'cloudflare-share', 'test.mjs')
     if os.path.exists(tm):

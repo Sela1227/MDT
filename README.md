@@ -97,6 +97,11 @@ python3 preflight.py --quick  # 只跑靜態
 
 **投影片內容等價測試**(V5.75.0):`content-equiv.js` 用固定的虛構會議產出 HTML 投影片,逐頁比對文字與 `content-baseline.json`。投影片上的字只要變了(多頁、少頁、標籤改名)preflight 就 🔴。**經主任同意改投影片內容後**才執行 `node content-equiv.js --update` 更新基準,並在 CHANGELOG 寫理由。
 
+**AI JSON 匯入**(V5.82.0):三個入口(個案貼上 `doImportCase`、JSON 檔 `importCaseJSON`、病程時序 AI `doImportTlAi`)都走 `_parseAIJSONx(raw)` → `{data,fixes,warns}`,再由 `_aiJsonNotice` 顯示修正、對 warns 詢問。修正只在解析失敗時逐步進行且不改內容:圍欄與前後文字 → 不合法反斜線(字串內 `\X` 非 JSON 跳脫、字串外任何 `\`)→ 多餘逗號 → 彎引號當引號。成功後若字串含字面 `\n`/`\"` 判為反斜線加倍並警告。提示詞的輸出規則只有 `_aiJsonRules(shape)` 一份,要求 ```json 程式碼區塊。
+
+**搬家(換網址)**(V5.81.0):本機資料綁網域(origin),換網址 = 新網址空白、舊資料留在舊網址。搬家檔 = `_buildBackup()`(與匯出備份相同)+ `move:{kind:'mdt-move',v:2,from,at,by,lastUser,all,meetings}`;`all` 是這台**所有** `mdt_` key(V5.81.1 主任要求,含金鑰),只排除 `_moveSkip`:`mdt_m_`(放 meetings)、`mdt_pushed_`、`mdt_conflict_toast`、`mdt_test`、`mdt_sec_`。新增設定 key 不必改搬家程式。匯入走 `importAllJSON`,讀到 `move` 時 `_applyMove` 寫入全部設定(cfg/locs/drs/exam_types 由還原流程處理後經 loadAll 正規化)、逐筆核對並列出結果;V5.81.0 的舊格式 `secrets` 也讀得懂。資料夾授權(影像、NAS)無法搬,提示重選。
+**搬家當天要做的事**:①新網址部署本版 ②`cloudflare-share/index.js` 的 `ALLOWED_ORIGINS` 加新網址並重新部署 Worker(否則 HTML 分享會被擋)③舊網址部署時把 `MOVE_TO_URL` 設成 `https://cc.selaginella.io/cc/mdt/`(主任 2026-10-16 定案)(舊網址首頁會提示搬家)④每台電腦照 USER_GUIDE 第六章做。
+
 **標記註記**(V5.80.0):標記元素 `data-n` ↔ `hlMarks.marks[].n`(`_hlRanges` 第 6 欄);只有預覽(`body.hl-pv`)顯示「✎ 註記」按鈕與 ✎ 記號;`genHTMLSlides` 非預覽時以 `_hlMarksForSlides` 拿掉 `n`(下載、分享不帶註記);會議小抄以 `_sheetMarks(marks, 病歷號)` 列出該病人個案頁的重點與註記。
 
 **前期追蹤續追**(V5.79.0):會後填的 `decision` 帶入下一場時取代原始 `prevDecision`(必要提報保留【必要提報】行);`status` 未選不帶入,會後面板三態顯示並在「儲存並返回」提醒。**標記合併**:`_doSave` 的 NAS 合併判斷「有沒有改」不含 `hlMarks`,標記另由 `_mergeHlMarks` 決定(這台改過用這台的,否則用 NAS 的)。
