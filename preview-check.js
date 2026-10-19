@@ -288,7 +288,29 @@ if(!chromium){console.log('NO_PLAYWRIGHT');console.log('結果 -2');process.exit
       await c2.close();srv.close();
     }
 
-    console.log('預覽與畫重點 16 個情境'+(bad.length?'':' ✅'));
+    /* ⑫ V5.82.1 底部固定列:閱覽模式只有「前往產出 / 編輯」,編輯模式只有「放棄編輯(檢視)/ 儲存」
+       (原本 inline display:flex 蓋過 CSS,閱覽模式三顆全出現;jsdom 不算樣式,只能在真瀏覽器測) */
+    {
+      const mid=await p.evaluate(function(){showShell('app');var m=newMeetingObj(S.user.id,['head_neck']);m.date='2026-10-16';
+        S.meeting=m;S.cids=['head_neck'];ensureSec('head_neck');m.sections.head_neck.cases=[createItem('head_neck','cases',{chartNo:'9000601',name:'測試甲',diagnosis:'固定列測試'},{})];
+        m.version=1;saveLocal(m);return m.id;});
+      const bar=()=>p.evaluate(function(){var v=function(s){var e=document.querySelector(s);return !!e&&e.getClientRects().length>0;};
+        var ab=document.querySelector('#mtg-actionbar [data-role="abandon"]');
+        return {out:v('#mtg-actionbar .ab-view-only'),edit:v('#btn-ab-edit'),save:v('#mtg-actionbar .ab-edit-only .btn-a'),ab:v('#mtg-actionbar [data-role="abandon"]')?ab.textContent:''};});
+      await p.evaluate(function(i){openMtgById(i,false);},mid);await p.waitForTimeout(300);
+      const b1=await bar();
+      if(!b1.out||!b1.edit||b1.save||b1.ab)bad.push('⑫ 閱覽模式底部應只有「前往產出 / 編輯」:'+JSON.stringify(b1));
+      await p.click('#btn-ab-edit');await p.waitForTimeout(300);
+      const b2=await bar();
+      if(b2.out||b2.edit||!b2.save||b2.ab!=='檢視')bad.push('⑫ 按底部「編輯」後應為「檢視 / 儲存」:'+JSON.stringify(b2));
+      await p.evaluate(function(){markDirty();});
+      if((await bar()).ab!=='放棄編輯')bad.push('⑫ 有修改時應顯示「放棄編輯」');
+      await p.evaluate(async function(){await saveMeeting();});await p.waitForTimeout(1600);
+      const b3=await bar();
+      if(b3.ab!=='檢視'||!b3.save)bad.push('⑫ 儲存後應回到「檢視 / 儲存」:'+JSON.stringify(b3));
+    }
+
+    console.log('預覽與畫重點 17 個情境'+(bad.length?'':' ✅'));
     bad.slice(0,6).forEach(x=>console.log('  🔴 '+x));
     console.log('結果 '+bad.length);
   }catch(e){console.log('⚠ 例外:',e.message.slice(0,200));console.log('結果 -1');}

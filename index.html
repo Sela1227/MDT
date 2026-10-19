@@ -381,6 +381,9 @@ textarea{resize:vertical}
 /* V5.67.0 UI 第二輪④:閱覽模式也顯示固定列,只放「前往產出」 */
 .mtg-record.view-mode #mtg-actionbar{display:flex}
 .mtg-record.view-mode #mtg-actionbar .ab-edit-only{display:none}
+/* V5.82.1:兩組按鈕的 display 一律寫在這裡 —— 原本 .ab-edit-only 帶 inline style="display:flex",
+   inline 蓋過上一行,閱覽模式底部同時出現「前往產出 / 放棄編輯 / 儲存」(V5.67.0 起) */
+#mtg-actionbar .ab-edit-only,#mtg-actionbar .ab-view-only{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .mtg-record:not(.view-mode) #mtg-actionbar .ab-view-only{display:none}
 @media print{ #mtg-actionbar{display:none!important} }
 
@@ -885,8 +888,8 @@ textarea{resize:vertical}
               <span id="actionbar-sync" style="color:var(--textlt)"></span>
               <span id="actionbar-content" style="color:var(--textlt);cursor:pointer" onclick="_gotoTodo()" title="點擊前往待填"></span>
             </span>
-            <span class="ab-view-only" style="margin-left:auto"><button class="btn btn-b btn-sm" onclick="document.querySelector('.output-section').scrollIntoView({behavior:'smooth',block:'start'})">前往產出 ↓</button></span>
-            <span class="ab-edit-only" style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <span class="ab-view-only" style="margin-left:auto"><button class="btn btn-b btn-sm" onclick="document.querySelector('.output-section').scrollIntoView({behavior:'smooth',block:'start'})">前往產出 ↓</button><button class="btn btn-a btn-sm" id="btn-ab-edit" onclick="enterEditMode()">編輯</button></span>
+            <span class="ab-edit-only" style="margin-left:auto">
               <!-- V5.44.0:三顆產出鍵(LINE 通知 / HTML 投影片 / 會議小抄)移除。
                    V5.39.0(F-3)加它們的理由是「產出鍵在整頁最底部,8 個個案要滑過全部才按得到」——
                    但個管師指出:**編輯模式時根本不需要產出那些**。
@@ -1752,7 +1755,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.82.0';
+const VERSION='V5.82.1';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -3658,6 +3661,7 @@ function renderEditor(){
   const wrap=document.querySelector('#view-meeting .wrap');
   if(S.viewMode){wrap.classList.add('view-mode');_renderInfoDoc();}
   else{wrap.classList.remove('view-mode');}
+  _syncAbandonBtnLabel();/* V5.82.1:進編輯時按鈕文字依目前有無修改(原本固定留著 HTML 預設的「放棄編輯」) */
   wrap.classList.toggle('mtg-schedule', S.meetingMode==='schedule');
   wrap.classList.toggle('mtg-record',   S.meetingMode==='record');
   // Mode tag
@@ -3692,11 +3696,12 @@ function renderEditor(){
         var owner=S.meeting.createdBy?USERS.find(function(u){return u.id===S.meeting.createdBy;}):null;
         var isOwner=canEditMeeting(S.meeting);
         ownerBadge.textContent=owner&&!isOwner?'建立者：'+owner.name:'';
-        if(btnRecEdit){
-          btnRecEdit.disabled=!isOwner;
-          btnRecEdit.title=isOwner?'':'只能編輯自己建立的會議';
-          btnRecEdit.style.opacity=isOwner?'1':'0.4';
-        }
+        [btnRecEdit,document.getElementById('btn-ab-edit')].forEach(function(b){/* V5.82.1:底部固定列的「編輯」同一套權限 */
+          if(!b)return;
+          b.disabled=!isOwner;
+          b.title=isOwner?'':'只能編輯自己建立的會議';
+          b.style.opacity=isOwner?'1':'0.4';
+        });
       }
     } else {
       recEdit.style.display='none';

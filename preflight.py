@@ -269,7 +269,7 @@ if not QUICK:
         pc = int(m.group(1)) if m else -1
         reds = [l.strip() for l in r.stdout.splitlines() if '🔴' in l or '⚠' in l][:3]
         note = ('沒有 playwright → npm i -g playwright;或加 --no-layout 明確略過' if pc == -2
-                else (' | '.join(reds) if pc else '16 情境:存標記確認、再預覽、拒存、改資料保留畫線、改到畫線文字、同頁重複字不亂跳、同文字別病人、舊格式、多份預覽、慢存檔、代班合併、負責人改個案保留代班標記、複製會議、註記與小抄、兩個網址搬家'))
+                else (' | '.join(reds) if pc else '17 情境:存標記確認、再預覽、拒存、改資料保留畫線、改到畫線文字、同頁重複字不亂跳、同文字別病人、舊格式、多份預覽、慢存檔、代班合併、負責人改個案保留代班標記、複製會議、註記與小抄、兩個網址搬家、底部固定列按鈕'))
         check(D, '預覽與畫重點(preview-check.js)', pc == 0, note)
     tm = os.path.join(ROOT, 'cloudflare-share', 'test.mjs')
     if os.path.exists(tm):
