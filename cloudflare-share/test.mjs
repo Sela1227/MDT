@@ -1,7 +1,10 @@
 /* Worker 測試(V5.65.0)。執行:node cloudflare-share/test.mjs。每次改 Worker 必跑。 */
 import worker from './index.js';
 const mk=(over={})=>{const store=new Map();return{store,env:Object.assign({UPLOAD_KEY:'k'.repeat(32),VIEW_PWD:'testpwd',SESSION_SECRET:'s'.repeat(40),HTML:{
-  put:async(k,v,o)=>store.set(k,{v,m:o&&o.metadata,ttl:o&&o.expirationTtl}),get:async k=>store.has(k)?store.get(k).v:null,
+  put:async(k,v,o)=>{if(typeof v!=='string'&&v.length>25*1024*1024)throw new Error('KV value too large');store.set(k,{v,m:o&&o.metadata,ttl:o&&o.expirationTtl});},
+  get:async(k,t)=>{if(!store.has(k))return null;const v=store.get(k).v;const u=typeof v==='string'?new TextEncoder().encode(v):v;return t==='arrayBuffer'?u.buffer.slice(u.byteOffset,u.byteOffset+u.length):new TextDecoder().decode(u);},
+  getWithMetadata:async k=>{if(!store.has(k))return{value:null,metadata:null};const e=store.get(k);return{value:typeof e.v==='string'?e.v:new TextDecoder().decode(e.v),metadata:e.m||null};},
+  delete:async k=>{store.delete(k);},
   list:async({limit=1000,cursor}={})=>{const keys=[...store.keys()].sort();const start=cursor?parseInt(cursor):0;const page=keys.slice(start,start+limit);const done=start+limit>=keys.length;return{keys:page.map(n=>({name:n,metadata:store.get(n).m})),list_complete:done,cursor:done?undefined:String(start+limit)};}}},over)};};
 const R=(env,u,i)=>worker.fetch(new Request('https://share.selaginella.io'+u,i),env);
 let pass=0,total=0;const T=(n,ok,x)=>{total++;if(ok)pass++;console.log((ok?'✅':'🔴')+' '+n+(x?'  '+x:''));};
@@ -44,7 +47,7 @@ const login=async(env,pwd='testpwd',next='/?k=cbshow')=>{const r=await R(env,'/a
   const e0=mk({RETAIN_DAYS:'0'});await R(e0.env,'/api/upload?name=b_MDT.html',{method:'PUT',headers:{'X-Upload-Key':'k'.repeat(32)},body:'<title>B</title>'});
   T('W-5 RETAIN_DAYS=0 不過期',e0.store.get('b_MDT.html').ttl===undefined);
   T('上傳者 metadata',store.get('a_MDT.html').m.uploader==='楊');
-  const big=await R(env,'/api/upload?name=c_MDT.html',{method:'PUT',headers:{'X-Upload-Key':'k'.repeat(32),'Content-Length':String(30*1024*1024)},body:'x'});
+  const big=await R(env,'/api/upload?name=c_MDT.html',{method:'PUT',headers:{'X-Upload-Key':'k'.repeat(32),'Content-Length':String(95*1024*1024)},body:'x'});
   T('W-9 Content-Length 超過先 413',big.status===413);
   T('錯金鑰 401',(await R(env,'/api/upload?name=d_MDT.html',{method:'PUT',headers:{'X-Upload-Key':'bad'},body:'x'})).status===401);
   T('檔名 ../ 400',(await R(env,'/api/upload?name=../e.html',{method:'PUT',headers:{'X-Upload-Key':'k'.repeat(32)},body:'x'})).status===400);
@@ -56,5 +59,37 @@ const login=async(env,pwd='testpwd',next='/?k=cbshow')=>{const r=await R(env,'/a
   const n=(t.match(/new\d+/g)||[]).length;
   T('W-3 超過 1000 筆仍列出最新 10 筆',n===10,n+'/10');
   T('W-3 順序:new10 在最上',t.indexOf('new10')<t.indexOf('new9'));
+}
+/* V5.82.2 分段存放:26 MB(個管實際遇到的大小)、45 MB、同名重傳、超過上限、小檔照舊 */
+{ const {env,store}=mk({VIEW_PWD:undefined});
+  const K={'X-Upload-Key':'k'.repeat(32)};
+  const mkHtml=(mb,tag)=>'<html><head><title>'+tag+'</title></head><body>'+('A'.repeat(1023)+'\n').repeat(mb*1024)+'<p>END-'+tag+'</p></body></html>';
+  const h26=mkHtml(26,'B26');
+  let r=await R(env,'/api/upload?name=20261022_Breast_MDT.html',{method:'PUT',headers:K,body:h26});let j=await r.json();
+  T('26 MB 上傳成功(原本 413)',r.status===200&&j.ok,r.status+' '+(j.error||''));
+  const m=store.get('20261022_Breast_MDT.html').m;
+  T('分 2 段、主鍵記標題/大小/段數',m.parts===2&&m.title==='B26'&&m.size===new TextEncoder().encode(h26).length&&!!m.pid);
+  T('每段都在 KV 單筆上限內',[...store.keys()].filter(k=>/\.part\d+$/.test(k)).every(k=>store.get(k).v.length<=25*1024*1024));
+  T('各段帶同樣的 90 天過期',[...store.keys()].filter(k=>/\.part\d+$/.test(k)).every(k=>store.get(k).ttl===90*86400));
+  let back=await(await R(env,'/20261022_Breast_MDT.html')).text();
+  T('讀回來逐字相同',back===h26,back.length+' vs '+h26.length);
+  const lst=await(await R(env,'/?k=cbshow')).text();
+  T('清單只列一筆、不列分段',(lst.match(/<li>/g)||[]).length===1&&lst.indexOf('.part')<0);
+  T('單段網址開不到',(await R(env,'/'+[...store.keys()].find(k=>/\.part0$/.test(k)))).status===404);
+  const h45=mkHtml(45,'B45');
+  r=await R(env,'/api/upload?name=20261022_Breast_MDT.html',{method:'PUT',headers:K,body:h45});
+  const m2=store.get('20261022_Breast_MDT.html').m;
+  T('同名重傳 45 MB:3 段',r.status===200&&m2.parts===3);
+  T('同名重傳:舊段刪乾淨',[...store.keys()].filter(k=>/\.part\d+$/.test(k)).length===3&&[...store.keys()].every(k=>k.indexOf(m.pid)<0));
+  back=await(await R(env,'/20261022_Breast_MDT.html')).text();
+  T('重傳後讀回來是新內容',back===h45);
+  r=await R(env,'/api/upload?name=20261022_Breast_MDT.html',{method:'PUT',headers:K,body:mkHtml(95,'X')});
+  T('超過 90 MB 413、訊息寫新上限',r.status===413&&/> 90 MB/.test((await r.json()).error));
+  T('超過上限:舊檔不受影響、沒留下半套分段',(await(await R(env,'/20261022_Breast_MDT.html')).text())===h45&&[...store.keys()].filter(k=>/\.part\d+$/.test(k)).length===3);
+  r=await R(env,'/api/upload?name=20261022_Breast_MDT.html',{method:'PUT',headers:K,body:'<title>small</title>hi'});
+  T('改傳小檔:整份放主鍵、分段全刪',r.status===200&&!store.get('20261022_Breast_MDT.html').m.parts&&[...store.keys()].filter(k=>/\.part\d+$/.test(k)).length===0);
+  T('小檔讀回',(await(await R(env,'/20261022_Breast_MDT.html')).text())==='<title>small</title>hi');
+  store.set('old_MDT.html',{v:'<title>old</title>舊格式字串',m:{title:'old'}});
+  T('舊檔(字串、無 parts)照常讀',(await(await R(env,'/old_MDT.html')).text())==='<title>old</title>舊格式字串');
 }
 console.log('\n'+pass+'/'+total);process.exit(pass===total?0:1);

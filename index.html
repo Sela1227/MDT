@@ -1755,7 +1755,7 @@ const USERS=[
   {id:'lin', name:'林伯儒',ext:'',     cancers:['head_neck','hepatobiliary','urology']}
 ];
 const TOPICS=['影像討論','病理討論','分期討論','治療策略討論'];
-const VERSION='V5.82.1';
+const VERSION='V5.82.2';
 
 /* V4.6.0: HTML 投影片配色模板 — 設定→系統頁可選,每個個管師獨立記憶 */
 const HTML_THEMES={
@@ -6992,7 +6992,7 @@ async function uploadSlidesToCloudflare(htmlContent, fname){
     let hint='';
     if(resp.status===401||resp.status===403)hint='上傳金鑰錯誤或已更換，請向林醫師索取新的。';
     else if(resp.status===400)hint='檔名不合法（不可含路徑）。';
-    else if(resp.status===413)hint='檔案過大，KV 單筆上限 25 MB。含大量影像時容易超過。';
+    else if(resp.status===413)hint='檔案過大（分享上限 90 MB）。若訊息寫「> 25 MB」，表示分享空間的程式還沒更新，請通知林醫師。';/* V5.82.2:Worker 改分段存放 */
     else if(resp.status===429)hint='請求過於頻繁，稍候再試。';
     else hint='分享空間回應異常，請回報。';
     throw new Error(((data&&data.error)||('HTTP '+resp.status))+'\n\n→ '+hint);

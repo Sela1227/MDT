@@ -183,11 +183,11 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 
 | 版本 | 一行 |
 |---|---|
+| V5.82.2 | 個管:分享上傳 26 MB > 25 MB(KV 單筆硬限制)→ 主任「先放寬」:Worker 超過 20 MiB 分段存 `<名稱>.<pid>.partN`、主鍵放標記與 `metadata.parts/pid`、讀取串流接回,上限 90 MiB;邊讀邊存、段名帶上傳代號(重傳/失敗不壞舊檔);網頁只改 413 說明;test.mjs 38 條;**需部署 Worker** |
 | V5.82.1 | 主任:「儲存完還是儲存」→ 底部固定列 `.ab-edit-only` 的 inline `display:flex` 蓋過閱覽模式的隱藏規則(V5.67.0 起閱覽模式三顆鍵全出現);display 移到樣式表、閱覽模式固定列加「編輯」鍵、`renderEditor` 同步「檢視/放棄編輯」;preview-check ⑫ |
 | V5.82.0 | 主任:ChatGPT JSON「選取複製可用、複製鈕壞」→ `_parseAIJSONx` 唯一解析器(圍欄/說明文字、Markdown 跳脫字串內外分辨、多餘逗號、彎引號最後手段;回傳 fixes/warns;反斜線加倍警告;錯誤指出行與附近字)、`_aiJsonNotice` 三入口共用;四段提示詞改用 `_aiJsonRules`(要求 ```json 程式碼區塊,原本「不要圍籬」反而讓 ChatGPT 當 Markdown 排版);範例資料 2 組 6 碼疑似真實病歷號改虛構、preflight 改擋 6~8 碼 |
 | V5.81.1 | 主任:搬家檔「所有當前設定都要打包」→ `_moveCollectAll` 帶所有 `mdt_` key(明列排除 `_moveSkip`:會議本體另放、`pushed_`、`conflict_toast`、`test`、`sec_`),金鑰一律帶不再詢問;`_applyMove` 全部寫入並核對;⑪ 逐 key 比對新舊網址 + 「以後新增的設定」也要到 |
 | V5.81.0 | 搬家(換網址):`exportMoveFile`(`_buildBackup` + `move{from,by,lastUser,secrets 可選,meetings}`)、`importAllJSON` 讀到 move 時 `_applyMove` 帶入金鑰/登入者並逐筆核對;首頁 `renderMoveBanner`(空網址提示匯入;`MOVE_TO_URL` 有值時舊網址提示匯出);`_buildBackup` 收斂三處備份組裝;preview-check ⑪ 兩個網址端到端 |
-| V5.79.1 | V5.79.0 審核:V-1(P1)`_hlFind` 找最像處要前後文對上三成(最少 4 字),否則判為改掉並提示 —— 原本 ER 陽性的標記會跳到 PR 陽性;V-2 `_postFupUnset` 只列自己負責的癌別;V-3 測試會議前期追蹤 8 位標自動帶入;preview-check ⑤e |
 
 **完整歷程見 `CHANGELOG.md`**。
 
@@ -301,6 +301,7 @@ AI：api.anthropic.com / api.openai.com（主動觸發，不背景傳資料）
 |---|---|---|---|
 | 2026-09-24 | **合併會議所有文件產出永遠只出目前分頁癌別**,無合併流程(LINE 通知與 LINE 通知圖片例外) | 生效 | `getOutputCid()` 註解為設計不變量;preflight 檢查仍在 |
 | 2026-09-24 | **HTML 產出不要亂動,先討論再改**;目錄定位、雙欄功能延後 | 生效 |
+| 2026-10-21 | 個管分享上傳 26 MB 失敗:主任「空間很大,只會留 10 場,先放寬上傳條件」→ 不壓縮影像,Worker 改分段存放(上限 90 MB) | 已完成(V5.82.2);**Worker 待部署** | `cloudflare-share/index.js`、`uploadSlidesToCloudflare` 提示 |
 | 2026-10-19 | 主任回報「儲存完鈕應變編輯」:修閱覽模式固定列錯出編輯鍵;**儲存後留在編輯模式的設計(V5.36.1)不變**,待主任確認 | 已完成(V5.82.1) | `#mtg-actionbar`、`renderEditor` |
 | 2026-10-19 | 主任:「多專科會議很多地方有 JSON 匯入與提示詞,想辦法改善(ChatGPT 複製鈕弄壞 JSON)」 | 已完成(V5.82.0) | `_parseAIJSONx/_aiJsonNotice/_aiJsonRules`;個案貼上、JSON 檔匯入、病程時序 AI 判讀;4 段提示詞 |
 | 2026-10-16 | 主任定案:新網址 **`cc.selaginella.io/cc/mdt`**(個管電腦專用、不共用,同網域其他程式的顧慮接受);搬家檔**所有當前設定都要打包**(含金鑰) | 已完成(V5.81.1);搬家未執行 | `_moveCollectAll/_moveSkip/_applyMove` |

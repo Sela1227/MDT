@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════════
    MDT 投影片分享 Worker — share.selaginella.io
-   V5.65.0(2026-09-24,審核 W-1~W-9)
+   V5.65.0(2026-09-24,審核 W-1~W-9);V5.82.2 超過 20 MB 分段存放,上限 90 MB
 
    路由:
      GET  /?k=cbshow          清單頁(最近 10 場,只列檔名含 _MDT 的)
@@ -29,7 +29,18 @@ const ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:8000',
 ]);
 const LIST_KEY = 'cbshow';
-const MAX_BYTES = 25 * 1024 * 1024;  /* KV 單筆上限 */
+/* V5.82.2 分段存放(主任:「空間很大,先放寬上傳條件」)
+   KV 單筆上限 25 MiB 是平台硬限制,調不高;乳癌會議的乳攝/超音波原圖一場就 26 MB。
+   改成:超過 PART_BYTES 就切成 <名稱>.part0、.part1… 分筆存,主鍵只放一行標記與 metadata.parts;
+   讀取時依序接起來串流回去。沒超過的照舊整份存在主鍵(舊檔、Git Pusher 讀內容都不受影響)。
+   總上限受 Cloudflare 請求本體 100 MB 限制。 */
+const PART_BYTES = 20 * 1024 * 1024;  /* 每段 20 MiB(KV 單筆 25 MiB 以下留餘裕) */
+const MAX_BYTES = 90 * 1024 * 1024;   /* 整份上限(請求本體 100 MB 以下) */
+const PART_MARK = '<!--MDT-PARTS-->';
+/* 段名帶這次上傳的代號:同名重傳時新段寫在別處,主鍵換過去之前舊檔照樣能看;中途失敗也不會弄壞舊檔。
+   不以 .html 結尾:清單頁不列、GET 路由也開不到單段。 */
+const partKey = (name, pid, i) => name + '.' + pid + '.part' + i;
+function _cat(bufs, n) { if (bufs.length === 1) return bufs[0]; const out = new Uint8Array(n); let o = 0; for (const b of bufs) { out.set(b, o); o += b.length; } return out; }
 
 function corsHeaders(origin) {
   /* V5.65.0 W-7:不在白名單就不送 ACAO —— 原本送 'null',沙盒 iframe 與 file:// 的 Origin 正是字串 null,反而被放行 */
@@ -133,26 +144,52 @@ export default {
       if (!name || !/^[A-Za-z0-9._-]+\.html$/.test(name) || name.includes('..')) {
         return json({ ok: false, error: 'invalid name' }, 400, ch);
       }
+      const LIM = Math.round(MAX_BYTES / 1048576);
       const cl = parseInt(request.headers.get('Content-Length') || '0', 10);
-      if (cl > MAX_BYTES) return json({ ok: false, error: 'too large (' + Math.round(cl / 1048576) + ' MB > 25 MB)' }, 413, ch);/* V5.65.0 W-9 */
-      const html = await request.text();
-      const size = new TextEncoder().encode(html).length;
-      if (!html || size === 0) return json({ ok: false, error: 'empty body' }, 400, ch);
-      if (size > MAX_BYTES) return json({ ok: false, error: 'too large (' + Math.round(size / 1048576) + ' MB > 25 MB)' }, 413, ch);
+      if (cl > MAX_BYTES) return json({ ok: false, error: 'too large (' + Math.round(cl / 1048576) + ' MB > ' + LIM + ' MB)' }, 413, ch);/* V5.65.0 W-9 */
+      const days = parseInt(env.RETAIN_DAYS || '90', 10);/* V5.65.0 W-5:自動過期,主任定 90 天(RETAIN_DAYS 可調);0 或負數 = 不過期 */
+      const putOpt = m => days > 0 ? { metadata: m, expirationTtl: days * 86400 } : (m ? { metadata: m } : {});
+      /* V5.82.2:邊讀邊存,記憶體最多放一段 —— 一次 request.text() 90 MB 會吃掉 Worker 大半記憶體 */
+      let old = null; try { old = await env.HTML.getWithMetadata(name); } catch (e) {}
+      const oldParts = (old && old.metadata && old.metadata.parts) || 0, oldPid = (old && old.metadata && old.metadata.pid) || '';
+      const pid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const reader = request.body ? request.body.getReader() : null;
+      let bufs = [], bufN = 0, size = 0, parts = 0, head = null, single = null;
+      /* 每段剛好 PART_BYTES(最後一段較短)—— 不能假設串流每次給小塊,一次給整份也要切得對 */
+      const flush = async (all) => {
+        while (bufN >= PART_BYTES || (all && bufN > 0)) {
+          const b = _cat(bufs, bufN), n = Math.min(PART_BYTES, bufN);
+          await env.HTML.put(partKey(name, pid, parts), b.subarray(0, n), putOpt(null)); parts++;
+          bufs = n < bufN ? [b.subarray(n)] : [];/* subarray 不複製:Worker 免費方案 CPU 時間很緊,少搬一次 20 MB */ bufN -= n;
+        }
+      };
+      const dropParts = async (p, n) => { for (let i = 0; i < n; i++) { try { await env.HTML.delete(partKey(name, p, i)); } catch (e) {} } };
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.length;
+        if (size > MAX_BYTES) { try { await reader.cancel(); } catch (e) {} await dropParts(pid, parts); return json({ ok: false, error: 'too large (' + Math.round(size / 1048576) + ' MB > ' + LIM + ' MB)' }, 413, ch); }
+        if (!head) head = value.slice(0, 8192);
+        bufs.push(value); bufN += value.length;
+        if (bufN >= PART_BYTES) await flush(false);
+      }
+      if (size === 0) return json({ ok: false, error: 'empty body' }, 400, ch);
+      if (parts === 0) single = _cat(bufs, bufN);   /* 小檔:照舊整份放主鍵 */
+      else await flush(true);
 
       /* 從 <title> 取標題,與 Git Pusher 寫入的 metadata 同格式 */
       let title = name.replace(/\.[^.]+$/, '');
-      const tm = html.slice(0, 8192).match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      const tm = new TextDecoder().decode(head || new Uint8Array(0)).match(/<title[^>]*>([\s\S]*?)<\/title>/i);
       if (tm && tm[1].trim()) title = tm[1].trim().slice(0, 120);
       /* V5.63.2:上傳者。網頁端 encodeURIComponent 過,這裡解回來;只留 40 字避免塞垃圾 */
       let uploader = '';
       try { uploader = decodeURIComponent(request.headers.get('X-Uploader') || '').trim().slice(0, 40); } catch (e) {}
       const metadata = { title, size, uploaded: new Date().toISOString().slice(0, 19), uploader };
-
-      /* V5.65.0 W-5:自動過期,主任定 90 天(RETAIN_DAYS 可調);0 或負數 = 不過期 */
-      const days = parseInt(env.RETAIN_DAYS || '90', 10);
-      await env.HTML.put(name, html, days > 0 ? { metadata, expirationTtl: days * 86400 } : { metadata });
-      return json({ ok: true, name, url: url.origin + '/' + encodeURIComponent(name), title, size }, 200, ch);
+      if (parts) { metadata.parts = parts; metadata.pid = pid; }
+      /* 各段寫完才寫主鍵 —— 讀的人不會看到「主鍵說 3 段、實際只有 2 段」 */
+      await env.HTML.put(name, parts ? PART_MARK : single, putOpt(metadata));
+      if (oldParts && oldPid) await dropParts(oldPid, oldParts);  /* 同名覆蓋:主鍵已換到新段,舊段刪掉 */
+      return json({ ok: true, name, url: url.origin + '/' + encodeURIComponent(name), title, size, parts }, 200, ch);
     }
 
     /* ── 登入 ── */
@@ -208,9 +245,28 @@ export default {
     if (request.method === 'GET' && path.length > 1) {
       const name = path.slice(1);
       if (!/^[A-Za-z0-9._-]+\.html$/.test(name) || name.includes('..')) return new Response('Not found', { status: 404 });
-      const html = await env.HTML.get(name);
-      if (html == null) return new Response('Not found', { status: 404 });
-      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': env.VIEW_PWD ? 'no-store' : 'private, max-age=300', 'X-Robots-Tag': 'noindex' } });/* V5.65.0 W-4:設密碼一律 no-store,否則關瀏覽器 5 分鐘內從歷史點回可繞過密碼 */
+      const got = await env.HTML.getWithMetadata(name);
+      if (!got || got.value == null) return new Response('Not found', { status: 404 });
+      const hd = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': env.VIEW_PWD ? 'no-store' : 'private, max-age=300', 'X-Robots-Tag': 'noindex' };/* V5.65.0 W-4:設密碼一律 no-store,否則關瀏覽器 5 分鐘內從歷史點回可繞過密碼 */
+      const n = (got.metadata && got.metadata.parts) || 0, pid = (got.metadata && got.metadata.pid) || '';
+      if (!n) return new Response(got.value, { status: 200, headers: hd });
+      /* V5.82.2 分段檔:先確認第一段在,再一段一段串流(記憶體一次只放一段) */
+      const first = await env.HTML.get(partKey(name, pid, 0), 'arrayBuffer');
+      if (first == null) return new Response('Not found', { status: 404 });
+      const { readable, writable } = new TransformStream();
+      (async () => {
+        const w = writable.getWriter();
+        try {
+          await w.write(new Uint8Array(first));
+          for (let i = 1; i < n; i++) {
+            const b = await env.HTML.get(partKey(name, pid, i), 'arrayBuffer');
+            if (b == null) throw new Error('missing part ' + i);
+            await w.write(new Uint8Array(b));
+          }
+          await w.close();
+        } catch (e) { console.error('[share] 分段讀取失敗', name, e); try { await w.abort(e); } catch (e2) {} }
+      })();
+      return new Response(readable, { status: 200, headers: hd });
     }
 
     return new Response('Not found', { status: 404 });
